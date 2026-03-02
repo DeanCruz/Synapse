@@ -1,23 +1,46 @@
-# Synapse
+<div align="center">
 
-Synapse is a distributed control system for coordinating autonomous agent swarms. It optimizes context usage, parallelizes execution, and provides a centralized control plane for complex software development tasks.
+# ⚡ Synapse
 
-Instead of one agent working through tasks sequentially, Synapse decomposes your prompt into independent units, dispatches multiple agents in parallel, tracks dependencies between them, and gives you a live dashboard to watch it all happen in real-time.
+### Distributed Agent Swarm Control System
+
+[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)]()
+[![Node.js](https://img.shields.io/badge/node.js-built--ins%20only-339933?logo=node.js&logoColor=white)]()
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-blueviolet?logo=anthropic&logoColor=white)]()
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**Parallelize your AI agents. Visualize the swarm. Ship faster.**
+
+Synapse decomposes complex tasks into independent units, dispatches multiple agents simultaneously,<br>tracks dependencies between them, and gives you a live dashboard to watch it all happen in real-time.
+
+[Getting Started](#setup) · [Commands](#commands) · [Dashboard](#dashboard) · [How It Works](#how-it-works)
+
+</div>
+
+---
+
+<div align="center">
+
+### What changes with Synapse
+
+| Without | With Synapse |
+|:---:|:---:|
+| 1 agent, sequential tasks | N agents, parallel execution |
+| Context exhaustion on large tasks | Context distributed across workers |
+| No visibility into progress | Live dashboard with dependency graph |
+| Manual retry on failure | Automatic repair task dispatch |
+
+</div>
 
 ---
 
 ## Setup
 
-### Requirements
-
-- **Node.js** (any recent version)
-- **Claude Code** CLI
-
-No `npm install` needed. The server uses only Node.js built-ins.
+> **Prerequisites:** Node.js (any recent version) + Claude Code CLI. No `npm install` needed.
 
 ### 1. Clone Synapse into Your Workspace
 
-Your workspace is the parent directory that contains your project repos. Clone or copy Synapse into it:
+Your workspace is the parent directory that contains your project repos.
 
 ```bash
 cd your-workspace/
@@ -26,17 +49,20 @@ git clone <synapse-repo-url> Synapse
 
 ### 2. Move Parent Files to the Workspace Root
 
-The `Synapse/_parent/` directory contains two items that **must** live at the workspace root — one level above Synapse:
+`Synapse/_parent/` contains files that **must** live at the workspace root — one level above Synapse:
 
 ```bash
 cp Synapse/_parent/CLAUDE.md ./CLAUDE.md
 cp -r Synapse/_parent/_commands ./_commands
 ```
 
-- **`CLAUDE.md`** — The master agent instructions. This is what tells Claude Code how to orchestrate work across your workspace, resolve `!commands`, and coordinate multi-repo tasks.
-- **`_commands/`** — Workspace-level commands (`!review`, `!trace`, `!initialize`, etc.) that operate across all your repos.
+| File | Purpose |
+|---|---|
+| `CLAUDE.md` | Master agent instructions — orchestration rules, `!command` resolution, multi-repo coordination |
+| `_commands/` | Workspace-level commands — `!review`, `!trace`, `!initialize`, and more |
 
-Your workspace should now look like this:
+<details>
+<summary><b>Resulting workspace structure</b></summary>
 
 ```
 your-workspace/
@@ -48,11 +74,13 @@ your-workspace/
 └── ...
 ```
 
+</details>
+
 ### 3. Add CLAUDE.md Files to Your Repos
 
-Each project repo should have its own `CLAUDE.md` describing its tech stack, architecture, conventions, and file structure. Workers read these before implementing — the better your conventions are documented, the better the output.
+Each repo should have its own `CLAUDE.md` describing its tech stack, architecture, and conventions. Workers read these before implementing — better docs mean better output.
 
-If your repos don't have them yet, you can scaffold starters after setup with `!initialize` — it detects missing `CLAUDE.md` files and generates templates.
+> **Don't have them yet?** Run `!initialize` after setup — it detects missing files and scaffolds templates.
 
 ### 4. Start the Dashboard
 
@@ -60,151 +88,164 @@ If your repos don't have them yet, you can scaffold starters after setup with `!
 ./Synapse/start.sh
 ```
 
-Or manually:
-
-```bash
-node Synapse/src/server/index.js
-```
-
-Open **http://localhost:3456** in your browser. You'll see the dashboard in its empty state, waiting for a swarm.
+Open **http://localhost:3456** — you'll see the dashboard waiting for a swarm.
 
 ### 5. Run Your First Swarm
-
-In Claude Code, type:
 
 ```
 !p_track Build a REST API with user authentication and product CRUD endpoints
 ```
 
-The master agent will read your codebase, plan the work, populate the dashboard with the task graph, and ask for your approval before dispatching workers.
+The master agent reads your codebase, plans the work, populates the dashboard, and asks for your approval before dispatching workers.
 
 ---
 
 ## Commands
 
-### Dispatching Work
+### ⚡ Dispatching Work
 
 | Command | When to Use |
 |---|---|
-| `!p_track {prompt}` | Full orchestration with live dashboard, dependency tracking, XML records, and history. Use for anything non-trivial — 5+ tasks, cross-repo work, or tasks with complex dependencies. |
-| `!p {prompt}` | Lightweight parallel dispatch. Same planning quality, but no dashboard writes or tracking artifacts. Use for quick focused jobs under 5 tasks. |
+| **`!p_track {prompt}`** | Full orchestration — live dashboard, dependency tracking, history. Use for 5+ tasks, cross-repo work, or complex dependencies. |
+| **`!p {prompt}`** | Lightweight parallel dispatch — same planning, no dashboard overhead. Use for quick jobs under 5 tasks. |
 
-Both commands trigger the same planning process — deep context gathering, dependency mapping, and self-contained worker prompts. The difference is whether the dashboard tracks it.
+Both trigger the same deep planning process. The difference is whether the dashboard tracks it.
 
-### Monitoring
-
-The dashboard is your primary view. But you can also check from the terminal:
+### 📊 Monitoring
 
 | Command | What It Shows |
 |---|---|
-| `!status` | Progress summary — completed/total, failures, elapsed time, per-agent status table |
-| `!logs` | Event log with filters: `--level error`, `--task 2.3`, `--last 20`, `--since 14:30` |
-| `!inspect {id}` | Deep-dive into a task — timeline, milestones, deviations, dependencies, worker logs |
-| `!deps` | Dependency graph. `!deps --critical` for the critical path. `!deps --blocked` for stuck chains |
+| `!status` | Progress summary — completed/total, failures, elapsed time, per-agent table |
+| `!logs` | Event log — `--level error`, `--task 2.3`, `--last 20`, `--since 14:30` |
+| `!inspect {id}` | Deep-dive — timeline, milestones, deviations, dependencies, worker logs |
+| `!deps` | Dependency graph — `--critical` for critical path, `--blocked` for stuck chains |
 
-### Intervening
-
-| Command | What It Does |
-|---|---|
-| `!dispatch {id}` | Manually dispatch a specific task. `!dispatch --ready` dispatches all unblocked tasks |
-| `!retry {id}` | Re-run a failed task with a fresh agent that knows why the first attempt failed |
-| `!cancel` | Immediately cancel the swarm. `--force` skips confirmation |
-| `!cancel-safe` | Graceful shutdown — waits for in-progress agents to finish, then stops |
-
-### After a Swarm
+### 🔧 Intervening
 
 | Command | What It Does |
 |---|---|
-| `!history` | Browse past completed swarms. `!history --last 5` for recent only |
-| `!reset` | Clear the active dashboard and save a history summary. `!reset --all` clears all 5 dashboards |
+| `!dispatch {id}` | Manually dispatch a task. `--ready` dispatches all unblocked tasks |
+| `!retry {id}` | Re-run a failed task — the new agent gets the failure context |
+| `!cancel` | Immediately cancel. `--force` skips confirmation |
+| `!cancel-safe` | Graceful shutdown — waits for in-progress agents to finish |
 
-### Server Control
+### 📁 Housekeeping
 
 | Command | What It Does |
 |---|---|
-| `!start` | Start the dashboard server and open the browser |
-| `!stop` | Stop the dashboard server |
-
-Type `!guide` for an interactive command decision tree.
+| `!history` | Browse past swarms. `--last 5` for recent only |
+| `!reset` | Clear dashboard + save history. `--all` clears all 5 dashboards |
+| `!start` / `!stop` | Start or stop the dashboard server |
+| `!guide` | Interactive command decision tree |
 
 ---
 
 ## How It Works
 
 ```
-You type: !p_track {your task}
-        │
-Master agent reads your codebase deeply
-        │
-Plans atomic tasks with dependency mapping
-        │
-Writes the plan to the dashboard (you see it immediately)
-        │
-You approve → workers are dispatched in parallel
-        │
-Workers report live progress → dashboard updates in real-time
-        │
-As tasks complete, blocked tasks are dispatched immediately
-        │
-All done → master compiles a summary report
+  !p_track {your task}
+         │
+         ▼
+  ┌─────────────────────┐
+  │  Master reads your   │
+  │  codebase deeply     │
+  └──────────┬──────────┘
+             │
+             ▼
+  ┌─────────────────────┐
+  │  Plans atomic tasks  │
+  │  with dependencies   │
+  └──────────┬──────────┘
+             │
+             ▼
+  ┌─────────────────────┐
+  │  Dashboard shows the │
+  │  plan — you approve  │
+  └──────────┬──────────┘
+             │
+             ▼
+  ┌─────────────────────┐
+  │  Workers dispatched  │◄──── parallel execution
+  │  in parallel         │
+  └──────────┬──────────┘
+             │
+             ▼
+  ┌─────────────────────┐
+  │  Live progress on    │◄──── real-time SSE updates
+  │  dashboard           │
+  └──────────┬──────────┘
+             │
+             ▼
+  ┌─────────────────────┐
+  │  Summary report      │
+  └─────────────────────┘
 ```
 
-**Key design decisions:**
+<details>
+<summary><b>Key design decisions</b></summary>
 
-- **The master agent never writes code.** It reads, plans, dispatches, and reports. Workers do all implementation. This separation keeps the orchestrator focused on the big picture.
-- **Workers are self-contained.** Each worker gets a complete prompt with everything it needs — files to modify, conventions to follow, code context, and success criteria. No back-and-forth.
-- **Dependencies drive dispatch, not waves.** Waves are a visual grouping. The moment a task's dependencies are satisfied, it gets dispatched — even if other tasks in the same wave are still running.
-- **Failures don't stop the swarm.** A failed task blocks only its direct dependents. Everything else continues. The master can dispatch repair tasks automatically.
+- **The master agent never writes code.** It reads, plans, dispatches, and reports. Workers do all implementation.
+- **Workers are self-contained.** Each gets a complete prompt — files to modify, conventions, code context, success criteria. No back-and-forth.
+- **Dependencies drive dispatch, not waves.** The moment a task's dependencies are satisfied, it launches — even if sibling tasks are still running.
+- **Failures don't stop the swarm.** A failed task blocks only its direct dependents. The master dispatches repair tasks automatically.
+
+</details>
 
 ### Context & Token Optimization
 
-A single agent working on a large task will eventually exhaust its context window — it forgets early decisions, re-reads files it already processed, and loses coherence. Synapse solves this through architectural separation.
+> *Why not just use one agent?*
 
-**Read once, distill many.** The master agent reads your entire codebase during planning — every file, every convention, every type definition it needs. It then distills that knowledge into compact, targeted prompts for each worker. A worker building a User model gets only the database patterns, the existing model files, and the relevant CLAUDE.md conventions — not the entire codebase. Each worker's context is small, focused, and complete.
+A single agent on a large task will exhaust its context window — it forgets early decisions, re-reads files, and loses coherence. Synapse solves this through architectural separation:
 
-**Workers never search.** Traditional agents spend significant context on exploration — reading files to find patterns, searching for conventions, figuring out project structure. Synapse workers skip all of this. The master has already done it and embedded the answers directly in the prompt. Workers start implementing immediately.
-
-**Upstream results flow downstream.** When a task completes, the master captures its output — what files were created, what interfaces were exported, what deviated from the plan. When dispatching dependent tasks, the master injects these upstream results into the downstream worker's prompt. The downstream worker knows exactly what was built before it, without needing to read those files itself. This is how dependency chains preserve context without each worker re-discovering what the previous one did.
-
-For example, in a three-wave swarm:
+| Strategy | How It Works |
+|---|---|
+| **Read once, distill many** | Master reads your entire codebase during planning, then distills targeted prompts per worker. Each worker's context is small, focused, and complete. |
+| **Workers never search** | No wasted context on exploration. The master already embedded the patterns, conventions, and file contents directly in the prompt. |
+| **Upstream results flow downstream** | When Wave 1 completes, the master injects its outputs (files created, types exported, deviations) into Wave 2 prompts. No re-reading upstream work. |
+| **Write-once plan** | `initialization.json` written once. Workers own their progress files. Dashboard derives stats client-side. Zero status bookkeeping overhead. |
 
 ```
-Wave 1: Create database schema + Create auth middleware
-            │                          │
-            ▼                          ▼
-Wave 2: Build User service (gets schema output) + Build Auth service (gets middleware output)
-            │                          │
-            ▼                          ▼
-Wave 3: Integration task (gets both service outputs, wires everything together)
+Wave 1: Create database schema ──────┐    Create auth middleware ──────┐
+                                      │                                │
+                                      ▼                                ▼
+Wave 2: Build User service ──────────┐│   Build Auth service ─────────┐│
+        (gets schema output)         ││   (gets middleware output)    ││
+                                     ▼▼                               ▼▼
+Wave 3:          Integration task (gets ALL upstream outputs)
 ```
 
-Each worker in Wave 2 receives the exact types, file paths, and export signatures from Wave 1 — injected into its prompt by the master. The Wave 3 worker gets the combined outputs from both Wave 2 tasks. No worker wastes context re-reading upstream work.
-
-**Write-once plan, zero status overhead.** The master writes `initialization.json` once during planning and never reads it back. Workers own their own progress files and write them independently. The dashboard derives all stats client-side. This means the master's context isn't consumed by status bookkeeping — no reading and rewriting a growing status file on every event.
-
-**The net effect:** instead of one agent with a 200K-token context window trying to hold an entire project in its head, you get a master agent spending its context on planning and a pool of workers each spending their small context windows on focused execution. Total effective context across the swarm scales linearly with the number of workers.
+> **The net effect:** instead of one 200K-token context window trying to hold everything, you get a master spending context on planning + N workers each with focused execution windows. Total effective context scales linearly with workers.
 
 ---
 
 ## Dashboard
 
-### Layout Modes
+<table>
+<tr>
+<td width="50%">
 
-- **Waves** — Vertical columns per dependency level. Independent tasks sit side-by-side. Best for broad, parallel workloads.
-- **Chains** — Horizontal rows per dependency chain. Tasks flow left-to-right. Best for narrow, deep pipelines.
+### Wave Mode
+Vertical columns per dependency level. Independent tasks side-by-side. Best for broad, parallel workloads.
+
+### Chain Mode
+Horizontal rows per dependency chain. Tasks flow left-to-right. Best for narrow, deep pipelines.
+
+</td>
+<td width="50%">
 
 ### What You'll See
+- **Stat cards** — Total, Completed, In Progress, Failed, Pending, Elapsed
+- **Agent cards** — Stage, elapsed time, latest milestone
+- **Dependency lines** — Hover for needs (blue) and blocks (red)
+- **Deviation badges** — Yellow when workers diverge from plan
+- **Log panel** — Filterable event log
+- **Agent popups** — Full timeline, deviations, worker logs
 
-- **Stat cards** — Total, Completed, In Progress, Failed, Pending, Elapsed time
-- **Agent cards** — Each task shows its current stage, elapsed time, and latest milestone
-- **Dependency lines** — Hover a card to see what it needs (blue) and what it blocks (red)
-- **Deviation badges** — Yellow badges appear when a worker diverges from the plan
-- **Log panel** — Collapsible bottom drawer with filterable event log
-- **Agent detail popups** — Click any card for full milestone timeline, deviations, and worker logs
+</td>
+</tr>
+</table>
 
-### Multi-Dashboard
-
-Up to 5 simultaneous swarms. The sidebar shows all dashboard slots with status indicators. Synapse automatically picks the first available slot when you start a new swarm — it will never overwrite an in-progress swarm.
+**Multi-Dashboard** — Up to 5 simultaneous swarms. Synapse auto-selects the first available slot and never overwrites an in-progress swarm.
 
 ---
 
@@ -216,18 +257,30 @@ Up to 5 simultaneous swarms. The sidebar shows all dashboard slots with status i
 
 ---
 
-## Tips for Best Results
+## Tips
 
-1. **Write detailed prompts.** The more context you give in your `!p_track` prompt, the better the master agent can decompose the work. Vague prompts produce vague plans.
+> [!TIP]
+> **Write detailed prompts.** The more context you give `!p_track`, the better the master decomposes work. Vague prompts produce vague plans.
 
-2. **Let the master read.** The planning phase involves extensive codebase reading. This is intentional — well-informed plans produce well-informed workers. Don't rush it.
+> [!TIP]
+> **Let the master read.** The planning phase reads extensively. This is intentional — well-informed plans produce well-informed workers.
 
-3. **Review the plan before approving.** The dashboard populates with the full task graph before dispatch begins. Check that the decomposition makes sense and dependencies are correct.
+> [!TIP]
+> **Review the plan before approving.** The dashboard shows the full task graph before dispatch. Check that decomposition and dependencies look right.
 
-4. **Use `!p` for small jobs.** If your task is 2-4 independent changes, `!p` gets you parallelism without the overhead of dashboard tracking.
+> [!TIP]
+> **Use `!p` for small jobs, `!p_track` for anything complex.** The split is roughly at 5 tasks — below that, skip the dashboard overhead.
 
-5. **Use `!p_track` for anything complex.** Cross-repo changes, shared-file conflicts, deep dependency chains — these need the full orchestration and visibility.
+> [!TIP]
+> **Check deviations.** Yellow badges mean a worker diverged from the plan. Not necessarily bad, but worth reviewing.
 
-6. **Check deviations.** Yellow badges on agent cards mean a worker did something different from the plan. This isn't necessarily bad, but you should review what changed.
+> [!TIP]
+> **Retry before giving up.** `!retry {id}` passes the failure context to a fresh agent. It often succeeds where a blind retry would fail.
 
-7. **Retry before giving up.** `!retry {id}` gives a fresh agent the failure context from the first attempt. It often succeeds where a blind retry would fail.
+---
+
+<div align="center">
+
+**MIT License** · Zero dependencies · Works offline
+
+</div>
