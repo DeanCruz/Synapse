@@ -8,6 +8,7 @@ const path = require('path');
 const {
   PORT,
   DASHBOARDS_DIR,
+  QUEUE_DIR,
   ARCHIVE_DIR,
   HISTORY_DIR,
   INIT_POLL_MS,
@@ -32,9 +33,12 @@ const {
 const {
   watchDashboard,
   startDashboardsWatcher,
+  startQueueWatcher,
   startLiveReload,
   stopAll: stopAllWatchers,
 } = require('./services/WatcherService');
+
+const { listQueueSummaries } = require('./services/QueueService');
 
 const { handleApiRoute } = require('./routes/apiRoutes');
 const { handleStaticRoute } = require('./routes/staticRoutes');
@@ -95,6 +99,12 @@ const server = http.createServer((req, res) => {
       }
     }
 
+    // Send initial queue data
+    const queueSummaries = listQueueSummaries();
+    if (queueSummaries.length > 0) {
+      res.write(`event: queue_changed\ndata: ${JSON.stringify({ queue: queueSummaries })}\n\n`);
+    }
+
     addClient(res);
     req.on('close', () => removeClient(res));
     return;
@@ -123,12 +133,15 @@ function startup() {
   }
   let dashboards = listDashboards();
 
-  // 3. Ensure Archive and History directories exist
+  // 3. Ensure Archive, History, and Queue directories exist
   if (!fs.existsSync(ARCHIVE_DIR)) {
     fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
   }
   if (!fs.existsSync(HISTORY_DIR)) {
     fs.mkdirSync(HISTORY_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(QUEUE_DIR)) {
+    fs.mkdirSync(QUEUE_DIR, { recursive: true });
   }
 
   // 4. Start watchers for all found dashboards
@@ -138,6 +151,9 @@ function startup() {
 
   // 5. Start the dashboards directory watcher
   startDashboardsWatcher(broadcast);
+
+  // 5b. Start the queue directory watcher
+  startQueueWatcher(broadcast);
 
   // 6. Start heartbeat
   startHeartbeat();
@@ -151,10 +167,12 @@ function startup() {
   console.log(`  Active dashboards: ${dashboards.join(', ')}`);
   console.log(`  Watching per dashboard: initialization.json (${INIT_POLL_MS}ms), logs.json (${INIT_POLL_MS}ms), progress/ (fs.watch)`);
   console.log(`  Watching: dashboards/ directory for new/removed dashboards`);
+  console.log(`  Watching: queue/ directory for queued tasks`);
   console.log(`  Watching: public/ for live reload`);
   console.log(`  SSE clients: /events`);
   console.log(`  API: /api/dashboards, /api/dashboards/:id/{initialization,logs,progress,clear,archive,export}`);
   console.log(`  API: /api/archives, /api/archives/:name`);
+  console.log(`  API: /api/queue, /api/queue/:id`);
   console.log(`  API: /api/history`);
   console.log(`  Archive directory: ${ARCHIVE_DIR}`);
   console.log(`  History directory: ${HISTORY_DIR}\n`);

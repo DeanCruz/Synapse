@@ -3,6 +3,7 @@ const path = require('path');
 const PORT = process.env.PORT || 3456;
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 const DASHBOARDS_DIR = path.join(ROOT, 'dashboards');
+const QUEUE_DIR = path.join(ROOT, 'queue');
 const ARCHIVE_DIR = path.join(ROOT, 'Archive');
 const HISTORY_DIR = path.join(ROOT, 'history');
 const PUBLIC_DIR = path.join(ROOT, 'public');
@@ -28,6 +29,7 @@ module.exports = {
   PORT,
   ROOT,
   DASHBOARDS_DIR,
+  QUEUE_DIR,
   ARCHIVE_DIR,
   HISTORY_DIR,
   PUBLIC_DIR,

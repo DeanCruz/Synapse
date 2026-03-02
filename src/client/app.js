@@ -78,6 +78,8 @@ function init() {
     dashboardStates: {},
     homeViewActive: false,
     archiveViewActive: false,
+    queueViewActive: false,
+    queueItems: [],
     priorDashboardId: null,
     activeLogFilter: 'all',
     activeStatFilter: null,
@@ -119,6 +121,7 @@ function init() {
     onAllProgress: vm.sseHandlers.onAllProgress,
     onDashboardsList: vm.sseHandlers.onDashboardsList,
     onDashboardsChanged: vm.sseHandlers.onDashboardsChanged,
+    onQueueChanged: vm.sseHandlers.onQueueChanged,
     onReload: vm.sseHandlers.onReload,
     onOpen: function () { connectionIndicator.setConnected(); },
     onError: function () { connectionIndicator.setDisconnected(); },
@@ -235,6 +238,28 @@ function init() {
       }
     })
     .catch(function () { /* non-critical — sidebar dots stay idle */ });
+
+  // Fetch initial queue data
+  fetch('/api/queue')
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (data && data.queue) {
+        appState.set('queueItems', data.queue);
+        vm.doRenderQueuePopup();
+        vm.doRenderSidebar();
+      }
+    })
+    .catch(function () { /* non-critical */ });
+
+  // Close queue popup on outside click
+  document.addEventListener('click', function (e) {
+    var queueContainer = document.getElementById('queue-popup-container');
+    if (queueContainer && queueContainer.classList.contains('expanded')) {
+      if (!queueContainer.contains(e.target)) {
+        queueContainer.classList.remove('expanded');
+      }
+    }
+  });
 
   // -------------------------------------------------------------------------
   // 9. Start elapsed timer
