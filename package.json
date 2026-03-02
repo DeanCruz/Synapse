@@ -1,0 +1,9 @@
+{
+  "name": "synapse",
+  "version": "1.0.0",
+  "description": "Synapse is a distributed control system for coordinating autonomous agent swarms. It optimizes context usage, parallelizes execution, and provides a centralized control plane for complex software development tasks.",
+  "main": "src/server/index.js",
+  "scripts": {
+    "start": "node src/server/index.js"
+  }
+}

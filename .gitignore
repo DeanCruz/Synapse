@@ -1,0 +1,16 @@
+# Runtime data (generated during swarms)
+dashboards/*/progress/*.json
+dashboards/*/initialization.json
+dashboards/*/logs.json
+tasks/
+Archive/
+history/
+
+# Dependencies
+node_modules/
+
+# OS
+.DS_Store
+
+# Local Claude Code settings
+_parent/.claude/settings.local.json
