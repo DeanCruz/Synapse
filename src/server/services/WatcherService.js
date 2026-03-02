@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const {
   DASHBOARDS_DIR,
+  QUEUE_DIR,
   PUBLIC_DIR,
   INIT_POLL_MS,
   PROGRESS_RETRY_MS,
@@ -10,6 +11,7 @@ const {
 } = require('../utils/constants');
 const { readJSON, readJSONWithRetry, isValidInitialization, isValidProgress } = require('../utils/json');
 const { getDashboardDir, ensureDashboard, listDashboards } = require('./DashboardService');
+const { listQueueSummaries } = require('./QueueService');
 
 // --- Dashboard Watcher Management ---
 
@@ -153,6 +155,33 @@ function startDashboardsWatcher(broadcastFn) {
   });
 }
 
+// --- Queue Directory Watcher ---
+
+let queueDirWatcher = null;
+let queueReconcileTimer = null;
+
+/**
+ * Start watching the queue/ directory for new/removed queue items.
+ * Broadcasts a 'queue_changed' SSE event with updated queue summaries.
+ *
+ * @param {Function} broadcastFn - Function(eventName, data) to broadcast SSE events
+ */
+function startQueueWatcher(broadcastFn) {
+  if (!fs.existsSync(QUEUE_DIR)) {
+    fs.mkdirSync(QUEUE_DIR, { recursive: true });
+  }
+
+  queueDirWatcher = fs.watch(QUEUE_DIR, { recursive: true }, (_eventType, filename) => {
+    if (!filename) return;
+    // Debounce — fires once after events settle
+    clearTimeout(queueReconcileTimer);
+    queueReconcileTimer = setTimeout(() => {
+      const summaries = listQueueSummaries();
+      broadcastFn('queue_changed', { queue: summaries });
+    }, RECONCILE_DEBOUNCE_MS);
+  });
+}
+
 // --- Live Reload (watches public/ for code changes) ---
 
 let reloadWatcher = null;
@@ -188,6 +217,14 @@ function stopAll() {
   clearTimeout(reconcileTimer);
   reconcileTimer = null;
 
+  // Stop queue directory watcher
+  if (queueDirWatcher) {
+    queueDirWatcher.close();
+    queueDirWatcher = null;
+  }
+  clearTimeout(queueReconcileTimer);
+  queueReconcileTimer = null;
+
   // Stop live reload
   if (reloadWatcher) {
     reloadWatcher.close();
@@ -199,6 +236,7 @@ module.exports = {
   watchDashboard,
   unwatchDashboard,
   startDashboardsWatcher,
+  startQueueWatcher,
   startLiveReload,
   stopAll,
 };

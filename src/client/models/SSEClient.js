@@ -15,6 +15,7 @@
  *   onAllProgress(dashboardId, progressMap)
  *   onDashboardsList(dashboards)
  *   onDashboardsChanged(dashboards)
+ *   onQueueChanged(queueItems)
  *   onReload()
  *   onOpen()
  *   onError()
@@ -82,6 +83,14 @@ export function createSSEClient(appState, callbacks) {
       try {
         var data = JSON.parse(e.data);
         if (callbacks.onDashboardsChanged) callbacks.onDashboardsChanged(data.dashboards || []);
+      } catch (err) { return; }
+    });
+
+    evtSource.addEventListener('queue_changed', function (e) {
+      appState.set('lastSSEEventTime', Date.now());
+      try {
+        var data = JSON.parse(e.data);
+        if (callbacks.onQueueChanged) callbacks.onQueueChanged(data.queue || []);
       } catch (err) { return; }
     });
 

@@ -13,6 +13,7 @@ import { renderTimelinePanel } from '../views/TimelinePanelView.js';
 import { renderLogs } from '../views/LogPanelView.js';
 import { renderSidebar } from '../views/SidebarView.js';
 import { renderHomeView } from '../views/HomeView.js';
+import { renderQueuePopup, closeQueuePopup } from '../views/QueuePopupView.js';
 import {
   showTaskDetails,
   showAgentDetails,
@@ -516,7 +517,7 @@ export function createDashboardVM(appState, sseClient, dom) {
       exitHome(id);
       return;
     }
-    if (id === appState.get('currentDashboardId') && !appState.get('archiveViewActive')) return;
+    if (id === appState.get('currentDashboardId') && !appState.get('archiveViewActive') && !appState.get('queueViewActive')) return;
     appState.update({
       currentDashboardId: id,
       currentInit: null,
@@ -525,6 +526,7 @@ export function createDashboardVM(appState, sseClient, dom) {
       currentStatus: null,
       activeLogFilter: 'all',
       seenPermissionCount: 0,
+      queueViewActive: false,
     });
 
     // Reset log filter UI to 'all' on dashboard switch
@@ -603,6 +605,60 @@ export function createDashboardVM(appState, sseClient, dom) {
     var restoreTo = appState.get('priorDashboardId') || 'dashboard1';
     appState.set('priorDashboardId', null);
     switchDashboard(restoreTo);
+  }
+
+  // -------------------------------------------------------------------------
+  // Queue view — display a queued task on the dashboard
+  // -------------------------------------------------------------------------
+
+  function loadQueuedTask(queueId) {
+    appState.update({
+      priorDashboardId: appState.get('currentDashboardId'),
+      queueViewActive: true,
+      archiveViewActive: false,
+      currentInit: null,
+      currentProgress: {},
+      currentLogs: null,
+      currentStatus: null,
+    });
+
+    renderStatus({ active_task: null, agents: [], waves: [], history: [] });
+    doRenderSidebar();
+
+    // Collapse the queue popup when viewing a task
+    closeQueuePopup(document.getElementById('queue-popup-container'));
+
+    fetch('/api/queue/' + encodeURIComponent(queueId))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        appState.update({
+          currentInit: data.initialization || null,
+          currentProgress: data.progress || {},
+        });
+        renderMerged();
+        if (data.logs) debouncedRenderLogs(data.logs);
+      })
+      .catch(function (err) {
+        showErrorPopup('Failed to load queued task', err.message || 'Network error');
+        exitQueueView();
+      });
+  }
+
+  function exitQueueView() {
+    appState.set('queueViewActive', false);
+    var restoreTo = appState.get('priorDashboardId') || 'dashboard1';
+    appState.set('priorDashboardId', null);
+    switchDashboard(restoreTo);
+  }
+
+  function doRenderQueuePopup() {
+    var containerEl = document.getElementById('queue-popup-container');
+    var queueItems = appState.get('queueItems') || [];
+    renderQueuePopup(containerEl, queueItems, {
+      onTaskClick: function (queueId) {
+        loadQueuedTask(queueId);
+      },
+    });
   }
 
   function clearCurrentDashboard() {
@@ -878,20 +934,27 @@ export function createDashboardVM(appState, sseClient, dom) {
   function doRenderSidebar() {
     var listEl = document.getElementById('dashboard-list');
     var homeActive = appState.get('homeViewActive');
+    var queueItems = appState.get('queueItems') || [];
     renderSidebar(listEl, {
       currentDashboardId: homeActive ? null : appState.get('currentDashboardId'),
       archiveViewActive: appState.get('archiveViewActive'),
+      queueViewActive: appState.get('queueViewActive'),
       dashboardStates: appState.get('dashboardStates'),
+      queueCount: queueItems.length,
       onSwitch: function (id) {
         if (appState.get('homeViewActive')) {
           exitHome(id);
           return;
         }
         if (appState.get('archiveViewActive')) exitArchiveView();
+        if (appState.get('queueViewActive')) exitQueueView();
         switchDashboard(id);
       },
       onExitArchive: function () {
         exitArchiveView();
+      },
+      onExitQueue: function () {
+        exitQueueView();
       },
     });
   }
@@ -1004,7 +1067,7 @@ export function createDashboardVM(appState, sseClient, dom) {
   function onInitialization(dashboardId, data) {
     // Track dashboard state for sidebar dots (before filtering)
     updateDashboardState(dashboardId, data);
-    if (appState.get('archiveViewActive')) return;
+    if (appState.get('archiveViewActive') || appState.get('queueViewActive')) return;
     // Filter by active dashboard
     if (dashboardId && dashboardId !== appState.get('currentDashboardId')) return;
     appState.set('currentInit', data);
@@ -1012,7 +1075,7 @@ export function createDashboardVM(appState, sseClient, dom) {
   }
 
   function onLogs(dashboardId, data) {
-    if (appState.get('archiveViewActive')) return;
+    if (appState.get('archiveViewActive') || appState.get('queueViewActive')) return;
 
     // Always cache logs per-dashboard for home view aggregation
     if (dashboardId && data) {
@@ -1114,7 +1177,7 @@ export function createDashboardVM(appState, sseClient, dom) {
         }
       }
     }
-    if (appState.get('archiveViewActive')) return;
+    if (appState.get('archiveViewActive') || appState.get('queueViewActive')) return;
     if (dashboardId && dashboardId !== appState.get('currentDashboardId')) return;
     if (data && data.task_id) {
       var currentProgress = appState.get('currentProgress');
@@ -1135,7 +1198,7 @@ export function createDashboardVM(appState, sseClient, dom) {
       }
       updateDashboardStateFromProgress(dashboardId, data);
     }
-    if (appState.get('archiveViewActive')) return;
+    if (appState.get('archiveViewActive') || appState.get('queueViewActive')) return;
     if (dashboardId && dashboardId !== appState.get('currentDashboardId')) return;
     // The payload is { dashboardId, ...progressMap }
     var progressData = {};
@@ -1152,6 +1215,12 @@ export function createDashboardVM(appState, sseClient, dom) {
 
   function onDashboardsChanged(dashboards) {
     appState.set('dashboardList', dashboards);
+  }
+
+  function onQueueChanged(queueItems) {
+    appState.set('queueItems', queueItems || []);
+    doRenderQueuePopup();
+    doRenderSidebar();
   }
 
   function onReload() {
@@ -1176,6 +1245,9 @@ export function createDashboardVM(appState, sseClient, dom) {
     switchDashboard: switchDashboard,
     loadArchivedTask: loadArchivedTask,
     exitArchiveView: exitArchiveView,
+    loadQueuedTask: loadQueuedTask,
+    exitQueueView: exitQueueView,
+    doRenderQueuePopup: doRenderQueuePopup,
     clearCurrentDashboard: clearCurrentDashboard,
     showClearConfirm: showClearConfirm,
     archiveCurrentTask: archiveCurrentTask,
@@ -1198,6 +1270,7 @@ export function createDashboardVM(appState, sseClient, dom) {
       onAllProgress: onAllProgress,
       onDashboardsList: onDashboardsList,
       onDashboardsChanged: onDashboardsChanged,
+      onQueueChanged: onQueueChanged,
       onReload: onReload,
     },
   };

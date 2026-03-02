@@ -10,9 +10,12 @@ import { DEFAULT_DASHBOARDS, DASHBOARD_LABELS } from '../utils/constants.js';
  * @param {object} options
  * @param {string} options.currentDashboardId — the currently active dashboard ID
  * @param {boolean} options.archiveViewActive — whether an archived task is being viewed
+ * @param {boolean} options.queueViewActive — whether a queued task is being viewed
  * @param {object} options.dashboardStates — map of dashboardId → state string ('idle'|'in_progress'|'completed'|'error')
+ * @param {number} options.queueCount — number of items in the queue
  * @param {Function} options.onSwitch — callback(dashboardId) when a dashboard item is clicked
  * @param {Function} options.onExitArchive — callback() when the archive exit button is clicked
+ * @param {Function} options.onExitQueue — callback() when the queue exit button is clicked
  */
 export function renderSidebar(listEl, options) {
   if (!listEl) return;
@@ -20,13 +23,16 @@ export function renderSidebar(listEl, options) {
 
   var currentDashboardId = options.currentDashboardId;
   var archiveViewActive  = options.archiveViewActive;
+  var queueViewActive    = options.queueViewActive;
   var dashboardStates    = options.dashboardStates;
+  var queueCount         = options.queueCount || 0;
   var onSwitch           = options.onSwitch;
   var onExitArchive      = options.onExitArchive;
+  var onExitQueue        = options.onExitQueue;
 
   for (var i = 0; i < DEFAULT_DASHBOARDS.length; i++) {
     var dbId = DEFAULT_DASHBOARDS[i];
-    var isActive = !archiveViewActive && dbId === currentDashboardId;
+    var isActive = !archiveViewActive && !queueViewActive && dbId === currentDashboardId;
     var item = document.createElement('div');
     item.className = 'dashboard-item' + (isActive ? ' active' : '');
     item.setAttribute('data-id', dbId);
@@ -78,6 +84,50 @@ export function renderSidebar(listEl, options) {
     archiveItem.appendChild(exitBtn);
 
     listEl.appendChild(archiveItem);
+  }
+
+  // If viewing a queued task, add the "Queued Task" item
+  if (queueViewActive) {
+    var queueItem = document.createElement('div');
+    queueItem.className = 'dashboard-item queue-item active';
+
+    var queueDot = document.createElement('span');
+    queueDot.className = 'dashboard-item-status has-activity';
+    queueItem.appendChild(queueDot);
+
+    var queueName = document.createElement('span');
+    queueName.className = 'dashboard-item-name';
+    queueName.textContent = 'Queued Task';
+    queueItem.appendChild(queueName);
+
+    var qExitBtn = document.createElement('button');
+    qExitBtn.className = 'archive-exit-btn';
+    qExitBtn.textContent = '\u2715';
+    qExitBtn.title = 'Exit queue view';
+    qExitBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (onExitQueue) onExitQueue();
+    });
+    queueItem.appendChild(qExitBtn);
+
+    listEl.appendChild(queueItem);
+  }
+
+  // Show queue count if there are queued items (and not viewing one)
+  if (queueCount > 0 && !queueViewActive) {
+    var queueLabel = document.createElement('div');
+    queueLabel.className = 'dashboard-item queue-count-item';
+
+    var queueCountDot = document.createElement('span');
+    queueCountDot.className = 'dashboard-item-status queue-dot';
+    queueLabel.appendChild(queueCountDot);
+
+    var queueCountName = document.createElement('span');
+    queueCountName.className = 'dashboard-item-name';
+    queueCountName.textContent = 'Queue (' + queueCount + ')';
+    queueLabel.appendChild(queueCountName);
+
+    listEl.appendChild(queueLabel);
   }
 }
 

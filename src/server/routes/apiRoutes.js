@@ -19,8 +19,9 @@ const {
 } = require('../services/DashboardService');
 const { listArchives, deleteArchive } = require('../services/ArchiveService');
 const { listHistory, buildHistorySummary, saveHistorySummary } = require('../services/HistoryService');
+const { listQueue, listQueueSummaries, readQueueInitAsync, readQueueLogsAsync, readQueueProgressAsync, getQueueDir } = require('../services/QueueService');
 const { readJSONAsync } = require('../utils/json');
-const { ARCHIVE_DIR, HISTORY_DIR, DEFAULT_INITIALIZATION, DEFAULT_LOGS } = require('../utils/constants');
+const { ARCHIVE_DIR, HISTORY_DIR, QUEUE_DIR, DEFAULT_INITIALIZATION, DEFAULT_LOGS } = require('../utils/constants');
 
 // --- URL Routing Helpers ---
 
@@ -364,6 +365,31 @@ function handleApiRoute(req, res, url) {
       })();
       return true;
     }
+  }
+
+  // --- API: List queue summaries ---
+  if (url.pathname === '/api/queue' && req.method === 'GET') {
+    const summaries = listQueueSummaries();
+    sendJSON(res, 200, { queue: summaries });
+    return true;
+  }
+
+  // --- API: Get single queue item (full data for dashboard view) ---
+  const queueRoute = url.pathname.match(/^\/api\/queue\/([^/]+)$/);
+  if (queueRoute && req.method === 'GET') {
+    const queueId = queueRoute[1];
+    const queueDir = getQueueDir(queueId);
+    if (!fs.existsSync(queueDir)) {
+      sendJSON(res, 404, { error: 'Queue item not found' });
+      return true;
+    }
+    (async () => {
+      const initialization = (await readQueueInitAsync(queueId)) || { ...DEFAULT_INITIALIZATION };
+      const logs = (await readQueueLogsAsync(queueId)) || { ...DEFAULT_LOGS };
+      const progress = await readQueueProgressAsync(queueId);
+      sendJSON(res, 200, { initialization, logs, progress });
+    })();
+    return true;
   }
 
   // Route not handled
