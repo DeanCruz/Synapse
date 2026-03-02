@@ -12,5 +12,8 @@ node_modules/
 # OS
 .DS_Store
 
+# Parent directory
+_parent/*
+
 # Local Claude Code settings
 _parent/.claude/settings.local.json
