@@ -17,3 +17,10 @@ _parent/*
 
 # Local Claude Code settings
 _parent/.claude/settings.local.json
+
+#logs and dashboards
+dashboards/*
+queue/*
+history/*
+Archive/*
+tasks/*
