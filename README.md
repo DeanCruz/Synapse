@@ -6,7 +6,7 @@ Instead of one agent working through tasks sequentially, Synapse decomposes your
 
 ---
 
-## First-Time Setup
+## Setup
 
 ### Requirements
 
@@ -15,24 +15,46 @@ Instead of one agent working through tasks sequentially, Synapse decomposes your
 
 No `npm install` needed. The server uses only Node.js built-ins.
 
-### 1. Place Synapse in Your Project
+### 1. Clone Synapse into Your Workspace
 
-Copy or symlink the `Synapse/` directory into your project root. Synapse is project-agnostic — it works with monorepos, single repos, or any directory layout.
+Your workspace is the parent directory that contains your project repos. Clone or copy Synapse into it:
 
-### 2. Add the Parent CLAUDE.md
+```bash
+cd your-workspace/
+git clone <synapse-repo-url> Synapse
+```
 
-Place the parent `CLAUDE.md` (the master agent instructions) one level above your project repositories. This tells Claude Code how to orchestrate across your workspace.
+### 2. Move Parent Files to the Workspace Root
+
+The `Synapse/_parent/` directory contains two items that **must** live at the workspace root — one level above Synapse:
+
+```bash
+cp Synapse/_parent/CLAUDE.md ./CLAUDE.md
+cp -r Synapse/_parent/_commands ./_commands
+```
+
+- **`CLAUDE.md`** — The master agent instructions. This is what tells Claude Code how to orchestrate work across your workspace, resolve `!commands`, and coordinate multi-repo tasks.
+- **`_commands/`** — Workspace-level commands (`!review`, `!trace`, `!initialize`, etc.) that operate across all your repos.
+
+Your workspace should now look like this:
 
 ```
 your-workspace/
-├── CLAUDE.md              ← Master agent instructions
+├── CLAUDE.md              ← Master agent instructions (from _parent/)
+├── _commands/             ← Workspace commands (from _parent/)
 ├── Synapse/               ← This tool
 ├── your-project-1/
 ├── your-project-2/
 └── ...
 ```
 
-### 3. Start the Dashboard
+### 3. Add CLAUDE.md Files to Your Repos
+
+Each project repo should have its own `CLAUDE.md` describing its tech stack, architecture, conventions, and file structure. Workers read these before implementing — the better your conventions are documented, the better the output.
+
+If your repos don't have them yet, you can scaffold starters after setup with `!initialize` — it detects missing `CLAUDE.md` files and generates templates.
+
+### 4. Start the Dashboard
 
 ```bash
 ./Synapse/start.sh
@@ -46,7 +68,7 @@ node Synapse/src/server/index.js
 
 Open **http://localhost:3456** in your browser. You'll see the dashboard in its empty state, waiting for a swarm.
 
-### 4. Run Your First Swarm
+### 5. Run Your First Swarm
 
 In Claude Code, type:
 
@@ -58,9 +80,9 @@ The master agent will read your codebase, plan the work, populate the dashboard 
 
 ---
 
-## Usage
+## Commands
 
-### Two Ways to Parallelize
+### Dispatching Work
 
 | Command | When to Use |
 |---|---|
@@ -69,7 +91,7 @@ The master agent will read your codebase, plan the work, populate the dashboard 
 
 Both commands trigger the same planning process — deep context gathering, dependency mapping, and self-contained worker prompts. The difference is whether the dashboard tracks it.
 
-### Monitoring a Running Swarm
+### Monitoring
 
 The dashboard is your primary view. But you can also check from the terminal:
 
@@ -80,7 +102,7 @@ The dashboard is your primary view. But you can also check from the terminal:
 | `!inspect {id}` | Deep-dive into a task — timeline, milestones, deviations, dependencies, worker logs |
 | `!deps` | Dependency graph. `!deps --critical` for the critical path. `!deps --blocked` for stuck chains |
 
-### Intervening in a Swarm
+### Intervening
 
 | Command | What It Does |
 |---|---|
@@ -103,9 +125,7 @@ The dashboard is your primary view. But you can also check from the terminal:
 | `!start` | Start the dashboard server and open the browser |
 | `!stop` | Stop the dashboard server |
 
-### Quick Reference
-
-If you forget any of this, type `!guide` for an interactive command decision tree.
+Type `!guide` for an interactive command decision tree.
 
 ---
 
@@ -211,5 +231,3 @@ Up to 5 simultaneous swarms. The sidebar shows all dashboard slots with status i
 6. **Check deviations.** Yellow badges on agent cards mean a worker did something different from the plan. This isn't necessarily bad, but you should review what changed.
 
 7. **Retry before giving up.** `!retry {id}` gives a fresh agent the failure context from the first attempt. It often succeeds where a blind retry would fail.
-
-8. **Add CLAUDE.md files to your repos.** Workers follow the conventions in each repo's `CLAUDE.md`. The better your conventions are documented, the better the workers' output.
