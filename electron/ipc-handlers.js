@@ -1,0 +1,498 @@
+// electron/ipc-handlers.js — IPC Data Bridge
+// Registers all IPC handlers, bridging existing server services to the Electron renderer.
+// Sets up file watchers that push real-time updates via webContents.send().
+
+const { ipcMain } = require('electron');
+const fs = require('fs');
+const path = require('path');
+
+// Import existing services (CommonJS — paths resolve relative to the required file)
+const {
+  listDashboards,
+  ensureDashboard,
+  getDashboardDir,
+  readDashboardInit,
+  readDashboardLogs,
+  readDashboardProgress,
+  readDashboardInitAsync,
+  readDashboardLogsAsync,
+  readDashboardProgressAsync,
+  clearDashboardProgress,
+  copyDirSync,
+} = require('../src/server/services/DashboardService');
+
+const {
+  watchDashboard,
+  startDashboardsWatcher,
+  startQueueWatcher,
+  stopAll: stopAllWatchers,
+} = require('../src/server/services/WatcherService');
+
+const {
+  listArchives,
+  archiveDashboard,
+  deleteArchive,
+} = require('../src/server/services/ArchiveService');
+
+const {
+  listHistory,
+  buildHistorySummary,
+  saveHistorySummary,
+} = require('../src/server/services/HistoryService');
+
+const {
+  listQueueSummaries,
+  getQueueDir,
+  readQueueInitAsync,
+  readQueueLogsAsync,
+  readQueueProgressAsync,
+} = require('../src/server/services/QueueService');
+
+const { readJSONAsync } = require('../src/server/utils/json');
+
+const {
+  DASHBOARDS_DIR,
+  QUEUE_DIR,
+  ARCHIVE_DIR,
+  HISTORY_DIR,
+  DEFAULT_INITIALIZATION,
+  DEFAULT_LOGS,
+} = require('../src/server/utils/constants');
+
+const fsPromises = fs.promises;
+
+// ---------------------------------------------------------------------------
+// Broadcast bridge — adapts WatcherService's broadcastFn to IPC
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a broadcast function that sends events to the renderer via IPC.
+ * Checks that the window exists and is not destroyed before sending.
+ *
+ * @param {Function} getMainWindow - returns the BrowserWindow instance
+ * @returns {Function} broadcastFn(eventName, data)
+ */
+function createBroadcastFn(getMainWindow) {
+  return function broadcast(eventName, data) {
+    const win = getMainWindow();
+    if (win && !win.isDestroyed()) {
+      win.webContents.send(eventName, data);
+    }
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Status computation — shared logic (mirrors apiRoutes.js)
+// ---------------------------------------------------------------------------
+
+/**
+ * Derive a dashboard's status from its initialization and progress data.
+ *
+ * @param {Object|null} init - parsed initialization.json
+ * @param {Object} progress - keyed by task_id
+ * @returns {string} 'idle' | 'in_progress' | 'completed' | 'error'
+ */
+function deriveDashboardStatus(init, progress) {
+  const hasTask = init && init.task && init.task.name;
+  if (!hasTask) return 'idle';
+
+  const progressValues = Object.values(progress);
+  if (progressValues.length === 0) return 'in_progress';
+
+  let allDone = true;
+  let hasFailed = false;
+  let hasInProgress = false;
+  for (const p of progressValues) {
+    if (p.status === 'in_progress') hasInProgress = true;
+    if (p.status === 'failed') hasFailed = true;
+    if (p.status !== 'completed' && p.status !== 'failed') allDone = false;
+  }
+
+  const totalTasks = (init.task && init.task.total_tasks) || 0;
+  if (totalTasks > 0 && progressValues.length < totalTasks) allDone = false;
+
+  if (allDone && hasFailed) return 'error';
+  if (allDone) return 'completed';
+  if (hasInProgress || progressValues.length > 0) return 'in_progress';
+  return 'idle';
+}
+
+// ---------------------------------------------------------------------------
+// Directory initialization — mirrors server startup()
+// ---------------------------------------------------------------------------
+
+/**
+ * Ensure all required directories and default dashboards exist.
+ */
+function ensureDirectories() {
+  if (!fs.existsSync(DASHBOARDS_DIR)) {
+    fs.mkdirSync(DASHBOARDS_DIR, { recursive: true });
+  }
+
+  for (let i = 1; i <= 5; i++) {
+    ensureDashboard(`dashboard${i}`);
+  }
+
+  if (!fs.existsSync(ARCHIVE_DIR)) {
+    fs.mkdirSync(ARCHIVE_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(HISTORY_DIR)) {
+    fs.mkdirSync(HISTORY_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(QUEUE_DIR)) {
+    fs.mkdirSync(QUEUE_DIR, { recursive: true });
+  }
+}
+
+// ---------------------------------------------------------------------------
+// IPC Handler registration
+// ---------------------------------------------------------------------------
+
+/**
+ * Register all IPC handlers and start file watchers.
+ * Called once from main.js during app initialization.
+ *
+ * @param {Function} getMainWindow - returns the BrowserWindow (may be null during startup)
+ */
+function registerIPCHandlers(getMainWindow) {
+  const broadcastFn = createBroadcastFn(getMainWindow);
+
+  // --- 1. Ensure directories exist ---
+  ensureDirectories();
+
+  // --- 2. Register all ipcMain.handle() handlers ---
+
+  // GET /api/dashboards -> get-dashboards
+  ipcMain.handle('get-dashboards', async () => {
+    return { dashboards: listDashboards() };
+  });
+
+  // GET /api/dashboards/statuses -> get-dashboard-statuses
+  ipcMain.handle('get-dashboard-statuses', async () => {
+    const dashboards = listDashboards();
+    const statuses = {};
+    for (const id of dashboards) {
+      const init = readDashboardInit(id);
+      const progress = readDashboardProgress(id);
+      statuses[id] = deriveDashboardStatus(init, progress);
+    }
+    return { statuses };
+  });
+
+  // GET /api/overview -> get-overview
+  ipcMain.handle('get-overview', async () => {
+    const dashboards = listDashboards();
+    const dashboardSummaries = [];
+    const allLogEntries = [];
+
+    for (const id of dashboards) {
+      const init = readDashboardInit(id);
+      const progress = readDashboardProgress(id);
+      const hasTask = init && init.task && init.task.name;
+      const status = deriveDashboardStatus(init, progress);
+
+      let taskSummary = null;
+      if (hasTask) {
+        const progressValues = Object.values(progress);
+        let completedCount = 0;
+        let failedCount = 0;
+        for (const p of progressValues) {
+          if (p.status === 'completed') completedCount++;
+          if (p.status === 'failed') failedCount++;
+        }
+        taskSummary = {
+          name: init.task.name,
+          type: init.task.type || null,
+          directory: init.task.directory || null,
+          total_tasks: init.task.total_tasks || (init.agents ? init.agents.length : 0),
+          completed_tasks: completedCount,
+          failed_tasks: failedCount,
+          created: init.task.created || null,
+        };
+      }
+
+      dashboardSummaries.push({ id, status, task: taskSummary });
+
+      if (hasTask) {
+        const logs = readDashboardLogs(id);
+        if (logs && logs.entries) {
+          for (const entry of logs.entries) {
+            allLogEntries.push(Object.assign({ dashboardId: id }, entry));
+          }
+        }
+      }
+    }
+
+    // Sort logs newest-first, take top 30
+    allLogEntries.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+    const recentLogs = allLogEntries.slice(0, 30);
+
+    const archives = listArchives().slice(0, 10);
+    const history = listHistory().slice(0, 10);
+
+    return { dashboards: dashboardSummaries, archives, history, recentLogs };
+  });
+
+  // GET /api/dashboards/:id/initialization -> get-dashboard-init
+  ipcMain.handle('get-dashboard-init', async (_event, id) => {
+    const data = await readDashboardInitAsync(id);
+    return data || { ...DEFAULT_INITIALIZATION };
+  });
+
+  // GET /api/dashboards/:id/logs -> get-dashboard-logs
+  ipcMain.handle('get-dashboard-logs', async (_event, id) => {
+    const data = await readDashboardLogsAsync(id);
+    return data || { ...DEFAULT_LOGS };
+  });
+
+  // GET /api/dashboards/:id/progress -> get-dashboard-progress
+  ipcMain.handle('get-dashboard-progress', async (_event, id) => {
+    return await readDashboardProgressAsync(id);
+  });
+
+  // POST /api/dashboards/:id/clear -> clear-dashboard
+  ipcMain.handle('clear-dashboard', async (_event, id) => {
+    // Build and save history summary before clearing
+    const init = readDashboardInit(id);
+    if (init && init.task && init.task.name) {
+      const summary = buildHistorySummary(id);
+      if (!fs.existsSync(HISTORY_DIR)) {
+        fs.mkdirSync(HISTORY_DIR, { recursive: true });
+      }
+      const today = new Date().toISOString().slice(0, 10);
+      const historyFile = path.join(HISTORY_DIR, `${today}_${summary.task_name}.json`);
+      fs.writeFileSync(historyFile, JSON.stringify(summary, null, 2));
+    }
+
+    // Reset dashboard
+    const dashboardDir = getDashboardDir(id);
+    ensureDashboard(id);
+    clearDashboardProgress(id);
+    const initFile = path.join(dashboardDir, 'initialization.json');
+    const logsFile = path.join(dashboardDir, 'logs.json');
+    fs.writeFileSync(initFile, JSON.stringify(DEFAULT_INITIALIZATION, null, 2));
+    fs.writeFileSync(logsFile, JSON.stringify(DEFAULT_LOGS, null, 2));
+
+    return { success: true };
+  });
+
+  // POST /api/dashboards/:id/archive -> archive-dashboard
+  ipcMain.handle('archive-dashboard', async (_event, id) => {
+    const dashboardDir = getDashboardDir(id);
+    const init = readDashboardInit(id);
+    const taskName = (init && init.task && init.task.name) ? init.task.name : 'unnamed';
+    const today = new Date().toISOString().slice(0, 10);
+    const archiveName = `${today}_${taskName}`;
+    const archiveDir = path.join(ARCHIVE_DIR, archiveName);
+
+    // Copy dashboard contents to archive
+    try {
+      copyDirSync(dashboardDir, archiveDir);
+    } catch (err) {
+      return { success: false, error: 'Failed to archive: ' + err.message };
+    }
+
+    // Clear the dashboard after archiving
+    ensureDashboard(id);
+    clearDashboardProgress(id);
+    const initFile = path.join(dashboardDir, 'initialization.json');
+    const logsFile = path.join(dashboardDir, 'logs.json');
+    fs.writeFileSync(initFile, JSON.stringify(DEFAULT_INITIALIZATION, null, 2));
+    fs.writeFileSync(logsFile, JSON.stringify(DEFAULT_LOGS, null, 2));
+
+    return { success: true, archiveName };
+  });
+
+  // POST /api/dashboards/:id/save-history -> save-dashboard-history
+  ipcMain.handle('save-dashboard-history', async (_event, id) => {
+    const init = readDashboardInit(id);
+    if (!init || !init.task || !init.task.name) {
+      return { success: false, error: 'No active task to save history for' };
+    }
+    const summary = buildHistorySummary(id);
+    if (!fs.existsSync(HISTORY_DIR)) {
+      fs.mkdirSync(HISTORY_DIR, { recursive: true });
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const safeName = summary.task_name.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const historyFile = path.join(HISTORY_DIR, `${today}_${safeName}.json`);
+    // Prevent duplicates
+    if (fs.existsSync(historyFile)) {
+      return { success: true, alreadySaved: true, task_name: summary.task_name };
+    }
+    fs.writeFileSync(historyFile, JSON.stringify(summary, null, 2));
+    return { success: true, task_name: summary.task_name };
+  });
+
+  // GET /api/dashboards/:id/export -> export-dashboard
+  ipcMain.handle('export-dashboard', async (_event, id) => {
+    const initialization = (await readDashboardInitAsync(id)) || { ...DEFAULT_INITIALIZATION };
+    const logs = (await readDashboardLogsAsync(id)) || { ...DEFAULT_LOGS };
+    const progress = await readDashboardProgressAsync(id);
+    const summary = buildHistorySummary(id);
+    // Remove cleared_at — only relevant when actually clearing
+    delete summary.cleared_at;
+
+    return {
+      exported_at: new Date().toISOString(),
+      summary,
+      initialization,
+      logs,
+      progress,
+    };
+  });
+
+  // GET /api/archives -> get-archives
+  ipcMain.handle('get-archives', async () => {
+    return { archives: listArchives() };
+  });
+
+  // GET /api/archives/:name -> get-archive
+  ipcMain.handle('get-archive', async (_event, name) => {
+    const archiveDir = path.join(ARCHIVE_DIR, name);
+    if (!fs.existsSync(archiveDir)) {
+      return { error: 'Archive not found' };
+    }
+    const initialization = (await readJSONAsync(path.join(archiveDir, 'initialization.json'))) || { ...DEFAULT_INITIALIZATION };
+    const logs = (await readJSONAsync(path.join(archiveDir, 'logs.json'))) || { ...DEFAULT_LOGS };
+    const progress = {};
+    const progressDir = path.join(archiveDir, 'progress');
+    try {
+      const files = await fsPromises.readdir(progressDir);
+      const reads = files.filter(f => f.endsWith('.json')).map(async (file) => {
+        const data = await readJSONAsync(path.join(progressDir, file));
+        if (data && data.task_id) progress[data.task_id] = data;
+      });
+      await Promise.all(reads);
+    } catch { /* progress dir may not exist */ }
+    return { initialization, logs, progress };
+  });
+
+  // DELETE /api/archives/:name -> delete-archive
+  ipcMain.handle('delete-archive', async (_event, name) => {
+    const deleted = deleteArchive(name);
+    if (!deleted) {
+      return { success: false, error: 'Archive not found' };
+    }
+    return { success: true };
+  });
+
+  // GET /api/history -> get-history
+  ipcMain.handle('get-history', async () => {
+    return { history: listHistory() };
+  });
+
+  // GET /api/queue -> get-queue
+  ipcMain.handle('get-queue', async () => {
+    return { queue: listQueueSummaries() };
+  });
+
+  // GET /api/queue/:id -> get-queue-item
+  ipcMain.handle('get-queue-item', async (_event, queueId) => {
+    const queueDir = getQueueDir(queueId);
+    if (!fs.existsSync(queueDir)) {
+      return { error: 'Queue item not found' };
+    }
+    const initialization = (await readQueueInitAsync(queueId)) || { ...DEFAULT_INITIALIZATION };
+    const logs = (await readQueueLogsAsync(queueId)) || { ...DEFAULT_LOGS };
+    const progress = await readQueueProgressAsync(queueId);
+    return { initialization, logs, progress };
+  });
+
+  // --- Settings handlers ---
+  ipcMain.handle('get-settings', async () => {
+    const settings = require('./settings');
+    return settings.getAll();
+  });
+
+  ipcMain.handle('set-setting', async (_event, key, value) => {
+    const settings = require('./settings');
+    settings.set(key, value);
+    return { success: true };
+  });
+
+  ipcMain.handle('reset-settings', async () => {
+    const settings = require('./settings');
+    return settings.reset();
+  });
+
+  // --- 3. Set up file watchers with IPC broadcast ---
+
+  const dashboards = listDashboards();
+
+  // Start watchers for all existing dashboards
+  for (const id of dashboards) {
+    watchDashboard(id, broadcastFn);
+  }
+
+  // Start dashboards directory watcher (detects new/removed dashboards)
+  startDashboardsWatcher(broadcastFn);
+
+  // Start queue watcher
+  startQueueWatcher(broadcastFn);
+
+  // NOTE: Live reload is NOT started — it was for the web dev server, not needed in Electron
+
+  // --- 4. Send initial data once the window is ready ---
+  sendInitialData(getMainWindow, dashboards);
+}
+
+// ---------------------------------------------------------------------------
+// Initial data push — mirrors the SSE /events connection handler
+// ---------------------------------------------------------------------------
+
+/**
+ * Send initial data to the renderer once the window is available.
+ * Mirrors the SSE /events endpoint's initial data burst.
+ *
+ * @param {Function} getMainWindow - returns the BrowserWindow
+ * @param {string[]} dashboards - list of dashboard IDs
+ */
+function sendInitialData(getMainWindow, dashboards) {
+  const trySend = () => {
+    const win = getMainWindow();
+    if (!win || win.isDestroyed()) {
+      // Window not ready yet — retry shortly
+      setTimeout(trySend, 100);
+      return;
+    }
+
+    // Send list of all dashboards
+    win.webContents.send('dashboards_list', { dashboards });
+
+    // Send initial data for each dashboard
+    for (const id of dashboards) {
+      const init = readDashboardInit(id);
+      if (init) {
+        win.webContents.send('initialization', { dashboardId: id, ...init });
+      }
+
+      const progress = readDashboardProgress(id);
+      if (Object.keys(progress).length > 0) {
+        win.webContents.send('all_progress', { dashboardId: id, ...progress });
+      }
+    }
+
+    // Send initial queue data
+    const queueSummaries = listQueueSummaries();
+    if (queueSummaries.length > 0) {
+      win.webContents.send('queue_changed', { queue: queueSummaries });
+    }
+  };
+
+  // Start trying after a short delay to let the window finish loading
+  setTimeout(trySend, 200);
+}
+
+// ---------------------------------------------------------------------------
+// Cleanup
+// ---------------------------------------------------------------------------
+
+/**
+ * Stop all file watchers. Call on app quit.
+ */
+function stopWatchers() {
+  stopAllWatchers();
+}
+
+module.exports = { registerIPCHandlers, stopWatchers };

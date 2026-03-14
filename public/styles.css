@@ -3942,3 +3942,54 @@ a:hover {
   border-color: var(--border-hover);
   color: var(--text);
 }
+
+/* --- App Configuration (Electron) --- */
+
+.settings-app-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.settings-app-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.settings-app-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.settings-app-input {
+  width: 90px;
+  padding: 5px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--mono, monospace);
+  font-size: 0.75rem;
+  text-align: right;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.settings-app-input:focus {
+  border-color: var(--color-in-progress);
+}
+
+.settings-app-input:hover {
+  border-color: var(--border-hover);
+}
+
+.settings-app-note {
+  margin-top: 10px;
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  font-style: italic;
+}
