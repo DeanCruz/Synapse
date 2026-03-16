@@ -53,13 +53,14 @@ function createWindow() {
   mainWindow.on('maximize', () => settings.set('windowMaximized', true));
   mainWindow.on('unmaximize', () => settings.set('windowMaximized', false));
 
-  // Forward renderer console to main process stdout
+  // Forward ALL renderer console to main process stdout for debugging
   mainWindow.webContents.on('console-message', (_e, level, msg) => {
-    if (level >= 2) console.log('[renderer]', msg); // warnings + errors only
+    const prefix = ['[renderer:verbose]','[renderer:info]','[renderer:warn]','[renderer:error]'][level] || '[renderer]';
+    console.log(prefix, msg);
   });
 
-  // Load the dashboard HTML via custom protocol
-  mainWindow.loadURL('app://synapse/public/index.html');
+  // Load the React app from the Vite build output
+  mainWindow.loadURL('app://synapse/dist/index.html');
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -93,7 +94,15 @@ app.whenReady().then(() => {
     // Try the direct path first (handles /src/*, /public/*)
     let resolved = path.join(PROJECT_ROOT, filePath);
 
-    // If not found, try public/ subdirectory (handles /styles.css -> public/styles.css)
+    // If not found, try dist/ subdirectory (Vite build output)
+    if (!fs.existsSync(resolved)) {
+      const distResolved = path.join(PROJECT_ROOT, 'dist', filePath);
+      if (fs.existsSync(distResolved)) {
+        resolved = distResolved;
+      }
+    }
+
+    // If still not found, try public/ subdirectory (legacy fallback)
     if (!fs.existsSync(resolved)) {
       const publicResolved = path.join(PROJECT_ROOT, 'public', filePath);
       if (fs.existsSync(publicResolved)) {
@@ -124,6 +133,10 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   const { stopWatchers } = require('./ipc-handlers');
   stopWatchers();
+  try {
+    const ClaudeCodeService = require('./services/ClaudeCodeService');
+    ClaudeCodeService.killAllWorkers();
+  } catch (e) { /* ignore */ }
   app.quit();
 });
 

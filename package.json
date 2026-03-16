@@ -4,9 +4,11 @@
   "description": "Synapse is a distributed control system for coordinating autonomous agent swarms. It optimizes context usage, parallelizes execution, and provides a centralized control plane for complex software development tasks.",
   "main": "electron/main.js",
   "scripts": {
-    "start": "unset ELECTRON_RUN_AS_NODE && electron .",
+    "build": "vite build",
+    "start": "vite build && unset ELECTRON_RUN_AS_NODE && electron .",
+    "dev": "vite build --watch",
     "server": "node src/server/index.js",
-    "dist": "electron-builder --mac"
+    "dist": "vite build && electron-builder --mac"
   },
   "build": {
     "appId": "com.synapse.app",
@@ -17,8 +19,8 @@
     },
     "files": [
       "electron/**/*",
-      "src/**/*",
-      "public/**/*",
+      "src/server/**/*",
+      "dist/**/*",
       "dashboards/**/*",
       "!node_modules/**/*"
     ],
@@ -30,7 +32,13 @@
     ]
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^6.0.1",
     "electron": "^33.4.11",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "vite": "^8.0.0"
+  },
+  "dependencies": {
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4"
   }
 }

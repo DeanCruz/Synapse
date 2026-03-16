@@ -13,6 +13,9 @@ const PUSH_CHANNELS = [
   'dashboards_changed',
   'queue_changed',
   'reload',
+  'worker-output',
+  'worker-complete',
+  'worker-error',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -22,7 +25,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
     if (!PUSH_CHANNELS.includes(channel)) return;
     const listener = (_event, data) => callback(data);
     ipcRenderer.on(channel, listener);
-    // Return the listener so it can be removed
     return listener;
   },
 
@@ -63,4 +65,57 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   setSetting: (key, value) => ipcRenderer.invoke('set-setting', key, value),
   resetSettings: () => ipcRenderer.invoke('reset-settings'),
+
+  // Project
+  selectProjectDirectory: () => ipcRenderer.invoke('select-project-directory'),
+  loadProject: (dirPath) => ipcRenderer.invoke('load-project', dirPath),
+  getRecentProjects: () => ipcRenderer.invoke('get-recent-projects'),
+  addRecentProject: (project) => ipcRenderer.invoke('add-recent-project', project),
+  getProjectContext: (dirPath) => ipcRenderer.invoke('get-project-context', dirPath),
+  scanProjectDirectory: (dirPath, depth) => ipcRenderer.invoke('scan-project-directory', dirPath, depth),
+  detectClaudeCli: () => ipcRenderer.invoke('detect-claude-cli'),
+
+  // Task Editor
+  createSwarm: (dashboardId, opts) => ipcRenderer.invoke('create-swarm', dashboardId, opts),
+  addTask: (dashboardId, task) => ipcRenderer.invoke('add-task', dashboardId, task),
+  updateTask: (dashboardId, taskId, updates) => ipcRenderer.invoke('update-task', dashboardId, taskId, updates),
+  removeTask: (dashboardId, taskId) => ipcRenderer.invoke('remove-task', dashboardId, taskId),
+  addWave: (dashboardId, wave) => ipcRenderer.invoke('add-wave', dashboardId, wave),
+  removeWave: (dashboardId, waveId) => ipcRenderer.invoke('remove-wave', dashboardId, waveId),
+  nextTaskId: (dashboardId, waveNum) => ipcRenderer.invoke('next-task-id', dashboardId, waveNum),
+  validateDependencies: (dashboardId) => ipcRenderer.invoke('validate-dependencies', dashboardId),
+
+  // Commands
+  listCommands: (commandsDir) => ipcRenderer.invoke('list-commands', commandsDir),
+  getCommand: (name, commandsDir) => ipcRenderer.invoke('get-command', name, commandsDir),
+  saveCommand: (name, content, commandsDir) => ipcRenderer.invoke('save-command', name, content, commandsDir),
+  deleteCommand: (name, commandsDir) => ipcRenderer.invoke('delete-command', name, commandsDir),
+  loadProjectClaudeMd: (projectDir) => ipcRenderer.invoke('load-project-claude-md', projectDir),
+  listProjectCommands: (projectDir) => ipcRenderer.invoke('list-project-commands', projectDir),
+
+  // Chat context
+  getChatSystemPrompt: (projectDir) => ipcRenderer.invoke('get-chat-system-prompt', projectDir),
+  logChatEvent: (dashboardId, entry) => ipcRenderer.invoke('log-chat-event', dashboardId, entry),
+
+  // Workers
+  spawnWorker: (opts) => ipcRenderer.invoke('spawn-worker', opts),
+  killWorker: (pid) => ipcRenderer.invoke('kill-worker', pid),
+  killAllWorkers: () => ipcRenderer.invoke('kill-all-workers'),
+  getActiveWorkers: () => ipcRenderer.invoke('get-active-workers'),
+
+  // Orchestration
+  startSwarm: (dashboardId, opts) => ipcRenderer.invoke('start-swarm', dashboardId, opts),
+  pauseSwarm: (dashboardId) => ipcRenderer.invoke('pause-swarm', dashboardId),
+  resumeSwarm: (dashboardId) => ipcRenderer.invoke('resume-swarm', dashboardId),
+  cancelSwarm: (dashboardId) => ipcRenderer.invoke('cancel-swarm', dashboardId),
+  retryTask: (dashboardId, taskId) => ipcRenderer.invoke('retry-task', dashboardId, taskId),
+  getSwarmStates: () => ipcRenderer.invoke('get-swarm-states'),
+
+  // Conversation management
+  listConversations: () => ipcRenderer.invoke('list-conversations'),
+  loadConversation: (filename) => ipcRenderer.invoke('load-conversation', filename),
+  saveConversation: (conv) => ipcRenderer.invoke('save-conversation', conv),
+  createConversation: (name) => ipcRenderer.invoke('create-conversation', name),
+  deleteConversation: (filename) => ipcRenderer.invoke('delete-conversation', filename),
+  renameConversation: (filename, newName) => ipcRenderer.invoke('rename-conversation', filename, newName),
 });

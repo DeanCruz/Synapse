@@ -48,6 +48,15 @@ const {
   readQueueProgressAsync,
 } = require('../src/server/services/QueueService');
 
+const {
+  listConversations,
+  loadConversation,
+  saveConversation,
+  createConversation,
+  deleteConversation,
+  renameConversation,
+} = require('./services/ConversationService');
+
 const { readJSONAsync } = require('../src/server/utils/json');
 
 const {
@@ -77,6 +86,14 @@ function createBroadcastFn(getMainWindow) {
     const win = getMainWindow();
     if (win && !win.isDestroyed()) {
       win.webContents.send(eventName, data);
+    }
+
+    // Feed progress updates to the SwarmOrchestrator for dispatch loop
+    if (eventName === 'agent_progress' && data && data.task_id && data.dashboardId) {
+      try {
+        const SwarmOrchestrator = require('./services/SwarmOrchestrator');
+        SwarmOrchestrator.handleProgressUpdate(data.dashboardId, data.task_id, data);
+      } catch (e) { /* orchestrator not initialized yet */ }
     }
   };
 }
@@ -414,6 +431,269 @@ function registerIPCHandlers(getMainWindow) {
   ipcMain.handle('reset-settings', async () => {
     const settings = require('./settings');
     return settings.reset();
+  });
+
+  // --- Project handlers ---
+  const ProjectService = require('./services/ProjectService');
+  const { dialog } = require('electron');
+
+  ipcMain.handle('select-project-directory', async () => {
+    const win = getMainWindow();
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openDirectory'],
+      title: 'Select Project Directory',
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
+
+  ipcMain.handle('load-project', async (_event, dirPath) => {
+    return ProjectService.loadProject(dirPath);
+  });
+
+  ipcMain.handle('get-recent-projects', async () => {
+    const settings = require('./settings');
+    return settings.get('recentProjects') || [];
+  });
+
+  ipcMain.handle('add-recent-project', async (_event, project) => {
+    const settings = require('./settings');
+    var recents = settings.get('recentProjects') || [];
+    // Remove duplicate
+    recents = recents.filter(function (p) { return p.path !== project.path; });
+    recents.unshift({ path: project.path, name: project.name, lastOpened: new Date().toISOString() });
+    if (recents.length > 10) recents = recents.slice(0, 10);
+    settings.set('recentProjects', recents);
+    return recents;
+  });
+
+  ipcMain.handle('get-project-context', async (_event, dirPath) => {
+    return ProjectService.getProjectContext(dirPath);
+  });
+
+  ipcMain.handle('scan-project-directory', async (_event, dirPath, depth) => {
+    return ProjectService.scanDirectory(dirPath, depth || 2);
+  });
+
+  ipcMain.handle('detect-claude-cli', async () => {
+    return ProjectService.detectClaudeCLI();
+  });
+
+  // --- Task Editor handlers ---
+  const TaskEditorService = require('./services/TaskEditorService');
+
+  ipcMain.handle('create-swarm', async (_event, dashboardId, opts) => {
+    return TaskEditorService.createSwarm(dashboardId, opts);
+  });
+
+  ipcMain.handle('add-task', async (_event, dashboardId, task) => {
+    return TaskEditorService.addTask(dashboardId, task);
+  });
+
+  ipcMain.handle('update-task', async (_event, dashboardId, taskId, updates) => {
+    return TaskEditorService.updateTask(dashboardId, taskId, updates);
+  });
+
+  ipcMain.handle('remove-task', async (_event, dashboardId, taskId) => {
+    return TaskEditorService.removeTask(dashboardId, taskId);
+  });
+
+  ipcMain.handle('add-wave', async (_event, dashboardId, wave) => {
+    return TaskEditorService.addWave(dashboardId, wave);
+  });
+
+  ipcMain.handle('remove-wave', async (_event, dashboardId, waveId) => {
+    return TaskEditorService.removeWave(dashboardId, waveId);
+  });
+
+  ipcMain.handle('next-task-id', async (_event, dashboardId, waveNum) => {
+    return TaskEditorService.nextTaskId(dashboardId, waveNum);
+  });
+
+  ipcMain.handle('validate-dependencies', async (_event, dashboardId) => {
+    return TaskEditorService.validateDependencies(dashboardId);
+  });
+
+  // --- Worker handlers ---
+  const ClaudeCodeService = require('./services/ClaudeCodeService');
+  ClaudeCodeService.init(broadcastFn);
+
+  // Build system prompt for ClaudeView chat — reads Synapse CLAUDE.md + project CLAUDE.md
+  ipcMain.handle('get-chat-system-prompt', async (_event, projectDir) => {
+    const parts = [];
+
+    // Read Synapse CLAUDE.md
+    const synapseClaudeMd = path.join(path.resolve(__dirname, '..'), 'CLAUDE.md');
+    try {
+      const content = fs.readFileSync(synapseClaudeMd, 'utf-8');
+      parts.push('# Synapse Context\n' + content);
+    } catch (e) { /* ignore */ }
+
+    // Read project CLAUDE.md if available
+    if (projectDir) {
+      const projectClaudeMd = path.join(projectDir, 'CLAUDE.md');
+      try {
+        const content = fs.readFileSync(projectClaudeMd, 'utf-8');
+        parts.push('\n# Project Context\n' + content);
+      } catch (e) { /* ignore */ }
+
+      // Check parent directory for master CLAUDE.md
+      const parentClaudeMd = path.join(path.dirname(projectDir), 'CLAUDE.md');
+      try {
+        if (parentClaudeMd !== projectClaudeMd) {
+          const content = fs.readFileSync(parentClaudeMd, 'utf-8');
+          parts.push('\n# Parent Project Context\n' + content);
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    return parts.join('\n\n');
+  });
+
+  // Log a chat event to a dashboard's logs.json
+  ipcMain.handle('log-chat-event', async (_event, dashboardId, entry) => {
+    const logsFile = path.join(DASHBOARDS_DIR, dashboardId, 'logs.json');
+    let logs;
+    try {
+      logs = JSON.parse(fs.readFileSync(logsFile, 'utf-8'));
+    } catch (e) {
+      logs = { entries: [] };
+    }
+    logs.entries.push({
+      timestamp: new Date().toISOString(),
+      task_id: entry.task_id || null,
+      agent: entry.agent || 'claude-chat',
+      level: entry.level || 'info',
+      message: entry.message,
+      task_name: entry.task_name || 'Claude Chat',
+    });
+    fs.writeFileSync(logsFile, JSON.stringify(logs, null, 2));
+    return { success: true };
+  });
+
+  ipcMain.handle('spawn-worker', async (_event, opts) => {
+    console.log('[spawn-worker] Called with opts:', JSON.stringify({
+      taskId: opts.taskId,
+      model: opts.model,
+      cliPath: opts.cliPath,
+      projectDir: opts.projectDir,
+      promptLen: opts.prompt ? opts.prompt.length : 0,
+      dangerouslySkipPermissions: opts.dangerouslySkipPermissions,
+    }));
+    try {
+      const result = ClaudeCodeService.spawnWorker(opts);
+      console.log('[spawn-worker] Spawned PID:', result.pid);
+      return result;
+    } catch (err) {
+      console.error('[spawn-worker] ERROR:', err.message);
+      throw err;
+    }
+  });
+
+  ipcMain.handle('kill-worker', async (_event, pid) => {
+    return ClaudeCodeService.killWorker(pid);
+  });
+
+  ipcMain.handle('kill-all-workers', async () => {
+    return ClaudeCodeService.killAllWorkers();
+  });
+
+  ipcMain.handle('get-active-workers', async () => {
+    return ClaudeCodeService.getActiveWorkers();
+  });
+
+  // --- Commands handlers ---
+  const CommandsService = require('./services/CommandsService');
+
+  ipcMain.handle('list-commands', async (_event, commandsDir) => {
+    return CommandsService.listCommands(commandsDir || undefined);
+  });
+
+  ipcMain.handle('get-command', async (_event, name, commandsDir) => {
+    return CommandsService.getCommand(name, commandsDir || undefined);
+  });
+
+  ipcMain.handle('save-command', async (_event, name, content, commandsDir) => {
+    return CommandsService.saveCommand(name, content, commandsDir || undefined);
+  });
+
+  ipcMain.handle('delete-command', async (_event, name, commandsDir) => {
+    return CommandsService.deleteCommand(name, commandsDir || undefined);
+  });
+
+  ipcMain.handle('load-project-claude-md', async (_event, projectDir) => {
+    return CommandsService.loadProjectClaudeMd(projectDir);
+  });
+
+  ipcMain.handle('list-project-commands', async (_event, projectDir) => {
+    return CommandsService.listProjectCommands(projectDir);
+  });
+
+  // --- Orchestration handlers ---
+  const SwarmOrchestrator = require('./services/SwarmOrchestrator');
+  SwarmOrchestrator.init(broadcastFn);
+
+  ipcMain.handle('start-swarm', async (_event, dashboardId, opts) => {
+    return SwarmOrchestrator.startSwarm(dashboardId, opts);
+  });
+
+  ipcMain.handle('pause-swarm', async (_event, dashboardId) => {
+    return SwarmOrchestrator.pauseSwarm(dashboardId);
+  });
+
+  ipcMain.handle('resume-swarm', async (_event, dashboardId) => {
+    return SwarmOrchestrator.resumeSwarm(dashboardId);
+  });
+
+  ipcMain.handle('cancel-swarm', async (_event, dashboardId) => {
+    return SwarmOrchestrator.cancelSwarm(dashboardId);
+  });
+
+  ipcMain.handle('retry-task', async (_event, dashboardId, taskId) => {
+    return SwarmOrchestrator.retryTask(dashboardId, taskId);
+  });
+
+  ipcMain.handle('get-swarm-states', async () => {
+    return SwarmOrchestrator.getSwarmStates();
+  });
+
+  // --- Conversation Handlers ---
+
+  // GET conversations -> list-conversations
+  ipcMain.handle('list-conversations', async () => {
+    return { conversations: listConversations() };
+  });
+
+  // POST create-conversation
+  ipcMain.handle('create-conversation', async (_event, name) => {
+    return createConversation(name);
+  });
+
+  // GET conversation -> load-conversation
+  ipcMain.handle('load-conversation', async (_event, filename) => {
+    const conv = loadConversation(filename);
+    if (!conv) return { error: 'Conversation not found' };
+    return conv;
+  });
+
+  // POST save-conversation
+  ipcMain.handle('save-conversation', async (_event, conv) => {
+    try {
+      const result = saveConversation(conv);
+      return { success: true, filename: result.filename, id: result.id };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // DELETE delete-conversation
+  ipcMain.handle('delete-conversation', async (_event, filename) => {
+    return deleteConversation(filename);
+  });
+
+  // PATCH rename-conversation
+  ipcMain.handle('rename-conversation', async (_event, filename, newName) => {
+    return renameConversation(filename, newName);
   });
 
   // --- 3. Set up file watchers with IPC broadcast ---

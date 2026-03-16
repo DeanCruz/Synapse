@@ -85,6 +85,12 @@ function routeToIPC(api, url, method) {
     if (sub === 'export' && method === 'GET') return api.exportDashboard(id);
   }
 
+  // /api/commands
+  if (url === '/api/commands' && method === 'GET') return api.listCommands();
+  // /api/commands/:name
+  var cmdMatch = url.match(/^\/api\/commands\/([^/]+)$/);
+  if (cmdMatch && method === 'GET') return api.getCommand(decodeURIComponent(cmdMatch[1]));
+
   return null; // unknown route
 }
 
@@ -259,6 +265,33 @@ function init() {
     settingsBtn.addEventListener('click', function () {
       vm.showSettings();
     });
+  }
+
+  // Swarm controls (Electron only)
+  if (isElectron) {
+    var swarmControls = document.getElementById('swarm-controls');
+    if (swarmControls) swarmControls.style.display = '';
+
+    var projectBtn = document.getElementById('project-btn');
+    if (projectBtn) {
+      projectBtn.addEventListener('click', function () {
+        vm.showProjectConfig();
+      });
+    }
+
+    var commandsBtn = document.getElementById('commands-btn');
+    if (commandsBtn) {
+      commandsBtn.addEventListener('click', function () {
+        vm.showCommands();
+      });
+    }
+
+    var claudeBtn = document.getElementById('claude-btn');
+    if (claudeBtn) {
+      claudeBtn.addEventListener('click', function () {
+        vm.showClaudeChat();
+      });
+    }
   }
 
   // Archive dropdown

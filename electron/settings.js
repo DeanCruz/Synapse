@@ -27,6 +27,13 @@ const DEFAULTS = {
   // Theme (synced with renderer)
   theme: 'original',
   customColors: null,
+
+  // Project
+  recentProjects: [],
+  activeProjectPath: null,
+  claudeCliPath: null,
+  defaultModel: 'sonnet',
+  dangerouslySkipPermissions: false,
 };
 
 function init(electronApp) {
@@ -42,7 +49,8 @@ function get(key) {
 
 function set(key, value) {
   if (!(key in DEFAULTS)) {
-    throw new Error('Unknown setting: ' + key);
+    // Allow storing unknown keys for extensibility (e.g. recentProjects items)
+    console.warn('[settings] Unknown setting key:', key);
   }
   cache[key] = value;
   _save();

@@ -14,6 +14,7 @@ var broadcastFn = null;
  */
 function init(broadcast) {
   broadcastFn = broadcast;
+  console.log('[ClaudeCodeService] init() called, broadcastFn set:', !!broadcast);
 }
 
 /**
@@ -32,9 +33,11 @@ function init(broadcast) {
  */
 function spawnWorker(opts) {
   var cliPath = opts.cliPath || 'claude';
+  console.log('[ClaudeCodeService] spawnWorker() cliPath:', cliPath, 'broadcastFn set:', !!broadcastFn);
   var args = [
     '--print',
     '--output-format', 'stream-json',
+    '--verbose',
   ];
 
   if (opts.model) {
@@ -45,6 +48,10 @@ function spawnWorker(opts) {
     args.push('--dangerously-skip-permissions');
   }
 
+  if (opts.resumeSessionId) {
+    args.push('--resume', opts.resumeSessionId);
+  }
+
   if (opts.projectDir) {
     args.push('--add-dir', opts.projectDir);
   }
@@ -53,17 +60,38 @@ function spawnWorker(opts) {
     args.push('--append-system-prompt', opts.systemPrompt);
   }
 
-  // The prompt is the final argument
-  args.push(opts.prompt);
+  // Prompt will be passed via stdin to avoid arg parsing issues
+  var promptText = opts.prompt;
+
+  // Build clean env — remove vars that prevent CLI from launching
+  var env = Object.assign({}, process.env);
+  delete env.ELECTRON_RUN_AS_NODE;  // Prevents Electron from hijacking Node
+  delete env.CLAUDECODE;             // Prevents "nested session" error
+
+  console.log('[ClaudeCodeService] Spawning:', cliPath);
+  console.log('[ClaudeCodeService] Full args:', JSON.stringify(args));
+  console.log('[ClaudeCodeService] CWD:', opts.projectDir || process.cwd());
 
   var proc = spawn(cliPath, args, {
     cwd: opts.projectDir || process.cwd(),
-    env: Object.assign({}, process.env, {
-      // Ensure Electron doesn't interfere with spawned CLI
-      ELECTRON_RUN_AS_NODE: undefined,
-    }),
+    env: env,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
+
+  console.log('[ClaudeCodeService] Process spawned, PID:', proc.pid);
+
+  // Write prompt via stdin then close — avoids arg parsing issues with flags
+  proc.stdin.write(promptText);
+  proc.stdin.end();
+
+  // Safety timeout: if no stdout within 10s, log a warning
+  var gotOutput = false;
+  setTimeout(function () {
+    if (!gotOutput && activeWorkers[proc.pid]) {
+      console.warn('[ClaudeCodeService] WARNING: No stdout received after 10s from PID:', proc.pid);
+      console.warn('[ClaudeCodeService] stderr so far:', worker.errorOutput || '(empty)');
+    }
+  }, 10000);
 
   var worker = {
     taskId: opts.taskId,
@@ -73,30 +101,57 @@ function spawnWorker(opts) {
     startedAt: new Date().toISOString(),
     output: '',
     errorOutput: '',
+    lineBuffer: '',  // Buffer for incomplete NDJSON lines
   };
 
   activeWorkers[proc.pid] = worker;
 
-  // Stream stdout to renderer
+  // Stream stdout — buffer NDJSON lines and emit parsed events
   proc.stdout.on('data', function (chunk) {
+    gotOutput = true;
     var text = chunk.toString();
+    console.log('[ClaudeCodeService] stdout chunk (' + text.length + ' bytes) from PID:', proc.pid);
     worker.output += text;
-    if (broadcastFn) {
-      broadcastFn('worker-output', {
-        pid: proc.pid,
-        taskId: opts.taskId,
-        dashboardId: opts.dashboardId,
-        chunk: text,
-      });
+    worker.lineBuffer += text;
+
+    // Split on newlines and process complete lines
+    var lines = worker.lineBuffer.split('\n');
+    // Last element is incomplete (or empty if chunk ended with \n)
+    worker.lineBuffer = lines.pop() || '';
+
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i].trim();
+      if (!line) continue;
+
+      var parsed = null;
+      try { parsed = JSON.parse(line); } catch (e) { /* not valid JSON yet */ }
+
+      if (broadcastFn) {
+        var eventType = parsed ? parsed.type : 'raw';
+        console.log('[ClaudeCodeService] Broadcasting worker-output, event type:', eventType, 'taskId:', opts.taskId);
+        broadcastFn('worker-output', {
+          pid: proc.pid,
+          taskId: opts.taskId,
+          dashboardId: opts.dashboardId,
+          // Send both raw line and parsed object
+          chunk: line + '\n',
+          parsed: parsed,
+        });
+      } else {
+        console.warn('[ClaudeCodeService] broadcastFn is NULL — output lost!');
+      }
     }
   });
 
   proc.stderr.on('data', function (chunk) {
-    worker.errorOutput += chunk.toString();
+    var errText = chunk.toString();
+    console.log('[ClaudeCodeService] stderr from PID', proc.pid, ':', errText.substring(0, 200));
+    worker.errorOutput += errText;
   });
 
   proc.on('close', function (code) {
     var exitCode = code;
+    console.log('[ClaudeCodeService] Process closed, PID:', proc.pid, 'exit code:', exitCode);
     delete activeWorkers[proc.pid];
 
     if (broadcastFn) {
@@ -112,6 +167,7 @@ function spawnWorker(opts) {
   });
 
   proc.on('error', function (err) {
+    console.error('[ClaudeCodeService] Process error, PID:', proc.pid, 'error:', err.message);
     delete activeWorkers[proc.pid];
 
     if (broadcastFn) {

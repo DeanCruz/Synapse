@@ -26,7 +26,13 @@ import {
   showSettingsPopup,
   applyCustomTheme,
   clearCustomTheme,
+  showProjectModal,
+  showPlanningModal,
+  showWorkerTerminal,
+  showCommandsModal,
 } from '../views/modals/index.js';
+import { renderSwarmBuilder } from '../views/SwarmBuilderView.js';
+import { renderClaudeView } from '../views/ClaudeView.js';
 
 /**
  * Create the DashboardVM — the central orchestrator for all dashboard logic.
@@ -57,6 +63,12 @@ export function createDashboardVM(appState, sseClient, dom) {
   // Keyed by dashboardId + taskName so a new task on the same dashboard resets.
   // -------------------------------------------------------------------------
   var _historySavedFor = {};
+
+  // -------------------------------------------------------------------------
+  // Custom view guard — when true, renderStatus skips pipeline/section changes
+  // Set by showSwarmBuilder, showClaudeChat, etc. Cleared on switchDashboard.
+  // -------------------------------------------------------------------------
+  var _customViewActive = false;
 
   // -------------------------------------------------------------------------
   // Debounce timers
@@ -223,6 +235,10 @@ export function createDashboardVM(appState, sseClient, dom) {
    */
   function renderStatus(data, skipPipeline) {
     appState.set('currentStatus', data);
+
+    // When a custom view (SwarmBuilder, ClaudeChat, etc.) owns the pipeline,
+    // skip all DOM manipulation — the custom view manages its own lifecycle.
+    if (_customViewActive) return;
 
     // Empty state
     if (!data.active_task) {
@@ -517,6 +533,12 @@ export function createDashboardVM(appState, sseClient, dom) {
       exitHome(id);
       return;
     }
+    // Clear custom view flag so renderStatus can take over again
+    _customViewActive = false;
+    if (claudeViewController) {
+      claudeViewController.destroy();
+      claudeViewController = null;
+    }
     if (id === appState.get('currentDashboardId') && !appState.get('archiveViewActive') && !appState.get('queueViewActive')) return;
     appState.update({
       currentDashboardId: id,
@@ -572,6 +594,17 @@ export function createDashboardVM(appState, sseClient, dom) {
   }
 
   function loadArchivedTask(archiveName) {
+    // Reset custom view state so renderStatus can run
+    _customViewActive = false;
+    if (claudeViewController) {
+      claudeViewController.destroy();
+      claudeViewController = null;
+    }
+    // Ensure main content area is visible
+    var mainEl = document.querySelector('.dashboard-content > main');
+    if (mainEl) mainEl.hidden = false;
+    if (dom.headerCenter) dom.headerCenter.hidden = false;
+
     appState.update({
       priorDashboardId: appState.get('currentDashboardId'),
       archiveViewActive: true,
@@ -1228,6 +1261,216 @@ export function createDashboardVM(appState, sseClient, dom) {
   }
 
   // -------------------------------------------------------------------------
+  // Swarm Builder / Orchestration
+  // -------------------------------------------------------------------------
+
+  function showSwarmBuilder(initData) {
+    var container = dom.wavePipeline;
+    if (!container) return;
+
+    _customViewActive = true;
+
+    // Hide other sections, but ensure wave section is visible (it holds the container)
+    if (dom.statsBar) dom.statsBar.hidden = true;
+    if (dom.logPanel) dom.logPanel.hidden = true;
+    if (dom.emptyState) dom.emptyState.hidden = true;
+    if (dom.progressSection) dom.progressSection.hidden = true;
+    if (dom.clearDashboardSection) dom.clearDashboardSection.hidden = true;
+    if (dom.waveSection) dom.waveSection.hidden = false;
+
+    renderSwarmBuilder({
+      container: container,
+      dashboardId: appState.get('currentDashboardId'),
+      initData: initData || null,
+      onLaunch: function (plan) {
+        var dashboardId = appState.get('currentDashboardId');
+        var api = window.electronAPI;
+        if (!api) return;
+
+        // Write the plan to the dashboard — sequential chain with error handling
+        api.createSwarm(dashboardId, {
+          name: plan.task.name,
+          type: plan.task.type,
+          directory: plan.task.directory,
+          project: plan.task.project,
+          prompt: plan.task.prompt,
+        }).then(function () {
+          // Add each task sequentially — must all complete before switching
+          var chain = Promise.resolve();
+          for (var i = 0; i < plan.agents.length; i++) {
+            (function (agent) {
+              chain = chain.then(function () {
+                return api.addTask(dashboardId, agent);
+              });
+            })(plan.agents[i]);
+          }
+          return chain;
+        }).then(function () {
+          // All tasks written — now safe to reload dashboard
+          return new Promise(function (resolve) {
+            switchDashboard(dashboardId);
+            // Give the dashboard a tick to render the new data
+            setTimeout(resolve, 200);
+          });
+        }).then(function () {
+          // Ask to launch
+          showConfirmModal(
+            'Launch Swarm?',
+            'Plan written to dashboard. Start dispatching worker agents now?',
+            function () {
+              hideConfirmModal();
+              launchSwarm();
+            }
+          );
+        }).catch(function (err) {
+          console.error('[SwarmBuilder] Launch failed:', err);
+          showErrorPopup('Failed to create swarm: ' + (err.message || String(err)));
+        });
+      },
+      onCancel: function () {
+        _customViewActive = false;
+        // Restore normal view
+        if (dom.statsBar) dom.statsBar.hidden = false;
+        if (dom.emptyState) dom.emptyState.hidden = false;
+        switchDashboard(appState.get('currentDashboardId'));
+      },
+    });
+  }
+
+  function showProjectConfig() {
+    showProjectModal({
+      onProjectSelected: function (project) {
+        // Project selected — store it
+      },
+    });
+  }
+
+  function showAIPlanner() {
+    var api = window.electronAPI;
+    if (!api) return;
+
+    api.getSettings().then(function (settings) {
+      showPlanningModal({
+        dashboardId: appState.get('currentDashboardId'),
+        projectPath: settings.activeProjectPath || null,
+        onPlanReady: function (plan) {
+          showSwarmBuilder(plan);
+        },
+      });
+    });
+  }
+
+  function launchSwarm() {
+    var api = window.electronAPI;
+    if (!api) return;
+
+    var dashboardId = appState.get('currentDashboardId');
+
+    api.getSettings().then(function (settings) {
+      return api.startSwarm(dashboardId, {
+        projectPath: settings.activeProjectPath || '.',
+        model: settings.defaultModel || 'sonnet',
+        cliPath: settings.claudeCliPath || null,
+        dangerouslySkipPermissions: settings.dangerouslySkipPermissions || false,
+      });
+    }).then(function (result) {
+      if (!result.success) {
+        showErrorPopup('Failed to launch swarm', result.error);
+      }
+    });
+  }
+
+  function pauseSwarm() {
+    var api = window.electronAPI;
+    if (!api) return;
+    api.pauseSwarm(appState.get('currentDashboardId'));
+  }
+
+  function resumeSwarm() {
+    var api = window.electronAPI;
+    if (!api) return;
+    api.resumeSwarm(appState.get('currentDashboardId'));
+  }
+
+  function cancelSwarm() {
+    var api = window.electronAPI;
+    if (!api) return;
+    showConfirmModal(
+      'Cancel Swarm?',
+      'This will kill all running worker agents. Tasks in progress will be marked as failed.',
+      function () {
+        hideConfirmModal();
+        api.cancelSwarm(appState.get('currentDashboardId'));
+      }
+    );
+  }
+
+  function retryFailedTask(taskId) {
+    var api = window.electronAPI;
+    if (!api) return;
+    api.retryTask(appState.get('currentDashboardId'), taskId);
+  }
+
+  function showWorkerOutput(taskId, title) {
+    showWorkerTerminal({ taskId: taskId, title: title });
+  }
+
+  // Track active Claude view controller for cleanup
+  var claudeViewController = null;
+
+  function showClaudeChat() {
+    var container = dom.wavePipeline;
+    if (!container) return;
+
+    _customViewActive = true;
+
+    // Clean up previous instance
+    if (claudeViewController) {
+      claudeViewController.destroy();
+      claudeViewController = null;
+    }
+
+    // Hide other sections, but ensure wave section is visible (it holds the container)
+    if (dom.statsBar) dom.statsBar.hidden = true;
+    if (dom.logPanel) dom.logPanel.hidden = true;
+    if (dom.emptyState) dom.emptyState.hidden = true;
+    if (dom.progressSection) dom.progressSection.hidden = true;
+    if (dom.clearDashboardSection) dom.clearDashboardSection.hidden = true;
+    if (dom.waveSection) dom.waveSection.hidden = false;
+
+    claudeViewController = renderClaudeView({
+      container: container,
+      onClose: function () {
+        _customViewActive = false;
+        if (claudeViewController) {
+          claudeViewController.destroy();
+          claudeViewController = null;
+        }
+        // Restore normal view
+        if (dom.statsBar) dom.statsBar.hidden = false;
+        if (dom.emptyState) dom.emptyState.hidden = false;
+        switchDashboard(appState.get('currentDashboardId'));
+      },
+      onNewSwarm: function () { showSwarmBuilder(); },
+      onAIPlan: function () { showAIPlanner(); },
+      onLaunch: function () { launchSwarm(); },
+      onPause: function () { pauseSwarm(); },
+      onCancel: function () { cancelSwarm(); },
+    });
+  }
+
+  function showCommands() {
+    var api = window.electronAPI;
+    if (!api) return;
+
+    api.getSettings().then(function (settings) {
+      showCommandsModal({
+        projectDir: settings.activeProjectPath || null,
+      });
+    });
+  }
+
+  // -------------------------------------------------------------------------
   // Public interface
   // -------------------------------------------------------------------------
 
@@ -1255,6 +1498,19 @@ export function createDashboardVM(appState, sseClient, dom) {
     showArchiveList: showArchiveList,
     showHistoryList: showHistoryList,
     showSettings: showSettings,
+
+    // Swarm orchestration
+    showSwarmBuilder: showSwarmBuilder,
+    showProjectConfig: showProjectConfig,
+    showAIPlanner: showAIPlanner,
+    launchSwarm: launchSwarm,
+    pauseSwarm: pauseSwarm,
+    resumeSwarm: resumeSwarm,
+    cancelSwarm: cancelSwarm,
+    retryFailedTask: retryFailedTask,
+    showWorkerOutput: showWorkerOutput,
+    showClaudeChat: showClaudeChat,
+    showCommands: showCommands,
 
     // Timer
     startElapsedTimer: startElapsedTimer,
