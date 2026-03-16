@@ -6,6 +6,9 @@ tasks/
 Archive/
 history/
 
+# Build output
+dist/
+
 # Dependencies
 node_modules/
 
