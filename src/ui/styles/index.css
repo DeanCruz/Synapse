@@ -4278,8 +4278,20 @@ a:hover {
   background: rgba(59, 130, 246, 0.12);
 }
 
-.claude-view-close {
+.claude-clear-btn {
   margin-left: auto;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 2px 8px;
+}
+.claude-clear-btn:hover:not(:disabled) { color: var(--text); border-color: var(--text-secondary); }
+.claude-clear-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.claude-view-close {
   background: none;
   border: none;
   color: var(--text-secondary);
@@ -4289,125 +4301,77 @@ a:hover {
 }
 .claude-view-close:hover { color: var(--text); }
 
-/* =====================================================================
-   Session Toolbar
-   ===================================================================== */
-
-.claude-session-toolbar {
+.claude-view-body {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+.claude-history-panel {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--surface-raised);
+}
+
+.claude-history-header {
+  padding: 10px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   border-bottom: 1px solid var(--border);
-  background: var(--bg);
-  overflow-x: auto;
-  scrollbar-width: none;
   flex-shrink: 0;
 }
 
-.claude-session-toolbar::-webkit-scrollbar { display: none; }
-
-.claude-session-new-btn {
-  flex-shrink: 0;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: none;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: border-color 0.15s, color 0.15s;
-}
-.claude-session-new-btn:hover {
-  border-color: var(--border-hover);
-  color: var(--text);
+.claude-history-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
 }
 
-.claude-session-chip {
-  position: relative;
+.claude-history-empty {
+  padding: 16px 12px;
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.claude-history-item {
   display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 10px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: 0;
   cursor: pointer;
-  flex-shrink: 0;
-  transition: border-color 0.15s, background 0.15s;
-  max-width: 160px;
+  text-align: left;
+  transition: background 0.1s;
 }
-.claude-session-chip:hover {
-  border-color: var(--border-hover);
-  background: var(--surface-hover);
-}
-.claude-session-chip.active {
-  border-color: var(--color-in-progress);
-  background: rgba(59,130,246,0.12);
-}
+.claude-history-item:hover:not(:disabled) { background: var(--surface-active, rgba(255,255,255,0.05)); }
+.claude-history-item.active { background: rgba(59,130,246,0.1); }
+.claude-history-item:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.claude-session-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-in-progress);
-  flex-shrink: 0;
-  display: none;
-}
-.claude-session-chip.active .claude-session-dot {
-  display: block;
-}
-
-.claude-session-label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
+.claude-history-name {
+  font-size: 0.78rem;
+  color: var(--text);
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 110px;
-}
-.claude-session-chip.active .claude-session-label {
-  color: var(--text);
+  max-width: 196px;
 }
 
-.claude-session-label-input {
-  font-size: 0.75rem;
-  border: none;
-  border-bottom: 1px solid var(--color-in-progress);
-  background: transparent;
-  color: var(--text);
-  outline: none;
-  width: 100px;
-}
-
-.claude-session-delete {
-  display: none;
-  background: none;
-  border: none;
+.claude-history-date {
+  font-size: 0.68rem;
   color: var(--text-tertiary);
-  cursor: pointer;
-  font-size: 0.7rem;
-  padding: 0 2px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-.claude-session-chip:hover .claude-session-delete {
-  display: block;
-}
-.claude-session-delete:hover {
-  color: var(--color-failed);
-}
-
-.claude-session-overflow {
-  flex-shrink: 0;
-  padding: 4px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: none;
-  color: var(--text-tertiary);
-  font-size: 0.75rem;
-  cursor: pointer;
 }
 
 .claude-conversation,
@@ -4563,6 +4527,14 @@ a:hover {
   border-color: var(--color-in-progress);
 }
 
+.claude-tool-call.has-result {
+  border-color: var(--color-completed);
+}
+
+.claude-tool-call.has-result .claude-tool-icon {
+  color: var(--color-completed);
+}
+
 .claude-tool-header {
   display: flex;
   align-items: center;
@@ -4589,10 +4561,21 @@ a:hover {
   font-family: 'Space Grotesk', monospace;
 }
 
+.claude-tool-summary {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-family: 'Space Grotesk', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+
 .claude-tool-toggle {
   margin-left: auto;
   font-size: 0.65rem;
   color: var(--text-tertiary);
+  flex-shrink: 0;
 }
 
 .claude-tool-body {
@@ -4643,6 +4626,39 @@ a:hover {
   border-radius: 8px;
 }
 
+/* Suggestion chips */
+.claude-suggestion-chips {
+  display: flex;
+  gap: 6px;
+  padding: 8px 16px 0;
+  background: var(--surface-raised);
+  flex-wrap: wrap;
+}
+
+.claude-suggestion-chip {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.claude-suggestion-chip:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.claude-suggestion-chip:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* Prompt bar */
 .claude-prompt-bar {
   display: flex;
@@ -4676,32 +4692,6 @@ a:hover {
 
 .claude-prompt-input::placeholder {
   color: var(--text-tertiary);
-}
-
-/* Quick action chips */
-.claude-quick-actions {
-  display: flex;
-  gap: 6px;
-  padding: 6px 16px 8px;
-  flex-wrap: wrap;
-}
-
-.claude-quick-action-btn {
-  padding: 4px 12px;
-  font-size: 0.75rem;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s, background 0.15s;
-  font-family: inherit;
-}
-
-.claude-quick-action-btn:hover {
-  border-color: var(--color-in-progress);
-  color: var(--text);
-  background: rgba(59, 130, 246, 0.08);
 }
 
 .claude-send-btn {
@@ -4975,4 +4965,146 @@ a:hover {
   gap: 8px;
   padding: 10px 16px;
   border-top: 1px solid var(--border);
+}
+
+/* =====================================================================
+   Attachment UI
+   ===================================================================== */
+
+/* Paperclip button in prompt bar — secondary/muted send-btn style */
+.claude-attach-btn {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.claude-attach-btn:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
+}
+.claude-attach-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Preview strip above prompt bar showing pending attachments */
+.claude-attachment-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  overflow-x: auto;
+  background: var(--surface-raised);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Individual attachment thumbnail container */
+.claude-attachment-chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  max-width: 150px;
+  flex-shrink: 0;
+}
+
+/* Thumbnail image inside chip */
+.claude-attachment-chip img {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* Filename label in chip */
+.claude-attachment-chip-name {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80px;
+}
+
+/* Remove button on chip */
+.claude-attachment-chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  line-height: 1;
+  padding: 0 2px;
+  font-size: 12px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.claude-attachment-chip-remove:hover {
+  color: var(--color-failed);
+}
+
+/* Full-area drag-drop overlay (reserved) */
+.claude-drop-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  background: rgba(155, 124, 240, 0.08);
+  border: 2px dashed var(--color-in-progress);
+  border-radius: 12px;
+  pointer-events: none;
+}
+.claude-drop-overlay.active {
+  display: flex;
+}
+
+/* Container for images in a user message */
+.claude-message-attachments {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+/* Individual image in a user message */
+.claude-message-image {
+  max-width: 300px;
+  max-height: 200px;
+  border-radius: 6px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  display: block;
+}
+
+/* Drag-over highlight on the conversation area */
+.claude-conversation.drag-over,
+.claude-view-conversation.drag-over {
+  outline: 2px dashed var(--color-in-progress);
+  outline-offset: -4px;
+  background: rgba(155, 124, 240, 0.04);
+}
+
+.claude-prompt-input.drag-over {
+  outline: 2px dashed var(--color-in-progress);
+  outline-offset: -2px;
+  background: rgba(155, 124, 240, 0.06);
 }

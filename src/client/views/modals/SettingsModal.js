@@ -337,5 +337,74 @@ export function showSettingsPopup(currentTheme, onThemeChange) {
 
   body.appendChild(section);
 
+  // --- App Configuration Section (Electron only) ---
+  if (window.electronAPI) {
+    var appSection = el('div', { className: 'settings-section' });
+    appSection.appendChild(el('div', { className: 'settings-section-title', text: 'App Configuration' }));
+
+    var APP_FIELDS = [
+      { key: 'dashboardCount', label: 'Dashboard Slots', type: 'number', min: 1, max: 10 },
+      { key: 'initPollMs', label: 'Init Poll Interval (ms)', type: 'number', min: 50, max: 2000 },
+      { key: 'progressRetryMs', label: 'Progress Retry Delay (ms)', type: 'number', min: 20, max: 500 },
+      { key: 'progressReadDelayMs', label: 'Progress Read Delay (ms)', type: 'number', min: 10, max: 200 },
+      { key: 'reconcileDebounceMs', label: 'Reconcile Debounce (ms)', type: 'number', min: 100, max: 2000 },
+    ];
+
+    // Load current settings
+    window.electronAPI.getSettings().then(function (settings) {
+      var appGrid = el('div', { className: 'settings-app-grid' });
+
+      for (var ai = 0; ai < APP_FIELDS.length; ai++) {
+        (function (field) {
+          var row = el('div', { className: 'settings-app-row' });
+
+          var label = el('label', { className: 'settings-app-label', text: field.label });
+          row.appendChild(label);
+
+          var input = document.createElement('input');
+          input.type = field.type;
+          input.className = 'settings-app-input';
+          input.value = settings[field.key] !== undefined ? settings[field.key] : '';
+          if (field.min !== undefined) input.min = field.min;
+          if (field.max !== undefined) input.max = field.max;
+
+          input.addEventListener('change', function () {
+            var val = field.type === 'number' ? parseInt(input.value, 10) : input.value;
+            if (field.type === 'number' && isNaN(val)) return;
+            window.electronAPI.setSetting(field.key, val);
+          });
+
+          row.appendChild(input);
+          appGrid.appendChild(row);
+        })(APP_FIELDS[ai]);
+      }
+
+      appSection.appendChild(appGrid);
+
+      // Note about restart
+      var note = el('div', { className: 'settings-app-note', text: 'Changes to polling intervals take effect on next app restart.' });
+      appSection.appendChild(note);
+
+      // Reset all settings button
+      var resetAllBtn = el('button', { className: 'settings-custom-reset-btn', text: 'Reset All to Defaults' });
+      resetAllBtn.addEventListener('click', function () {
+        window.electronAPI.resetSettings().then(function (defaults) {
+          // Update all inputs with default values
+          var inputs = appGrid.querySelectorAll('.settings-app-input');
+          var idx = 0;
+          for (var ri = 0; ri < APP_FIELDS.length; ri++) {
+            if (inputs[idx]) {
+              inputs[idx].value = defaults[APP_FIELDS[ri].key] !== undefined ? defaults[APP_FIELDS[ri].key] : '';
+            }
+            idx++;
+          }
+        });
+      });
+      appSection.appendChild(resetAllBtn);
+    });
+
+    body.appendChild(appSection);
+  }
+
   document.body.appendChild(popup.overlay);
 }

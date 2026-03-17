@@ -6,6 +6,9 @@ tasks/
 Archive/
 history/
 
+# Build output
+dist/
+
 # Dependencies
 node_modules/
 
@@ -17,6 +20,9 @@ _parent/*
 
 # Local Claude Code settings
 _parent/.claude/settings.local.json
+
+# Saved conversations (user data)
+conversations/*
 
 #logs and dashboards
 dashboards/*

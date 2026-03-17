@@ -5,6 +5,7 @@
 import { initStatusColorsFromCSS } from './utils/constants.js';
 import { createAppState } from './models/AppState.js';
 import { createSSEClient } from './models/SSEClient.js';
+import { createIPCClient } from './models/IPCClient.js';
 import { createDashboardVM } from './viewmodels/DashboardVM.js';
 import { createConnectionIndicator } from './views/ConnectionIndicatorView.js';
 import { setupLogPanel } from './views/LogPanelView.js';
@@ -13,6 +14,85 @@ import { setupTaskBadge, setupTitleClick } from './views/HeaderView.js';
 import { setupStatCards } from './views/StatsBarView.js';
 import { setupTimelineCard } from './views/TimelinePanelView.js';
 import { showTaskDetails, applyCustomTheme } from './views/modals/index.js';
+
+// ---------------------------------------------------------------------------
+// Electron fetch shim — intercepts /api/* calls and routes through IPC
+// This means DashboardVM.js and all other modules need ZERO changes.
+// ---------------------------------------------------------------------------
+var isElectron = !!(window.electronAPI);
+
+if (isElectron) {
+  var originalFetch = window.fetch;
+  window.fetch = function (url, options) {
+    if (typeof url !== 'string' || !url.startsWith('/api/')) {
+      return originalFetch.call(window, url, options);
+    }
+    var method = (options && options.method) ? options.method.toUpperCase() : 'GET';
+    var api = window.electronAPI;
+    var promise = routeToIPC(api, url, method);
+    if (!promise) {
+      // Unknown route — fall through to original fetch (will fail in Electron, but safe)
+      return originalFetch.call(window, url, options);
+    }
+    // Wrap in a fake Response with .json()
+    return promise.then(function (data) {
+      return {
+        ok: true,
+        status: 200,
+        json: function () { return Promise.resolve(data); },
+      };
+    });
+  };
+}
+
+function routeToIPC(api, url, method) {
+  // /api/dashboards/statuses
+  if (url === '/api/dashboards/statuses' && method === 'GET') return api.getDashboardStatuses();
+  // /api/dashboards (must check after /statuses to avoid false match)
+  if (url === '/api/dashboards' && method === 'GET') return api.getDashboards();
+  // /api/overview
+  if (url === '/api/overview' && method === 'GET') return api.getOverview();
+  // /api/archives
+  if (url === '/api/archives' && method === 'GET') return api.getArchives();
+  // /api/history
+  if (url === '/api/history' && method === 'GET') return api.getHistory();
+  // /api/queue (exact)
+  if (url === '/api/queue' && method === 'GET') return api.getQueue();
+
+  // /api/archives/:name
+  var archiveMatch = url.match(/^\/api\/archives\/([^/]+)$/);
+  if (archiveMatch) {
+    var archiveName = decodeURIComponent(archiveMatch[1]);
+    if (method === 'GET') return api.getArchive(archiveName);
+    if (method === 'DELETE') return api.deleteArchive(archiveName);
+  }
+
+  // /api/queue/:id
+  var queueMatch = url.match(/^\/api\/queue\/([^/]+)$/);
+  if (queueMatch && method === 'GET') return api.getQueueItem(decodeURIComponent(queueMatch[1]));
+
+  // /api/dashboards/:id/:subpath
+  var dashMatch = url.match(/^\/api\/dashboards\/([^/]+)\/(.+)$/);
+  if (dashMatch) {
+    var id = dashMatch[1];
+    var sub = dashMatch[2];
+    if (sub === 'initialization' && method === 'GET') return api.getDashboardInit(id);
+    if (sub === 'logs' && method === 'GET') return api.getDashboardLogs(id);
+    if (sub === 'progress' && method === 'GET') return api.getDashboardProgress(id);
+    if (sub === 'clear' && method === 'POST') return api.clearDashboard(id);
+    if (sub === 'archive' && method === 'POST') return api.archiveDashboard(id);
+    if (sub === 'save-history' && method === 'POST') return api.saveDashboardHistory(id);
+    if (sub === 'export' && method === 'GET') return api.exportDashboard(id);
+  }
+
+  // /api/commands
+  if (url === '/api/commands' && method === 'GET') return api.listCommands();
+  // /api/commands/:name
+  var cmdMatch = url.match(/^\/api\/commands\/([^/]+)$/);
+  if (cmdMatch && method === 'GET') return api.getCommand(decodeURIComponent(cmdMatch[1]));
+
+  return null; // unknown route
+}
 
 /**
  * Main initialization function.
@@ -97,24 +177,24 @@ function init() {
   var connectionIndicator = createConnectionIndicator(headerCenter);
 
   // -------------------------------------------------------------------------
-  // 5. Create SSEClient — we'll wire up callbacks via the VM's sseHandlers
-  //    after creating the VM (chicken-and-egg solved by deferred connect)
+  // 5. Create data client — IPCClient in Electron, SSEClient in browser
   // -------------------------------------------------------------------------
-  var sseClient; // forward declaration
+  var dataClient; // forward declaration
+  var createClient = isElectron ? createIPCClient : createSSEClient;
 
   // -------------------------------------------------------------------------
-  // 6. Create DashboardVM — needs appState, sseClient, and dom
-  //    We create a temporary sseClient reference that will be set before connect
+  // 6. Create DashboardVM — needs appState, dataClient, and dom
+  //    We create a temporary proxy that will be set before connect
   // -------------------------------------------------------------------------
-  var sseClientProxy = {
-    connect: function () { if (sseClient) sseClient.connect(); },
-    disconnect: function () { if (sseClient) sseClient.disconnect(); },
+  var clientProxy = {
+    connect: function () { if (dataClient) dataClient.connect(); },
+    disconnect: function () { if (dataClient) dataClient.disconnect(); },
   };
 
-  var vm = createDashboardVM(appState, sseClientProxy, dom);
+  var vm = createDashboardVM(appState, clientProxy, dom);
 
-  // Now create the actual SSEClient with the VM's handlers
-  sseClient = createSSEClient(appState, {
+  // Now create the actual client with the VM's handlers
+  dataClient = createClient(appState, {
     onInitialization: vm.sseHandlers.onInitialization,
     onLogs: vm.sseHandlers.onLogs,
     onAgentProgress: vm.sseHandlers.onAgentProgress,
@@ -185,6 +265,33 @@ function init() {
     settingsBtn.addEventListener('click', function () {
       vm.showSettings();
     });
+  }
+
+  // Swarm controls (Electron only)
+  if (isElectron) {
+    var swarmControls = document.getElementById('swarm-controls');
+    if (swarmControls) swarmControls.style.display = '';
+
+    var projectBtn = document.getElementById('project-btn');
+    if (projectBtn) {
+      projectBtn.addEventListener('click', function () {
+        vm.showProjectConfig();
+      });
+    }
+
+    var commandsBtn = document.getElementById('commands-btn');
+    if (commandsBtn) {
+      commandsBtn.addEventListener('click', function () {
+        vm.showCommands();
+      });
+    }
+
+    var claudeBtn = document.getElementById('claude-btn');
+    if (claudeBtn) {
+      claudeBtn.addEventListener('click', function () {
+        vm.showClaudeChat();
+      });
+    }
   }
 
   // Archive dropdown
@@ -279,9 +386,9 @@ function init() {
   }
 
   // -------------------------------------------------------------------------
-  // 11. Connect SSE
+  // 11. Connect data client (IPC in Electron, SSE in browser)
   // -------------------------------------------------------------------------
-  sseClient.connect();
+  dataClient.connect();
 }
 
 // ---------------------------------------------------------------------------

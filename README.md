@@ -100,6 +100,35 @@ The master agent reads your codebase, plans the work, populates the dashboard, a
 
 ---
 
+## Desktop App
+
+Synapse ships as a native macOS desktop app — the same swarm engine wrapped in a full React GUI, so you can plan, dispatch, and monitor agent swarms without touching the terminal.
+
+### Running
+
+| Command | What It Does |
+|---|---|
+| `npm start` | Builds the UI with Vite, then launches the Electron app |
+| `npm run dist` | Builds with Vite then packages a signed `.dmg` via electron-builder |
+| `npm run server` | Web server mode only — dashboard at http://localhost:3456 (unchanged) |
+
+### Features
+
+| Feature | What It Does |
+|---|---|
+| **Live Swarm Dashboard** | Full dependency graph with Wave and Chain modes, real-time agent cards, deviation badges, and hover-highlighted dependency lines — same as web but in a native window |
+| **Claude Chat** | Direct chat interface to the Claude Code CLI; streams output live inside the app |
+| **Swarm Builder** | GUI for planning swarms: task form, dependency editor, and wave preview — no manual JSON editing required |
+| **AI Planner** | AI-assisted planning wizard that accepts a plain-language prompt and automatically decomposes it into a full task graph |
+| **Commands Browser** | Browse and execute all `!commands` from the UI without typing in the terminal |
+| **Worker Terminal** | Live terminal output per worker process — see exactly what each agent is doing as it runs |
+
+### Architecture
+
+The app maintains two parallel frontends: `src/ui/` is the React/Vite renderer for the Electron desktop app, while `src/client/` is the existing vanilla-JS frontend for web server mode — both remain fully functional. On the backend, `electron/services/SwarmOrchestrator.js` is a self-managing dispatch engine that replaces the terminal-based master agent: it reads `initialization.json`, dispatches unblocked tasks via the Claude Code CLI, handles completions and failures, and updates dashboard files automatically — so the desktop app can run a full swarm without any terminal interaction.
+
+---
+
 ## Commands
 
 ### ⚡ Dispatching Work

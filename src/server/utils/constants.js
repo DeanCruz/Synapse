@@ -6,6 +6,7 @@ const DASHBOARDS_DIR = path.join(ROOT, 'dashboards');
 const QUEUE_DIR = path.join(ROOT, 'queue');
 const ARCHIVE_DIR = path.join(ROOT, 'Archive');
 const HISTORY_DIR = path.join(ROOT, 'history');
+const CONVERSATIONS_DIR = path.join(ROOT, 'conversations');
 const PUBLIC_DIR = path.join(ROOT, 'public');
 
 // --- Named Constants ---
@@ -32,6 +33,7 @@ module.exports = {
   QUEUE_DIR,
   ARCHIVE_DIR,
   HISTORY_DIR,
+  CONVERSATIONS_DIR,
   PUBLIC_DIR,
   INIT_POLL_MS,
   PROGRESS_RETRY_MS,
