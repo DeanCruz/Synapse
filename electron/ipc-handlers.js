@@ -571,6 +571,28 @@ function registerIPCHandlers(getMainWindow) {
     return { success: true };
   });
 
+  // --- Image attachment handlers ---
+  ipcMain.handle('save-temp-images', async (_event, attachments) => {
+    const os = require('os');
+    const path = require('path');
+    const fs = require('fs');
+    const results = [];
+    for (const att of attachments) {
+      try {
+        const ext = att.mimeType ? '.' + att.mimeType.split('/')[1].split('+')[0] : '.png';
+        const filename = 'synapse_attach_' + Date.now() + '_' + Math.random().toString(36).slice(2) + ext;
+        const filepath = path.join(os.tmpdir(), filename);
+        const base64Data = att.base64.replace(/^data:[^;]+;base64,/, '');
+        fs.writeFileSync(filepath, Buffer.from(base64Data, 'base64'));
+        results.push({ path: filepath, name: att.name || filename });
+      } catch (err) {
+        console.error('[save-temp-images] Failed to save attachment:', err.message);
+        results.push({ path: null, name: att.name || 'unknown', error: err.message });
+      }
+    }
+    return results;
+  });
+
   ipcMain.handle('spawn-worker', async (_event, opts) => {
     console.log('[spawn-worker] Called with opts:', JSON.stringify({
       taskId: opts.taskId,
@@ -694,6 +716,52 @@ function registerIPCHandlers(getMainWindow) {
   // PATCH rename-conversation
   ipcMain.handle('rename-conversation', async (_event, filename, newName) => {
     return renameConversation(filename, newName);
+  });
+
+  // --- File/image handling for chat attachments ---
+  ipcMain.handle('save-temp-file', async (_event, base64, mimeType, name) => {
+    const os = require('os');
+    const ext = mimeType ? mimeType.split('/')[1] || 'png' : 'png';
+    const safeName = (name || 'attachment').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const fileName = safeName.endsWith('.' + ext) ? safeName : safeName + '.' + ext;
+    const tempPath = path.join(os.tmpdir(), 'synapse_' + Date.now() + '_' + fileName);
+    const buffer = Buffer.from(base64.replace(/^data:[^;]+;base64,/, ''), 'base64');
+    fs.writeFileSync(tempPath, buffer);
+    return { path: tempPath };
+  });
+
+  ipcMain.handle('select-image-file', async () => {
+    const win = getMainWindow();
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openFile'],
+      filters: [
+        { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'] },
+        { name: 'All Files', extensions: ['*'] },
+      ],
+      title: 'Select Image or File',
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    const filePath = result.filePaths[0];
+    const data = fs.readFileSync(filePath);
+    const ext = path.extname(filePath).slice(1).toLowerCase();
+    const mimeTypes = {
+      png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+      gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp',
+    };
+    const mimeType = mimeTypes[ext] || 'application/octet-stream';
+    const base64 = 'data:' + mimeType + ';base64,' + data.toString('base64');
+    return { path: filePath, base64, mimeType, name: path.basename(filePath) };
+  });
+
+  ipcMain.handle('read-file-as-base64', async (_event, filePath) => {
+    const data = fs.readFileSync(filePath);
+    const ext = path.extname(filePath).slice(1).toLowerCase();
+    const mimeTypes = {
+      png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg',
+      gif: 'image/gif', webp: 'image/webp', bmp: 'image/bmp',
+    };
+    const mimeType = mimeTypes[ext] || 'application/octet-stream';
+    return { base64: 'data:' + mimeType + ';base64,' + data.toString('base64'), mimeType, name: path.basename(filePath) };
   });
 
   // --- 3. Set up file watchers with IPC broadcast ---

@@ -97,6 +97,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getChatSystemPrompt: (projectDir) => ipcRenderer.invoke('get-chat-system-prompt', projectDir),
   logChatEvent: (dashboardId, entry) => ipcRenderer.invoke('log-chat-event', dashboardId, entry),
 
+  // Attachments
+  saveTempImages: (attachments) => ipcRenderer.invoke('save-temp-images', attachments),
+
   // Workers
   spawnWorker: (opts) => ipcRenderer.invoke('spawn-worker', opts),
   killWorker: (pid) => ipcRenderer.invoke('kill-worker', pid),
@@ -118,4 +121,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   createConversation: (name) => ipcRenderer.invoke('create-conversation', name),
   deleteConversation: (filename) => ipcRenderer.invoke('delete-conversation', filename),
   renameConversation: (filename, newName) => ipcRenderer.invoke('rename-conversation', filename, newName),
+
+  // File/image handling for chat attachments
+  saveTempFile: (base64, mimeType, name) => ipcRenderer.invoke('save-temp-file', base64, mimeType, name),
+  selectImageFile: () => ipcRenderer.invoke('select-image-file'),
+  readFileAsBase64: (filePath) => ipcRenderer.invoke('read-file-as-base64', filePath),
 });

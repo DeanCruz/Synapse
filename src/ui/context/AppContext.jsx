@@ -43,6 +43,7 @@ const initialState = {
   claudeIsProcessing: false,
   claudeStatus: 'Ready',
   claudeActiveTaskId: null,
+  claudePendingAttachments: [],
   // Per-dashboard caches for sidebar state derivation
   allDashboardProgress: {},
   allDashboardLogs: {},
@@ -103,13 +104,21 @@ function appReducerCore(state, action) {
       return { ...state, claudeMessages: action.updater(state.claudeMessages) };
     case 'CLAUDE_CLEAR_MESSAGES':
       try { localStorage.removeItem(CLAUDE_MESSAGES_KEY); } catch (e) { /* unavailable */ }
-      return { ...state, claudeMessages: [CLAUDE_WELCOME_MSG] };
+      return { ...state, claudeMessages: [CLAUDE_WELCOME_MSG], claudePendingAttachments: [] };
     case 'CLAUDE_SET_PROCESSING':
       return { ...state, claudeIsProcessing: action.value };
     case 'CLAUDE_SET_STATUS':
       return { ...state, claudeStatus: action.value };
     case 'CLAUDE_SET_TASK_ID':
       return { ...state, claudeActiveTaskId: action.value };
+    case 'CLAUDE_ADD_ATTACHMENT':
+      // action.attachment = { id, name, type, dataUrl }
+      return { ...state, claudePendingAttachments: [...state.claudePendingAttachments, action.attachment] };
+    case 'CLAUDE_REMOVE_ATTACHMENT':
+      // action.id = attachment id to remove
+      return { ...state, claudePendingAttachments: state.claudePendingAttachments.filter(a => a.id !== action.id) };
+    case 'CLAUDE_CLEAR_ATTACHMENTS':
+      return { ...state, claudePendingAttachments: [] };
     default:
       return state;
   }

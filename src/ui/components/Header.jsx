@@ -126,8 +126,7 @@ export default function Header() {
           <div className="header-btn-group">
             <button className="header-action-btn" title="Project Config" onClick={handleProject}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M2 4l4-2 4 2 4-2v10l-4 2-4-2-4 2V4z" stroke="currentColor" strokeWidth="1.2"/>
-                <path d="M6 2v12M10 4v12" stroke="currentColor" strokeWidth="1.2"/>
+                <path d="M2 4a1 1 0 011-1h4l1.5 1.5H13a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="currentColor" strokeWidth="1.2" fill="none"/>
               </svg>
               <span>Project</span>
             </button>

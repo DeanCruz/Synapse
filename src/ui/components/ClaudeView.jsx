@@ -80,6 +80,13 @@ function ConversationMessage({ msg }) {
   if (msg.type === 'user') {
     return (
       <div className="claude-message claude-user">
+        {msg.attachments && msg.attachments.length > 0 && (
+          <div className="claude-message-attachments">
+            {msg.attachments.map((a, i) => (
+              <img key={i} className="claude-message-image" src={a.dataUrl} alt={a.name} />
+            ))}
+          </div>
+        )}
         <div className="claude-message-text">{msg.text}</div>
       </div>
     );
@@ -124,12 +131,14 @@ export default function ClaudeView({ onClose }) {
   const isProcessing = state.claudeIsProcessing;
   const status = state.claudeStatus;
   const dashboardId = state.currentDashboardId;
+  const pendingAttachments = state.claudePendingAttachments;
 
   const [prompt, setPrompt] = useState('');
   const [model, setModel] = useState('sonnet');
   const [showHistory, setShowHistory] = useState(false);
   const [conversations, setConversations] = useState([]);
   const textareaRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Session / conversation persistence
   const sessionIdRef = useRef(null);    // CLI session_id for --resume
@@ -384,10 +393,74 @@ export default function ClaudeView({ onClose }) {
     return parts.join('\n');
   }
 
-  async function sendText(text) {
+  async function handleFiles(files) {
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) continue;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        dispatch({
+          type: 'CLAUDE_ADD_ATTACHMENT',
+          attachment: {
+            id: Date.now() + Math.random(),
+            name: file.name,
+            type: file.type,
+            dataUrl: e.target.result,
+          },
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+  }
+  function handleDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+  async function handleDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    const files = Array.from(e.dataTransfer.files);
+    await handleFiles(files);
+  }
+  async function handlePaste(e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles = [];
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      await handleFiles(imageFiles);
+    }
+  }
+
+  async function openFilePicker() {
+    if (!api) return;
+    const result = await api.selectImageFile();
+    if (result && result.base64) {
+      dispatch({
+        type: 'CLAUDE_ADD_ATTACHMENT',
+        attachment: {
+          id: Date.now() + Math.random(),
+          name: result.name || 'image',
+          type: result.mimeType || 'image/png',
+          dataUrl: `data:${result.mimeType || 'image/png'};base64,${result.base64}`,
+        },
+      });
+    }
+  }
+
+  async function sendText(text, attachments = []) {
     if (!text || !api) return;
 
-    appendMsg({ type: 'user', text });
+    appendMsg({ type: 'user', text, attachments });
     dispatch({ type: 'CLAUDE_SET_PROCESSING', value: true });
     dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
     currentTextIndexRef.current = null;
@@ -434,9 +507,31 @@ export default function ClaudeView({ onClose }) {
 
   async function sendMessage() {
     const text = prompt.trim();
-    if (!text) return;
+    if (!text && pendingAttachments.length === 0) return;
     setPrompt('');
-    await sendText(text);
+
+    let finalPrompt = text;
+    const attachmentsSnapshot = [...pendingAttachments];
+
+    if (attachmentsSnapshot.length > 0 && api) {
+      try {
+        const toSave = attachmentsSnapshot.map(a => ({
+          base64: a.dataUrl.split(',')[1] || a.dataUrl,
+          mimeType: a.type,
+          name: a.name,
+        }));
+        const saved = await api.saveTempImages(toSave);
+        const paths = saved.filter(s => s.path).map(s => s.path);
+        if (paths.length > 0) {
+          finalPrompt = (text ? text + '\n\n' : '') + paths.join('\n');
+        }
+      } catch (err) {
+        // proceed without paths if save fails
+      }
+      dispatch({ type: 'CLAUDE_CLEAR_ATTACHMENTS' });
+    }
+
+    await sendText(finalPrompt, attachmentsSnapshot);
   }
 
   const SUGGESTIONS = [
@@ -552,7 +647,13 @@ export default function ClaudeView({ onClose }) {
           </div>
         )}
 
-        <div className="claude-conversation claude-view-conversation" ref={conversationRef}>
+        <div
+          className="claude-conversation claude-view-conversation"
+          ref={conversationRef}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           {messages.map(msg => (
             <ConversationMessage key={msg.id} msg={msg} />
           ))}
@@ -573,6 +674,22 @@ export default function ClaudeView({ onClose }) {
         ))}
       </div>
 
+      {pendingAttachments.length > 0 && (
+        <div className="claude-attachment-bar">
+          {pendingAttachments.map(a => (
+            <div key={a.id} className="claude-attachment-chip">
+              <img src={a.dataUrl} alt={a.name} />
+              <span className="claude-attachment-chip-name">{a.name}</span>
+              <button
+                className="claude-attachment-chip-remove"
+                onClick={() => dispatch({ type: 'CLAUDE_REMOVE_ATTACHMENT', id: a.id })}
+                title="Remove"
+              >✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="claude-prompt-bar">
         <select
           className="claude-model-select"
@@ -583,20 +700,38 @@ export default function ClaudeView({ onClose }) {
           <option value="opus">Opus</option>
           <option value="haiku">Haiku</option>
         </select>
+        <button
+          className="claude-attach-btn"
+          onClick={openFilePicker}
+          title="Attach image"
+          disabled={isProcessing}
+        >📎</button>
         <textarea
           ref={textareaRef}
           className="claude-prompt-input"
-          placeholder="Ask Claude anything..."
+          placeholder="Ask Claude anything... (drag or paste images)"
           rows={1}
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
           onInput={handleTextareaInput}
+          onPaste={handlePaste}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          style={{ display: 'none' }}
+          onChange={e => { handleFiles(Array.from(e.target.files)); e.target.value = ''; }}
         />
         <button
           className="claude-send-btn"
           onClick={sendMessage}
-          disabled={!prompt.trim()}
+          disabled={!prompt.trim() && pendingAttachments.length === 0}
         >
           Send
         </button>

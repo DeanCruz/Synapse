@@ -83,13 +83,9 @@ export default function Sidebar() {
       {/* Footer — Settings */}
       <div className="sidebar-footer">
         <button className="sidebar-settings-btn" title="Settings" aria-label="Settings" onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'settings' })}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" overflow="visible">
-            <path
-              d="M6.7 1.4a1 1 0 011.6 0l.5.7a1 1 0 001 .4l.8-.2a1 1 0 011.1.8l.1.9a1 1 0 00.7.7l.9.1a1 1 0 01.8 1.1l-.2.8a1 1 0 00.4 1l.7.5a1 1 0 010 1.6l-.7.5a1 1 0 00-.4 1l.2.8a1 1 0 01-.8 1.1l-.9.1a1 1 0 00-.7.7l-.1.9a1 1 0 01-1.1.8l-.8-.2a1 1 0 00-1 .4l-.5.7a1 1 0 01-1.6 0l-.5-.7a1 1 0 00-1-.4l-.8.2a1 1 0 01-1.1-.8l-.1-.9a1 1 0 00-.7-.7l-.9-.1a1 1 0 01-.8-1.1l.2-.8a1 1 0 00-.4-1l-.7-.5a1 1 0 010-1.6l.7-.5a1 1 0 00.4-1l-.2-.8a1 1 0 01.8-1.1l.9-.1a1 1 0 00.7-.7l.1-.9a1 1 0 011.1-.8l.8.2a1 1 0 001-.4l.5-.7z"
-              stroke="currentColor"
-              strokeWidth="1.1"
-            />
-            <circle cx="8" cy="8" r="2.2" stroke="currentColor" strokeWidth="1.1"/>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+            <path d="M8 2v2.5M8 11.5V14M2 8h2.5M11.5 8H14M3.93 3.93l1.77 1.77M10.3 10.3l1.77 1.77M3.93 12.07l1.77-1.77M10.3 5.7l1.77-1.77" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
           </svg>
           <span className="sidebar-settings-label">Settings</span>
         </button>

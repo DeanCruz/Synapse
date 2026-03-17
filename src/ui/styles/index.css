@@ -4966,3 +4966,145 @@ a:hover {
   padding: 10px 16px;
   border-top: 1px solid var(--border);
 }
+
+/* =====================================================================
+   Attachment UI
+   ===================================================================== */
+
+/* Paperclip button in prompt bar — secondary/muted send-btn style */
+.claude-attach-btn {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.claude-attach-btn:hover {
+  color: var(--text);
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
+}
+.claude-attach-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Preview strip above prompt bar showing pending attachments */
+.claude-attachment-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  overflow-x: auto;
+  background: var(--surface-raised);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Individual attachment thumbnail container */
+.claude-attachment-chip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 3px 6px;
+  max-width: 150px;
+  flex-shrink: 0;
+}
+
+/* Thumbnail image inside chip */
+.claude-attachment-chip img {
+  width: 28px;
+  height: 28px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+/* Filename label in chip */
+.claude-attachment-chip-name {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80px;
+}
+
+/* Remove button on chip */
+.claude-attachment-chip-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  line-height: 1;
+  padding: 0 2px;
+  font-size: 12px;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.claude-attachment-chip-remove:hover {
+  color: var(--color-failed);
+}
+
+/* Full-area drag-drop overlay (reserved) */
+.claude-drop-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  background: rgba(155, 124, 240, 0.08);
+  border: 2px dashed var(--color-in-progress);
+  border-radius: 12px;
+  pointer-events: none;
+}
+.claude-drop-overlay.active {
+  display: flex;
+}
+
+/* Container for images in a user message */
+.claude-message-attachments {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+/* Individual image in a user message */
+.claude-message-image {
+  max-width: 300px;
+  max-height: 200px;
+  border-radius: 6px;
+  object-fit: contain;
+  border: 1px solid var(--border);
+  display: block;
+}
+
+/* Drag-over highlight on the conversation area */
+.claude-conversation.drag-over,
+.claude-view-conversation.drag-over {
+  outline: 2px dashed var(--color-in-progress);
+  outline-offset: -4px;
+  background: rgba(155, 124, 240, 0.04);
+}
+
+.claude-prompt-input.drag-over {
+  outline: 2px dashed var(--color-in-progress);
+  outline-offset: -2px;
+  background: rgba(155, 124, 240, 0.06);
+}
