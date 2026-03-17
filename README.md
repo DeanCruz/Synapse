@@ -2,18 +2,18 @@
 
 # ⚡ Synapse
 
-### Distributed Agent Swarm Control System
+### AI Agent Swarm Control — Desktop App
 
-[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)]()
-[![Node.js](https://img.shields.io/badge/node.js-built--ins%20only-339933?logo=node.js&logoColor=white)]()
+[![Electron](https://img.shields.io/badge/Electron-desktop%20app-47848F?logo=electron&logoColor=white)]()
+[![React](https://img.shields.io/badge/React%2019-UI-61DAFB?logo=react&logoColor=black)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-blueviolet?logo=anthropic&logoColor=white)]()
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-**Parallelize your AI agents. Visualize the swarm. Ship faster.**
+**Plan, dispatch, and monitor parallel AI agent swarms from a native desktop app.**
 
 Synapse decomposes complex tasks into independent units, dispatches multiple agents simultaneously,<br>tracks dependencies between them, and gives you a live dashboard to watch it all happen in real-time.
 
-[Getting Started](#setup) · [Commands](#commands) · [Dashboard](#dashboard) · [How It Works](#how-it-works)
+[Getting Started](#getting-started) · [Features](#features) · [Commands](#commands) · [How It Works](#how-it-works)
 
 </div>
 
@@ -29,118 +29,143 @@ Synapse decomposes complex tasks into independent units, dispatches multiple age
 | Context exhaustion on large tasks | Context distributed across workers |
 | No visibility into progress | Live dashboard with dependency graph |
 | Manual retry on failure | Automatic repair task dispatch |
+| Terminal-only interaction | Native desktop GUI with built-in chat |
 
 </div>
 
 ---
 
-## Setup
+## Getting Started
 
-> **Prerequisites:** Node.js (any recent version) + Claude Code CLI. No `npm install` needed.
+> **Prerequisites:** Node.js (any recent version) + Claude Code CLI.
 
-### 1. Clone Synapse into Your Workspace
-
-Your workspace is the parent directory that contains your project repos.
+### Install & Run
 
 ```bash
-cd your-workspace/
-git clone <synapse-repo-url> Synapse
+npm install
+npm start
 ```
 
-### 2. Move Parent Files to the Workspace Root
+`npm start` builds the React UI with Vite, then launches the Electron app — no separate server needed.
 
-`Synapse/_parent/` contains files that **must** live at the workspace root — one level above Synapse:
+### Other Scripts
+
+| Command | What It Does |
+|---|---|
+| `npm start` | Build UI + launch the desktop app |
+| `npm run dev` | Vite watch mode (rebuilds UI on change) |
+| `npm run dist` | Package a signed `.dmg` for macOS distribution |
+| `npm run server` | Web server mode only — dashboard at http://localhost:3456 |
+
+### Workspace Setup
+
+For full multi-repo orchestration, Synapse expects a workspace structure:
+
+```
+your-workspace/
+├── CLAUDE.md              ← Master agent instructions
+├── _commands/             ← Workspace commands (!review, !trace, etc.)
+├── Synapse/               ← This app
+├── your-project-1/
+├── your-project-2/
+└── ...
+```
+
+`Synapse/_parent/` contains the workspace-level files. Copy them to your workspace root:
 
 ```bash
 cp Synapse/_parent/CLAUDE.md ./CLAUDE.md
 cp -r Synapse/_parent/_commands ./_commands
 ```
 
-| File | Purpose |
-|---|---|
-| `CLAUDE.md` | Master agent instructions — orchestration rules, `!command` resolution, multi-repo coordination |
-| `_commands/` | Workspace-level commands — `!review`, `!trace`, `!initialize`, and more |
-
-<details>
-<summary><b>Resulting workspace structure</b></summary>
-
-```
-your-workspace/
-├── CLAUDE.md              ← Master agent instructions (from _parent/)
-├── _commands/             ← Workspace commands (from _parent/)
-├── Synapse/               ← This tool
-├── your-project-1/
-├── your-project-2/
-└── ...
-```
-
-</details>
-
-### 3. Add CLAUDE.md Files to Your Repos
-
-Each repo should have its own `CLAUDE.md` describing its tech stack, architecture, and conventions. Workers read these before implementing — better docs mean better output.
-
-> **Don't have them yet?** Run `!initialize` after setup — it detects missing files and scaffolds templates.
-
-### 4. Start the Dashboard
-
-```bash
-./Synapse/start.sh
-```
-
-Open **http://localhost:3456** — you'll see the dashboard waiting for a swarm.
-
-### 5. Run Your First Swarm
-
-```
-!p_track Build a REST API with user authentication and product CRUD endpoints
-```
-
-The master agent reads your codebase, plans the work, populates the dashboard, and asks for your approval before dispatching workers.
+Each child repo should have its own `CLAUDE.md` describing its tech stack and conventions. Run `!initialize` inside the app to scaffold any missing ones.
 
 ---
 
-## Desktop App
+## Features
 
-Synapse ships as a native macOS desktop app — the same swarm engine wrapped in a full React GUI, so you can plan, dispatch, and monitor agent swarms without touching the terminal.
+### Live Swarm Dashboard
 
-### Running
+Full dependency graph visualization with Wave and Chain layout modes. Real-time agent cards show stage, elapsed time, and latest milestone. Dependency lines highlight on hover — blue for upstream needs, red for downstream blocks. Yellow deviation badges appear instantly when workers diverge from the plan.
 
-| Command | What It Does |
-|---|---|
-| `npm start` | Builds the UI with Vite, then launches the Electron app |
-| `npm run dist` | Builds with Vite then packages a signed `.dmg` via electron-builder |
-| `npm run server` | Web server mode only — dashboard at http://localhost:3456 (unchanged) |
+### Claude Chat
 
-### Features
+Built-in chat interface to the Claude Code CLI. Streams output live inside the app — no terminal switching required. Start swarms, ask questions, or run commands directly from the chat view.
 
-| Feature | What It Does |
-|---|---|
-| **Live Swarm Dashboard** | Full dependency graph with Wave and Chain modes, real-time agent cards, deviation badges, and hover-highlighted dependency lines — same as web but in a native window |
-| **Claude Chat** | Direct chat interface to the Claude Code CLI; streams output live inside the app |
-| **Swarm Builder** | GUI for planning swarms: task form, dependency editor, and wave preview — no manual JSON editing required |
-| **AI Planner** | AI-assisted planning wizard that accepts a plain-language prompt and automatically decomposes it into a full task graph |
-| **Commands Browser** | Browse and execute all `!commands` from the UI without typing in the terminal |
-| **Worker Terminal** | Live terminal output per worker process — see exactly what each agent is doing as it runs |
+### Swarm Builder
 
-### Architecture
+GUI for planning swarms: task form, dependency editor, and wave preview. Build a full task graph visually without editing JSON.
 
-The app maintains two parallel frontends: `src/ui/` is the React/Vite renderer for the Electron desktop app, while `src/client/` is the existing vanilla-JS frontend for web server mode — both remain fully functional. On the backend, `electron/services/SwarmOrchestrator.js` is a self-managing dispatch engine that replaces the terminal-based master agent: it reads `initialization.json`, dispatches unblocked tasks via the Claude Code CLI, handles completions and failures, and updates dashboard files automatically — so the desktop app can run a full swarm without any terminal interaction.
+### AI Planner
+
+AI-assisted planning wizard that accepts a plain-language prompt and automatically decomposes it into a complete task graph with dependencies.
+
+### Commands Browser
+
+Browse and execute all `!commands` from the UI. See available commands, their descriptions, and run them without touching the terminal.
+
+### Worker Terminal
+
+Live terminal output per worker process. See exactly what each agent is doing as it runs.
+
+### Multi-Dashboard
+
+Up to 5 simultaneous swarms. Synapse auto-selects the first available slot and never overwrites an in-progress swarm. Switch between them from the sidebar.
+
+---
+
+## Architecture
+
+```
+Electron Main Process
+├── main.js                  ← Window management, app lifecycle
+├── preload.js               ← IPC bridge (electronAPI)
+├── ipc-handlers.js          ← IPC handler registration
+└── services/
+    ├── ClaudeCodeService.js     ← Claude Code CLI integration
+    ├── SwarmOrchestrator.js     ← Self-managing dispatch engine
+    ├── ConversationService.js   ← Chat history persistence
+    ├── ProjectService.js        ← Workspace/project detection
+    ├── CommandsService.js       ← !command discovery and execution
+    ├── TaskEditorService.js     ← Swarm builder backend
+    └── PromptBuilder.js         ← Worker prompt construction
+
+React Renderer (Vite)
+├── App.jsx                  ← Root with routing
+├── components/
+│   ├── ClaudeView.jsx       ← Chat interface
+│   ├── SwarmBuilder.jsx     ← Visual task graph editor
+│   ├── WavePipeline.jsx     ← Wave layout dashboard
+│   ├── ChainPipeline.jsx    ← Chain layout dashboard
+│   ├── Header.jsx           ← Navigation + controls
+│   ├── Sidebar.jsx          ← Dashboard selector
+│   └── ...
+├── context/                 ← App state (React Context)
+├── hooks/                   ← Data fetching, electron API
+└── styles/                  ← Dark theme CSS
+
+Web Server (standalone mode)
+└── src/server/index.js      ← SSE server for browser dashboard
+```
+
+The desktop app has two parallel frontends: `src/ui/` is the React/Vite renderer for Electron, while `src/client/` is the vanilla-JS frontend for web server mode. Both remain fully functional.
+
+`SwarmOrchestrator.js` is the desktop app's dispatch engine — it reads `initialization.json`, dispatches unblocked tasks via the Claude Code CLI, handles completions and failures, and updates dashboard files. This replaces the terminal-based master agent, so the app can run a full swarm without any terminal interaction.
 
 ---
 
 ## Commands
 
-### ⚡ Dispatching Work
+Commands work in both the built-in chat and the terminal Claude Code CLI.
+
+### Dispatching Work
 
 | Command | When to Use |
 |---|---|
 | **`!p_track {prompt}`** | Full orchestration — live dashboard, dependency tracking, history. Use for 5+ tasks, cross-repo work, or complex dependencies. |
 | **`!p {prompt}`** | Lightweight parallel dispatch — same planning, no dashboard overhead. Use for quick jobs under 5 tasks. |
 
-Both trigger the same deep planning process. The difference is whether the dashboard tracks it.
-
-### 📊 Monitoring
+### Monitoring
 
 | Command | What It Shows |
 |---|---|
@@ -149,7 +174,7 @@ Both trigger the same deep planning process. The difference is whether the dashb
 | `!inspect {id}` | Deep-dive — timeline, milestones, deviations, dependencies, worker logs |
 | `!deps` | Dependency graph — `--critical` for critical path, `--blocked` for stuck chains |
 
-### 🔧 Intervening
+### Intervening
 
 | Command | What It Does |
 |---|---|
@@ -158,13 +183,13 @@ Both trigger the same deep planning process. The difference is whether the dashb
 | `!cancel` | Immediately cancel. `--force` skips confirmation |
 | `!cancel-safe` | Graceful shutdown — waits for in-progress agents to finish |
 
-### 📁 Housekeeping
+### Housekeeping
 
 | Command | What It Does |
 |---|---|
 | `!history` | Browse past swarms. `--last 5` for recent only |
 | `!reset` | Clear dashboard + save history. `--all` clears all 5 dashboards |
-| `!start` / `!stop` | Start or stop the dashboard server |
+| `!start` / `!stop` | Start or stop the web dashboard server |
 | `!guide` | Interactive command decision tree |
 
 ---
@@ -200,7 +225,7 @@ Both trigger the same deep planning process. The difference is whether the dashb
              │
              ▼
   ┌─────────────────────┐
-  │  Live progress on    │◄──── real-time SSE updates
+  │  Live progress on    │◄──── real-time updates
   │  dashboard           │
   └──────────┬──────────┘
              │
@@ -233,56 +258,13 @@ A single agent on a large task will exhaust its context window — it forgets ea
 | **Upstream results flow downstream** | When Wave 1 completes, the master injects its outputs (files created, types exported, deviations) into Wave 2 prompts. No re-reading upstream work. |
 | **Write-once plan** | `initialization.json` written once. Workers own their progress files. Dashboard derives stats client-side. Zero status bookkeeping overhead. |
 
-```
-Wave 1: Create database schema ──────┐    Create auth middleware ──────┐
-                                      │                                │
-                                      ▼                                ▼
-Wave 2: Build User service ──────────┐│   Build Auth service ─────────┐│
-        (gets schema output)         ││   (gets middleware output)    ││
-                                     ▼▼                               ▼▼
-Wave 3:          Integration task (gets ALL upstream outputs)
-```
-
-> **The net effect:** instead of one 200K-token context window trying to hold everything, you get a master spending context on planning + N workers each with focused execution windows. Total effective context scales linearly with workers.
-
----
-
-## Dashboard
-
-<table>
-<tr>
-<td width="50%">
-
-### Wave Mode
-Vertical columns per dependency level. Independent tasks side-by-side. Best for broad, parallel workloads.
-
-### Chain Mode
-Horizontal rows per dependency chain. Tasks flow left-to-right. Best for narrow, deep pipelines.
-
-</td>
-<td width="50%">
-
-### What You'll See
-- **Stat cards** — Total, Completed, In Progress, Failed, Pending, Elapsed
-- **Agent cards** — Stage, elapsed time, latest milestone
-- **Dependency lines** — Hover for needs (blue) and blocks (red)
-- **Deviation badges** — Yellow when workers diverge from plan
-- **Log panel** — Filterable event log
-- **Agent popups** — Full timeline, deviations, worker logs
-
-</td>
-</tr>
-</table>
-
-**Multi-Dashboard** — Up to 5 simultaneous swarms. Synapse auto-selects the first available slot and never overwrites an in-progress swarm.
-
 ---
 
 ## Configuration
 
 | Setting | Default | Override |
 |---|---|---|
-| Port | `3456` | `PORT=8080 node Synapse/src/server/index.js` |
+| Port (web server mode) | `3456` | `PORT=8080 node src/server/index.js` |
 
 ---
 
@@ -310,6 +292,6 @@ Horizontal rows per dependency chain. Tasks flow left-to-right. Best for narrow,
 
 <div align="center">
 
-**MIT License** · Zero dependencies · Works offline
+**MIT License** · Built with Electron + React + Vite
 
 </div>
