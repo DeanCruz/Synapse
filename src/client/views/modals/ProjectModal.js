@@ -4,14 +4,51 @@
 import { el } from '../../utils/dom.js';
 import { createModalPopup } from './ModalFactory.js';
 
+var DASHBOARD_PROJECTS_KEY = 'synapse-dashboard-projects';
+
+/**
+ * Get all per-dashboard project paths from localStorage.
+ * @returns {object} — map of dashboardId → project path
+ */
+export function getAllDashboardProjects() {
+  try {
+    return JSON.parse(localStorage.getItem(DASHBOARD_PROJECTS_KEY)) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+/**
+ * Get the project path for a specific dashboard.
+ * @param {string} dashboardId
+ * @returns {string|null}
+ */
+export function getDashboardProject(dashboardId) {
+  var map = getAllDashboardProjects();
+  return map[dashboardId] || null;
+}
+
+/**
+ * Save a project path for a specific dashboard.
+ * @param {string} dashboardId
+ * @param {string} projectPath
+ */
+export function saveDashboardProject(dashboardId, projectPath) {
+  var map = getAllDashboardProjects();
+  map[dashboardId] = projectPath;
+  localStorage.setItem(DASHBOARD_PROJECTS_KEY, JSON.stringify(map));
+}
+
 /**
  * Show the project configuration modal.
  *
  * @param {object} opts
- * @param {function} opts.onProjectSelected — callback({ path, name, language, hasClaudeMd })
+ * @param {string} opts.dashboardId — which dashboard this project config is for
+ * @param {function} opts.onProjectSelected — callback({ path, name, language, hasClaudeMd, dashboardId })
  */
 export function showProjectModal(opts) {
-  var popup = createModalPopup('project-overlay', 'Project Configuration');
+  var dashboardId = opts.dashboardId || 'dashboard1';
+  var popup = createModalPopup('project-overlay', 'Project Configuration — ' + dashboardId.replace('dashboard', 'Dashboard '));
   var body = popup.body;
 
   var api = window.electronAPI;
@@ -37,8 +74,9 @@ export function showProjectModal(opts) {
       api.loadProject(dirPath).then(function (project) {
         updateCurrentDisplay(project);
         api.addRecentProject({ path: project.path, name: project.name });
-        api.setSetting('activeProjectPath', project.path);
-        if (opts.onProjectSelected) opts.onProjectSelected(project);
+        // Save per-dashboard project path
+        saveDashboardProject(dashboardId, project.path);
+        if (opts.onProjectSelected) opts.onProjectSelected({ path: project.path, name: project.name, language: project.language, hasClaudeMd: project.hasClaudeMd, dashboardId: dashboardId });
       });
     });
   });
@@ -121,10 +159,12 @@ export function showProjectModal(opts) {
     currentDisplay.appendChild(metaEl);
   }
 
-  // Load active project
+  // Load active project for this dashboard (per-dashboard path takes priority)
+  var perDashboardPath = getDashboardProject(dashboardId);
   api.getSettings().then(function (settings) {
-    if (settings.activeProjectPath) {
-      api.loadProject(settings.activeProjectPath).then(function (project) {
+    var projectPath = perDashboardPath || settings.activeProjectPath;
+    if (projectPath) {
+      api.loadProject(projectPath).then(function (project) {
         updateCurrentDisplay(project);
       });
     }
@@ -151,8 +191,8 @@ export function showProjectModal(opts) {
         row.addEventListener('click', function () {
           api.loadProject(recent.path).then(function (project) {
             updateCurrentDisplay(project);
-            api.setSetting('activeProjectPath', project.path);
-            if (opts.onProjectSelected) opts.onProjectSelected(project);
+            saveDashboardProject(dashboardId, project.path);
+            if (opts.onProjectSelected) opts.onProjectSelected({ path: project.path, name: project.name, language: project.language, hasClaudeMd: project.hasClaudeMd, dashboardId: dashboardId });
           });
         });
         recentList.appendChild(row);

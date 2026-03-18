@@ -10,9 +10,10 @@ function ensureDir() {
 }
 
 /**
- * Returns array of {id, name, created, updated, messageCount} sorted newest-first by updated.
+ * Returns array of {id, name, created, updated, dashboardId, messageCount} sorted newest-first by updated.
+ * If dashboardId is provided, only returns conversations for that dashboard.
  */
-function listConversations() {
+function listConversations(dashboardId) {
   try {
     ensureDir();
     const files = fs.readdirSync(CONVERSATIONS_DIR).filter(f => f.endsWith('.json'));
@@ -21,11 +22,14 @@ function listConversations() {
       try {
         const raw = fs.readFileSync(path.join(CONVERSATIONS_DIR, file), 'utf8');
         const conv = JSON.parse(raw);
+        // Filter by dashboardId if provided
+        if (dashboardId && conv.dashboardId && conv.dashboardId !== dashboardId) continue;
         results.push({
           id: conv.id,
           name: conv.name,
           created: conv.created,
           updated: conv.updated,
+          dashboardId: conv.dashboardId || null,
           messageCount: Array.isArray(conv.messages) ? conv.messages.length : 0,
         });
       } catch (e) {
