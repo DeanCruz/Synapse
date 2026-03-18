@@ -43,7 +43,9 @@
    - Read any files that are relevant to the failure (e.g., if the worker reported a missing import, read the file to verify the current state).
    - Determine what to include in the retry prompt to prevent the same failure.
 
-10. **Dispatch a new agent** using the standard prompt template from `p_track.md` Step 14. **Include `{dashboardId}` in the worker prompt.** Add a retry section with root cause context:
+10. **Resolve `{project_root}`** from the `task.project_root` field in `initialization.json`. If not present, resolve using the standard resolution order.
+
+11. **Dispatch a new agent** using the standard prompt template from `p_track.md` Step 14. **Include `{dashboardId}`, `{tracker_root}`, and `{project_root}` in the worker prompt.** Add a retry section with root cause context:
    ```
    NOTE: This is a RETRY of a previously failed task.
 
@@ -62,7 +64,7 @@
    {Key log entries from the failed attempt that provide context}
    ```
 
-11. **Append to `{tracker_root}/dashboards/{dashboardId}/logs.json`:**
+12. **Append to `{tracker_root}/dashboards/{dashboardId}/logs.json`:**
     ```json
     {
       "timestamp": "{live timestamp via date -u}",
@@ -74,4 +76,4 @@
     }
     ```
 
-12. **Display a brief confirmation** showing the retried task and its new agent assignment.
+13. **Display a brief confirmation** showing the retried task and its new agent assignment.

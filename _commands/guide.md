@@ -13,10 +13,18 @@
 ```markdown
 ## What do you want to do?
 
+### Set up a project
+  ├─ Point Synapse at a project ─────────── !project set /path/to/repo
+  ├─ Show current project ───────────────── !project
+  ├─ Initialize Synapse for a project ───── !initialize
+  ├─ Get oriented in a new project ──────── !onboard
+  └─ Generate CLAUDE.md for a project ───── !scaffold
+  │
 ### Start parallel work
   ├─ How many tasks?
   │   ├─ < 5 tasks, quick job ────────────── !p {prompt}
   │   └─ 5+ tasks, need tracking ─────────── !p_track {prompt}
+  │   └─ Multiple independent swarms ─────── !master_plan_track {prompt}
   │
 ### Monitor a running swarm
   ├─ Quick status overview ────────────────── !status
@@ -41,6 +49,25 @@
   ├─ Start the dashboard server ───────────── !start
   └─ Stop the dashboard server ────────────── !stop
   │
+### Project analysis
+  ├─ Deep context search ────────────────── !context {query}
+  ├─ Code review ────────────────────────── !review
+  ├─ Project health check ───────────────── !health
+  ├─ Blast radius analysis ──────────────── !scope {change}
+  ├─ End-to-end tracing ─────────────────── !trace {endpoint}
+  ├─ API contract audit ─────────────────── !contracts
+  └─ Environment variable audit ─────────── !env_check
+  │
+### Table of Contents
+  ├─ Search project TOC ─────────────────── !toc {query}
+  ├─ Generate full TOC ──────────────────── !toc_generate
+  └─ Update TOC incrementally ───────────── !toc_update
+  │
+### Profiles & discovery
+  ├─ List available profiles ────────────── !profiles
+  ├─ List all commands ──────────────────── !commands
+  └─ Show help guide ────────────────────── !help
+  │
 ### Housekeeping
   ├─ Clear dashboard data ─────────────────── !reset
   ├─ Clear all dashboards ─────────────────── !reset --all
@@ -52,12 +79,22 @@
 ```markdown
 ## Command Reference
 
+### Project Management
+
+| Command | Description |
+|---|---|
+| `!project` | Show, set, or clear the target project path. |
+| `!initialize` | Initialize Synapse for a target project — create `.synapse/`, detect tech stack, optionally scaffold `CLAUDE.md`. |
+| `!onboard` | Project walkthrough — read CLAUDE.md, TOC, key files and present a structured orientation. |
+| `!scaffold` | Generate a `CLAUDE.md` for a project that doesn't have one. |
+
 ### Swarm Lifecycle
 
 | Command | Description |
 |---|---|
 | `!p_track {prompt}` | Full swarm: deep planning, dependency-aware parallel dispatch, live dashboard tracking, and detailed statusing. The primary command for complex parallel work. |
 | `!p {prompt}` | Lightweight parallel dispatch: deep planning and high-quality worker prompts without dashboard tracking overhead. No XML, no dashboard writes, no progress files. |
+| `!master_plan_track {prompt}` | Multi-stream orchestration: decompose large work into independent swarms across multiple dashboards. |
 | `!dispatch {id}` | Manually dispatch a specific pending task. Use `!dispatch --ready` to dispatch all tasks whose dependencies are satisfied. |
 | `!retry {id}` | Re-dispatch a failed or blocked task with a fresh agent. Deletes the old progress file and launches a new worker. |
 | `!cancel` | Cancel the active swarm immediately. Marks all non-completed tasks as failed. Running agents may continue in the background. Use `--force` to skip confirmation. |
@@ -86,6 +123,25 @@
 |---|---|
 | `!reset` | Clear a dashboard and reset it to empty state. Saves a history summary before clearing. Use `--all` to reset all 5 dashboards. Use `--keep-history` to preserve past task records. |
 | `!guide` | Show this command decision tree and reference. |
+
+### Project Analysis
+
+| Command | Description |
+|---|---|
+| `!context {query}` | Deep context gathering within the target project. |
+| `!review` | Code review of recent changes or specified files. |
+| `!health` | Project health check — CLAUDE.md quality, dependency health, TOC consistency. |
+| `!scope {change}` | Blast radius analysis — what would be affected by a proposed change. |
+| `!trace {endpoint}` | End-to-end code tracing of an endpoint, function, or data flow. |
+| `!contracts` | API contract audit — consistency between interfaces and implementations. |
+| `!env_check` | Environment variable audit — consistency across configs. |
+| `!plan {task}` | Implementation planning based on project context. |
+| `!toc {query}` | Search the project Table of Contents. |
+| `!toc_generate` | Generate a full project TOC via parallel agent swarm. |
+| `!toc_update` | Incrementally update the TOC for changed files. |
+| `!profiles` | List all available agent role profiles. |
+| `!commands` | List all available commands from all locations. |
+| `!help` | Master agent guide — when to use each command. |
 ```
 
 3. **Display the quick-pick tips:**

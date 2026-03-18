@@ -1,23 +1,49 @@
 # Synapse — Distributed Agent Swarm Control System
 
-Synapse is a distributed control system for coordinating autonomous agent swarms. It optimizes context usage, parallelizes execution, and provides a centralized control plane for complex software development tasks.
+Synapse is a standalone distributed control system for coordinating autonomous agent swarms. It optimizes context usage, parallelizes execution, and provides a centralized control plane for complex software development tasks.
+
+Synapse operates on a **target project** that lives at `{project_root}` — completely separate from Synapse's own location at `{tracker_root}`. Workers do their code work in `{project_root}` and report progress back to `{tracker_root}`. Synapse does not need to be inside the project it manages.
 
 ---
 
 ## Quick Start
 
 ```bash
-# 1. Start the dashboard
-node Synapse/src/server/index.js
+# 1. Point Synapse at your project (or just run from within the project directory)
+!project set /path/to/your/project
 
-# 2. Open in browser
+# 2. Start the dashboard
+node {tracker_root}/src/server/index.js
+
+# 3. Open in browser
 open http://localhost:3456
 
-# 3. Run a parallel task
+# 4. Run a parallel task
 !p_track {your prompt here}
 ```
 
-No `npm install` required. The server uses only Node.js built-ins.
+If you are already working inside the target project directory, Synapse will auto-detect it as `{project_root}` — no `!project set` needed.
+
+---
+
+## Path Convention
+
+Every path in Synapse uses one of two placeholders:
+
+| Placeholder | Meaning | Example |
+|---|---|---|
+| `{tracker_root}` | Absolute path to the Synapse repository | `/Users/dean/tools/Synapse` |
+| `{project_root}` | Absolute path to the target project being worked on | `/Users/dean/repos/my-app` |
+
+These are always absolute paths. Workers receive **both** in their dispatch prompts. They write code in `{project_root}` and report progress to `{tracker_root}/dashboards/{dashboardId}/progress/`.
+
+### Resolving `{project_root}`
+
+When any Synapse command needs the target project, resolve in this order:
+
+1. **Explicit `--project /path` flag** on the command
+2. **Stored config** at `{tracker_root}/.synapse/project.json` (set via `!project set /path`)
+3. **Current working directory** — the agent's CWD
 
 ---
 
@@ -27,7 +53,7 @@ No `npm install` required. The server uses only Node.js built-ins.
 Master Agent plans → writes initialization.json once
         │
         ▼
-Workers execute tasks → write progress files with full lifecycle + logs
+Workers execute tasks in {project_root} → write progress files to {tracker_root}
         │
         ▼
 server.js detects file changes (fs.watch on progress/, fs.watchFile on init/logs)
@@ -53,14 +79,15 @@ The master agent has exactly **five responsibilities** during a swarm. Nothing m
 
 #### 1. Gather Context
 
-- Read `TableOfContentsMaster.xml` to identify relevant repos and directories, then drill into `TableOfContents/{repo}/{path}/index.xml` for file-level detail
-- Read the `CLAUDE.md` of every child repo that will be touched
-- Read source files, documentation, types, schemas, and configs needed to understand the task
 - Read the Synapse `CLAUDE.md` (this file) for swarm protocols
+- Read `{project_root}/CLAUDE.md` for target project conventions, architecture, and constraints
+- If a project TOC exists at `{project_root}/.synapse/toc.md`, read it for semantic orientation
+- Use Glob/Grep within `{project_root}` for targeted file discovery
+- Read source files, documentation, types, schemas, and configs needed to understand the task
 - Read relevant command files from `_commands/` directories
 - Build a complete mental model of the codebase, dependencies, and constraints
 
-The master agent reads **extensively**. It reads more than any worker will. It reads across repo boundaries. It reads documentation, code, types, and tests. This deep context gathering is what makes the plan accurate and the agent prompts self-contained. Skimping here causes cascading failures downstream.
+The master agent reads **extensively**. It reads more than any worker will. It reads documentation, code, types, and tests. This deep context gathering is what makes the plan accurate and the agent prompts self-contained. Skimping here causes cascading failures downstream.
 
 #### 2. Plan
 
@@ -68,7 +95,7 @@ The master agent reads **extensively**. It reads more than any worker will. It r
 - Map every dependency between tasks (what blocks what)
 - Determine wave groupings for visual organization
 - Write each agent's prompt with **complete, self-contained context** — the agent must be able to execute without reading additional files or asking questions
-- Include in every agent prompt: the specific files to modify, the conventions from the relevant repo's `CLAUDE.md`, any cross-repo context, code snippets the agent needs to see, and clear success criteria
+- Include in every agent prompt: the specific files to modify, the conventions from `{project_root}/CLAUDE.md`, code snippets the agent needs to see, clear success criteria, **and both `{tracker_root}` and `{project_root}` paths**
 - Create the master XML task file documenting the full plan
 - Write the strategy rationale plan file
 - **Populate the dashboard before presenting the plan to the user** — clear the progress directory, write the full plan to `initialization.json` (all tasks, all waves, all dependencies — static plan data only), and write an initialization entry to `logs.json`. This gives the user a live visual representation of the plan on the dashboard while they review and approve it. **`initialization.json` is write-once — the master never updates it after planning.**
@@ -79,6 +106,7 @@ Planning is where the master agent earns its value. A well-planned swarm execute
 
 - The dashboard is already populated with the full plan from the planning phase — all tasks visible as pending cards with dependency lines
 - Spawn worker agents via the Task tool with their complete prompts (the elapsed timer starts automatically when the first worker writes its progress file with a `started_at` value)
+- **Every worker prompt must include `{tracker_root}` (for progress reporting) and `{project_root}` (for code work)** — workers cannot auto-detect these
 - Dispatch all independent tasks in parallel — no artificial sequencing
 - As workers complete, immediately scan for newly unblocked tasks and dispatch them
 - Never let the pipeline stall waiting for a batch or wave to finish
@@ -96,7 +124,7 @@ Planning is where the master agent earns its value. A well-planned swarm execute
 
 - When all agents have completed (or failed), compile a final summary
 - Report what was accomplished, what failed, and what needs follow-up
-- Update `TableOfContentsMaster.xml` and relevant `TableOfContents/*/index.xml` files if the swarm created, moved, or restructured files
+- Update the project TOC at `{project_root}/.synapse/toc.md` if the swarm created, moved, or restructured files (and if a TOC exists)
 - Move the completed swarm to history if a new swarm will start
 
 ### What the Master Agent NEVER Does During a Swarm
@@ -112,13 +140,13 @@ This list is exhaustive and absolute. There are **no exceptions**.
 
 ### Why This Matters
 
-The master agent's power comes from its **elevated perspective**. It sees the full dependency graph. It holds context from every repo. It knows what every worker is doing and what comes next. The moment it starts writing code, it loses this perspective. It gets tunnel-visioned into implementation details. It forgets to dispatch the next wave. It misses a dependency. It writes code that conflicts with what a worker is simultaneously producing.
+The master agent's power comes from its **elevated perspective**. It sees the full dependency graph. It holds context from the entire project. It knows what every worker is doing and what comes next. The moment it starts writing code, it loses this perspective. It gets tunnel-visioned into implementation details. It forgets to dispatch the next wave. It misses a dependency. It writes code that conflicts with what a worker is simultaneously producing.
 
 A conductor does not pick up a violin mid-symphony. The master agent does not pick up an editor mid-swarm.
 
 ### The Only Files the Master Agent Writes
 
-During a swarm, the master agent writes to exactly these files and **no others**:
+During a swarm, the master agent writes to exactly these files at `{tracker_root}` and **no others**:
 
 | File | Purpose |
 |---|---|
@@ -127,11 +155,217 @@ During a swarm, the master agent writes to exactly these files and **no others**
 | `tasks/{date}/parallel_{name}.xml` | Master task record (plan, status, summaries) |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
-Everything else is a worker's job.
+Everything else is a worker's job. The master agent writes **nothing** into `{project_root}`.
 
 ### After a Swarm Completes
 
 Once all workers have finished and the master has compiled its final report, the swarm is over. At this point — and **only** at this point — the master agent may resume normal agent behavior (including direct code edits) if the user requests non-parallel work. The no-code restriction applies **exclusively during active swarm orchestration.**
+
+---
+
+## Project Discovery and Context Gathering
+
+### Context Efficiency Principles
+
+The master agent's most critical skill is **context efficiency** — gathering exactly the right information with minimal reads, and preserving context window space for reasoning and execution.
+
+1. **Glob/Grep first for targeted searches.** They cost zero context tokens and are always current. Use them before reaching for the TOC.
+
+2. **Project CLAUDE.md for orientation.** `{project_root}/CLAUDE.md` provides the architectural overview, conventions, and patterns for the target project. Read it before any work in the project.
+
+3. **Project TOC for semantic discovery.** When filenames don't reveal purpose, or you need to understand how components relate, check `{project_root}/.synapse/toc.md` if one exists. If none exists and the project is large (500+ files), consider running `!toc_generate`.
+
+4. **Read with purpose.** Before reading any file, know what you expect to find. If you're reading "just in case," you're wasting context.
+
+5. **Parallel reads.** When you need to read multiple files, read them all in a single parallel call. Never read files sequentially when they have no dependency between them.
+
+6. **Targeted line ranges.** For large files where you only need a specific section, use line offsets rather than reading the entire file.
+
+7. **Cache awareness.** After context compaction, you lose file contents from earlier reads. Re-read critical files rather than working from stale memory.
+
+8. **Summarize, don't hoard.** After reading a file for context, extract the relevant facts and move on. You don't need to keep the entire file contents in working memory.
+
+### Project `.synapse/` Directory
+
+Synapse stores project-scoped metadata in `{project_root}/.synapse/`:
+
+| File | Purpose |
+|---|---|
+| `toc.md` | Project Table of Contents — semantic index of files and directories (generated by `!toc_generate`) |
+| `profile.json` | Auto-generated project profile (tech stack, key directories, git info) |
+| `context_cache.json` | Key facts discovered during swarms, persisted across sessions |
+
+Projects should add `.synapse/` to their `.gitignore`. This directory is optional — Synapse works without it but provides better context efficiency when it exists.
+
+---
+
+## Command Resolution — `!{command}` System
+
+When the user types `!{command}`, locate and execute the corresponding command file. Commands are resolved in this priority order:
+
+### Resolution Order
+
+```
+1. {tracker_root}/_commands/{command}.md              ← Synapse swarm commands (highest priority)
+2. {tracker_root}/_commands/project/{command}.md      ← Synapse project commands
+3. {project_root}/_commands/{command}.md              ← Project-specific commands
+```
+
+### Resolution Rules
+
+1. **Check Synapse swarm commands first.** Swarm and dashboard commands (`!p_track`, `!status`, `!dispatch`, etc.) live at `{tracker_root}/_commands/`. Always checked first.
+
+2. **Check Synapse project commands second.** Project analysis and management commands (`!context`, `!review`, `!health`, `!toc`, etc.) live at `{tracker_root}/_commands/project/`.
+
+3. **Check the target project last.** Projects may define their own commands at `{project_root}/_commands/`. These allow project-specific workflows and overrides.
+
+4. **If not found anywhere**, inform the user that `!{command}` does not exist and list available commands from all discovered locations.
+
+5. **Once found, read the command file in full and follow it exactly.** Command files are complete specs — do not improvise, skip steps, or partially execute.
+
+---
+
+## Profile System — `!profile` Modifier
+
+Profiles override the agent's default priorities, goals, tone, and output style to match a specific role. They are defined as markdown files in `{tracker_root}/_commands/_profiles/` and are applied as a **modifier on top of any command**, not as a standalone command.
+
+### How Profiles Work
+
+A profile does not replace the agent's core instructions (this CLAUDE.md). It layers on top of them — adjusting **what the agent prioritizes**, **how it frames its output**, and **what success looks like** for the duration of the task. The agent's technical capabilities, tool access, and orchestration protocols remain unchanged. The profile shapes the agent's persona, priorities, and deliverables.
+
+### Syntax
+
+Profiles are invoked with `!{profile_name}` placed before or alongside other commands and prompts:
+
+```
+!{profile_name} {prompt}                         ← Profile + direct task
+!{profile_name} !{command} {prompt}              ← Profile + command + task
+!p !{profile_name} {prompt}                      ← Parallel + profile + task
+!p_track !{profile_name} {prompt}                ← Tracked swarm + profile + task
+```
+
+### Profile Resolution
+
+```
+{tracker_root}/_commands/_profiles/{profile_name}.md
+```
+
+If found, read the profile file in full and apply it. If not found, inform the user and list available profiles.
+
+### Profile File Structure
+
+Every profile file must define:
+
+- **Role** — Who the agent becomes (e.g., "Senior Marketing Strategist")
+- **Priorities** — What the agent optimizes for, in ranked order
+- **Constraints** — What the agent avoids or deprioritizes
+- **Output Style** — Tone, format, structure, and length expectations
+- **Success Criteria** — What a good output looks like for this role
+
+### Applying Profiles
+
+When a profile is active:
+
+1. **Read the profile file in full** before beginning any work
+2. **Adopt the role's priorities and output style** for all work in the current task
+3. **Combine with command protocols seamlessly** — if `!p` is also invoked, the swarm protocol still applies in full, but each agent receives the profile context in its prompt so it operates under the same role
+4. **When dispatching agents with a profile**, include the full profile content in each agent's prompt — agents must adopt the same role, priorities, and output style as the master agent would
+5. **Profile scope is task-scoped** — the profile applies for the duration of the current task only
+
+### Profile + Command Interaction
+
+| Invocation | Behavior |
+|---|---|
+| `!{profile} {prompt}` | Serial execution under profile persona |
+| `!{profile} !{command} {prompt}` | Execute command with profile priorities applied |
+| `!p !{profile} {prompt}` | Parallel dispatch — all agents adopt the profile |
+| `!p_track !{profile} {prompt}` | Tracked swarm — all agents adopt the profile |
+
+---
+
+## Execution Mode Selection — Serial vs. Parallel
+
+The master agent operates in two distinct modes. Choosing the right mode is critical to efficiency.
+
+### Serial Mode (Default)
+
+For tasks that are small, single-file, or inherently sequential, execute them directly. No swarm overhead, no agent dispatch — just do the work.
+
+**Use serial mode when:**
+- The task touches 1-2 files
+- The task is a quick fix, small refactor, or minor addition
+- The task has no independent subtasks that could run simultaneously
+- The total effort is less than what would justify planning + dispatch overhead
+
+### Parallel Mode (Swarm Dispatch)
+
+For tasks that decompose into multiple independent work streams, **parallel execution via agent swarm is mandatory.** The master agent must recognize when parallel execution is more efficient and switch to swarm mode proactively — even if the user did not explicitly request it.
+
+**Use parallel mode when:**
+- The task naturally decomposes into 3+ independent subtasks
+- The task involves multiple files that can be edited simultaneously by different agents
+- The total wall-clock time would be significantly reduced by parallel execution
+- Multiple components, features, or fixes are being requested in a single prompt
+
+**When the master agent determines that parallel mode is more efficient, it SHOULD proactively enter swarm mode.** The agent must use its judgment — if the task would be done in half the time with 4 agents working in parallel, doing it serially is a waste of the user's time.
+
+### Forced Parallel Mode — `!p` Commands (NON-NEGOTIABLE)
+
+Any command prefixed with `!p` **forces the agent into master dispatch mode.** This is absolute and non-negotiable.
+
+When any `!p` command is invoked, the following happens unconditionally:
+
+1. **The agent enters master dispatch mode.** It becomes the orchestrator. It does NOT write code. Its only responsibilities are: gather context, plan, dispatch, status, and report.
+2. **Reading this file (`{tracker_root}/CLAUDE.md`) is NON-NEGOTIABLE.** This must be done before any planning or dispatch begins.
+3. **All Synapse rules apply in full.** Every principle, every constraint, every protocol defined here is binding for the duration of the swarm.
+
+### Automatic Parallel Mode
+
+Even without an explicit `!p` command, the master agent must escalate to parallel mode when it recognizes the opportunity. In this case:
+
+1. **Inform the user** that you are switching to parallel execution and briefly explain why
+2. **Read `{tracker_root}/CLAUDE.md`** — this is NON-NEGOTIABLE any time agents are being dispatched
+3. **Follow the full swarm protocol**
+4. The master agent assumes the orchestrator role — no code, only context/plan/dispatch/status/report
+
+### Decision Flowchart
+
+```
+User gives task
+       │
+       ▼
+Is it a !p command? ──YES──→ FORCED PARALLEL MODE
+       │                      Read {tracker_root}/CLAUDE.md
+       NO                     Enter master dispatch mode
+       │                      Do NOT write code
+       ▼
+Can it decompose into 3+ independent subtasks? ──YES──→ AUTOMATIC PARALLEL MODE
+       │                                                  Notify user
+       NO                                                 Read {tracker_root}/CLAUDE.md
+       │                                                  Enter master dispatch mode
+       ▼                                                  Do NOT write code
+SERIAL MODE
+Execute directly
+```
+
+---
+
+## Creating New Commands and Profiles — Duplicate Detection
+
+When the user asks to create a new command or profile, the agent **must check for duplicates before creating anything.**
+
+### For Commands
+
+1. Search all command locations: `{tracker_root}/_commands/`, `{tracker_root}/_commands/project/`, `{project_root}/_commands/`
+2. If a command with the same name exists, alert the user, summarize the existing command, and ask whether to overwrite, rename, or cancel
+3. If no duplicate exists, proceed with creation
+
+### For Profiles
+
+1. Check `{tracker_root}/_commands/_profiles/` for the profile name
+2. Same duplicate handling as commands
+
+This duplicate check is **mandatory** — never silently overwrite an existing command or profile.
 
 ---
 
@@ -142,7 +376,7 @@ Workers report their own live progress directly to the dashboard via individual 
 ### How It Works
 
 ```
-Worker starts → writes dashboards/{dashboardId}/progress/{id}.json with full lifecycle
+Worker starts → writes {tracker_root}/dashboards/{dashboardId}/progress/{id}.json
        │
 Worker progresses → overwrites progress file with new stage/status/logs
        │
@@ -155,11 +389,11 @@ Worker completes → writes final progress file with status "completed"
 Master processes return → updates logs.json + XML only (NOT initialization.json)
 ```
 
-Workers **MUST read `{tracker_root}/agent/instructions/tracker_worker_instructions.md`** before starting work. This contains the full progress reporting protocol.
+**Important:** Workers do their code work in `{project_root}` but write progress files to `{tracker_root}`. These are different locations. Workers **MUST read `{tracker_root}/agent/instructions/tracker_worker_instructions.md`** before starting work.
 
 ### Progress File Location
 
-Each worker owns exactly one file: `dashboards/{dashboardId}/progress/{task_id}.json` (e.g., `dashboards/dashboard1/progress/2.1.json`).
+Each worker owns exactly one file: `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` (e.g., `dashboards/dashboard1/progress/2.1.json`).
 
 The worker writes the **full file** on every update (no read-modify-write needed — the worker is the sole writer). The server watches the `progress/` directory via `fs.watch` and broadcasts changes immediately.
 
@@ -255,64 +489,131 @@ This architecture dramatically reduces master agent context consumption:
 ## Directory Structure
 
 ```
-Synapse/
-├── CLAUDE.md                    ← You are here
-├── server.js                    ← Node.js SSE server (zero deps)
-├── package.json                 ← Metadata + start script
-├── dashboards/                  ← Multi-dashboard support
-│   ├── dashboard1/
-│   │   ├── initialization.json  ← Static plan data (written once by master)
-│   │   ├── logs.json            ← Event log (written by master)
-│   │   └── progress/            ← Worker progress files
-│   │       ├── 1.1.json
-│   │       └── 2.1.json
-│   └── dashboard2/              ← Additional dashboards
-│       └── ...
-├── history/                     ← History summary JSON files (created on dashboard clear)
-├── Archive/                     ← Full archived dashboard snapshots
-├── _commands/                   ← Command specs for controlling swarms
-│   ├── p_track.md               ← Core: plan + dispatch + track a full swarm
-│   ├── p.md                    ← Lightweight parallel dispatch (no tracking)
-│   ├── start.md                 ← Start the dashboard server
-│   ├── stop.md                  ← Stop the dashboard server
-│   ├── status.md                ← Terminal status summary
-│   ├── reset.md                 ← Clear dashboard data
-│   ├── dispatch.md              ← Manually dispatch tasks
-│   ├── retry.md                 ← Re-run failed tasks
-│   ├── cancel.md                ← Cancel the active swarm
-│   ├── logs.md                  ← View/filter log entries
-│   ├── inspect.md               ← Deep-dive into a specific task
-│   ├── history.md               ← View past swarm history
-│   └── deps.md                  ← Visualize dependency graph
-├── agent/                       ← Agent instruction files
+Synapse/                            ← {tracker_root}
+├── CLAUDE.md                       ← You are here
+├── package.json                    ← Metadata + start script
+├── .synapse/                       ← Synapse config
+│   └── project.json                ← Current target project (set via !project)
+├── _commands/                      ← Synapse commands
+│   ├── p_track.md                  ← Core: plan + dispatch + track a full swarm
+│   ├── p.md                        ← Lightweight parallel dispatch (no tracking)
+│   ├── master_plan_track.md        ← Multi-stream orchestration
+│   ├── project.md                  ← Set/show/clear target project
+│   ├── start.md                    ← Start the dashboard server
+│   ├── stop.md                     ← Stop the dashboard server
+│   ├── status.md                   ← Terminal status summary
+│   ├── reset.md                    ← Clear dashboard data
+│   ├── dispatch.md                 ← Manually dispatch tasks
+│   ├── retry.md                    ← Re-run failed tasks
+│   ├── cancel.md                   ← Cancel the active swarm
+│   ├── cancel-safe.md              ← Graceful shutdown
+│   ├── logs.md                     ← View/filter log entries
+│   ├── inspect.md                  ← Deep-dive into a specific task
+│   ├── history.md                  ← View past swarm history
+│   ├── deps.md                     ← Visualize dependency graph
+│   ├── guide.md                    ← Command decision tree
+│   ├── project/                    ← Project analysis & management commands
+│   │   ├── initialize.md           ← Initialize Synapse for a project
+│   │   ├── onboard.md              ← Project walkthrough
+│   │   ├── context.md              ← Deep context gathering
+│   │   ├── review.md               ← Code review
+│   │   ├── health.md               ← Project health check
+│   │   ├── scaffold.md             ← Generate CLAUDE.md for a project
+│   │   ├── plan.md                 ← Implementation planning
+│   │   ├── scope.md                ← Blast radius analysis
+│   │   ├── trace.md                ← End-to-end code tracing
+│   │   ├── contracts.md            ← API contract audit
+│   │   ├── env_check.md            ← Environment variable audit
+│   │   ├── toc.md                  ← Search project TOC
+│   │   ├── toc_generate.md         ← Generate project TOC
+│   │   ├── toc_update.md           ← Update project TOC
+│   │   ├── commands.md             ← List all available commands
+│   │   ├── help.md                 ← Master agent guide
+│   │   └── profiles.md             ← List available profiles
+│   └── _profiles/                  ← Agent role profiles
+│       ├── analyst.md
+│       ├── architect.md
+│       ├── copywriter.md
+│       ├── customer-success.md
+│       ├── devops.md
+│       ├── founder.md
+│       ├── growth.md
+│       ├── legal.md
+│       ├── marketing.md
+│       ├── pricing.md
+│       ├── product.md
+│       ├── qa.md
+│       ├── sales.md
+│       ├── security.md
+│       └── technical-writer.md
+├── agent/                          ← Agent instruction files
 │   └── instructions/
-│       ├── dashboard_resolution.md      ← Shared dashboard selection/detection protocol
-│       ├── tracker_master_instructions.md ← Dashboard field-to-UI mapping reference
-│       └── tracker_worker_instructions.md ← Worker progress reporting protocol
-├── tasks/                       ← Generated per swarm (XML + plan files)
+│       ├── dashboard_resolution.md
+│       ├── tracker_master_instructions.md
+│       ├── tracker_multi_plan_instructions.md
+│       ├── tracker_worker_instructions.md
+│       ├── failed_task.md
+│       └── common_pitfalls.md
+├── dashboards/                     ← Multi-dashboard support (up to 5)
+│   ├── dashboard1/
+│   │   ├── initialization.json
+│   │   ├── logs.json
+│   │   └── progress/
+│   └── dashboard2/ ... dashboard5/
+├── queue/                          ← Overflow queue slots
+├── history/                        ← History summary JSON files
+├── Archive/                        ← Full archived dashboard snapshots
+├── tasks/                          ← Generated per swarm
 │   └── {MM_DD_YY}/
-│       ├── parallel_{name}.xml  ← Master task file (single source of truth)
-│       └── parallel_plan_{name}.md  ← Strategy rationale
+│       ├── parallel_{name}.xml
+│       └── parallel_plan_{name}.md
+├── src/
+│   ├── server/index.js             ← Node.js SSE server (zero deps)
+│   └── ui/                         ← React dashboard frontend
+├── electron/                       ← Desktop app (Electron)
 └── public/
-    ├── index.html               ← Dashboard HTML
-    ├── styles.css               ← Dark theme styling
-    └── dashboard.js             ← SSE client + DOM rendering
+    └── styles.css
+```
+
+**Target project structure** (created by Synapse at `{project_root}`):
+
+```
+{project_root}/
+├── .synapse/                       ← Synapse project metadata (add to .gitignore)
+│   ├── toc.md                      ← Project Table of Contents (opt-in)
+│   ├── profile.json                ← Auto-generated project profile
+│   └── context_cache.json          ← Cached context facts
+├── CLAUDE.md                       ← Project conventions (may already exist)
+├── _commands/                      ← Project-specific commands (optional)
+└── ... (project files)
 ```
 
 ---
 
 ## Commands
 
-When the user types a command prefixed with `!`, read the corresponding file in `Synapse/_commands/{command}.md` and follow it exactly.
+When the user types a command prefixed with `!`, resolve it using the command resolution hierarchy and follow it exactly.
+
+### Project Management
+
+| Command | Description |
+|---|---|
+| `!project` | Show, set, or clear the target project path. |
+| `!initialize` | Initialize Synapse for a target project — create `.synapse/`, detect tech stack, optionally scaffold `CLAUDE.md`. |
+| `!onboard` | Project walkthrough — read CLAUDE.md, TOC, key files and present a structured orientation. |
+| `!scaffold` | Generate a `CLAUDE.md` for a project that doesn't have one. |
 
 ### Swarm Lifecycle
 
 | Command | Description |
 |---|---|
 | `!p_track {prompt}` | **Primary command.** Plan, dispatch, track, and report a full parallel agent swarm with live dashboard updates. |
+| `!p {prompt}` | Lightweight parallel dispatch (no dashboard tracking). |
+| `!master_plan_track {prompt}` | Multi-stream orchestration — decompose into independent swarms across dashboards. |
 | `!dispatch {id}` | Manually dispatch a specific pending task. `!dispatch --ready` dispatches all unblocked tasks. |
 | `!retry {id}` | Re-dispatch a failed task with a fresh agent. |
 | `!cancel` | Cancel the active swarm. `!cancel --force` skips confirmation. |
+| `!cancel-safe` | Graceful shutdown — let running tasks finish, cancel pending. |
 
 ### Monitoring
 
@@ -323,6 +624,36 @@ When the user types a command prefixed with `!`, read the corresponding file in 
 | `!inspect {id}` | Deep-dive into a specific task — context, dependencies, timeline, logs. |
 | `!deps` | Visualize the full dependency graph. `!deps {id}` for a single task. `!deps --critical` for critical path. |
 | `!history` | View past swarm history. `!history --last 5` for recent only. |
+
+### Project Analysis
+
+| Command | Description |
+|---|---|
+| `!context {query}` | Deep context gathering within `{project_root}`. |
+| `!review` | Code review of recent changes or specified files. |
+| `!health` | Project health check — CLAUDE.md quality, dependency health, TOC consistency. |
+| `!scope {change}` | Blast radius analysis — what would be affected by a proposed change. |
+| `!trace {endpoint}` | End-to-end code tracing of an endpoint, function, or data flow. |
+| `!contracts` | API contract audit — consistency between interfaces and implementations. |
+| `!env_check` | Environment variable audit — consistency across configs. |
+| `!plan {task}` | Implementation planning based on project context. |
+
+### Table of Contents
+
+| Command | Description |
+|---|---|
+| `!toc {query}` | Search the project TOC at `{project_root}/.synapse/toc.md`. |
+| `!toc_generate` | Generate a full project TOC via parallel agent swarm. |
+| `!toc_update` | Incrementally update the TOC for changed files. |
+
+### Profiles & Discovery
+
+| Command | Description |
+|---|---|
+| `!profiles` | List all available agent role profiles. |
+| `!commands` | List all available commands from all locations. |
+| `!help` | Master agent guide — when to use each command. |
+| `!guide` | Interactive command decision tree. |
 
 ### Server Control
 
@@ -447,7 +778,7 @@ This is critical because the downstream worker's prompt was written during plann
 
 After all tasks complete (or all remaining are blocked), the master should assess whether a **verification step** is warranted:
 
-- If the swarm modified code across multiple files or repos → dispatch a verification agent to run tests, type checking, or build validation
+- If the swarm modified code across multiple files → dispatch a verification agent to run tests, type checking, or build validation
 - If the swarm was purely additive (new files, no modifications to existing code) → verification may be optional
 - If any tasks reported deviations → verification is strongly recommended
 
@@ -459,10 +790,10 @@ The verification agent gets a prompt listing ALL files changed across the swarm 
 
 ### initialization.json
 
-The static plan store, written once during planning and never updated after. Located at `dashboards/{dashboardId}/initialization.json`. Every field maps to UI elements on the dashboard, combined with progress file data. See `agent/instructions/tracker_master_instructions.md` for the complete field-to-UI mapping.
+The static plan store, written once during planning and never updated after. Located at `{tracker_root}/dashboards/{dashboardId}/initialization.json`. Every field maps to UI elements on the dashboard, combined with progress file data. See `agent/instructions/tracker_master_instructions.md` for the complete field-to-UI mapping.
 
 **Key objects:**
-- `task` — The swarm metadata (name, type, directory, prompt, project, created, total_tasks, total_waves)
+- `task` — The swarm metadata (name, type, directory, prompt, project, project_root, created, total_tasks, total_waves)
 - `agents[]` — One entry per task (id, title, wave, layer, directory, depends_on — plan data only, no lifecycle fields)
 - `waves[]` — One entry per wave (id, name, total — structure only, no status or completed counts)
 - `chains[]` — Optional, for chain layout mode
@@ -473,10 +804,11 @@ The static plan store, written once during planning and never updated after. Loc
 - Always atomic: read → modify in memory → write full file
 - Never write partial JSON
 - No lifecycle fields: `status`, `started_at`, `completed_at`, `summary`, `assigned_agent`, `completed_tasks`, `failed_tasks`, `overall_status` are all absent — they are derived from progress files by the dashboard
+- `task.project_root` stores the resolved `{project_root}` so the dashboard and commands know which project this swarm serves
 
 ### logs.json
 
-The timestamped event log, located at `dashboards/{dashboardId}/logs.json`. Every entry becomes a row in the dashboard log panel.
+The timestamped event log, located at `{tracker_root}/dashboards/{dashboardId}/logs.json`. Every entry becomes a row in the dashboard log panel.
 
 **Entry fields:** `timestamp`, `task_id`, `agent`, `level`, `message`, `task_name`
 
@@ -484,11 +816,11 @@ The timestamped event log, located at `dashboards/{dashboardId}/logs.json`. Ever
 
 ### Master XML
 
-The authoritative task record at `tasks/{date}/parallel_{name}.xml`. Contains everything: task descriptions, context, critical details, file lists, dependencies, status, summaries, and logs. Every agent reads it for context. The master updates it on every completion.
+The authoritative task record at `{tracker_root}/tasks/{date}/parallel_{name}.xml`. Contains everything: task descriptions, context, critical details, file lists, dependencies, status, summaries, and logs. Every agent reads it for context. The master updates it on every completion.
 
 ### progress/ Directory
 
-Worker-owned progress files. Each worker writes to `dashboards/{dashboardId}/progress/{task_id}.json` exclusively.
+Worker-owned progress files. Each worker writes to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` exclusively.
 
 **Key fields:** `task_id`, `status`, `started_at`, `completed_at`, `summary`, `assigned_agent`, `stage`, `message`, `milestones[]`, `deviations[]`, `logs[]`
 
@@ -524,11 +856,11 @@ In Wave mode, dependency lines are drawn between cards using BFS pathfinding thr
 
 ### Multi-Dashboard Sidebar
 
-The dashboard supports up to 5 simultaneous swarms via a sidebar that lists all dashboard instances (`dashboard1` through `dashboard5`). Each dashboard directory is an independent swarm with its own `initialization.json`, `logs.json`, and `progress/` directory.
+The dashboard supports up to 5 simultaneous swarms via a sidebar that lists all dashboard instances (`dashboard1` through `dashboard5`). Each dashboard directory is an independent swarm with its own `initialization.json`, `logs.json`, and `progress/` directory. Different dashboards can serve different projects — the `task.project_root` field identifies which project each swarm belongs to.
 
 **Dashboard selection is automatic.** When `!p_track` starts, the master scans dashboards 1-5 for the first available slot — it will never overwrite an in-progress swarm. All commands (`!status`, `!logs`, `!inspect`, etc.) auto-detect the active dashboard when no dashboard is specified. See `agent/instructions/dashboard_resolution.md` for the full selection and detection protocol.
 
-**Workers always know their dashboard.** The master includes `{dashboardId}` in every worker dispatch prompt. Workers write progress files to `dashboards/{dashboardId}/progress/{task_id}.json` — they never auto-detect.
+**Workers always know their dashboard.** The master includes `{dashboardId}` in every worker dispatch prompt. Workers write progress files to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — they never auto-detect.
 
 ### Stat Cards
 
@@ -562,26 +894,44 @@ date -u +"%Y-%m-%dT%H:%M:%SZ"
 
 ## Integration with Any Project
 
-Synapse is project-agnostic. To use it in any repository:
+Synapse is project-agnostic and fully standalone. To use it with any project:
 
-1. **Copy or symlink** the `Synapse/` directory into your project (or reference it from a shared location).
+1. **Synapse can live anywhere.** It does not need to be inside the target project. Keep it in a tools directory, home folder, or wherever is convenient.
 
-2. **Reference the commands** by reading `Synapse/_commands/{command}.md` when the user invokes `!{command}`.
+2. **Point Synapse at your project** using one of:
+   - Run `!project set /path/to/project` to store the target
+   - Run from within the project directory (auto-detected as CWD)
+   - Pass `--project /path` to any command
 
-3. **Project-specific context** comes from the project's own `CLAUDE.md` files, documentation, and code — the tracker doesn't assume any specific structure.
+3. **Project-specific context** comes from the project's own `CLAUDE.md`, documentation, and code. Synapse reads `{project_root}/CLAUDE.md` for conventions and uses Glob/Grep for file discovery.
 
-4. **All paths in commands use `{tracker_root}`** as a placeholder. Resolve it to wherever Synapse lives relative to your working directory.
+4. **Project-specific commands** can be defined at `{project_root}/_commands/`. These are checked after Synapse's own commands in the resolution hierarchy.
 
-5. **The `tasks/` directory** is created automatically when the first swarm runs. XML files and plans accumulate here as a record of past work.
+5. **The `.synapse/` directory** is created inside the target project for TOC, profile, and context cache. Add it to `.gitignore`.
+
+6. **All Synapse data** (dashboards, tasks, history, logs) stays at `{tracker_root}`. Nothing except `.synapse/` is written to the target project.
+
+---
+
+## Multi-Project Support
+
+Each of the 5 dashboard slots can serve a different project simultaneously. The `task.project_root` field in `initialization.json` identifies which project each swarm belongs to.
+
+When working across multiple projects:
+- Use `!project set` to switch the active project, or pass `--project` to individual commands
+- Each swarm's dashboard shows which project it's targeting
+- Commands like `!status` and `!logs` auto-detect the active dashboard regardless of which project it serves
+- Workers always receive explicit `{project_root}` in their prompts — they never need to auto-detect
 
 ---
 
 ## Portability Checklist
 
-- [x] Zero npm dependencies — works with any Node.js installation
-- [x] No hardcoded paths — all paths relative to the tracker directory
+- [x] Zero npm dependencies for the server — works with any Node.js installation
+- [x] Fully standalone — does not need to be inside the target project
+- [x] No hardcoded paths — all paths use `{tracker_root}` and `{project_root}` placeholders
 - [x] No project-specific assumptions — works with monorepos, single projects, or any layout
 - [x] Self-contained commands — each `_commands/*.md` file is a complete spec
-- [x] Dashboard reads `initialization.json` + `progress/` files, merging them client-side — no filesystem assumptions beyond the dashboard directory
+- [x] Dashboard reads `initialization.json` + `progress/` files, merging them client-side
 - [x] Server configurable via `PORT` env var
 - [x] Works offline — no external API calls, no CDN dependencies

@@ -3,7 +3,6 @@ const path = require('path');
 const {
   DASHBOARDS_DIR,
   QUEUE_DIR,
-  PUBLIC_DIR,
   INIT_POLL_MS,
   PROGRESS_RETRY_MS,
   PROGRESS_READ_DELAY_MS,
@@ -182,24 +181,6 @@ function startQueueWatcher(broadcastFn) {
   });
 }
 
-// --- Live Reload (watches public/ for code changes) ---
-
-let reloadWatcher = null;
-
-/**
- * Start watching public/ for file changes to trigger live reload.
- *
- * @param {Function} broadcastFn - Function(eventName, data) to broadcast SSE events
- */
-function startLiveReload(broadcastFn) {
-  if (!fs.existsSync(PUBLIC_DIR)) return;
-  reloadWatcher = fs.watch(PUBLIC_DIR, { recursive: true }, (_, filename) => {
-    if (!filename) return;
-    console.log(`  [live-reload] ${filename} changed — reloading clients`);
-    broadcastFn('reload', { file: filename });
-  });
-}
-
 /**
  * Stop all watchers — dashboard watchers, directory watcher, live reload, and pending timers.
  */
@@ -225,11 +206,6 @@ function stopAll() {
   clearTimeout(queueReconcileTimer);
   queueReconcileTimer = null;
 
-  // Stop live reload
-  if (reloadWatcher) {
-    reloadWatcher.close();
-    reloadWatcher = null;
-  }
 }
 
 module.exports = {
@@ -237,6 +213,5 @@ module.exports = {
   unwatchDashboard,
   startDashboardsWatcher,
   startQueueWatcher,
-  startLiveReload,
   stopAll,
 };

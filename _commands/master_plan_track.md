@@ -65,9 +65,11 @@ The meta-planner never dispatches workers. Child masters never touch other dashb
 
 ## Phase 1: Context Gathering & Stream Decomposition
 
-### Step 1: Read project context
+### Step 1: Resolve `{project_root}` and read project context
 
-Read the project's root-level `CLAUDE.md` (if one exists). Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
+Resolve `{project_root}` using the standard resolution order (see `{tracker_root}/CLAUDE.md` — Path Convention section): explicit `--project` flag → stored config at `{tracker_root}/.synapse/project.json` → agent's CWD.
+
+Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/toc.md` exists, read it for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
 
 ### Step 2: Read the multi-plan orchestrator instructions
 
@@ -293,6 +295,7 @@ Follow these steps exactly:
      "directory": "{primary directory}",
      "prompt": "{stream scope description}",
      "project": "{affected directories}",
+     "project_root": "{resolved absolute path to target project}",
      "created": "{ISO 8601 timestamp — run date command}",
      "total_tasks": {count},
      "total_waves": {count}

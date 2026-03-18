@@ -7,7 +7,6 @@
     "build": "vite build",
     "start": "vite build && unset ELECTRON_RUN_AS_NODE && electron .",
     "dev": "vite build --watch",
-    "server": "node src/server/index.js",
     "dist": "vite build && electron-builder --mac"
   },
   "build": {

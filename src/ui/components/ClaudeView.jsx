@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
-import { renderMarkdown } from '../../client/utils/markdown.js';
+import { renderMarkdown } from '../utils/markdown.js';
 import { getDashboardProject } from '../utils/dashboardProjects.js';
 
 // Parse tool result content into a display string

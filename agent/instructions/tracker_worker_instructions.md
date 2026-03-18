@@ -4,6 +4,12 @@
 
 **This is NON-NEGOTIABLE.** Every worker agent MUST follow these instructions exactly. Failure to report progress means the dashboard shows no live updates for your task — the user has no visibility into what you're doing.
 
+**Key location distinction:** Your dispatch prompt provides two critical paths:
+- **`{tracker_root}`** — The Synapse repository. This is where you write progress files (`{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`).
+- **`{project_root}`** — The target project. This is where you do your actual code work (read source files, modify code, create files).
+
+These are different locations. Do NOT confuse them. Your code work happens in `{project_root}`. Your progress reporting goes to `{tracker_root}`.
+
 ---
 
 ## Your Progress File

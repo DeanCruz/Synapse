@@ -85,13 +85,12 @@ function saveWindowState() {
 
 app.whenReady().then(() => {
   // Custom app:// protocol handler — resolves paths relative to PROJECT_ROOT.
-  // index.html uses absolute paths like /src/client/app.js and /styles.css.
-  // The protocol maps these to the correct locations on disk.
+  // The protocol maps absolute paths to the correct locations on disk.
   protocol.handle('app', (request) => {
     const reqUrl = new URL(request.url);
     let filePath = decodeURIComponent(reqUrl.pathname);
 
-    // Try the direct path first (handles /src/*, /public/*)
+    // Try the direct path first
     let resolved = path.join(PROJECT_ROOT, filePath);
 
     // If not found, try dist/ subdirectory (Vite build output)

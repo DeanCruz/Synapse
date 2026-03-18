@@ -29,12 +29,17 @@
 
 5. **Read the master XML** at `{tracker_root}/tasks/{date}/parallel_{task_name}.xml`. Extract the full task context for `{task_id}`.
 
-6. **Dispatch the agent** using the standard prompt template from `p_track.md` Step 14. **Include `{dashboardId}` in the worker prompt** so it writes progress to the correct dashboard:
+6. **Resolve `{project_root}`** from the `task.project_root` field in `initialization.json`. If not present, resolve using the standard resolution order (see `{tracker_root}/CLAUDE.md` — Path Convention section).
+
+7. **Dispatch the agent** using the standard prompt template from `p_track.md` Step 14. **Include `{dashboardId}`, `{tracker_root}`, and `{project_root}` in the worker prompt** so it writes progress to the correct dashboard and does code work in the correct project:
    ```
+   PROJECT ROOT: {project_root}
+   TRACKER ROOT: {tracker_root}
    Write your progress to: {tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json
+   Do your code work in: {project_root}
    ```
 
-7. **Append to `{tracker_root}/dashboards/{dashboardId}/logs.json`:**
+8. **Append to `{tracker_root}/dashboards/{dashboardId}/logs.json`:**
    ```json
    {
      "timestamp": "{live timestamp via date -u}",
@@ -46,7 +51,7 @@
    }
    ```
 
-8. **Display a brief confirmation** with the task ID, title, and assigned agent.
+9. **Display a brief confirmation** with the task ID, title, and assigned agent.
 
 > **Note:** Do NOT write a progress file. The worker creates its own progress file when it starts.
 

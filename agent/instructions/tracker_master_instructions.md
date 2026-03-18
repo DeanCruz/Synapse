@@ -562,6 +562,7 @@ The progress file now contains the **full lifecycle** for each agent — status,
 | `directory` | string | Plan creation | Master task directory displayed in header. Optional. |
 | `prompt` | string | Plan creation | Full verbatim prompt. |
 | `project` | string | Plan creation | Affected directory/project name(s). |
+| `project_root` | string | Plan creation | Absolute path to the target project (`{project_root}`). Identifies which project this swarm serves. |
 | `created` | ISO 8601 | Plan creation — **never overwrite** | Immutable creation timestamp. |
 | `total_tasks` | number | Plan creation | Total agent count across all waves. |
 | `total_waves` | number | Plan creation | Wave count. |
