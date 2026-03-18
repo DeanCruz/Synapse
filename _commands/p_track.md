@@ -45,9 +45,11 @@
 
 ## Phase 1: Planning — Deep Analysis & Decomposition
 
-### Step 1: Read project context
+### Step 1: Resolve `{project_root}` and read project context
 
-Read the project's root-level `CLAUDE.md` (if one exists). Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
+Resolve `{project_root}` using the standard resolution order (see `{tracker_root}/CLAUDE.md` — Path Convention section): explicit `--project` flag → stored config at `{tracker_root}/.synapse/project.json` → agent's CWD.
+
+Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/toc.md` exists, read it for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
 
 ### Step 2: Read the tracker master instructions
 
@@ -348,6 +350,7 @@ Set `task`:
   "directory": "{primary directory — optional}",
   "prompt": "{original user prompt}",
   "project": "{comma-separated affected directories}",
+  "project_root": "{resolved absolute path to target project}",
   "created": "{ISO 8601 timestamp}",
   "total_tasks": "{count}",
   "total_waves": "{count}"
@@ -524,8 +527,11 @@ DESCRIPTION:
 CONTEXT:
 {all context from XML <context>}
 
+PROJECT ROOT: {project_root}
+TRACKER ROOT: {tracker_root}
+
 CONVENTIONS:
-{Relevant sections extracted from the target directory's CLAUDE.md by the master.
+{Relevant sections extracted from {project_root}/CLAUDE.md by the master.
 Include naming conventions, file structure rules, import patterns, testing requirements.
 Quote directly from the CLAUDE.md — do not paraphrase. Omit section if no CLAUDE.md exists.}
 
@@ -568,8 +574,9 @@ Before writing any code, complete these steps in order:
 
 2. READ PROJECT INSTRUCTIONS (only if not already provided above):
    If the CONVENTIONS section above is empty or says "no CLAUDE.md", check if a CLAUDE.md file
-   exists in the target directory or project root and read it. If conventions were already
-   provided above, skip this step — do not re-read what the master already extracted for you.
+   exists at {project_root}/CLAUDE.md or in the target directory and read it. If conventions were
+   already provided above, skip this step — do not re-read what the master already extracted for you.
+   NOTE: Your code work happens in {project_root}. Your progress reporting goes to {tracker_root}.
 
 3. SELF-ASSESSMENT — answer these specific questions before proceeding:
    a. Can I identify EVERY file I need to modify? (If no → read the project structure)

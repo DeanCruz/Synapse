@@ -57,28 +57,19 @@ npm start
 | `npm run dist` | Package a signed `.dmg` for macOS distribution |
 | `npm run server` | Web server mode only — dashboard at http://localhost:3456 |
 
-### Workspace Setup
+### Project Setup
 
-For full multi-repo orchestration, Synapse expects a workspace structure:
-
-```
-your-workspace/
-├── CLAUDE.md              ← Master agent instructions
-├── _commands/             ← Workspace commands (!review, !trace, etc.)
-├── Synapse/               ← This app
-├── your-project-1/
-├── your-project-2/
-└── ...
-```
-
-`Synapse/_parent/` contains the workspace-level files. Copy them to your workspace root:
+Synapse is fully standalone — it can live anywhere and work with any project. No special directory structure required.
 
 ```bash
-cp Synapse/_parent/CLAUDE.md ./CLAUDE.md
-cp -r Synapse/_parent/_commands ./_commands
+# Point Synapse at your project (or just run from within the project directory)
+!project set /path/to/your/project
+
+# Or auto-detect from current working directory — no setup needed
+!p_track {your prompt here}
 ```
 
-Each child repo should have its own `CLAUDE.md` describing its tech stack and conventions. Run `!initialize` inside the app to scaffold any missing ones.
+Your target project should have its own `CLAUDE.md` describing its tech stack and conventions. Run `!scaffold` to generate one if missing, or `!initialize` for full project setup (creates `.synapse/` directory for TOC, context cache, etc.).
 
 ---
 
@@ -144,11 +135,11 @@ React Renderer (Vite)
 ├── hooks/                   ← Data fetching, electron API
 └── styles/                  ← Dark theme CSS
 
-Web Server (standalone mode)
-└── src/server/index.js      ← SSE server for browser dashboard
+Server
+└── src/server/index.js      ← SSE server for dashboard data
 ```
 
-The desktop app has two parallel frontends: `src/ui/` is the React/Vite renderer for Electron, while `src/client/` is the vanilla-JS frontend for web server mode. Both remain fully functional.
+The frontend lives in `src/ui/` — a React/Vite app rendered by Electron.
 
 `SwarmOrchestrator.js` is the desktop app's dispatch engine — it reads `initialization.json`, dispatches unblocked tasks via the Claude Code CLI, handles completions and failures, and updates dashboard files. This replaces the terminal-based master agent, so the app can run a full swarm without any terminal interaction.
 

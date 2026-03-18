@@ -34,14 +34,12 @@ const {
   watchDashboard,
   startDashboardsWatcher,
   startQueueWatcher,
-  startLiveReload,
   stopAll: stopAllWatchers,
 } = require('./services/WatcherService');
 
 const { listQueueSummaries } = require('./services/QueueService');
 
 const { handleApiRoute } = require('./routes/apiRoutes');
-const { handleStaticRoute } = require('./routes/staticRoutes');
 
 // --- HTTP Server ---
 
@@ -115,8 +113,9 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // --- Static Files ---
-  handleStaticRoute(req, res, url);
+  // --- Unknown route ---
+  res.writeHead(404);
+  res.end('Not Found');
 });
 
 // --- Startup ---
@@ -158,9 +157,6 @@ function startup() {
   // 6. Start heartbeat
   startHeartbeat();
 
-  // 7. Start live reload (watching public/)
-  startLiveReload(broadcast);
-
   console.log(`\n  Synapse Dashboard (Multi-Dashboard)`);
   console.log(`  http://localhost:${PORT}\n`);
   console.log(`  Dashboards directory: ${DASHBOARDS_DIR}`);
@@ -168,7 +164,6 @@ function startup() {
   console.log(`  Watching per dashboard: initialization.json (${INIT_POLL_MS}ms), logs.json (${INIT_POLL_MS}ms), progress/ (fs.watch)`);
   console.log(`  Watching: dashboards/ directory for new/removed dashboards`);
   console.log(`  Watching: queue/ directory for queued tasks`);
-  console.log(`  Watching: public/ for live reload`);
   console.log(`  SSE clients: /events`);
   console.log(`  API: /api/dashboards, /api/dashboards/:id/{initialization,logs,progress,clear,archive,export}`);
   console.log(`  API: /api/archives, /api/archives/:name`);

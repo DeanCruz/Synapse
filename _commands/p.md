@@ -25,9 +25,11 @@
 
 The master agent's most important job is **deep planning** and **high-quality prompt construction**. Every minute spent here saves ten minutes of worker confusion.
 
-### Step 1: Read project context
+### Step 1: Resolve `{project_root}` and read project context
 
-Read the project's root-level `CLAUDE.md` (if one exists). Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**.
+Resolve `{project_root}` using the standard resolution order (see `{tracker_root}/CLAUDE.md` — Path Convention section): explicit `--project` flag → stored config at `{tracker_root}/.synapse/project.json` → agent's CWD.
+
+Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/toc.md` exists, read it for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**.
 
 **Extract and cache** the conventions, patterns, tech stack, and constraints that are relevant to this task. These will be embedded directly into worker prompts — workers will not read these files themselves.
 
