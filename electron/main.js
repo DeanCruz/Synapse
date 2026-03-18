@@ -8,6 +8,7 @@ const url = require('url');
 const fs = require('fs');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
+const MAC_DOCK_ICON_PATH = path.join(__dirname, 'assets', 'icon.icns');
 
 let mainWindow = null;
 
@@ -67,6 +68,18 @@ function createWindow() {
   });
 }
 
+function setMacDockIcon() {
+  if (process.platform !== 'darwin' || !app.dock) return;
+
+  const iconPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'icon.icns')
+    : MAC_DOCK_ICON_PATH;
+
+  if (fs.existsSync(iconPath)) {
+    app.dock.setIcon(iconPath);
+  }
+}
+
 let saveWindowTimeout = null;
 function saveWindowState() {
   clearTimeout(saveWindowTimeout);
@@ -115,6 +128,7 @@ app.whenReady().then(() => {
   // Initialize settings
   const settings = require('./settings');
   settings.init(app);
+  setMacDockIcon();
 
   // Initialize IPC handlers + file watchers
   const { registerIPCHandlers } = require('./ipc-handlers');
