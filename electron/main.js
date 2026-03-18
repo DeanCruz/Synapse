@@ -71,12 +71,27 @@ function createWindow() {
 function setMacDockIcon() {
   if (process.platform !== 'darwin' || !app.dock) return;
 
-  const iconPath = app.isPackaged
+  // Prefer the 512x512 PNG — nativeImage handles PNGs reliably
+  const pngPath = app.isPackaged
+    ? path.join(process.resourcesPath, 'icon.png')
+    : path.join(__dirname, 'assets', 'icon.iconset', 'icon_512x512.png');
+
+  const icnsPath = app.isPackaged
     ? path.join(process.resourcesPath, 'icon.icns')
     : MAC_DOCK_ICON_PATH;
 
+  const iconPath = fs.existsSync(pngPath) ? pngPath : icnsPath;
+
   if (fs.existsSync(iconPath)) {
-    app.dock.setIcon(iconPath);
+    try {
+      const { nativeImage } = require('electron');
+      const img = nativeImage.createFromPath(iconPath);
+      if (!img.isEmpty()) {
+        app.dock.setIcon(img);
+      }
+    } catch (e) {
+      // Icon loading failed — non-fatal, skip silently
+    }
   }
 }
 
