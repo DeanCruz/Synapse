@@ -13,9 +13,13 @@ import { DEFAULT_DASHBOARDS, DASHBOARD_LABELS } from '../utils/constants.js';
  * @param {boolean} options.queueViewActive — whether a queued task is being viewed
  * @param {object} options.dashboardStates — map of dashboardId → state string ('idle'|'in_progress'|'completed'|'error')
  * @param {number} options.queueCount — number of items in the queue
+ * @param {object} options.dashboardProjects — map of dashboardId → project path string (for project indicator)
+ * @param {boolean} options.isElectron — whether running in Electron (controls action button visibility)
  * @param {Function} options.onSwitch — callback(dashboardId) when a dashboard item is clicked
  * @param {Function} options.onExitArchive — callback() when the archive exit button is clicked
  * @param {Function} options.onExitQueue — callback() when the queue exit button is clicked
+ * @param {Function} options.onProjectClick — callback(dashboardId) when Project button is clicked
+ * @param {Function} options.onClaudeClick — callback(dashboardId) when Claude button is clicked
  */
 export function renderSidebar(listEl, options) {
   if (!listEl) return;
@@ -25,10 +29,14 @@ export function renderSidebar(listEl, options) {
   var archiveViewActive  = options.archiveViewActive;
   var queueViewActive    = options.queueViewActive;
   var dashboardStates    = options.dashboardStates;
+  var dashboardProjects  = options.dashboardProjects || {};
+  var isElectron         = options.isElectron || false;
   var queueCount         = options.queueCount || 0;
   var onSwitch           = options.onSwitch;
   var onExitArchive      = options.onExitArchive;
   var onExitQueue        = options.onExitQueue;
+  var onProjectClick     = options.onProjectClick;
+  var onClaudeClick      = options.onClaudeClick;
 
   for (var i = 0; i < DEFAULT_DASHBOARDS.length; i++) {
     var dbId = DEFAULT_DASHBOARDS[i];
@@ -46,10 +54,53 @@ export function renderSidebar(listEl, options) {
     statusDot.className = 'dashboard-item-status ' + dotClass;
     item.appendChild(statusDot);
 
+    var projectPath = dashboardProjects[dbId] || '';
+    var displayName = DASHBOARD_LABELS[dbId] || dbId;
+    if (projectPath) {
+      // Extract the last directory name from the path
+      var parts = projectPath.replace(/\/+$/, '').split('/');
+      displayName = parts[parts.length - 1] || displayName;
+    }
+
     var nameEl = document.createElement('span');
     nameEl.className = 'dashboard-item-name';
-    nameEl.textContent = DASHBOARD_LABELS[dbId] || dbId;
+    nameEl.textContent = displayName;
+    if (projectPath) nameEl.title = projectPath;
     item.appendChild(nameEl);
+
+    // Per-dashboard action buttons (Electron only)
+    if (isElectron) {
+      var actions = document.createElement('div');
+      actions.className = 'dashboard-item-actions';
+
+      // Project button
+      var projBtn = document.createElement('button');
+      projBtn.className = 'dashboard-item-action-btn' + (dashboardProjects[dbId] ? ' has-project' : '');
+      projBtn.title = dashboardProjects[dbId] ? 'Project: ' + dashboardProjects[dbId] : 'Set project directory';
+      projBtn.setAttribute('data-id', dbId);
+      projBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4l4-2 4 2 4-2v10l-4 2-4-2-4 2V4z" stroke="currentColor" stroke-width="1.4"/><path d="M6 2v12M10 4v12" stroke="currentColor" stroke-width="1.4"/></svg>';
+      projBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var id = this.getAttribute('data-id');
+        if (onProjectClick) onProjectClick(id);
+      });
+      actions.appendChild(projBtn);
+
+      // Claude chat button
+      var claudeBtn = document.createElement('button');
+      claudeBtn.className = 'dashboard-item-action-btn';
+      claudeBtn.title = 'Claude Chat';
+      claudeBtn.setAttribute('data-id', dbId);
+      claudeBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" stroke-width="1.4"/><circle cx="5.5" cy="7" r="0.8" fill="currentColor"/><circle cx="8" cy="7" r="0.8" fill="currentColor"/><circle cx="10.5" cy="7" r="0.8" fill="currentColor"/></svg>';
+      claudeBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var id = this.getAttribute('data-id');
+        if (onClaudeClick) onClaudeClick(id);
+      });
+      actions.appendChild(claudeBtn);
+
+      item.appendChild(actions);
+    }
 
     item.addEventListener('click', function () {
       var id = this.getAttribute('data-id');

@@ -272,24 +272,10 @@ function init() {
     var swarmControls = document.getElementById('swarm-controls');
     if (swarmControls) swarmControls.style.display = '';
 
-    var projectBtn = document.getElementById('project-btn');
-    if (projectBtn) {
-      projectBtn.addEventListener('click', function () {
-        vm.showProjectConfig();
-      });
-    }
-
     var commandsBtn = document.getElementById('commands-btn');
     if (commandsBtn) {
       commandsBtn.addEventListener('click', function () {
         vm.showCommands();
-      });
-    }
-
-    var claudeBtn = document.getElementById('claude-btn');
-    if (claudeBtn) {
-      claudeBtn.addEventListener('click', function () {
-        vm.showClaudeChat();
       });
     }
   }

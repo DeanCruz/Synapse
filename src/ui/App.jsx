@@ -22,6 +22,7 @@ import ProjectModal from './components/modals/ProjectModal.jsx';
 import PlanningModal from './components/modals/PlanningModal.jsx';
 import SettingsModal from './components/modals/SettingsModal.jsx';
 import AgentDetails from './components/modals/AgentDetails.jsx';
+import { getDashboardProject } from './utils/dashboardProjects.js';
 
 // ── ClearDashboardSection ────────────────────────────────────────────────────
 function ClearDashboardSection({ visible, onClear }) {
@@ -80,8 +81,41 @@ function DashboardContent() {
     await window.electronAPI?.clearDashboard(state.currentDashboardId).catch(() => {});
   }
 
+  const dashboardId = state.currentDashboardId;
+  const projectPath = getDashboardProject(dashboardId);
+  const projectName = projectPath ? projectPath.replace(/\/+$/, '').split('/').pop() : null;
+
   return (
     <>
+      <div className="dashboard-action-bar">
+        <button
+          className={`dashboard-action-bar-btn${projectPath ? ' has-project' : ''}`}
+          title={projectPath ? `Project: ${projectPath}` : 'Set project directory'}
+          onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'project', dashboardId })}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M2 4l4-2 4 2 4-2v10l-4 2-4-2-4 2V4z" stroke="currentColor" strokeWidth="1.3"/>
+            <path d="M6 2v12M10 4v12" stroke="currentColor" strokeWidth="1.3"/>
+          </svg>
+          <span>{projectName || 'Project'}</span>
+        </button>
+        <button
+          className="dashboard-action-bar-btn"
+          title="Claude Chat"
+          onClick={() => {
+            dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId });
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.3"/>
+            <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
+            <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
+            <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
+          </svg>
+          <span>Claude</span>
+        </button>
+      </div>
+
       <ProgressSection onOpenTimeline={() => setTimelineOpen(true)} />
 
       {hasTask ? (
@@ -193,6 +227,10 @@ export default function App() {
     } catch (_) {}
   }
 
+  const claudeViewMode = state.claudeViewMode;
+  const claudeDashboardId = state.claudeDashboardId || currentDashboardId;
+  const showClaudeFloat = activeView === 'claude';
+
   function renderMainContent() {
     switch (activeView) {
       case 'home':
@@ -213,7 +251,8 @@ export default function App() {
           />
         );
       case 'claude':
-        return <ClaudeView />;
+        // Claude is now a floating panel — show the dashboard behind it
+        return <DashboardContent />;
       case 'dashboard':
       default:
         return <DashboardContent />;
@@ -234,7 +273,10 @@ export default function App() {
         <CommandsModal onClose={closeModal} />
       )}
       {activeModal === 'project' && (
-        <ProjectModal onClose={closeModal} />
+        <ProjectModal
+          onClose={closeModal}
+          dashboardId={state.modalDashboardId || currentDashboardId}
+        />
       )}
       {activeModal === 'planning' && (
         <PlanningModal
@@ -246,6 +288,103 @@ export default function App() {
       {activeModal === 'settings' && (
         <SettingsModal onClose={closeModal} />
       )}
+
+      {/* Floating Claude chat panel */}
+      {showClaudeFloat && (
+        <ClaudeFloatingPanel
+          dashboardId={claudeDashboardId}
+          viewMode={claudeViewMode}
+          onClose={() => dispatch({ type: 'SET_VIEW', view: 'dashboard' })}
+          onSetMode={(mode) => dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode })}
+        />
+      )}
     </>
+  );
+}
+
+// ── ClaudeFloatingPanel — wraps ClaudeView in a floating container ──────────
+function ClaudeFloatingPanel({ dashboardId, viewMode, onClose, onSetMode }) {
+  const dispatch = useDispatch();
+
+  if (viewMode === 'minimized') {
+    return (
+      <div className="claude-float claude-float--minimized">
+        <button className="claude-pill" onClick={() => onSetMode('collapsed')}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.4"/>
+            <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
+            <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
+            <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
+          </svg>
+          <span>Claude</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`claude-float claude-float--${viewMode}`}>
+      <div className="claude-view">
+        <ClaudeFloatingHeader
+          dashboardId={dashboardId}
+          viewMode={viewMode}
+          onClose={onClose}
+          onSetMode={onSetMode}
+        />
+        {(viewMode === 'expanded' || viewMode === 'maximized') && (
+          <ClaudeView onClose={onClose} hideHeader />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Floating header with window controls ────────────────────────────────────
+function ClaudeFloatingHeader({ dashboardId, viewMode, onClose, onSetMode }) {
+  const state = useAppState();
+  const projectPath = getDashboardProject(dashboardId);
+  const projectName = projectPath ? projectPath.replace(/\/+$/, '').split('/').pop() : null;
+  const dashboardLabel = dashboardId.replace('dashboard', 'Dashboard ');
+
+  return (
+    <div
+      className="claude-float-header"
+      onClick={() => { if (viewMode === 'collapsed') onSetMode('expanded'); }}
+      style={{ cursor: viewMode === 'collapsed' ? 'pointer' : 'default' }}
+    >
+      <span className="claude-view-title">Claude Code</span>
+      {projectName && (
+        <span className="claude-view-project" title={projectPath}>
+          {projectName}
+        </span>
+      )}
+      {!projectName && (
+        <span className="claude-view-project">{dashboardLabel}</span>
+      )}
+      <span className={'claude-view-status' + (state.claudeIsProcessing ? ' active' : '')}>
+        {state.claudeStatus}
+      </span>
+
+      <div className="claude-view-controls">
+        <button className="claude-view-ctrl-btn" title="Minimize" onClick={(e) => { e.stopPropagation(); onSetMode('minimized'); }}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 9h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </button>
+        <button className="claude-view-ctrl-btn" title={viewMode === 'maximized' ? 'Restore' : 'Maximize'} onClick={(e) => { e.stopPropagation(); onSetMode(viewMode === 'maximized' ? 'expanded' : 'maximized'); }}>
+          {viewMode === 'maximized' ? (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <rect x="3" y="1" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+              <rect x="1" y="3" width="8" height="8" rx="1" stroke="currentColor" strokeWidth="1.2" fill="var(--bg, #0f0f14)"/>
+            </svg>
+          ) : (
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" strokeWidth="1.2"/>
+            </svg>
+          )}
+        </button>
+        <button className="claude-view-ctrl-btn claude-view-close-btn" title="Close" onClick={(e) => { e.stopPropagation(); onClose(); }}>
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+        </button>
+      </div>
+    </div>
   );
 }

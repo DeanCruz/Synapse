@@ -115,7 +115,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSwarmStates: () => ipcRenderer.invoke('get-swarm-states'),
 
   // Conversation management
-  listConversations: () => ipcRenderer.invoke('list-conversations'),
+  listConversations: (dashboardId) => ipcRenderer.invoke('list-conversations', dashboardId),
   loadConversation: (filename) => ipcRenderer.invoke('load-conversation', filename),
   saveConversation: (conv) => ipcRenderer.invoke('save-conversation', conv),
   createConversation: (name) => ipcRenderer.invoke('create-conversation', name),

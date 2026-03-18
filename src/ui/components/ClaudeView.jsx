@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { renderMarkdown } from '../../client/utils/markdown.js';
+import { getDashboardProject } from '../utils/dashboardProjects.js';
 
 // Parse tool result content into a display string
 function toolResultText(content) {
@@ -121,7 +122,7 @@ function ConversationMessage({ msg }) {
   return null;
 }
 
-export default function ClaudeView({ onClose }) {
+export default function ClaudeView({ onClose, hideHeader }) {
   const api = window.electronAPI || null;
   const state = useAppState();
   const dispatch = useDispatch();
@@ -140,11 +141,13 @@ export default function ClaudeView({ onClose }) {
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Session / conversation persistence
+  // Session / conversation persistence (per-dashboard)
   const sessionIdRef = useRef(null);    // CLI session_id for --resume
   const convIdRef = useRef(null);       // saved conversation id
   const convCreatedRef = useRef(null);  // ISO string of conversation creation
   const messagesRef = useRef(messages); // mirror of messages for async saves
+  const sessionMapRef = useRef({});     // { [dashboardId]: { sessionId, convId, convCreated } }
+  const prevDashboardRef = useRef(dashboardId);
 
   const conversationRef = useRef(null);
   // Track all active task IDs (multiple workers can be running)
@@ -160,6 +163,27 @@ export default function ClaudeView({ onClose }) {
   // Keep messagesRef in sync for async saves
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
+  // Swap session/conversation refs when dashboard changes
+  useEffect(() => {
+    if (prevDashboardRef.current !== dashboardId) {
+      // Stash current dashboard's session info
+      sessionMapRef.current[prevDashboardRef.current] = {
+        sessionId: sessionIdRef.current,
+        convId: convIdRef.current,
+        convCreated: convCreatedRef.current,
+      };
+      // Restore target dashboard's session info
+      const restored = sessionMapRef.current[dashboardId] || {};
+      sessionIdRef.current = restored.sessionId || null;
+      convIdRef.current = restored.convId || null;
+      convCreatedRef.current = restored.convCreated || null;
+      // Reset streaming state
+      currentTextIndexRef.current = null;
+      toolCallIndexRef.current = {};
+      prevDashboardRef.current = dashboardId;
+    }
+  }, [dashboardId]);
+
   // Auto-scroll on new messages
   useEffect(() => {
     if (conversationRef.current) {
@@ -167,12 +191,12 @@ export default function ClaudeView({ onClose }) {
     }
   }, [messages]);
 
-  // Load conversation list when history panel opens
+  // Load conversation list when history panel opens (filtered by current dashboard)
   useEffect(() => {
     if (showHistory && api) {
-      api.listConversations().then(res => setConversations(res?.conversations || res || [])).catch(() => {});
+      api.listConversations(dashboardId).then(res => setConversations(res?.conversations || res || [])).catch(() => {});
     }
-  }, [showHistory, api]);
+  }, [showHistory, api, dashboardId]);
 
   // Set up push listeners — use refs so the closure always calls latest functions
   useEffect(() => {
@@ -362,6 +386,7 @@ export default function ClaudeView({ onClose }) {
         name,
         created: convCreatedRef.current || now,
         sessionId: sessionIdRef.current,
+        dashboardId,
         messages: currentMsgs,
       }).catch(() => {});
     }
@@ -470,7 +495,8 @@ export default function ClaudeView({ onClose }) {
 
     try {
       const settings = await api.getSettings();
-      const projectDir = settings.activeProjectPath || null;
+      const perDashboardPath = getDashboardProject(dashboardId);
+      const projectDir = perDashboardPath || settings.activeProjectPath || null;
       const selectedModel = model || settings.defaultModel || 'sonnet';
 
       // Only inject system prompt on fresh sessions — resumed sessions already have context
@@ -569,6 +595,8 @@ export default function ClaudeView({ onClose }) {
       sessionIdRef.current = null;
       convIdRef.current = null;
       convCreatedRef.current = null;
+      // Clear stashed session for this dashboard too
+      delete sessionMapRef.current[dashboardId];
     }
   }
 
@@ -600,29 +628,50 @@ export default function ClaudeView({ onClose }) {
   }
 
   return (
-    <div className="claude-view">
-      <div className="claude-view-header">
-        <span className="claude-view-title">Claude Code</span>
-        <span className={'claude-view-status' + (isProcessing ? ' active' : '')}>{status}</span>
-        <button
-          className="claude-clear-btn"
-          onClick={() => setShowHistory(h => !h)}
-          title="Browse conversation history"
-        >
-          History
-        </button>
-        <button
-          className="claude-clear-btn"
-          onClick={clearChat}
-          disabled={isProcessing}
-          title="Start a new conversation"
-        >
-          New
-        </button>
-        {onClose && (
-          <button className="claude-view-close" onClick={onClose}>✕</button>
-        )}
-      </div>
+    <div className={`claude-view${hideHeader ? ' claude-view--no-header' : ''}`}>
+      {!hideHeader && (
+        <div className="claude-view-header">
+          <span className="claude-view-title">Claude Code</span>
+          <span className={'claude-view-status' + (isProcessing ? ' active' : '')}>{status}</span>
+          <button
+            className="claude-clear-btn"
+            onClick={() => setShowHistory(h => !h)}
+            title="Browse conversation history"
+          >
+            History
+          </button>
+          <button
+            className="claude-clear-btn"
+            onClick={clearChat}
+            disabled={isProcessing}
+            title="Start a new conversation"
+          >
+            New
+          </button>
+          {onClose && (
+            <button className="claude-view-close" onClick={onClose}>✕</button>
+          )}
+        </div>
+      )}
+      {hideHeader && (
+        <div className="claude-float-actions-bar">
+          <button
+            className="claude-clear-btn"
+            onClick={() => setShowHistory(h => !h)}
+            title="Browse conversation history"
+          >
+            History
+          </button>
+          <button
+            className="claude-clear-btn"
+            onClick={clearChat}
+            disabled={isProcessing}
+            title="Start a new conversation"
+          >
+            New
+          </button>
+        </div>
+      )}
 
       <div className="claude-view-body">
         {showHistory && (

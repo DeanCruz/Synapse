@@ -77,9 +77,7 @@ body {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  background: rgba(10,10,12,0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgb(10,10,12);
   border-bottom: 1px solid rgba(255,255,255,0.06);
   padding: 12px 24px;
   box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.4);
@@ -178,6 +176,45 @@ body {
 /* ============================================================
    Progress Bar
    ============================================================ */
+/* Dashboard action bar — Project + Claude buttons above progress */
+.dashboard-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 24px 0;
+}
+
+.dashboard-action-bar-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 0.78rem;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.dashboard-action-bar-btn:hover {
+  border-color: var(--border-hover, var(--text-tertiary));
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.04);
+}
+.dashboard-action-bar-btn.has-project {
+  color: rgba(52, 211, 153, 0.8);
+  border-color: rgba(52, 211, 153, 0.2);
+}
+.dashboard-action-bar-btn.has-project:hover {
+  color: rgba(52, 211, 153, 1);
+  border-color: rgba(52, 211, 153, 0.4);
+  background: rgba(52, 211, 153, 0.06);
+}
+.dashboard-action-bar-btn svg { flex-shrink: 0; }
+
 .progress-section {
   padding: 0 24px;
 }
@@ -268,7 +305,7 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--text-tertiary);
-  margin-top: 4px;
+  margin-left: 6px;
 }
 
 /* ============================================================
@@ -2070,6 +2107,47 @@ a:hover {
   opacity: 0.3;
 }
 
+/* Per-dashboard action buttons (Project, Claude) */
+.dashboard-item-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+.dashboard-item:hover .dashboard-item-actions,
+.dashboard-item.active .dashboard-item-actions {
+  opacity: 1;
+}
+.dashboard-item-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+.dashboard-item-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+.dashboard-item-action-btn.has-project {
+  color: rgba(52, 211, 153, 0.7);
+}
+.dashboard-item-action-btn.has-project:hover {
+  color: rgba(52, 211, 153, 1);
+  background: rgba(52, 211, 153, 0.1);
+}
+.dashboard-item-action-btn svg { flex-shrink: 0; }
+.dashboard-sidebar.collapsed .dashboard-item-actions { display: none; }
+
 .dashboard-item.archived-item {
   border: 1px solid rgba(155, 124, 240, 0.15);
   background: rgba(155, 124, 240, 0.04);
@@ -2502,9 +2580,7 @@ a:hover {
 .history-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.85);
   z-index: 200;
   display: flex;
   align-items: center;
@@ -3100,7 +3176,7 @@ a:hover {
 }
 
 [data-theme="light"] .header-bar {
-  background: rgba(245,245,247,0.75);
+  background: rgb(245,245,247);
   box-shadow: 0 1px 0 rgba(0,0,0,0.06), 0 4px 24px rgba(0,0,0,0.08);
 }
 
@@ -3225,7 +3301,7 @@ a:hover {
 }
 
 [data-theme="ocean"] .header-bar {
-  background: rgba(11,22,40,0.75);
+  background: rgb(11,22,40);
   box-shadow: 0 1px 0 rgba(100,180,255,0.06), 0 4px 24px rgba(0,0,0,0.4);
 }
 
@@ -3297,7 +3373,7 @@ a:hover {
 }
 
 [data-theme="ember"] .header-bar {
-  background: rgba(26,16,10,0.75);
+  background: rgb(26,16,10);
   box-shadow: 0 1px 0 rgba(255,160,60,0.06), 0 4px 24px rgba(0,0,0,0.4);
 }
 
@@ -3396,7 +3472,7 @@ a:hover {
 }
 
 [data-theme="forest"] .header-bar {
-  background: rgba(10,26,16,0.75);
+  background: rgb(10,26,16);
   box-shadow: 0 1px 0 rgba(52,211,153,0.06), 0 4px 24px rgba(0,0,0,0.4);
 }
 
@@ -3494,7 +3570,7 @@ a:hover {
 }
 
 [data-theme="midnight"] .header-bar {
-  background: rgba(20,8,30,0.75);
+  background: rgb(20,8,30);
   box-shadow: 0 1px 0 rgba(168,85,247,0.06), 0 4px 24px rgba(0,0,0,0.4);
 }
 
@@ -4236,6 +4312,173 @@ a:hover {
 .planning-preview-deps { color: var(--text-tertiary); font-size: 0.68rem; }
 
 /* =====================================================================
+   Claude Floating Panel — minimized / collapsed / expanded
+   ===================================================================== */
+
+.claude-float {
+  position: fixed;
+  z-index: 9000;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Minimized: pill in bottom-right */
+.claude-float--minimized {
+  bottom: 20px;
+  right: 20px;
+}
+
+/* Collapsed: compact header bar */
+.claude-float--collapsed {
+  bottom: 20px;
+  right: 20px;
+  width: 420px;
+}
+.claude-float--collapsed .claude-view {
+  min-height: 0;
+  height: auto;
+  border-radius: 10px;
+}
+.claude-float--collapsed .claude-view-body,
+.claude-float--collapsed .claude-suggestion-chips,
+.claude-float--collapsed .claude-prompt-bar,
+.claude-float--collapsed .claude-attachment-bar,
+.claude-float--collapsed .claude-float-actions-bar { display: none; }
+
+/* Expanded: full panel */
+.claude-float--expanded {
+  bottom: 20px;
+  right: 20px;
+  width: 520px;
+  height: calc(100vh - 100px);
+  max-height: 800px;
+}
+.claude-float--expanded .claude-view {
+  height: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* Maximized: fills the entire content area */
+.claude-float--maximized {
+  top: 53px;    /* below header */
+  left: 220px;  /* past sidebar */
+  right: 0;
+  bottom: 0;
+  width: auto;
+  height: auto;
+}
+.claude-float--maximized .claude-view {
+  height: 100%;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Account for collapsed sidebar */
+:has(.dashboard-sidebar.collapsed) .claude-float--maximized {
+  left: 52px;
+}
+
+/* Pill button */
+.claude-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--bg, #0a0a0c);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.claude-pill:hover {
+  background: #161620;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Floating header (separate from ClaudeView's own header) */
+.claude-float-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg, #0a0a0c);
+  border-radius: 12px 12px 0 0;
+  flex-shrink: 0;
+  opacity: 1;
+}
+.claude-float--collapsed .claude-float-header {
+  border-bottom: none;
+  border-radius: 10px;
+  background: var(--bg, #0a0a0c);
+}
+
+/* Project badge in header */
+.claude-view-project {
+  font-size: 0.72rem;
+  color: rgba(52, 211, 153, 0.85);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.15);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* Window control buttons */
+.claude-view-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.claude-view-ctrl-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  padding: 0;
+}
+.claude-view-ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+.claude-view-close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-failed);
+}
+
+/* Actions bar when header is hidden (History / New buttons) */
+.claude-float-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+  border-radius: 0;
+}
+.claude-float-actions-bar .claude-clear-btn {
+  margin-left: 0;
+}
+
+/* =====================================================================
    Claude Conversation View — tool calls, messages, prompt bar
    ===================================================================== */
 
@@ -4244,10 +4487,15 @@ a:hover {
   flex-direction: column;
   height: 100%;
   min-height: 400px;
-  background: var(--surface);
+  background: var(--bg, #0a0a0c);
   border-radius: 12px;
   border: 1px solid var(--border);
   overflow: hidden;
+}
+
+/* No-header variant: remove top border radius */
+.claude-view.claude-view--no-header {
+  border-radius: 0 0 12px 12px;
 }
 
 .claude-view-header {
@@ -4256,7 +4504,7 @@ a:hover {
   gap: 10px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
-  background: var(--surface-raised);
+  background: var(--bg, #0a0a0c);
 }
 
 .claude-view-title {
@@ -4315,7 +4563,7 @@ a:hover {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--surface-raised);
+  background: var(--bg, #0a0a0c);
 }
 
 .claude-history-header {

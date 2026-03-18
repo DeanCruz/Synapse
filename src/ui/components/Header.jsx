@@ -46,16 +46,8 @@ export default function Header() {
     dispatch({ type: 'SET_VIEW', view: 'home' });
   }
 
-  function handleProject() {
-    dispatch({ type: 'OPEN_MODAL', modal: 'project' });
-  }
-
   function handleCommands() {
     dispatch({ type: 'OPEN_MODAL', modal: 'commands' });
-  }
-
-  function handleClaude() {
-    dispatch({ type: 'SET_VIEW', view: 'claude' });
   }
 
   return (
@@ -124,29 +116,12 @@ export default function Header() {
         {/* Electron-only swarm controls */}
         {isElectron && (
           <div className="header-btn-group">
-            <button className="header-action-btn" title="Project Config" onClick={handleProject}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M2 4a1 1 0 011-1h4l1.5 1.5H13a1 1 0 011 1v6a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="currentColor" strokeWidth="1.2" fill="none"/>
-              </svg>
-              <span>Project</span>
-            </button>
-
             <button className="header-action-btn" title="Commands" onClick={handleCommands}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M4 5l4 3-4 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M9 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
               </svg>
               <span>Commands</span>
-            </button>
-
-            <button className="header-action-btn" title="Claude Chat" onClick={handleClaude}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.2"/>
-                <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
-                <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
-                <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
-              </svg>
-              <span>Claude</span>
             </button>
           </div>
         )}
