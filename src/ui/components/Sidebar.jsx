@@ -1,8 +1,10 @@
-// Sidebar — Dashboard selector with status dots, collapse toggle, and queue section
+// Sidebar — Dashboard selector with status dots, per-dashboard Project/Claude buttons,
+// collapse toggle, and queue section
 
 import React, { useState } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { DEFAULT_DASHBOARDS, DASHBOARD_LABELS } from '@/utils/constants.js';
+import { getDashboardProject } from '../utils/dashboardProjects.js';
 
 function StatusDot({ status }) {
   let cls = 'dashboard-item-status idle';
@@ -11,6 +13,13 @@ function StatusDot({ status }) {
   else if (status === 'error') cls = 'dashboard-item-status error';
   else if (status === 'idle') cls = 'dashboard-item-status idle';
   return <span className={cls} />;
+}
+
+function getProjectDisplayName(dashboardId) {
+  const projectPath = getDashboardProject(dashboardId);
+  if (!projectPath) return null;
+  const parts = projectPath.replace(/\/+$/, '').split('/');
+  return parts[parts.length - 1] || null;
 }
 
 export default function Sidebar() {
@@ -24,6 +33,20 @@ export default function Sidebar() {
     if (id !== currentDashboardId) {
       dispatch({ type: 'SWITCH_DASHBOARD', id });
     }
+  }
+
+  function handleProjectClick(e, dashboardId) {
+    e.stopPropagation();
+    dispatch({ type: 'OPEN_MODAL', modal: 'project', dashboardId });
+  }
+
+  function handleClaudeClick(e, dashboardId) {
+    e.stopPropagation();
+    // Switch to the dashboard first, then open Claude
+    if (dashboardId !== currentDashboardId) {
+      dispatch({ type: 'SWITCH_DASHBOARD', id: dashboardId });
+    }
+    dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId });
   }
 
   return (
@@ -48,6 +71,8 @@ export default function Sidebar() {
         {DEFAULT_DASHBOARDS.map(id => {
           const status = dashboardStates[id] ?? 'idle';
           const isActive = id === currentDashboardId;
+          const projectName = getProjectDisplayName(id);
+          const projectPath = getDashboardProject(id);
           return (
             <div
               key={id}
@@ -58,7 +83,33 @@ export default function Sidebar() {
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSwitch(id); }}
             >
               <StatusDot status={status} />
-              <span className="dashboard-item-name">{DASHBOARD_LABELS[id] ?? id}</span>
+              <span className="dashboard-item-name" title={projectPath || undefined}>
+                {projectName || (DASHBOARD_LABELS[id] ?? id)}
+              </span>
+              <div className="dashboard-item-actions">
+                <button
+                  className={`dashboard-item-action-btn${projectPath ? ' has-project' : ''}`}
+                  title={projectPath ? `Project: ${projectPath}` : 'Set project directory'}
+                  onClick={(e) => handleProjectClick(e, id)}
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 4l4-2 4 2 4-2v10l-4 2-4-2-4 2V4z" stroke="currentColor" strokeWidth="1.4"/>
+                    <path d="M6 2v12M10 4v12" stroke="currentColor" strokeWidth="1.4"/>
+                  </svg>
+                </button>
+                <button
+                  className="dashboard-item-action-btn"
+                  title="Claude Chat"
+                  onClick={(e) => handleClaudeClick(e, id)}
+                >
+                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                    <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.4"/>
+                    <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
+                    <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
+                    <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
+                  </svg>
+                </button>
+              </div>
             </div>
           );
         })}

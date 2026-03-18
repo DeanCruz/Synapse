@@ -681,9 +681,9 @@ function registerIPCHandlers(getMainWindow) {
 
   // --- Conversation Handlers ---
 
-  // GET conversations -> list-conversations
-  ipcMain.handle('list-conversations', async () => {
-    return { conversations: listConversations() };
+  // GET conversations -> list-conversations (optional dashboardId filter)
+  ipcMain.handle('list-conversations', async (_event, dashboardId) => {
+    return { conversations: listConversations(dashboardId || undefined) };
   });
 
   // POST create-conversation

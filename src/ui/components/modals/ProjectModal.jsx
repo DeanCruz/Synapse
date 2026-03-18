@@ -1,11 +1,14 @@
 // ProjectModal — Project configuration: directory picker, recent projects, CLI detection
-// Mirrors ProjectModal.js with React hooks and JSX.
+// Supports per-dashboard project paths.
 
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
+import { getDashboardProject, saveDashboardProject } from '../../utils/dashboardProjects.js';
 
-export default function ProjectModal({ onClose, onProjectSelected }) {
+export default function ProjectModal({ onClose, onProjectSelected, dashboardId }) {
   const api = window.electronAPI || null;
+  const targetDashboard = dashboardId || 'dashboard1';
+  const dashboardLabel = targetDashboard.replace('dashboard', 'Dashboard ');
 
   const [currentProject, setCurrentProject] = useState(null);
   const [recentProjects, setRecentProjects] = useState([]);
@@ -18,9 +21,13 @@ export default function ProjectModal({ onClose, onProjectSelected }) {
   useEffect(() => {
     if (!api) return;
 
+    // Load per-dashboard project path first, then fall back to global
+    const perDashboardPath = getDashboardProject(targetDashboard);
+
     api.getSettings().then(settings => {
-      if (settings.activeProjectPath) {
-        api.loadProject(settings.activeProjectPath).then(project => {
+      const projectPath = perDashboardPath || settings.activeProjectPath;
+      if (projectPath) {
+        api.loadProject(projectPath).then(project => {
           setCurrentProject(project);
         }).catch(() => {});
       }
@@ -52,12 +59,12 @@ export default function ProjectModal({ onClose, onProjectSelected }) {
       api.loadProject(dirPath).then(project => {
         setCurrentProject(project);
         api.addRecentProject({ path: project.path, name: project.name });
-        api.setSetting('activeProjectPath', project.path);
+        saveDashboardProject(targetDashboard, project.path);
         setRecentProjects(prev => {
           const filtered = prev.filter(p => p.path !== project.path);
           return [{ path: project.path, name: project.name }, ...filtered];
         });
-        if (onProjectSelected) onProjectSelected(project);
+        if (onProjectSelected) onProjectSelected({ ...project, dashboardId: targetDashboard });
       });
     });
   }
@@ -66,8 +73,8 @@ export default function ProjectModal({ onClose, onProjectSelected }) {
     if (!api) return;
     api.loadProject(recent.path).then(project => {
       setCurrentProject(project);
-      api.setSetting('activeProjectPath', project.path);
-      if (onProjectSelected) onProjectSelected(project);
+      saveDashboardProject(targetDashboard, project.path);
+      if (onProjectSelected) onProjectSelected({ ...project, dashboardId: targetDashboard });
     }).catch(() => {});
   }
 
@@ -88,14 +95,14 @@ export default function ProjectModal({ onClose, onProjectSelected }) {
 
   if (!api) {
     return (
-      <Modal title="Project Configuration" onClose={onClose}>
+      <Modal title={'Project Configuration — ' + dashboardLabel} onClose={onClose}>
         <div>Project configuration requires the desktop app.</div>
       </Modal>
     );
   }
 
   return (
-    <Modal title="Project Configuration" onClose={onClose}>
+    <Modal title={'Project Configuration — ' + dashboardLabel} onClose={onClose}>
       {/* Active Project */}
       <div className="settings-section">
         <div className="settings-section-title">Active Project</div>

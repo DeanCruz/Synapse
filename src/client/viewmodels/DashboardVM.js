@@ -27,6 +27,8 @@ import {
   applyCustomTheme,
   clearCustomTheme,
   showProjectModal,
+  getAllDashboardProjects,
+  getDashboardProject,
   showPlanningModal,
   showWorkerTerminal,
   showCommandsModal,
@@ -535,10 +537,6 @@ export function createDashboardVM(appState, sseClient, dom) {
     }
     // Clear custom view flag so renderStatus can take over again
     _customViewActive = false;
-    if (claudeViewController) {
-      claudeViewController.destroy();
-      claudeViewController = null;
-    }
     if (id === appState.get('currentDashboardId') && !appState.get('archiveViewActive') && !appState.get('queueViewActive')) return;
     appState.update({
       currentDashboardId: id,
@@ -596,10 +594,6 @@ export function createDashboardVM(appState, sseClient, dom) {
   function loadArchivedTask(archiveName) {
     // Reset custom view state so renderStatus can run
     _customViewActive = false;
-    if (claudeViewController) {
-      claudeViewController.destroy();
-      claudeViewController = null;
-    }
     // Ensure main content area is visible
     var mainEl = document.querySelector('.dashboard-content > main');
     if (mainEl) mainEl.hidden = false;
@@ -973,6 +967,8 @@ export function createDashboardVM(appState, sseClient, dom) {
       archiveViewActive: appState.get('archiveViewActive'),
       queueViewActive: appState.get('queueViewActive'),
       dashboardStates: appState.get('dashboardStates'),
+      dashboardProjects: getAllDashboardProjects(),
+      isElectron: !!window.electronAPI,
       queueCount: queueItems.length,
       onSwitch: function (id) {
         if (appState.get('homeViewActive')) {
@@ -988,6 +984,12 @@ export function createDashboardVM(appState, sseClient, dom) {
       },
       onExitQueue: function () {
         exitQueueView();
+      },
+      onProjectClick: function (dashboardId) {
+        showProjectConfigForDashboard(dashboardId);
+      },
+      onClaudeClick: function (dashboardId) {
+        showClaudeChatForDashboard(dashboardId);
       },
     });
   }
@@ -1338,9 +1340,15 @@ export function createDashboardVM(appState, sseClient, dom) {
   }
 
   function showProjectConfig() {
+    showProjectConfigForDashboard(appState.get('currentDashboardId'));
+  }
+
+  function showProjectConfigForDashboard(dashboardId) {
     showProjectModal({
+      dashboardId: dashboardId,
       onProjectSelected: function (project) {
-        // Project selected — store it
+        // Project selected — re-render sidebar to update project indicator
+        doRenderSidebar();
       },
     });
   }
@@ -1349,10 +1357,13 @@ export function createDashboardVM(appState, sseClient, dom) {
     var api = window.electronAPI;
     if (!api) return;
 
+    var dashboardId = appState.get('currentDashboardId');
+    var perDashboardPath = getDashboardProject(dashboardId);
+
     api.getSettings().then(function (settings) {
       showPlanningModal({
-        dashboardId: appState.get('currentDashboardId'),
-        projectPath: settings.activeProjectPath || null,
+        dashboardId: dashboardId,
+        projectPath: perDashboardPath || settings.activeProjectPath || null,
         onPlanReady: function (plan) {
           showSwarmBuilder(plan);
         },
@@ -1365,10 +1376,11 @@ export function createDashboardVM(appState, sseClient, dom) {
     if (!api) return;
 
     var dashboardId = appState.get('currentDashboardId');
+    var perDashboardPath = getDashboardProject(dashboardId);
 
     api.getSettings().then(function (settings) {
       return api.startSwarm(dashboardId, {
-        projectPath: settings.activeProjectPath || '.',
+        projectPath: perDashboardPath || settings.activeProjectPath || '.',
         model: settings.defaultModel || 'sonnet',
         cliPath: settings.claudeCliPath || null,
         dangerouslySkipPermissions: settings.dangerouslySkipPermissions || false,
@@ -1419,37 +1431,33 @@ export function createDashboardVM(appState, sseClient, dom) {
   var claudeViewController = null;
 
   function showClaudeChat() {
-    var container = dom.wavePipeline;
-    if (!container) return;
+    showClaudeChatForDashboard(appState.get('currentDashboardId'));
+  }
 
-    _customViewActive = true;
-
-    // Clean up previous instance
+  function showClaudeChatForDashboard(dashboardId) {
+    // If there's already a Claude view open, destroy it first
     if (claudeViewController) {
       claudeViewController.destroy();
       claudeViewController = null;
     }
 
-    // Hide other sections, but ensure wave section is visible (it holds the container)
-    if (dom.statsBar) dom.statsBar.hidden = true;
-    if (dom.logPanel) dom.logPanel.hidden = true;
-    if (dom.emptyState) dom.emptyState.hidden = true;
-    if (dom.progressSection) dom.progressSection.hidden = true;
-    if (dom.clearDashboardSection) dom.clearDashboardSection.hidden = true;
-    if (dom.waveSection) dom.waveSection.hidden = false;
+    // Also switch to this dashboard in the sidebar
+    var currentId = appState.get('currentDashboardId');
+    if (currentId !== dashboardId) {
+      if (appState.get('archiveViewActive')) exitArchiveView();
+      if (appState.get('queueViewActive')) exitQueueView();
+      if (appState.get('homeViewActive')) exitHome(dashboardId);
+      switchDashboard(dashboardId);
+    }
 
+    // Claude view is now a floating panel — no need to hide dashboard sections
     claudeViewController = renderClaudeView({
-      container: container,
+      dashboardId: dashboardId,
       onClose: function () {
-        _customViewActive = false;
         if (claudeViewController) {
           claudeViewController.destroy();
           claudeViewController = null;
         }
-        // Restore normal view
-        if (dom.statsBar) dom.statsBar.hidden = false;
-        if (dom.emptyState) dom.emptyState.hidden = false;
-        switchDashboard(appState.get('currentDashboardId'));
       },
       onNewSwarm: function () { showSwarmBuilder(); },
       onAIPlan: function () { showAIPlanner(); },
@@ -1463,9 +1471,12 @@ export function createDashboardVM(appState, sseClient, dom) {
     var api = window.electronAPI;
     if (!api) return;
 
+    var dashboardId = appState.get('currentDashboardId');
+    var perDashboardPath = getDashboardProject(dashboardId);
+
     api.getSettings().then(function (settings) {
       showCommandsModal({
-        projectDir: settings.activeProjectPath || null,
+        projectDir: perDashboardPath || settings.activeProjectPath || null,
       });
     });
   }
@@ -1502,6 +1513,7 @@ export function createDashboardVM(appState, sseClient, dom) {
     // Swarm orchestration
     showSwarmBuilder: showSwarmBuilder,
     showProjectConfig: showProjectConfig,
+    showProjectConfigForDashboard: showProjectConfigForDashboard,
     showAIPlanner: showAIPlanner,
     launchSwarm: launchSwarm,
     pauseSwarm: pauseSwarm,
@@ -1510,6 +1522,7 @@ export function createDashboardVM(appState, sseClient, dom) {
     retryFailedTask: retryFailedTask,
     showWorkerOutput: showWorkerOutput,
     showClaudeChat: showClaudeChat,
+    showClaudeChatForDashboard: showClaudeChatForDashboard,
     showCommands: showCommands,
 
     // Timer

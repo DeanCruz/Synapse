@@ -77,9 +77,8 @@ body {
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
-  background: rgba(10,10,12,0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgb(10,10,12);
+
   border-bottom: 1px solid rgba(255,255,255,0.06);
   padding: 12px 24px;
   box-shadow: 0 1px 0 rgba(255,255,255,0.04), 0 4px 24px rgba(0,0,0,0.4);
@@ -2070,6 +2069,59 @@ a:hover {
   opacity: 0.3;
 }
 
+/* Per-dashboard action buttons (Project, Claude) */
+.dashboard-item-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.dashboard-item:hover .dashboard-item-actions,
+.dashboard-item.active .dashboard-item-actions {
+  opacity: 1;
+}
+
+.dashboard-item-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.dashboard-item-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.dashboard-item-action-btn.has-project {
+  color: rgba(52, 211, 153, 0.7);
+}
+
+.dashboard-item-action-btn.has-project:hover {
+  color: rgba(52, 211, 153, 1);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.dashboard-item-action-btn svg {
+  flex-shrink: 0;
+}
+
+/* Hide action buttons when sidebar is collapsed */
+.dashboard-sidebar.collapsed .dashboard-item-actions {
+  display: none;
+}
+
 .dashboard-item.archived-item {
   border: 1px solid rgba(155, 124, 240, 0.15);
   background: rgba(155, 124, 240, 0.04);
@@ -3100,7 +3152,7 @@ a:hover {
 }
 
 [data-theme="light"] .header-bar {
-  background: rgba(245,245,247,0.75);
+  background: rgb(245,245,247);
   box-shadow: 0 1px 0 rgba(0,0,0,0.06), 0 4px 24px rgba(0,0,0,0.08);
 }
 
@@ -3225,7 +3277,7 @@ a:hover {
 }
 
 [data-theme="ocean"] .header-bar {
-  background: rgba(11,22,40,0.75);
+  background: rgb(11,22,40);
   box-shadow: 0 1px 0 rgba(100,180,255,0.06), 0 4px 24px rgba(0,0,0,0.4);
 }
 
@@ -3297,7 +3349,7 @@ a:hover {
 }
 
 [data-theme="ember"] .header-bar {
-  background: rgba(26,16,10,0.75);
+  background: rgb(26,16,10);
   box-shadow: 0 1px 0 rgba(255,160,60,0.06), 0 4px 24px rgba(0,0,0,0.4);
 }
 
@@ -3396,7 +3448,7 @@ a:hover {
 }
 
 [data-theme="forest"] .header-bar {
-  background: rgba(10,26,16,0.75);
+  background: rgb(10,26,16);
   box-shadow: 0 1px 0 rgba(52,211,153,0.06), 0 4px 24px rgba(0,0,0,0.4);
 }
 
@@ -3494,7 +3546,7 @@ a:hover {
 }
 
 [data-theme="midnight"] .header-bar {
-  background: rgba(20,8,30,0.75);
+  background: rgb(20,8,30);
   box-shadow: 0 1px 0 rgba(168,85,247,0.06), 0 4px 24px rgba(0,0,0,0.4);
 }
 
@@ -4236,9 +4288,87 @@ a:hover {
 .planning-preview-deps { color: var(--text-tertiary); font-size: 0.68rem; }
 
 /* =====================================================================
-   Claude Conversation View — tool calls, messages, prompt bar
+   Claude Conversation View — floating panel with 3 modes
    ===================================================================== */
 
+/* ── Floating root container ──────────────────────────────────────────── */
+.claude-float {
+  position: fixed;
+  z-index: 9000;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Minimized: small pill in bottom-right ────────────────────────────── */
+.claude-float--minimized {
+  bottom: 20px;
+  right: 20px;
+  width: auto;
+  height: auto;
+}
+.claude-float--minimized .claude-view { display: none; }
+.claude-float--minimized .claude-pill { display: flex; }
+
+/* ── Collapsed: compact bar at bottom-right ──────────────────────────── */
+.claude-float--collapsed {
+  bottom: 20px;
+  right: 20px;
+  width: 420px;
+  height: auto;
+  max-height: 52px;
+}
+.claude-float--collapsed .claude-pill { display: none; }
+.claude-float--collapsed .claude-view { display: flex; }
+.claude-float--collapsed .claude-session-toolbar,
+.claude-float--collapsed .claude-conversation,
+.claude-float--collapsed .claude-view-conversation,
+.claude-float--collapsed .claude-quick-actions,
+.claude-float--collapsed .claude-prompt-bar,
+.claude-float--collapsed .claude-context-usage,
+.claude-float--collapsed .claude-view-project { display: none; }
+.claude-float--collapsed .claude-view {
+  border-radius: 10px;
+  min-height: 0;
+}
+.claude-float--collapsed .claude-view-header {
+  border-bottom: none;
+  cursor: pointer;
+}
+
+/* ── Expanded: full panel, bottom-right ──────────────────────────────── */
+.claude-float--expanded {
+  bottom: 20px;
+  right: 20px;
+  width: 520px;
+  height: calc(100vh - 100px);
+  max-height: 800px;
+}
+.claude-float--expanded .claude-pill { display: none; }
+.claude-float--expanded .claude-view { display: flex; height: 100%; }
+
+/* ── Pill button ─────────────────────────────────────────────────────── */
+.claude-pill {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface-raised);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.claude-pill:hover {
+  background: var(--surface-hover);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  transform: translateY(-1px);
+}
+
+/* ── Main wrapper ────────────────────────────────────────────────────── */
 .claude-view {
   display: flex;
   flex-direction: column;
@@ -4248,8 +4378,10 @@ a:hover {
   border-radius: 12px;
   border: 1px solid var(--border);
   overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
+/* ── Header ──────────────────────────────────────────────────────────── */
 .claude-view-header {
   display: flex;
   align-items: center;
@@ -4257,12 +4389,28 @@ a:hover {
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--surface-raised);
+  flex-shrink: 0;
 }
 
 .claude-view-title {
   font-weight: 600;
   font-size: 0.9rem;
   color: var(--text);
+  white-space: nowrap;
+}
+
+/* ── Project badge (visible in expanded mode header) ─────────────────── */
+.claude-view-project {
+  font-size: 0.72rem;
+  color: rgba(52, 211, 153, 0.85);
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.15);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
 }
 
 .claude-view-status {
@@ -4278,16 +4426,80 @@ a:hover {
   background: rgba(59, 130, 246, 0.12);
 }
 
-.claude-view-close {
+/* ── Window control buttons ──────────────────────────────────────────── */
+.claude-view-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   margin-left: auto;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 1rem;
-  padding: 4px;
+  flex-shrink: 0;
 }
-.claude-view-close:hover { color: var(--text); }
+
+.claude-view-ctrl-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  padding: 0;
+}
+.claude-view-ctrl-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+.claude-view-close-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-failed);
+}
+
+/* ── Context usage ───────────────────────────────────────────────────── */
+.claude-context-usage {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 4px;
+}
+
+.claude-context-label {
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.claude-context-bar-outer {
+  width: 80px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.claude-context-bar-inner {
+  height: 100%;
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.4s ease, background 0.4s ease;
+}
+
+.claude-context-bar-inner.low { background: var(--color-completed, #34d399); }
+.claude-context-bar-inner.medium { background: var(--color-warn, #fbbf24); }
+.claude-context-bar-inner.high { background: var(--color-failed, #f87171); }
+
+.claude-context-text {
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 
 /* =====================================================================
    Session Toolbar

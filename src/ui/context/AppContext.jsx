@@ -6,13 +6,32 @@ import React, { createContext, useContext, useReducer, useCallback } from 'react
 const AppContext = createContext(null);
 const DispatchContext = createContext(null);
 
-const CLAUDE_MESSAGES_KEY = 'synapse-claude-messages';
+const CLAUDE_MESSAGES_KEY_PREFIX = 'synapse-claude-messages-';
 const CLAUDE_WELCOME_MSG = { id: 'welcome', type: 'system', text: 'Claude Code is ready. Type a message below to start.' };
 
-function loadSavedMessages() {
+function claudeMessagesKey(dashboardId) {
+  return CLAUDE_MESSAGES_KEY_PREFIX + (dashboardId || 'dashboard1');
+}
+
+function loadSavedMessages(dashboardId) {
   try {
-    const raw = localStorage.getItem(CLAUDE_MESSAGES_KEY);
-    if (!raw) return null;
+    const key = claudeMessagesKey(dashboardId);
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      // Migration: move old global key to dashboard1
+      if (!dashboardId || dashboardId === 'dashboard1') {
+        const oldRaw = localStorage.getItem('synapse-claude-messages');
+        if (oldRaw) {
+          const parsed = JSON.parse(oldRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            localStorage.setItem(key, oldRaw);
+            localStorage.removeItem('synapse-claude-messages');
+            return parsed;
+          }
+        }
+      }
+      return null;
+    }
     const parsed = JSON.parse(raw);
     if (Array.isArray(parsed) && parsed.length > 0) return parsed;
   } catch (e) { /* corrupt or unavailable */ }
@@ -37,9 +56,13 @@ const initialState = {
   seenPermissionCount: 0,
   activeView: 'dashboard', // 'dashboard' | 'home' | 'swarmBuilder' | 'claude'
   activeModal: null, // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor'
+  modalDashboardId: null, // which dashboard a modal was opened for
+  claudeDashboardId: null, // which dashboard the Claude view is associated with
+  claudeViewMode: 'expanded', // 'minimized' | 'collapsed' | 'expanded' | 'maximized'
   connected: false,
-  // Persistent Claude chat state
-  claudeMessages: loadSavedMessages() || [CLAUDE_WELCOME_MSG],
+  // Persistent Claude chat state (per-dashboard)
+  claudeMessages: loadSavedMessages('dashboard1') || [CLAUDE_WELCOME_MSG],
+  claudeChatStash: {}, // { [dashboardId]: messages } — in-memory cache for fast dashboard switching
   claudeIsProcessing: false,
   claudeStatus: 'Ready',
   claudeActiveTaskId: null,
@@ -75,7 +98,11 @@ function appReducerCore(state, action) {
       const newLogs = { ...state.allDashboardLogs, [action.dashboardId]: action.logs };
       return { ...state, allDashboardLogs: newLogs };
     }
-    case 'SWITCH_DASHBOARD':
+    case 'SWITCH_DASHBOARD': {
+      // Stash current dashboard's chat messages
+      const stash = { ...state.claudeChatStash, [state.currentDashboardId]: state.claudeMessages };
+      // Restore target dashboard's chat messages
+      const targetMessages = stash[action.id] || loadSavedMessages(action.id) || [CLAUDE_WELCOME_MSG];
       return {
         ...state,
         currentDashboardId: action.id,
@@ -85,14 +112,22 @@ function appReducerCore(state, action) {
         currentStatus: null,
         activeLogFilter: 'all',
         seenPermissionCount: 0,
-        activeView: 'dashboard',
+        activeView: state.activeView === 'claude' ? 'claude' : 'dashboard',
         archiveViewActive: false,
         queueViewActive: false,
+        // Swap chat state
+        claudeChatStash: stash,
+        claudeMessages: targetMessages,
+        claudeIsProcessing: false,
+        claudeStatus: 'Ready',
+        claudePendingAttachments: [],
+        claudeDashboardId: action.id,
       };
+    }
     case 'SET_VIEW':
-      return { ...state, activeView: action.view };
+      return { ...state, activeView: action.view, claudeDashboardId: action.dashboardId || state.claudeDashboardId || state.currentDashboardId };
     case 'OPEN_MODAL':
-      return { ...state, activeModal: action.modal };
+      return { ...state, activeModal: action.modal, modalDashboardId: action.dashboardId || state.currentDashboardId };
     case 'CLOSE_MODAL':
       return { ...state, activeModal: null };
     case 'CLAUDE_SET_MESSAGES':
@@ -103,8 +138,10 @@ function appReducerCore(state, action) {
       // Functional update: action.updater(prevMessages) => newMessages
       return { ...state, claudeMessages: action.updater(state.claudeMessages) };
     case 'CLAUDE_CLEAR_MESSAGES':
-      try { localStorage.removeItem(CLAUDE_MESSAGES_KEY); } catch (e) { /* unavailable */ }
+      try { localStorage.removeItem(claudeMessagesKey(state.currentDashboardId)); } catch (e) { /* unavailable */ }
       return { ...state, claudeMessages: [CLAUDE_WELCOME_MSG], claudePendingAttachments: [] };
+    case 'CLAUDE_SET_VIEW_MODE':
+      return { ...state, claudeViewMode: action.mode };
     case 'CLAUDE_SET_PROCESSING':
       return { ...state, claudeIsProcessing: action.value };
     case 'CLAUDE_SET_STATUS':
@@ -130,7 +167,7 @@ function appReducer(state, action) {
   const newState = appReducerCore(state, action);
   if (CLAUDE_PERSIST_ACTIONS.has(action.type)) {
     try {
-      localStorage.setItem(CLAUDE_MESSAGES_KEY, JSON.stringify(newState.claudeMessages));
+      localStorage.setItem(claudeMessagesKey(newState.currentDashboardId), JSON.stringify(newState.claudeMessages));
     } catch (e) { /* quota exceeded or private browsing */ }
   }
   return newState;
