@@ -120,28 +120,47 @@ function scanDirectory(dirPath, maxDepth) {
   return scan(dirPath, 0);
 }
 
+function detectCliBinary(binaryName, commonPaths) {
+  var { execSync } = require('child_process');
+  try {
+    var result = execSync('which ' + binaryName, { encoding: 'utf-8', timeout: 5000 }).trim();
+    if (result && fs.existsSync(result)) return result;
+  } catch (e) { /* not found */ }
+
+  for (var i = 0; i < commonPaths.length; i++) {
+    if (fs.existsSync(commonPaths[i])) return commonPaths[i];
+  }
+  return null;
+}
+
 /**
  * Detect Claude CLI binary path.
  *
  * @returns {string|null}
  */
 function detectClaudeCLI() {
-  var { execSync } = require('child_process');
-  try {
-    var result = execSync('which claude', { encoding: 'utf-8', timeout: 5000 }).trim();
-    if (result && fs.existsSync(result)) return result;
-  } catch (e) { /* not found */ }
-
-  // Check common locations
-  var common = [
+  return detectCliBinary('claude', [
     '/usr/local/bin/claude',
     path.join(process.env.HOME || '', '.claude', 'bin', 'claude'),
     path.join(process.env.HOME || '', '.local', 'bin', 'claude'),
-  ];
-  for (var i = 0; i < common.length; i++) {
-    if (fs.existsSync(common[i])) return common[i];
-  }
-  return null;
+  ]);
 }
 
-module.exports = { loadProject, getProjectContext, scanDirectory, detectClaudeCLI };
+/**
+ * Detect Codex CLI binary path.
+ *
+ * @returns {string|null}
+ */
+function detectCodexCLI() {
+  return detectCliBinary('codex', [
+    '/opt/homebrew/bin/codex',
+    '/usr/local/bin/codex',
+    path.join(process.env.HOME || '', '.local', 'bin', 'codex'),
+  ]);
+}
+
+function detectAgentCLI(provider) {
+  return provider === 'codex' ? detectCodexCLI() : detectClaudeCLI();
+}
+
+module.exports = { loadProject, getProjectContext, scanDirectory, detectClaudeCLI, detectCodexCLI, detectAgentCLI };

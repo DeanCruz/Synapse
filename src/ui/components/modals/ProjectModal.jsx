@@ -5,6 +5,35 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
 import { getDashboardProject, saveDashboardProject } from '../../utils/dashboardProjects.js';
 
+const MODEL_OPTIONS = {
+  claude: [
+    { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
+    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+    { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
+  ],
+  codex: [
+    { value: 'gpt-5.4', label: 'GPT-5.4' },
+    { value: 'gpt-5.4-mini', label: 'GPT-5.4-Mini' },
+    { value: 'gpt-5.3-codex', label: 'GPT-5.3-Codex' },
+    { value: 'gpt-5.2-codex', label: 'GPT-5.2-Codex' },
+    { value: 'gpt-5.2', label: 'GPT-5.2' },
+    { value: 'gpt-5.1-codex-max', label: 'GPT-5.1-Codex-Max' },
+    { value: 'gpt-5.1-codex-mini', label: 'GPT-5.1-Codex-Mini' },
+  ],
+};
+
+function getModelOptions(provider) {
+  return MODEL_OPTIONS[provider] || MODEL_OPTIONS.claude;
+}
+
+function resolveModel(provider, savedModel) {
+  const options = getModelOptions(provider);
+  if (savedModel && options.some((option) => option.value === savedModel)) {
+    return savedModel;
+  }
+  return options[0].value;
+}
+
 export default function ProjectModal({ onClose, onProjectSelected, dashboardId }) {
   const api = window.electronAPI || null;
   const targetDashboard = dashboardId || 'dashboard1';
@@ -12,10 +41,11 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
 
   const [currentProject, setCurrentProject] = useState(null);
   const [recentProjects, setRecentProjects] = useState([]);
+  const [provider, setProvider] = useState('claude');
   const [cliPath, setCliPath] = useState('');
   const [cliStatus, setCliStatus] = useState('Detecting...');
   const [cliFound, setCliFound] = useState(null); // null | true | false
-  const [defaultModel, setDefaultModel] = useState('sonnet');
+  const [defaultModel, setDefaultModel] = useState('');
   const [skipPermissions, setSkipPermissions] = useState(false);
 
   useEffect(() => {
@@ -31,8 +61,14 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
           setCurrentProject(project);
         }).catch(() => {});
       }
-      if (settings.claudeCliPath) setCliPath(settings.claudeCliPath);
-      if (settings.defaultModel) setDefaultModel(settings.defaultModel);
+      const activeProvider = settings.agentProvider || 'claude';
+      const resolvedDefaultModel = resolveModel(activeProvider, settings.defaultModel);
+      setProvider(activeProvider);
+      setCliPath(activeProvider === 'codex' ? (settings.codexCliPath || '') : (settings.claudeCliPath || ''));
+      setDefaultModel(resolvedDefaultModel);
+      if (resolvedDefaultModel !== settings.defaultModel) {
+        api.setSetting('defaultModel', resolvedDefaultModel).catch(() => {});
+      }
       setSkipPermissions(!!settings.dangerouslySkipPermissions);
     });
 
@@ -40,7 +76,7 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
       setRecentProjects(recents || []);
     });
 
-    api.detectClaudeCli().then(detected => {
+    api.detectAgentCli(provider).then(detected => {
       if (detected) {
         setCliStatus('Found: ' + detected);
         setCliFound(true);
@@ -50,7 +86,7 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
         setCliFound(false);
       }
     });
-  }, [api]);
+  }, [api, provider, targetDashboard]);
 
   function handleSelectDirectory() {
     if (!api) return;
@@ -80,7 +116,20 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
 
   function handleCliPathChange(e) {
     setCliPath(e.target.value);
-    if (api) api.setSetting('claudeCliPath', e.target.value);
+    if (api) api.setSetting(provider === 'codex' ? 'codexCliPath' : 'claudeCliPath', e.target.value);
+  }
+
+  function handleProviderChange(e) {
+    const nextProvider = e.target.value;
+    const nextModel = resolveModel(nextProvider, defaultModel);
+    setProvider(nextProvider);
+    setDefaultModel(nextModel);
+    setCliStatus('Detecting...');
+    setCliFound(null);
+    if (api) {
+      api.setSetting('agentProvider', nextProvider);
+      api.setSetting('defaultModel', nextModel);
+    }
   }
 
   function handleModelChange(e) {
@@ -150,39 +199,56 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
         </div>
       </div>
 
-      {/* Claude CLI */}
+      {/* Agent provider */}
       <div className="settings-section">
-        <div className="settings-section-title">Claude CLI</div>
+        <div className="settings-section-title">Agent Provider</div>
+        <div className="settings-app-row project-settings-row">
+          <label className="settings-app-label">Provider</label>
+          <select
+            className="settings-app-input project-settings-input"
+            value={provider}
+            onChange={handleProviderChange}
+          >
+            <option value="claude">Claude Code</option>
+            <option value="codex">Codex</option>
+          </select>
+        </div>
+
+        <div className="settings-section-title" style={{ marginTop: '12px' }}>
+          {provider === 'codex' ? 'Codex CLI' : 'Claude CLI'}
+        </div>
         <div className={'project-cli-status' + (cliFound === true ? ' project-cli-found' : cliFound === false ? ' project-cli-missing' : '')}>
           {cliStatus}
         </div>
         <input
           type="text"
-          className="settings-app-input"
-          placeholder="Path to claude binary"
+          className="settings-app-input project-settings-input project-settings-path-input"
+          placeholder={provider === 'codex' ? 'Path to codex binary' : 'Path to claude binary'}
           value={cliPath}
           onChange={handleCliPathChange}
           style={{ marginTop: '8px' }}
         />
 
-        <div className="settings-app-row" style={{ marginTop: '12px' }}>
+        <div className="settings-app-row project-settings-row" style={{ marginTop: '12px' }}>
           <label className="settings-app-label">Default Model</label>
           <select
-            className="settings-app-input"
+            className="settings-app-input project-settings-input"
             value={defaultModel}
             onChange={handleModelChange}
           >
-            <option value="sonnet">Sonnet</option>
-            <option value="opus">Opus</option>
-            <option value="haiku">Haiku</option>
+            {getModelOptions(provider).map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
           </select>
         </div>
 
-        <div className="settings-app-row" style={{ marginTop: '8px' }}>
+        <div className="settings-app-row project-settings-row" style={{ marginTop: '8px' }}>
           <label className="settings-app-label">Skip Permissions</label>
           <input
             type="checkbox"
-            className="settings-app-input"
+            className="settings-app-input project-settings-checkbox"
             style={{ width: 'auto' }}
             checked={skipPermissions}
             onChange={handleSkipPermissionsChange}

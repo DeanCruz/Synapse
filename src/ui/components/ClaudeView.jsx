@@ -1,14 +1,43 @@
-// ClaudeView — Full Claude Code chat view embedded in main content area
+// ClaudeView — Full in-app agent chat view embedded in main content area
 // Handles streaming worker output, tool call rendering, and conversation history.
 // State persists in AppContext so switching views doesn't lose messages.
 // Reads Synapse CLAUDE.md + project CLAUDE.md on each spawn.
 // Logs chat events to the active dashboard.
-// Allows sending follow-up messages while Claude is still running.
+// Allows sending follow-up messages while an agent is still running.
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { renderMarkdown } from '../utils/markdown.js';
 import { getDashboardProject } from '../utils/dashboardProjects.js';
+
+const MODEL_OPTIONS = {
+  claude: [
+    { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
+    { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
+    { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
+  ],
+  codex: [
+    { value: 'gpt-5.4', label: 'GPT-5.4' },
+    { value: 'gpt-5.4-mini', label: 'GPT-5.4-Mini' },
+    { value: 'gpt-5.3-codex', label: 'GPT-5.3-Codex' },
+    { value: 'gpt-5.2-codex', label: 'GPT-5.2-Codex' },
+    { value: 'gpt-5.2', label: 'GPT-5.2' },
+    { value: 'gpt-5.1-codex-max', label: 'GPT-5.1-Codex-Max' },
+    { value: 'gpt-5.1-codex-mini', label: 'GPT-5.1-Codex-Mini' },
+  ],
+};
+
+function getModelOptions(provider) {
+  return MODEL_OPTIONS[provider] || MODEL_OPTIONS.claude;
+}
+
+function resolveModel(provider, savedModel) {
+  const options = getModelOptions(provider);
+  if (savedModel && options.some((option) => option.value === savedModel)) {
+    return savedModel;
+  }
+  return options[0].value;
+}
 
 // Parse tool result content into a display string
 function toolResultText(content) {
@@ -135,7 +164,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const pendingAttachments = state.claudePendingAttachments;
 
   const [prompt, setPrompt] = useState('');
-  const [model, setModel] = useState('sonnet');
+  const [provider, setProvider] = useState('claude');
+  const [model, setModel] = useState(resolveModel('claude'));
   const [showHistory, setShowHistory] = useState(false);
   const [conversations, setConversations] = useState([]);
   const textareaRef = useRef(null);
@@ -152,6 +182,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const conversationRef = useRef(null);
   // Track all active task IDs (multiple workers can be running)
   const activeTaskIdsRef = useRef(new Set());
+  const codexStreamedTaskIdsRef = useRef(new Set());
   // Map: tool_use_id -> index in messages array (for appending results)
   const toolCallIndexRef = useRef({});
   // Index of current accumulating assistant text message
@@ -198,17 +229,33 @@ export default function ClaudeView({ onClose, hideHeader }) {
     }
   }, [showHistory, api, dashboardId]);
 
+  useEffect(() => {
+    if (!api) return;
+    api.getSettings().then((settings) => {
+      const nextProvider = settings.agentProvider || 'claude';
+      const resolvedDefaultModel = resolveModel(nextProvider, settings.defaultModel);
+      setProvider(nextProvider);
+      setModel(resolvedDefaultModel);
+      if (resolvedDefaultModel !== settings.defaultModel) {
+        api.setSetting('defaultModel', resolvedDefaultModel).catch(() => {});
+      }
+    }).catch(() => {});
+  }, [api, dashboardId]);
+
   // Set up push listeners — use refs so the closure always calls latest functions
   useEffect(() => {
     if (!api) return;
 
     const workerListener = api.on('worker-output', (data) => {
       if (!activeTaskIdsRef.current.has(data.taskId)) return;
-      if (handleChunkRef.current) handleChunkRef.current(data.chunk);
+      if (handleChunkRef.current) handleChunkRef.current(data);
     });
 
     const completeListener = api.on('worker-complete', (data) => {
       if (!activeTaskIdsRef.current.has(data.taskId)) return;
+      if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
+        appendMsg({ type: 'assistant', text: data.lastMessage });
+      }
       if (data.errorOutput) {
         dispatch({
           type: 'CLAUDE_APPEND_MSG',
@@ -276,21 +323,22 @@ export default function ClaudeView({ onClose, hideHeader }) {
     }});
   }
 
-  function handleChunk(chunk) {
+  function handleChunk(data) {
+    const chunk = data.chunk;
     const lines = chunk.split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
       try {
         const evt = JSON.parse(trimmed);
-        processEvent(evt);
+        processEvent(evt, data.taskId);
       } catch (e) {
         appendTextContent(trimmed + '\n');
       }
     }
   }
 
-  function processEvent(evt) {
+  function processEvent(evt, taskId) {
     if (!evt || !evt.type) return;
 
     switch (evt.type) {
@@ -342,6 +390,27 @@ export default function ClaudeView({ onClose, hideHeader }) {
         break;
       }
 
+      case 'thread.started': {
+        if (evt.thread_id) sessionIdRef.current = evt.thread_id;
+        break;
+      }
+
+      case 'turn.started':
+        dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
+        break;
+
+      case 'item.completed':
+        if (evt.item?.type === 'agent_message' && evt.item.text) {
+          codexStreamedTaskIdsRef.current.add(taskId);
+          appendTextContent(evt.item.text);
+          flushText();
+        }
+        break;
+
+      case 'error':
+        appendMsg({ type: 'system', text: evt.message || 'Agent error', isError: true });
+        break;
+
       case 'rate_limit_event':
         break;
 
@@ -352,6 +421,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
 
   function finishProcessing(taskId) {
     activeTaskIdsRef.current.delete(taskId);
+    codexStreamedTaskIdsRef.current.delete(taskId);
     // Only mark as not processing when ALL workers are done
     if (activeTaskIdsRef.current.size === 0) {
       dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
@@ -492,12 +562,17 @@ export default function ClaudeView({ onClose, hideHeader }) {
 
     const taskId = '_claude_' + Date.now();
     activeTaskIdsRef.current.add(taskId);
+    codexStreamedTaskIdsRef.current.delete(taskId);
 
     try {
       const settings = await api.getSettings();
       const perDashboardPath = getDashboardProject(dashboardId);
       const projectDir = perDashboardPath || settings.activeProjectPath || null;
-      const selectedModel = model || settings.defaultModel || 'sonnet';
+      const provider = settings.agentProvider || 'claude';
+      const selectedModel = resolveModel(provider, model || settings.defaultModel);
+      const cliPath = provider === 'codex'
+        ? (settings.codexCliPath || null)
+        : (settings.claudeCliPath || null);
 
       // Only inject system prompt on fresh sessions — resumed sessions already have context
       const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir);
@@ -505,19 +580,20 @@ export default function ClaudeView({ onClose, hideHeader }) {
       if (dashboardId) {
         api.logChatEvent(dashboardId, {
           level: 'info',
-          message: 'Claude chat: ' + text.substring(0, 100) + (text.length > 100 ? '...' : ''),
+          message: 'Agent chat: ' + text.substring(0, 100) + (text.length > 100 ? '...' : ''),
           task_id: taskId,
         }).catch(() => {});
       }
 
       await api.spawnWorker({
+        provider,
         taskId,
         dashboardId,
         prompt: text,
         systemPrompt: systemPrompt || undefined,
         resumeSessionId: sessionIdRef.current || undefined,
-        model: selectedModel,
-        cliPath: settings.claudeCliPath || null,
+        model: selectedModel || undefined,
+        cliPath,
         dangerouslySkipPermissions: settings.dangerouslySkipPermissions || false,
         projectDir,
       });
@@ -589,6 +665,13 @@ export default function ClaudeView({ onClose, hideHeader }) {
     el.style.height = Math.min(el.scrollHeight, 150) + 'px';
   }
 
+  function handleModelSelect(nextModel) {
+    setModel(nextModel);
+    if (api) {
+      api.setSetting('defaultModel', nextModel).catch(() => {});
+    }
+  }
+
   function clearChat() {
     if (!isProcessing) {
       dispatch({ type: 'CLAUDE_CLEAR_MESSAGES' });
@@ -627,11 +710,16 @@ export default function ClaudeView({ onClose, hideHeader }) {
     return d.toLocaleDateString();
   }
 
+  const providerLabel = provider === 'codex' ? 'Codex' : 'Claude Code';
+  const activeModelLabel = getModelOptions(provider).find((option) => option.value === model)?.label || model;
+
   return (
     <div className={`claude-view${hideHeader ? ' claude-view--no-header' : ''}`}>
       {!hideHeader && (
         <div className="claude-view-header">
-          <span className="claude-view-title">Claude Code</span>
+          <span className="claude-view-title">Agent Chat</span>
+          <span className="claude-view-project">{providerLabel}</span>
+          <span className="claude-view-project">{activeModelLabel}</span>
           <span className={'claude-view-status' + (isProcessing ? ' active' : '')}>{status}</span>
           <button
             className="claude-clear-btn"
@@ -743,11 +831,13 @@ export default function ClaudeView({ onClose, hideHeader }) {
         <select
           className="claude-model-select"
           value={model}
-          onChange={e => setModel(e.target.value)}
+          onChange={e => handleModelSelect(e.target.value)}
         >
-          <option value="sonnet">Sonnet</option>
-          <option value="opus">Opus</option>
-          <option value="haiku">Haiku</option>
+          {getModelOptions(provider).map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
         </select>
         <button
           className="claude-attach-btn"
@@ -758,7 +848,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         <textarea
           ref={textareaRef}
           className="claude-prompt-input"
-          placeholder="Ask Claude anything... (drag or paste images)"
+          placeholder="Ask the active agent anything... (drag or paste images)"
           rows={1}
           value={prompt}
           onChange={e => setPrompt(e.target.value)}

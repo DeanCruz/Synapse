@@ -7,7 +7,7 @@ const AppContext = createContext(null);
 const DispatchContext = createContext(null);
 
 const CLAUDE_MESSAGES_KEY_PREFIX = 'synapse-claude-messages-';
-const CLAUDE_WELCOME_MSG = { id: 'welcome', type: 'system', text: 'Claude Code is ready. Type a message below to start.' };
+const CLAUDE_WELCOME_MSG = { id: 'welcome', type: 'system', text: 'Agent chat is ready. Type a message below to start.' };
 
 function claudeMessagesKey(dashboardId) {
   return CLAUDE_MESSAGES_KEY_PREFIX + (dashboardId || 'dashboard1');
