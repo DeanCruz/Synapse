@@ -31,8 +31,10 @@ const DEFAULTS = {
   // Project
   recentProjects: [],
   activeProjectPath: null,
+  agentProvider: 'claude',
   claudeCliPath: null,
-  defaultModel: 'sonnet',
+  codexCliPath: null,
+  defaultModel: '',
   dangerouslySkipPermissions: false,
 };
 

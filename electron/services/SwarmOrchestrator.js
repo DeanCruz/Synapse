@@ -8,6 +8,7 @@ const path = require('path');
 const { DASHBOARDS_DIR } = require('../../src/server/utils/constants');
 const { readDashboardInit, readDashboardProgress } = require('../../src/server/services/DashboardService');
 const ClaudeCodeService = require('./ClaudeCodeService');
+const CodexService = require('./CodexService');
 const PromptBuilder = require('./PromptBuilder');
 const ProjectService = require('./ProjectService');
 
@@ -21,6 +22,7 @@ var broadcastFn = null;
 function init(broadcast) {
   broadcastFn = broadcast;
   ClaudeCodeService.init(broadcast);
+  CodexService.init(broadcast);
 }
 
 /**
@@ -29,8 +31,9 @@ function init(broadcast) {
  * @param {string} dashboardId
  * @param {object} opts
  * @param {string} opts.projectPath — project directory
- * @param {string} [opts.model] — Claude model
- * @param {string} [opts.cliPath] — path to claude binary
+ * @param {string} [opts.provider] — active CLI provider
+ * @param {string} [opts.model] — model name
+ * @param {string} [opts.cliPath] — path to CLI binary
  * @param {boolean} [opts.dangerouslySkipPermissions]
  * @returns {{ success: boolean, error?: string }}
  */
@@ -53,8 +56,9 @@ function startSwarm(dashboardId, opts) {
   activeSwarms[dashboardId] = {
     state: 'running',
     projectPath: opts.projectPath,
-    model: opts.model || 'sonnet',
-    cliPath: opts.cliPath || 'claude',
+    provider: opts.provider || 'claude',
+    model: opts.model || '',
+    cliPath: opts.cliPath || null,
     dangerouslySkipPermissions: opts.dangerouslySkipPermissions || false,
     trackerRoot: trackerRoot,
     dispatchedTasks: {},  // taskId -> true
@@ -238,7 +242,9 @@ function dispatchReady(dashboardId) {
     });
 
     // Spawn the worker
-    ClaudeCodeService.spawnWorker({
+    var service = swarm.provider === 'codex' ? CodexService : ClaudeCodeService;
+    service.spawnWorker({
+      provider: swarm.provider,
       taskId: taskId,
       dashboardId: dashboardId,
       projectDir: swarm.projectPath,
@@ -315,9 +321,12 @@ function cancelSwarm(dashboardId) {
 
   // Kill all workers for this dashboard
   var workers = ClaudeCodeService.getActiveWorkers();
+  workers = workers.concat(CodexService.getActiveWorkers());
   for (var i = 0; i < workers.length; i++) {
     if (workers[i].dashboardId === dashboardId) {
-      ClaudeCodeService.killWorker(workers[i].pid);
+      if (!ClaudeCodeService.killWorker(workers[i].pid)) {
+        CodexService.killWorker(workers[i].pid);
+      }
     }
   }
 

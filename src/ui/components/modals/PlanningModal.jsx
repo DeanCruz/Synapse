@@ -1,12 +1,12 @@
 // PlanningModal — AI-powered task planning from natural language prompt
-// Spawns Claude Code planner worker, shows streaming output, then plan preview.
+// Spawns the configured agent provider, shows streaming output, then plan preview.
 
 import React, { useState, useEffect, useRef } from 'react';
 import Modal from './Modal.jsx';
 
 function buildPlanningPrompt(userPrompt) {
   return (
-    'Decompose this work request into parallel tasks for a swarm of Claude Code agents.\n\n' +
+    'Decompose this work request into parallel tasks for a swarm of coding agents.\n\n' +
     'User request: ' + userPrompt + '\n\n' +
     'Output a JSON object with this exact structure:\n' +
     '{\n' +
@@ -122,20 +122,31 @@ export default function PlanningModal({ onClose, dashboardId, projectPath, onPla
     setGenerating(true);
     setError('');
     setGeneratedPlan(null);
-    setStatusMsg('Spawning Claude Code planner...');
+    setStatusMsg('Spawning planner...');
     planOutputRef.current = '';
 
     const planPrompt = buildPlanningPrompt(text);
+    api.getSettings().then((settings) => {
+      const provider = settings.agentProvider || 'claude';
+      const cliPath = provider === 'codex'
+        ? (settings.codexCliPath || null)
+        : (settings.claudeCliPath || null);
 
-    api.spawnWorker({
-      taskId: '_planner',
-      dashboardId,
-      projectDir: projectPath || null,
-      prompt: planPrompt,
-      systemPrompt: 'You are a task planner. Output ONLY valid JSON matching the initialization.json schema. No markdown, no explanation — just the JSON object.',
-      model: 'sonnet',
-      cliPath: null,
-      dangerouslySkipPermissions: true,
+      return api.spawnWorker({
+        provider,
+        taskId: '_planner',
+        dashboardId,
+        projectDir: projectPath || null,
+        prompt: planPrompt,
+        systemPrompt: 'You are a task planner. Output ONLY valid JSON matching the initialization.json schema. No markdown, no explanation — just the JSON object.',
+        model: settings.defaultModel || undefined,
+        cliPath,
+        dangerouslySkipPermissions: true,
+      });
+    }).catch((err) => {
+      setGenerating(false);
+      setError(err.message || String(err));
+      setStatusMsg('');
     });
 
     outputListenerRef.current = api.on('worker-output', (data) => {

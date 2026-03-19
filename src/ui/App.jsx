@@ -101,7 +101,7 @@ function DashboardContent() {
         </button>
         <button
           className="dashboard-action-bar-btn"
-          title="Claude Chat"
+          title="Agent Chat"
           onClick={() => {
             dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId });
           }}
@@ -112,7 +112,7 @@ function DashboardContent() {
             <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
             <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
           </svg>
-          <span>Claude</span>
+          <span>Agent</span>
         </button>
       </div>
 
@@ -289,7 +289,7 @@ export default function App() {
         <SettingsModal onClose={closeModal} />
       )}
 
-      {/* Floating Claude chat panel */}
+      {/* Floating agent chat panel */}
       {showClaudeFloat && (
         <ClaudeFloatingPanel
           dashboardId={claudeDashboardId}
@@ -305,6 +305,17 @@ export default function App() {
 // ── ClaudeFloatingPanel — wraps ClaudeView in a floating container ──────────
 function ClaudeFloatingPanel({ dashboardId, viewMode, onClose, onSetMode }) {
   const dispatch = useDispatch();
+  const [providerLabel, setProviderLabel] = useState('Claude Code');
+  const [modelLabel, setModelLabel] = useState('');
+
+  useEffect(() => {
+    const api = window.electronAPI || null;
+    if (!api) return;
+    api.getSettings().then((settings) => {
+      setProviderLabel((settings.agentProvider || 'claude') === 'codex' ? 'Codex' : 'Claude Code');
+      setModelLabel(settings.defaultModel || '');
+    }).catch(() => {});
+  }, [dashboardId, viewMode]);
 
   if (viewMode === 'minimized') {
     return (
@@ -316,7 +327,7 @@ function ClaudeFloatingPanel({ dashboardId, viewMode, onClose, onSetMode }) {
             <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
             <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
           </svg>
-          <span>Claude</span>
+          <span>{modelLabel ? `${providerLabel} · ${modelLabel}` : providerLabel}</span>
         </button>
       </div>
     );
@@ -327,6 +338,8 @@ function ClaudeFloatingPanel({ dashboardId, viewMode, onClose, onSetMode }) {
       <div className="claude-view">
         <ClaudeFloatingHeader
           dashboardId={dashboardId}
+          providerLabel={providerLabel}
+          modelLabel={modelLabel}
           viewMode={viewMode}
           onClose={onClose}
           onSetMode={onSetMode}
@@ -340,7 +353,7 @@ function ClaudeFloatingPanel({ dashboardId, viewMode, onClose, onSetMode }) {
 }
 
 // ── Floating header with window controls ────────────────────────────────────
-function ClaudeFloatingHeader({ dashboardId, viewMode, onClose, onSetMode }) {
+function ClaudeFloatingHeader({ dashboardId, providerLabel, modelLabel, viewMode, onClose, onSetMode }) {
   const state = useAppState();
   const projectPath = getDashboardProject(dashboardId);
   const projectName = projectPath ? projectPath.replace(/\/+$/, '').split('/').pop() : null;
@@ -352,7 +365,11 @@ function ClaudeFloatingHeader({ dashboardId, viewMode, onClose, onSetMode }) {
       onClick={() => { if (viewMode === 'collapsed') onSetMode('expanded'); }}
       style={{ cursor: viewMode === 'collapsed' ? 'pointer' : 'default' }}
     >
-      <span className="claude-view-title">Claude Code</span>
+      <span className="claude-view-title">Agent Chat</span>
+      <span className="claude-view-project">{providerLabel}</span>
+      {modelLabel && (
+        <span className="claude-view-project">{modelLabel}</span>
+      )}
       {projectName && (
         <span className="claude-view-project" title={projectPath}>
           {projectName}
