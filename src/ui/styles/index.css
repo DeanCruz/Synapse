@@ -5189,8 +5189,65 @@ a:hover {
   padding: 4px 0;
 }
 
-.commands-list-item {
+/* Collapsible folder groups */
+.commands-folder {
+  margin-bottom: 2px;
+}
+
+.commands-folder-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
   padding: 8px 12px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  transition: color 0.12s;
+}
+
+.commands-folder-header:hover {
+  color: var(--text);
+}
+
+.commands-folder-chevron {
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.commands-folder-header.open .commands-folder-chevron {
+  transform: rotate(90deg);
+}
+
+.commands-folder-name {
+  flex: 1;
+  text-align: left;
+}
+
+.commands-folder-count {
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.commands-folder-items {
+  padding-left: 4px;
+}
+
+.commands-item-subfolder {
+  color: var(--text-tertiary);
+  font-weight: 400;
+  font-size: 0.72rem;
+}
+
+.commands-list-item {
+  padding: 8px 12px 8px 24px;
   cursor: pointer;
   border-left: 3px solid transparent;
   transition: background 0.12s;

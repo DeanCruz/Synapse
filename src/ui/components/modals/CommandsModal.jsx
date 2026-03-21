@@ -1,28 +1,43 @@
 // CommandsModal — Browse, view, edit, add, delete command .md files
-// Sidebar list + content viewer layout with full markdown content.
+// Sidebar list grouped by folder (collapsible) + content viewer layout.
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Modal from './Modal.jsx';
 
 const COMMAND_TEMPLATE = '# `!command_name`\n\n**Purpose:** Describe what this command does.\n\n**Syntax:** `!command_name [options] {prompt}`\n\n---\n\n## Details\n\nAdd detailed instructions here.\n';
 
-function CommandList({ commands, activeCommand, onSelect, label }) {
-  if (!commands || commands.length === 0) {
-    return <div className="commands-empty">No commands found</div>;
-  }
+function CommandFolder({ folder, commands, activeCommand, onSelect, defaultOpen }) {
+  const [open, setOpen] = useState(defaultOpen || false);
   return (
-    <>
-      {commands.map(cmd => (
-        <div
-          key={cmd.name}
-          className={'commands-list-item' + (activeCommand && activeCommand.name === cmd.name ? ' active' : '')}
-          onClick={() => onSelect(cmd.name)}
-        >
-          <span className="commands-item-name">!{cmd.name}</span>
-          <div className="commands-item-purpose">{cmd.purpose || ''}</div>
+    <div className="commands-folder">
+      <button
+        className={'commands-folder-header' + (open ? ' open' : '')}
+        onClick={() => setOpen(o => !o)}
+      >
+        <svg className="commands-folder-chevron" width="10" height="10" viewBox="0 0 10 10" fill="none">
+          <path d="M3 2l4 3-4 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        <span className="commands-folder-name">{folder}</span>
+        <span className="commands-folder-count">{commands.length}</span>
+      </button>
+      {open && (
+        <div className="commands-folder-items">
+          {commands.map(cmd => (
+            <div
+              key={cmd.name + (cmd.subfolder || '')}
+              className={'commands-list-item' + (activeCommand && activeCommand.name === cmd.name ? ' active' : '')}
+              onClick={() => onSelect(cmd)}
+            >
+              <span className="commands-item-name">
+                {cmd.subfolder ? <span className="commands-item-subfolder">{cmd.subfolder}/</span> : null}
+                !{cmd.name}
+              </span>
+              <div className="commands-item-purpose">{cmd.purpose || ''}</div>
+            </div>
+          ))}
         </div>
-      ))}
-    </>
+      )}
+    </div>
   );
 }
 
@@ -101,28 +116,29 @@ function CommandEditor({ cmd, commandsDir, onSave, onCancel }) {
 export default function CommandsModal({ onClose, projectDir }) {
   const api = window.electronAPI || null;
 
-  const [synapseCommands, setSynapseCommands] = useState([]);
-  const [projectCommands, setProjectCommands] = useState([]);
+  // Groups: [{ folder, commands[] }]
+  const [synapseGroups, setSynapseGroups] = useState([]);
+  const [projectGroups, setProjectGroups] = useState([]);
   const [activeCommand, setActiveCommand] = useState(null);
   const [activeCommandsDir, setActiveCommandsDir] = useState(null);
   const [viewerState, setViewerState] = useState('placeholder'); // 'placeholder' | 'view' | 'edit' | 'new'
 
   const loadCommands = useCallback(() => {
     if (!api) return;
-    api.listCommands().then(cmds => setSynapseCommands(cmds || []));
+    api.listCommands().then(groups => setSynapseGroups(groups || []));
     if (projectDir) {
-      api.listProjectCommands(projectDir).then(cmds => setProjectCommands(cmds || []));
+      api.listProjectCommands(projectDir).then(groups => setProjectGroups(groups || []));
     }
   }, [api, projectDir]);
 
   useEffect(() => { loadCommands(); }, [loadCommands]);
 
-  function selectCommand(name, commandsDir) {
+  function selectCommand(cmd, commandsDir) {
     if (!api) return;
-    const getter = commandsDir ? api.getCommand(name, commandsDir) : api.getCommand(name);
-    getter.then(cmd => {
-      if (!cmd) { setViewerState('placeholder'); setActiveCommand(null); return; }
-      setActiveCommand(cmd);
+    const getter = commandsDir ? api.getCommand(cmd.name, commandsDir) : api.getCommand(cmd.name);
+    getter.then(full => {
+      if (!full) { setViewerState('placeholder'); setActiveCommand(null); return; }
+      setActiveCommand(full);
       setActiveCommandsDir(commandsDir);
       setViewerState('view');
     });
@@ -148,7 +164,7 @@ export default function CommandsModal({ onClose, projectDir }) {
       : api.saveCommand(name, content);
     saver.then(() => {
       loadCommands();
-      selectCommand(name, activeCommandsDir);
+      selectCommand({ name }, activeCommandsDir);
     });
   }
 
@@ -163,30 +179,32 @@ export default function CommandsModal({ onClose, projectDir }) {
       <div className="commands-layout">
         <div className="commands-sidebar">
           <div className="commands-sidebar-header">
-            <span className="commands-section-title">Synapse Commands</span>
+            <span className="commands-section-title">Commands</span>
             <button className="commands-add-btn" onClick={handleNewCommand}>+ New</button>
           </div>
           <div className="commands-list">
-            <CommandList
-              commands={synapseCommands}
-              activeCommand={activeCommand}
-              onSelect={name => selectCommand(name, null)}
-            />
+            {synapseGroups.map(group => (
+              <CommandFolder
+                key={group.folder}
+                folder={group.folder}
+                commands={group.commands}
+                activeCommand={activeCommand}
+                onSelect={cmd => selectCommand(cmd, null)}
+              />
+            ))}
+            {projectGroups.map(group => (
+              <CommandFolder
+                key={'project-' + group.folder}
+                folder={group.folder}
+                commands={group.commands}
+                activeCommand={activeCommand}
+                onSelect={cmd => selectCommand(cmd, projectDir + '/_commands')}
+              />
+            ))}
+            {synapseGroups.length === 0 && projectGroups.length === 0 && (
+              <div className="commands-empty">No commands found</div>
+            )}
           </div>
-          {projectDir && (
-            <>
-              <div className="commands-sidebar-header">
-                <span className="commands-section-title">Project Commands</span>
-              </div>
-              <div className="commands-list">
-                <CommandList
-                  commands={projectCommands}
-                  activeCommand={activeCommand}
-                  onSelect={name => selectCommand(name, projectDir + '/_commands')}
-                />
-              </div>
-            </>
-          )}
         </div>
 
         <div className="commands-viewer">

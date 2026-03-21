@@ -218,14 +218,14 @@ When the user types `!{command}`, locate and execute the corresponding command f
 ### Resolution Order
 
 ```
-1. {tracker_root}/_commands/{command}.md              ← Synapse swarm commands (highest priority)
-2. {tracker_root}/_commands/project/{command}.md      ← Synapse project commands
-3. {project_root}/_commands/{command}.md              ← Project-specific commands
+1. {tracker_root}/_commands/Synapse/{command}.md       ← Synapse swarm commands (highest priority)
+2. {tracker_root}/_commands/project/{command}.md       ← Synapse project commands
+3. {project_root}/_commands/{command}.md               ← Project-specific commands
 ```
 
 ### Resolution Rules
 
-1. **Check Synapse swarm commands first.** Swarm and dashboard commands (`!p_track`, `!status`, `!dispatch`, etc.) live at `{tracker_root}/_commands/`. Always checked first.
+1. **Check Synapse swarm commands first.** Swarm and dashboard commands (`!p_track`, `!status`, `!dispatch`, etc.) live at `{tracker_root}/_commands/Synapse/`. Always checked first.
 
 2. **Check Synapse project commands second.** Project analysis and management commands (`!context`, `!review`, `!health`, `!toc`, etc.) live at `{tracker_root}/_commands/project/`.
 
@@ -239,7 +239,7 @@ When the user types `!{command}`, locate and execute the corresponding command f
 
 ## Profile System — `!profile` Modifier
 
-Profiles override the agent's default priorities, goals, tone, and output style to match a specific role. They are defined as markdown files in `{tracker_root}/_commands/_profiles/` and are applied as a **modifier on top of any command**, not as a standalone command.
+Profiles override the agent's default priorities, goals, tone, and output style to match a specific role. They are defined as markdown files in `{tracker_root}/_commands/profiles/` and are applied as a **modifier on top of any command**, not as a standalone command.
 
 ### How Profiles Work
 
@@ -259,7 +259,7 @@ Profiles are invoked with `!{profile_name}` placed before or alongside other com
 ### Profile Resolution
 
 ```
-{tracker_root}/_commands/_profiles/{profile_name}.md
+{tracker_root}/_commands/profiles/{profile_name}.md
 ```
 
 If found, read the profile file in full and apply it. If not found, inform the user and list available profiles.
@@ -328,7 +328,7 @@ Any command prefixed with `!p` **forces the agent into master dispatch mode.** T
 When any `!p` command is invoked, the following happens unconditionally:
 
 1. **The agent enters master dispatch mode.** It becomes the orchestrator. It does NOT write code. Its only responsibilities are: gather context, plan, dispatch, status, and report. **The master agent NEVER implements anything itself — it dispatches worker agents to do ALL implementation work. No exceptions, regardless of how long the prompt is or how simple a task seems.**
-2. **Reading the command file is NON-NEGOTIABLE.** For `!p_track`, the master MUST read `{tracker_root}/_commands/p_track.md` in full and follow it step by step. For `!p`, read `{tracker_root}/_commands/p.md`. **Do not skip this. Do not "remember" what the command does. Read the file every time.**
+2. **Reading the command file is NON-NEGOTIABLE.** For `!p_track`, the master MUST read `{tracker_root}/_commands/Synapse/p_track.md` in full and follow it step by step. For `!p`, read `{tracker_root}/_commands/Synapse/p.md`. **Do not skip this. Do not "remember" what the command does. Read the file every time.** The command resolution system searches all subdirectories under `_commands/` automatically.
 3. **Reading `{tracker_root}/agent/instructions/tracker_master_instructions.md` is NON-NEGOTIABLE.** This file maps every dashboard panel to the exact fields that drive it. The master must read it before writing any dashboard files. **Do not skip this. Do not summarize from memory. Read it.**
 4. **Reading this file (`{tracker_root}/CLAUDE.md`) is NON-NEGOTIABLE.** This must be done before any planning or dispatch begins.
 5. **All Synapse rules apply in full.** Every principle, every constraint, every protocol defined here is binding for the duration of the swarm.
@@ -371,13 +371,13 @@ When the user asks to create a new command or profile, the agent **must check fo
 
 ### For Commands
 
-1. Search all command locations: `{tracker_root}/_commands/`, `{tracker_root}/_commands/project/`, `{project_root}/_commands/`
+1. Search all command locations: `{tracker_root}/_commands/Synapse/`, `{tracker_root}/_commands/project/`, `{project_root}/_commands/`
 2. If a command with the same name exists, alert the user, summarize the existing command, and ask whether to overwrite, rename, or cancel
 3. If no duplicate exists, proceed with creation
 
 ### For Profiles
 
-1. Check `{tracker_root}/_commands/_profiles/` for the profile name
+1. Check `{tracker_root}/_commands/profiles/` for the profile name
 2. Same duplicate handling as commands
 
 This duplicate check is **mandatory** — never silently overwrite an existing command or profile.
@@ -509,24 +509,26 @@ Synapse/                            ← {tracker_root}
 ├── package.json                    ← Metadata + start script
 ├── .synapse/                       ← Synapse config
 │   └── project.json                ← Current target project (set via !project)
-├── _commands/                      ← Synapse commands
-│   ├── p_track.md                  ← Core: plan + dispatch + track a full swarm
-│   ├── p.md                        ← Lightweight parallel dispatch (no tracking)
-│   ├── master_plan_track.md        ← Multi-stream orchestration
-│   ├── project.md                  ← Set/show/clear target project
-│   ├── start.md                    ← Start the dashboard server
-│   ├── stop.md                     ← Stop the dashboard server
-│   ├── status.md                   ← Terminal status summary
-│   ├── reset.md                    ← Clear dashboard data
-│   ├── dispatch.md                 ← Manually dispatch tasks
-│   ├── retry.md                    ← Re-run failed tasks
-│   ├── cancel.md                   ← Cancel the active swarm
-│   ├── cancel-safe.md              ← Graceful shutdown
-│   ├── logs.md                     ← View/filter log entries
-│   ├── inspect.md                  ← Deep-dive into a specific task
-│   ├── history.md                  ← View past swarm history
-│   ├── deps.md                     ← Visualize dependency graph
-│   ├── guide.md                    ← Command decision tree
+├── _commands/                      ← All commands organized by folder
+│   ├── Synapse/                    ← Synapse swarm commands
+│   │   ├── p_track.md              ← Core: plan + dispatch + track a full swarm
+│   │   ├── p.md                    ← Lightweight parallel dispatch (no tracking)
+│   │   ├── master_plan_track.md    ← Multi-stream orchestration
+│   │   ├── project.md              ← Set/show/clear target project
+│   │   ├── start.md                ← Start the dashboard server
+│   │   ├── stop.md                 ← Stop the dashboard server
+│   │   ├── status.md               ← Terminal status summary
+│   │   ├── reset.md                ← Clear dashboard data
+│   │   ├── dispatch.md             ← Manually dispatch tasks
+│   │   ├── retry.md                ← Re-run failed tasks
+│   │   ├── cancel.md               ← Cancel the active swarm
+│   │   ├── cancel-safe.md          ← Graceful shutdown
+│   │   ├── logs.md                 ← View/filter log entries
+│   │   ├── inspect.md              ← Deep-dive into a specific task
+│   │   ├── history.md              ← View past swarm history
+│   │   ├── deps.md                 ← Visualize dependency graph
+│   │   ├── guide.md                ← Command decision tree
+│   │   └── update_dashboard.md     ← Update dashboard config
 │   ├── project/                    ← Project analysis & management commands
 │   │   ├── initialize.md           ← Initialize Synapse for a project
 │   │   ├── onboard.md              ← Project walkthrough
@@ -545,7 +547,7 @@ Synapse/                            ← {tracker_root}
 │   │   ├── commands.md             ← List all available commands
 │   │   ├── help.md                 ← Master agent guide
 │   │   └── profiles.md             ← List available profiles
-│   └── _profiles/                  ← Agent role profiles
+│   └── profiles/                   ← Agent role profiles
 │       ├── analyst.md
 │       ├── architect.md
 │       ├── copywriter.md
