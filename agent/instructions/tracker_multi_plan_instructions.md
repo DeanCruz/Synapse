@@ -217,7 +217,7 @@ YOUR DASHBOARD: {dashboardId}
 ═══════════════════════════════════════
 
 Your plan has already been created and written to the dashboard. The dashboard
-at http://localhost:3456 already shows your tasks as pending cards.
+in the Synapse Electron app already shows your tasks as pending cards.
 
 YOUR FILES:
 - XML:              {tracker_root}/tasks/{MM_DD_YY}/parallel_{stream_slug}.xml

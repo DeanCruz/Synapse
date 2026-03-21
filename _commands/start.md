@@ -1,6 +1,6 @@
 # `!start`
 
-**Purpose:** Start the Synapse dashboard server and open it in the browser.
+**Purpose:** Start the Synapse dashboard server and launch the Electron app.
 
 **Syntax:** `!start`
 
@@ -22,13 +22,13 @@
    ```
    Wait 1 second, then verify it's running:
    ```bash
-   curl -s http://localhost:3456/api/dashboards > /dev/null && echo "Server running" || echo "Server failed to start"
+   curl -s http://127.0.0.1:3456/api/dashboards > /dev/null && echo "Server running" || echo "Server failed to start"
    ```
 
-4. **Open the dashboard.** Run:
+4. **Open the Electron app.** Run:
    ```bash
-   open http://localhost:3456
+   npm start
    ```
-   On Linux, use `xdg-open` instead of `open`.
+   This launches the Synapse Electron app.
 
-5. **Report.** Tell the user the dashboard is live at `http://localhost:3456`.
+5. **Report.** Tell the user the Synapse dashboard app is running.

@@ -51,7 +51,7 @@
 >
 > **`{dashboardId}`** is automatically selected by scanning dashboards 1-5 for the first available slot. A dashboard is "available" if its `initialization.json` has `task: null`, or if all its progress files show terminal status (completed/failed). The user can override with `--dashboard dashboardN`. See `{tracker_root}/agent/instructions/dashboard_resolution.md` for the full selection algorithm.
 
-**Dashboard:** `http://localhost:3456` — live visualization powered by `initialization.json`, `logs.json`, and `progress/` files merged client-side.
+**Dashboard:** Synapse Electron app — live visualization powered by `initialization.json`, `logs.json`, and `progress/` files merged client-side.
 
 ---
 
@@ -453,7 +453,7 @@ The dashboard is now live with the full plan — all tasks visible as pending ca
 
 **Type:** {Waves|Chains}
 **Directories:** {affected directories}
-**Dashboard:** http://localhost:3456 (live — review the visual plan there)
+**Dashboard:** Synapse Electron app (live — review the visual plan there)
 
 ### Wave 1 — {wave name} (parallel — {N} tasks)
 | Task | Description | Directory | Dependencies |

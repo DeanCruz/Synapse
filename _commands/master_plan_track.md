@@ -418,7 +418,7 @@ Once all planner agents have returned, present a consolidated view:
 ```markdown
 ## Master Plan Complete: {N} Streams Ready
 
-**Dashboard:** http://localhost:3456 — {N_dashboards} dashboards populated (review the visual plans there)
+**Dashboard:** Synapse Electron app — {N_dashboards} dashboards populated (review the visual plans there)
 **Queued:** {N_queue} streams in queue (will promote to dashboards as slots free up)
 
 ### Stream Summary

@@ -64,7 +64,7 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  const url = new URL(req.url, `http://localhost:${PORT}`);
+  const url = new URL(req.url, `http://127.0.0.1:${PORT}`);
 
   // --- SSE Endpoint ---
   if (url.pathname === '/events' && req.method === 'GET') {
@@ -158,7 +158,7 @@ function startup() {
   startHeartbeat();
 
   console.log(`\n  Synapse Dashboard (Multi-Dashboard)`);
-  console.log(`  http://localhost:${PORT}\n`);
+  console.log(`  Synapse server listening on port ${PORT}\n`);
   console.log(`  Dashboards directory: ${DASHBOARDS_DIR}`);
   console.log(`  Active dashboards: ${dashboards.join(', ')}`);
   console.log(`  Watching per dashboard: initialization.json (${INIT_POLL_MS}ms), logs.json (${INIT_POLL_MS}ms), progress/ (fs.watch)`);
