@@ -263,7 +263,7 @@ Execute `!start` to launch the Synapse dashboard:
 ```
 ### Dashboard
 
-OK Dashboard server running at http://localhost:3456
+OK Dashboard server running (Synapse Electron app)
 ```
 
 If the server fails to start, report the error but don't abort — the rest of the setup is still usable without the dashboard.

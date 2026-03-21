@@ -119,6 +119,18 @@ function ProcessingIndicator() {
   );
 }
 
+// Expandable pre block for tool input/result — click to toggle max-height
+function ExpandablePre({ className, children }) {
+  const [contentExpanded, setContentExpanded] = useState(false);
+  return (
+    <pre
+      className={className + (contentExpanded ? ' tool-content-expanded' : '')}
+      onClick={(e) => { e.stopPropagation(); setContentExpanded(v => !v); }}
+      title={contentExpanded ? 'Click to collapse' : 'Click to expand'}
+    >{children}</pre>
+  );
+}
+
 // Single collapsible tool call block
 function ToolCallBlock({ block }) {
   const [expanded, setExpanded] = useState(false);
@@ -141,13 +153,13 @@ function ToolCallBlock({ block }) {
           {inputStr && (
             <>
               <div className="claude-tool-label">Input:</div>
-              <pre className="claude-tool-input">{inputStr}</pre>
+              <ExpandablePre className="claude-tool-input">{inputStr}</ExpandablePre>
             </>
           )}
           {hasResult && (
             <>
               <div className="claude-tool-label claude-tool-result-label">Result:</div>
-              <pre className="claude-tool-result">{toolResultText(block._result)}</pre>
+              <ExpandablePre className="claude-tool-result">{toolResultText(block._result)}</ExpandablePre>
             </>
           )}
         </div>
@@ -192,15 +204,7 @@ function ConversationMessage({ msg }) {
     );
   }
   if (msg.type === 'tool_call') {
-    // DEBUG: render tool calls as visible debug blocks
-    return (
-      <div style={{ background: '#1a1a2e', border: '1px solid #444', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', maxWidth: '90%', fontSize: '0.75rem' }}>
-        <span style={{ color: '#f59e0b' }}>[TOOL_CALL]</span>{' '}
-        <span style={{ color: '#60a5fa' }}>{msg.block?.name || '(no name)'}</span>{' '}
-        <span style={{ color: '#888' }}>{toolInputSummary(msg.block?.name, msg.block?.input) || ''}</span>
-        {msg.block?._result && <span style={{ color: '#34d399' }}> ✓ has result</span>}
-      </div>
-    );
+    return <ToolCallBlock block={msg.block || {}} />;
   }
   if (msg.type === 'system') {
     return (

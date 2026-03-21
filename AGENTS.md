@@ -16,7 +16,7 @@ Synapse operates on a **target project** that lives at `{project_root}` — comp
 node {tracker_root}/src/server/index.js
 
 # 3. Open in browser
-open http://localhost:3456
+npm start  # launches the Electron app
 
 # 4. Run a parallel task
 !p_track {your prompt here}

@@ -232,7 +232,7 @@ To start the dashboard:
 node {tracker_root}/server.js
 ```
 
-Dashboard URL: `http://localhost:3456` (configurable via `PORT` env var).
+Dashboard: Synapse Electron app (server runs on port `3456`, configurable via `PORT` env var).
 
 ---
 

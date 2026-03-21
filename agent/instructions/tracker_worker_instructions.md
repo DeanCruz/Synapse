@@ -100,15 +100,17 @@ Progress through these stages in order:
 
 1. **Before starting work** — Write your initial progress file with `status: "in_progress"`, `stage: "reading_context"`, and a log entry saying you're starting.
 
-2. **On every stage transition** — Update `stage`, `message`, and add a log entry.
+2. **After initial write, if you have dependencies** — Read all upstream dependency progress files (see **Reading Upstream Results** below). Log what you found. If any upstream task failed or has `CRITICAL` deviations, adapt before proceeding.
 
-3. **On any deviation from the plan** — Add to `deviations[]` AND add a log entry at `level: "deviation"`. Do this IMMEDIATELY when the deviation occurs.
+3. **On every stage transition** — Update `stage`, `message`, and add a log entry.
 
-4. **On any error** — Add a log entry at `level: "error"` with details.
+4. **On any deviation from the plan** — Add to `deviations[]` AND add a log entry at `level: "deviation"`. Do this IMMEDIATELY when the deviation occurs.
 
-5. **On task completion** — Set `status: "completed"`, `stage: "completed"`, `completed_at`, `summary`, and add a final log entry.
+5. **On any error** — Add a log entry at `level: "error"` with details.
 
-6. **On task failure** — Set `status: "failed"`, `stage: "failed"`, `completed_at`, `summary` (with error description), and add a log entry at `level: "error"`.
+6. **On task completion** — Set `status: "completed"`, `stage: "completed"`, `completed_at`, `summary`, and add a final log entry.
+
+7. **On task failure** — Set `status: "failed"`, `stage: "failed"`, `completed_at`, `summary` (with error description), and add a log entry at `level: "error"`.
 
 ### Recommended writes (as often as useful):
 
@@ -193,19 +195,61 @@ Every deviation **must** include a `severity` field. Classify each deviation int
 
 The master agent uses severity to decide whether to re-plan downstream tasks (`CRITICAL`), note for review (`MODERATE`), or ignore (`MINOR`).
 
-### Reading Upstream Results
+### Reading Upstream Results — NON-NEGOTIABLE for Dependent Tasks
 
-If your task has upstream dependencies, the master's dispatch prompt will include their results. Before implementing, extract the following from each upstream dependency in your prompt:
+If your task has upstream dependencies (listed in your dispatch prompt), you **MUST read the progress files of every upstream dependency** before starting implementation. This is not optional — the master's dispatch prompt may contain a summary, but the progress files contain the **ground truth**: what actually happened, what deviated, what failed, and what the upstream worker logged.
+
+#### Step 1: Read upstream progress files
+
+For each dependency task ID listed in your dispatch prompt, read:
+
+```
+{tracker_root}/dashboards/{dashboardId}/progress/{dependency_task_id}.json
+```
+
+For example, if your task depends on `1.1` and `1.3`, read both:
+- `{tracker_root}/dashboards/{dashboardId}/progress/1.1.json`
+- `{tracker_root}/dashboards/{dashboardId}/progress/1.3.json`
+
+**Read these files in parallel** — they have no dependency on each other.
+
+#### Step 2: Extract critical information
+
+From each upstream progress file, extract:
 
 | Field | What to look for |
 |---|---|
-| **Task ID** | Which upstream task produced this result |
-| **Summary** | What the upstream task accomplished |
-| **Files changed** | Which files were created or modified (check for conflicts with your task) |
-| **New exports** | Any new functions, types, APIs, or interfaces you should use |
-| **Deviations** | Any plan divergences that affect your work — especially `CRITICAL` severity |
+| **`status`** | Did it complete successfully or fail? If `"failed"`, assess whether your task can still proceed. |
+| **`summary`** | What the upstream task accomplished — the definitive one-line result. |
+| **`deviations[]`** | Every plan divergence. Pay special attention to `CRITICAL` severity — these may change your assumptions about interfaces, file locations, or APIs. |
+| **`milestones[]`** | What was actually built, in order. Cross-reference with what your dispatch prompt expects to exist. |
+| **`logs[]`** | The full narrative of what happened. Scan for `"error"` and `"warn"` level entries — these reveal issues that may affect your work. |
+| **`message`** | Final state message — useful for understanding the last thing the upstream worker did. |
 
-If an upstream deviation at `CRITICAL` severity affects your task's assumptions, **log a warning** and adapt your approach accordingly. Document how you adapted as a deviation in your own progress file.
+#### Step 3: Adapt your approach
+
+- **If an upstream task failed:** Log a `"warn"` entry explaining which dependency failed and how you're proceeding. If the failure means a file or API you need doesn't exist, attempt to work around it or set your own status to `"failed"` with a clear explanation.
+- **If an upstream task has `CRITICAL` deviations:** The upstream worker changed something your dispatch prompt assumed would be a certain way. Adapt your implementation to match what was *actually* built, not what was *planned*. Log every adaptation as a deviation in your own progress file.
+- **If an upstream task has `MODERATE` deviations:** Note them but they likely don't affect your work. Log that you reviewed them.
+- **If an upstream task's logs contain `"error"` entries:** Even if the task completed, errors may indicate partial issues. Review them to ensure nothing impacts your work.
+
+#### Step 4: Log what you learned
+
+After reading upstream progress files, add a log entry summarizing what you found:
+
+```json
+{ "at": "...", "level": "info", "msg": "Read upstream dependencies: 1.1 (completed, no deviations), 1.3 (completed, 1 MODERATE deviation — used alternative API pattern)" }
+```
+
+If any upstream deviation requires you to adapt, log it immediately:
+
+```json
+{ "at": "...", "level": "deviation", "msg": "Adapting to upstream 1.3 deviation: using fetchUsers() instead of planned getUsers() — upstream changed the export name" }
+```
+
+#### Why this matters
+
+The master agent writes dispatch prompts during the **planning phase** — before any work is done. By the time your task runs, upstream workers may have deviated from the plan, encountered errors, used different file names, or changed interfaces. If you only rely on the master's dispatch prompt, you're working from a stale snapshot. Reading the progress files gives you the **actual state of the world** as left by the workers before you.
 
 ---
 
@@ -332,10 +376,11 @@ Not every task finishes cleanly. If you complete **80%+ of the task** but hit a 
 ## Rules Summary
 
 1. **Write your progress file before starting any work** — NON-NEGOTIABLE
-2. **Write on every stage transition** — NON-NEGOTIABLE
-3. **Report deviations immediately** — NON-NEGOTIABLE
-4. **Use live timestamps** — always via `date -u +"%Y-%m-%dT%H:%M:%SZ"`
-5. **Write the full file every time** — no partial updates
-6. **Include logs** — the popup log box renders from your `logs[]` array
-7. **Set status lifecycle fields** — `started_at` on first write, `completed_at` on completion/failure
-8. **Summary must be descriptive** — "Created auth middleware with rate limiting — 3 endpoints" not "Done"
+2. **Read upstream dependency progress files if you have dependencies** — NON-NEGOTIABLE
+3. **Write on every stage transition** — NON-NEGOTIABLE
+4. **Report deviations immediately** — NON-NEGOTIABLE
+5. **Use live timestamps** — always via `date -u +"%Y-%m-%dT%H:%M:%SZ"`
+6. **Write the full file every time** — no partial updates
+7. **Include logs** — the popup log box renders from your `logs[]` array
+8. **Set status lifecycle fields** — `started_at` on first write, `completed_at` on completion/failure
+9. **Summary must be descriptive** — "Created auth middleware with rate limiting — 3 endpoints" not "Done"

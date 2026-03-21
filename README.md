@@ -55,7 +55,7 @@ npm start
 | `npm start` | Build UI + launch the desktop app |
 | `npm run dev` | Vite watch mode (rebuilds UI on change) |
 | `npm run dist` | Package a signed `.dmg` for macOS distribution |
-| `npm run server` | Web server mode only — dashboard at http://localhost:3456 |
+| `npm run server` | Backend server only (used internally by the Electron app) |
 
 ### Project Setup
 
