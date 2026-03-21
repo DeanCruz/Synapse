@@ -101,7 +101,7 @@ function DashboardContent() {
         </button>
         <button
           className="dashboard-action-bar-btn"
-          title="Claude Chat"
+          title="Agent Chat"
           onClick={() => {
             dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId });
           }}
@@ -112,7 +112,7 @@ function DashboardContent() {
             <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
             <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
           </svg>
-          <span>Claude</span>
+          <span>Agent</span>
         </button>
       </div>
 
@@ -346,7 +346,7 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onClose, onSetM
 }
 
 // ── Floating header with window controls ────────────────────────────────────
-function ClaudeFloatingHeader({ dashboardId, viewMode, onClose, onSetMode }) {
+function ClaudeFloatingHeader({ dashboardId, providerLabel, modelLabel, viewMode, onClose, onSetMode }) {
   const state = useAppState();
   const projectPath = getDashboardProject(dashboardId);
   const projectName = projectPath ? projectPath.replace(/\/+$/, '').split('/').pop() : null;
@@ -358,7 +358,11 @@ function ClaudeFloatingHeader({ dashboardId, viewMode, onClose, onSetMode }) {
       onClick={() => { if (viewMode === 'collapsed') onSetMode('expanded'); }}
       style={{ cursor: viewMode === 'collapsed' ? 'pointer' : 'default' }}
     >
-      <span className="claude-view-title">Claude Code</span>
+      <span className="claude-view-title">Agent Chat</span>
+      <span className="claude-view-project">{providerLabel}</span>
+      {modelLabel && (
+        <span className="claude-view-project">{modelLabel}</span>
+      )}
       {projectName && (
         <span className="claude-view-project" title={projectPath}>
           {projectName}

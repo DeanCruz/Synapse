@@ -479,6 +479,10 @@ function registerIPCHandlers(getMainWindow) {
     return ProjectService.detectClaudeCLI();
   });
 
+  ipcMain.handle('detect-agent-cli', async (_event, provider) => {
+    return ProjectService.detectAgentCLI(provider);
+  });
+
   // --- Task Editor handlers ---
   const TaskEditorService = require('./services/TaskEditorService');
 
@@ -516,9 +520,11 @@ function registerIPCHandlers(getMainWindow) {
 
   // --- Worker handlers ---
   const ClaudeCodeService = require('./services/ClaudeCodeService');
+  const CodexService = require('./services/CodexService');
   ClaudeCodeService.init(broadcastFn);
+  CodexService.init(broadcastFn);
 
-  // Build system prompt for ClaudeView chat — reads Synapse CLAUDE.md + project CLAUDE.md
+  // Build system prompt for in-app agent chat — reads Synapse CLAUDE.md + project CLAUDE.md
   ipcMain.handle('get-chat-system-prompt', async (_event, projectDir) => {
     const parts = [];
     const synapseRoot = path.resolve(__dirname, '..');
@@ -567,10 +573,10 @@ function registerIPCHandlers(getMainWindow) {
     logs.entries.push({
       timestamp: new Date().toISOString(),
       task_id: entry.task_id || null,
-      agent: entry.agent || 'claude-chat',
+      agent: entry.agent || 'agent-chat',
       level: entry.level || 'info',
       message: entry.message,
-      task_name: entry.task_name || 'Claude Chat',
+      task_name: entry.task_name || 'Agent Chat',
     });
     fs.writeFileSync(logsFile, JSON.stringify(logs, null, 2));
     return { success: true };
@@ -600,6 +606,7 @@ function registerIPCHandlers(getMainWindow) {
 
   ipcMain.handle('spawn-worker', async (_event, opts) => {
     console.log('[spawn-worker] Called with opts:', JSON.stringify({
+      provider: opts.provider,
       taskId: opts.taskId,
       model: opts.model,
       cliPath: opts.cliPath,
@@ -608,7 +615,8 @@ function registerIPCHandlers(getMainWindow) {
       dangerouslySkipPermissions: opts.dangerouslySkipPermissions,
     }));
     try {
-      const result = ClaudeCodeService.spawnWorker(opts);
+      const service = opts.provider === 'codex' ? CodexService : ClaudeCodeService;
+      const result = service.spawnWorker(opts);
       console.log('[spawn-worker] Spawned PID:', result.pid);
       return result;
     } catch (err) {
@@ -618,15 +626,15 @@ function registerIPCHandlers(getMainWindow) {
   });
 
   ipcMain.handle('kill-worker', async (_event, pid) => {
-    return ClaudeCodeService.killWorker(pid);
+    return ClaudeCodeService.killWorker(pid) || CodexService.killWorker(pid);
   });
 
   ipcMain.handle('kill-all-workers', async () => {
-    return ClaudeCodeService.killAllWorkers();
+    return ClaudeCodeService.killAllWorkers() + CodexService.killAllWorkers();
   });
 
   ipcMain.handle('get-active-workers', async () => {
-    return ClaudeCodeService.getActiveWorkers();
+    return ClaudeCodeService.getActiveWorkers().concat(CodexService.getActiveWorkers());
   });
 
   // --- Commands handlers ---

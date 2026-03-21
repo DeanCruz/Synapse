@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { useIsElectron } from '../hooks/useElectronAPI.js';
+import logoMark from '../assets/synapse-logo-mark.svg';
 
 export default function Header() {
   const state = useAppState();
@@ -54,7 +55,15 @@ export default function Header() {
     <header className="header-bar">
       {/* Left — logo */}
       <div className="header-left">
-        <h1 className="header-title" onClick={handleHomeClick}>Synapse</h1>
+        <button
+          type="button"
+          className="header-brand"
+          onClick={handleHomeClick}
+          aria-label="Go to home view"
+        >
+          <img className="header-brand-mark" src={logoMark} alt="" aria-hidden="true" />
+          <span className="header-brand-label">Synapse</span>
+        </button>
       </div>
 
       {/* Center — task badge + directory */}

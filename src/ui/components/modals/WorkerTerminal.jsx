@@ -111,6 +111,7 @@ export default function WorkerTerminal({ onClose, taskId, title, pid }) {
   const conversationRef = useRef(null);
   const toolMapRef = useRef({});
   const currentTextIdxRef = useRef(null);
+  const sawCodexStreamTextRef = useRef(false);
   const handleChunkRef = useRef(null);
 
   useEffect(() => {
@@ -118,18 +119,22 @@ export default function WorkerTerminal({ onClose, taskId, title, pid }) {
 
     const workerListener = api.on('worker-output', (data) => {
       if (data.taskId !== taskId) return;
-      if (handleChunkRef.current) handleChunkRef.current(data.chunk);
+      if (handleChunkRef.current) handleChunkRef.current(data);
     });
 
     const completeListener = api.on('worker-complete', (data) => {
       if (data.taskId !== taskId) return;
       currentTextIdxRef.current = null;
       setMessages(prev => {
-        const out = [...prev, {
+        const out = [...prev];
+        if (data.provider === 'codex' && data.lastMessage && !sawCodexStreamTextRef.current) {
+          out.push({ id: Date.now() + Math.random(), type: 'assistant_text', text: data.lastMessage });
+        }
+        out.push({
           id: Date.now() + Math.random(),
           type: 'system',
           text: '\u2014\u2014\u2014 Worker finished (exit code: ' + data.exitCode + ') \u2014\u2014\u2014',
-        }];
+        });
         if (data.errorOutput) {
           out.push({ id: Date.now() + Math.random(), type: 'system', text: '[stderr] ' + data.errorOutput, isError: true });
         }
@@ -198,7 +203,8 @@ export default function WorkerTerminal({ onClose, taskId, title, pid }) {
     });
   }
 
-  function handleChunk(chunk) {
+  function handleChunk(data) {
+    const chunk = data.chunk;
     const lines = chunk.split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
@@ -253,10 +259,25 @@ export default function WorkerTerminal({ onClose, taskId, title, pid }) {
       }
 
       case 'result': {
-        // Result text duplicates the last assistant message — skip it.
         flushText();
         break;
       }
+
+      case 'thread.started':
+      case 'turn.started':
+        break;
+
+      case 'item.completed':
+        if (evt.item?.type === 'agent_message' && evt.item.text) {
+          sawCodexStreamTextRef.current = true;
+          appendText(evt.item.text);
+          flushText();
+        }
+        break;
+
+      case 'error':
+        appendMsg({ type: 'system', text: evt.message || 'Agent error', isError: true });
+        break;
 
       // Silently ignore rate_limit_event
       default: break;

@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Synapse logo mark">
+  <defs>
+    <linearGradient id="markStroke" x1="22" y1="22" x2="106" y2="106" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8af7ff"/>
+      <stop offset="52%" stop-color="#34d8c7"/>
+      <stop offset="100%" stop-color="#a8ff6d"/>
+    </linearGradient>
+    <linearGradient id="markShadow" x1="28" y1="18" x2="100" y2="110" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f2333"/>
+      <stop offset="100%" stop-color="#081520"/>
+    </linearGradient>
+  </defs>
+  <rect x="20" y="20" width="88" height="88" rx="24" fill="#ffffff" fill-opacity="0.02"/>
+  <path d="M 32 42
+           C 41 28 56 20 72 22
+           C 86 24 98 35 97 50
+           C 96 64 84 73 71 77
+           C 58 81 47 81 39 88
+           C 31 94 30 103 36 108"
+        fill="none" stroke="url(#markShadow)" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+  <path d="M 32 42
+           C 41 28 56 20 72 22
+           C 86 24 98 35 97 50
+           C 96 64 84 73 71 77
+           C 58 81 47 81 39 88
+           C 31 94 30 103 36 108"
+        fill="none" stroke="url(#markStroke)" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="32" cy="42" r="5" fill="#8af7ff"/>
+  <circle cx="72" cy="22" r="4.5" fill="#34d8c7"/>
+  <circle cx="97" cy="50" r="5" fill="#a8ff6d"/>
+  <circle cx="36" cy="108" r="4.5" fill="#8af7ff"/>
+  <circle cx="64" cy="64" r="10" fill="#071721" stroke="#17384f" stroke-width="3"/>
+  <path d="M 52 64
+           C 52 57 58 52 65 52
+           C 69 52 73 54 76 57
+           C 78 59 78 62 76 64
+           C 74 66 70 66 66 67
+           C 58 68 54 72 54 77
+           C 54 82 58 86 64 86
+           C 68 86 72 84 75 81"
+        fill="none" stroke="#071721" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 52 64
+           C 52 57 58 52 65 52
+           C 69 52 73 54 76 57
+           C 78 59 78 62 76 64
+           C 74 66 70 66 66 67
+           C 58 68 54 72 54 77
+           C 54 82 58 86 64 86
+           C 68 86 72 84 75 81"
+        fill="none" stroke="url(#markStroke)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="65" cy="52" r="2.5" fill="#8af7ff"/>
+  <circle cx="66" cy="67" r="2.5" fill="#34d8c7"/>
+  <circle cx="64" cy="86" r="2.5" fill="#a8ff6d"/>
+</svg>

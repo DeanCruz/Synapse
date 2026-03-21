@@ -107,20 +107,46 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-shrink: 0;
+  min-width: 132px;
 }
 
-.header-title {
+.header-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  background: transparent;
   font-family: var(--display);
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
   letter-spacing: 0.04em;
   cursor: pointer;
-  transition: color 0.15s;
+  transition: color 0.15s, opacity 0.15s;
+  white-space: nowrap;
 }
 
-.header-title:hover {
+.header-brand:hover {
   color: #9b7cf0;
+}
+
+.header-brand:focus-visible {
+  outline: 2px solid rgba(155,124,240,0.55);
+  outline-offset: 4px;
+  border-radius: 10px;
+}
+
+.header-brand-mark {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.header-brand-label {
+  line-height: 1;
 }
 
 .header-center {
@@ -1786,8 +1812,18 @@ a:hover {
     gap: 8px;
   }
 
-  .header-title {
+  .header-left {
+    min-width: 0;
+  }
+
+  .header-brand {
     font-size: 0.85rem;
+    gap: 8px;
+  }
+
+  .header-brand-mark {
+    width: 24px;
+    height: 24px;
   }
 
   .progress-section {
@@ -4123,6 +4159,27 @@ a:hover {
 .project-cli-status { font-size: 0.75rem; color: var(--text-secondary); }
 .project-cli-found { color: #34d399; }
 .project-cli-missing { color: #ef4444; }
+
+.project-settings-row {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.project-settings-input {
+  width: 100%;
+  min-width: 0;
+  text-align: left;
+}
+
+.project-settings-path-input {
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+
+.project-settings-checkbox {
+  align-self: flex-start;
+}
 
 /* ----- Task Editor Modal ----- */
 

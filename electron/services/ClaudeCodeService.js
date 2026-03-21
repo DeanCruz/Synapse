@@ -1,10 +1,8 @@
 // electron/services/ClaudeCodeService.js — Claude Code CLI process management
-// Spawns Claude Code CLI processes as worker agents, streams output, manages lifecycle.
 
 const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
-
 var activeWorkers = {};   // pid -> { taskId, dashboardId, process, ... }
 var broadcastFn = null;
 
@@ -26,8 +24,8 @@ function init(broadcast) {
  * @param {string} opts.projectDir — codebase directory
  * @param {string} opts.prompt — the task prompt
  * @param {string} opts.systemPrompt — system prompt (worker instructions + context)
- * @param {string} [opts.model] — Claude model to use
- * @param {string} [opts.cliPath] — path to claude binary
+ * @param {string} [opts.model] — model to use
+ * @param {string} [opts.cliPath] — path to Claude binary
  * @param {boolean} [opts.dangerouslySkipPermissions] — skip permission prompts
  * @returns {{ pid, taskId, dashboardId }}
  */
@@ -68,12 +66,11 @@ function spawnWorker(opts) {
   // Prompt will be passed via stdin to avoid arg parsing issues
   var promptText = opts.prompt;
 
-  // Build clean env — remove vars that prevent CLI from launching
   var env = Object.assign({}, process.env);
-  delete env.ELECTRON_RUN_AS_NODE;  // Prevents Electron from hijacking Node
-  delete env.CLAUDECODE;             // Prevents "nested session" error
+  delete env.ELECTRON_RUN_AS_NODE;
+  delete env.CLAUDECODE;
 
-  console.log('[ClaudeCodeService] Spawning:', cliPath);
+  console.log('[ClaudeCodeService] Spawning cliPath:', cliPath);
   console.log('[ClaudeCodeService] Full args:', JSON.stringify(args));
   console.log('[ClaudeCodeService] CWD:', opts.projectDir || process.cwd());
 
@@ -99,6 +96,7 @@ function spawnWorker(opts) {
   }, 10000);
 
   var worker = {
+    provider: 'claude',
     taskId: opts.taskId,
     dashboardId: opts.dashboardId,
     process: proc,
@@ -106,7 +104,7 @@ function spawnWorker(opts) {
     startedAt: new Date().toISOString(),
     output: '',
     errorOutput: '',
-    lineBuffer: '',  // Buffer for incomplete NDJSON lines
+    lineBuffer: '',
   };
 
   activeWorkers[proc.pid] = worker;
@@ -136,9 +134,9 @@ function spawnWorker(opts) {
         console.log('[ClaudeCodeService] Broadcasting worker-output, event type:', eventType, 'taskId:', opts.taskId);
         broadcastFn('worker-output', {
           pid: proc.pid,
+          provider: 'claude',
           taskId: opts.taskId,
           dashboardId: opts.dashboardId,
-          // Send both raw line and parsed object
           chunk: line + '\n',
           parsed: parsed,
         });
@@ -155,13 +153,13 @@ function spawnWorker(opts) {
   });
 
   proc.on('close', function (code) {
-    var exitCode = code;
+    var exitCode = code == null ? 0 : code;
     console.log('[ClaudeCodeService] Process closed, PID:', proc.pid, 'exit code:', exitCode);
     delete activeWorkers[proc.pid];
-
     if (broadcastFn) {
       broadcastFn('worker-complete', {
         pid: proc.pid,
+        provider: 'claude',
         taskId: opts.taskId,
         dashboardId: opts.dashboardId,
         exitCode: exitCode,
@@ -178,6 +176,7 @@ function spawnWorker(opts) {
     if (broadcastFn) {
       broadcastFn('worker-error', {
         pid: proc.pid,
+        provider: 'claude',
         taskId: opts.taskId,
         dashboardId: opts.dashboardId,
         error: err.message,
@@ -231,6 +230,7 @@ function getActiveWorkers() {
     var w = activeWorkers[pid];
     result.push({
       pid: Number(pid),
+      provider: w.provider,
       taskId: w.taskId,
       dashboardId: w.dashboardId,
       startedAt: w.startedAt,
@@ -260,3 +260,28 @@ module.exports = {
   getActiveWorkers,
   getActiveCountForDashboard,
 };
+
+function buildArgs(opts) {
+  var claudeArgs = [
+    '--print',
+    '--output-format', 'stream-json',
+    '--verbose',
+  ];
+
+  if (opts.model) {
+    claudeArgs.push('--model', opts.model);
+  }
+  if (opts.dangerouslySkipPermissions) {
+    claudeArgs.push('--dangerously-skip-permissions');
+  }
+  if (opts.resumeSessionId) {
+    claudeArgs.push('--resume', opts.resumeSessionId);
+  }
+  if (opts.projectDir) {
+    claudeArgs.push('--add-dir', opts.projectDir);
+  }
+  if (opts.systemPrompt) {
+    claudeArgs.push('--append-system-prompt', opts.systemPrompt);
+  }
+  return claudeArgs;
+}
