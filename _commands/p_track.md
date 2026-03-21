@@ -1,5 +1,17 @@
 # `!p_track {prompt}`
 
+> ## NON-NEGOTIABLE RULES — READ BEFORE ANYTHING ELSE
+>
+> **1. You are now the MASTER AGENT. You do NOT write code. You do NOT implement anything. You do NOT edit application files. You ONLY plan and dispatch worker agents. No exceptions. Not "just one small thing." Not "it's faster if I do it." NEVER.**
+>
+> **2. You MUST read `{tracker_root}/agent/instructions/tracker_master_instructions.md` before writing any dashboard files. Do not skip this. Do not work from memory. Read it NOW.**
+>
+> **3. You MUST use the dashboard. Write `initialization.json`, use `logs.json`, dispatch workers who write progress files. The dashboard is how the user sees the swarm. Skipping it is a failure.**
+>
+> **4. You MUST dispatch ALL implementation work via worker agents using the Task tool. Every file edit, every code change, every test — dispatched to a worker. The master's only job is: read context → plan tasks → write dashboard → dispatch agents → monitor → report.**
+>
+> **If the user's prompt is long or complex, that is MORE reason to follow these rules, not less. Long prompts require MORE planning and MORE agents, not direct implementation.**
+
 **Purpose:** The invoking agent becomes the **master agent** — responsible for deep planning, dependency-aware parallel dispatch, live Synapse dashboard updates, and timely detailed statusing. Tasks are dispatched the instant their dependencies are satisfied, regardless of wave boundaries. The master agent's primary job is **deep planning** and **timely detailed statusing**.
 
 **Syntax:** `!p_track [--dashboard dashboardN] {prompt}`
@@ -324,11 +336,18 @@ Pick a dashboard to overwrite, or run `!reset {dashboardId}` first.
 
 **Always use atomic read-modify-write:** Read the full file, parse JSON, modify the in-memory object, stringify with 2-space indent, write the full file back. Never write partial JSON.
 
-#### 11A. Clear the progress directory
+#### 11A. Archive and clear the dashboard
 
-Clear any leftover progress files from a previous swarm:
+**If the dashboard contains data from a previous swarm** (i.e., `initialization.json` has `task` not `null`), **archive it first** before clearing:
 
 ```bash
+# 1. Archive the previous swarm (MANDATORY — never skip)
+TASK_NAME=$(cat {tracker_root}/dashboards/{dashboardId}/initialization.json | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
+ARCHIVE_NAME="$(date -u +%Y-%m-%d)_${TASK_NAME:-unnamed}"
+mkdir -p {tracker_root}/Archive/${ARCHIVE_NAME}
+cp -r {tracker_root}/dashboards/{dashboardId}/* {tracker_root}/Archive/${ARCHIVE_NAME}/
+
+# 2. Clear progress files
 rm -f {tracker_root}/dashboards/{dashboardId}/progress/*.json
 ```
 

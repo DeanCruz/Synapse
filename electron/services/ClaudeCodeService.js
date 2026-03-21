@@ -31,7 +31,39 @@ function init(broadcast) {
  */
 function spawnWorker(opts) {
   var cliPath = opts.cliPath || 'claude';
-  var args = buildArgs(opts);
+  console.log('[ClaudeCodeService] spawnWorker() cliPath:', cliPath, 'broadcastFn set:', !!broadcastFn);
+  var args = [
+    '--print',
+    '--output-format', 'stream-json',
+    '--verbose',
+  ];
+
+  if (opts.model) {
+    args.push('--model', opts.model);
+  }
+
+  if (opts.dangerouslySkipPermissions) {
+    args.push('--dangerously-skip-permissions');
+  }
+
+  if (opts.resumeSessionId) {
+    args.push('--resume', opts.resumeSessionId);
+  }
+
+  // Always add Synapse directory first — agent needs access to commands and instructions
+  var synapseRoot = path.resolve(__dirname, '../..');
+  args.push('--add-dir', synapseRoot);
+
+  // Then add the target project directory if different from Synapse
+  if (opts.projectDir && path.resolve(opts.projectDir) !== synapseRoot) {
+    args.push('--add-dir', opts.projectDir);
+  }
+
+  if (opts.systemPrompt) {
+    args.push('--append-system-prompt', opts.systemPrompt);
+  }
+
+  // Prompt will be passed via stdin to avoid arg parsing issues
   var promptText = opts.prompt;
 
   var env = Object.assign({}, process.env);

@@ -152,16 +152,23 @@ Create queue directories as needed:
 mkdir -p {tracker_root}/queue/{queueId}/progress
 ```
 
-#### 7C. Clear assigned slots
+#### 7C. Archive and clear assigned slots
 
-For each assigned dashboard or queue slot, clear stale data:
+For each assigned dashboard or queue slot, **archive before clearing** if it contains previous swarm data:
 ```bash
+# Archive previous swarm (MANDATORY if dashboard has data)
+TASK_NAME=$(cat {tracker_root}/dashboards/{dashboardId}/initialization.json | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
+ARCHIVE_NAME="$(date -u +%Y-%m-%d)_${TASK_NAME:-unnamed}"
+mkdir -p {tracker_root}/Archive/${ARCHIVE_NAME}
+cp -r {tracker_root}/dashboards/{dashboardId}/* {tracker_root}/Archive/${ARCHIVE_NAME}/
+
+# Then clear
 rm -f {tracker_root}/dashboards/{dashboardId}/progress/*.json
-# or
+# or for queues:
 rm -f {tracker_root}/queue/{queueId}/progress/*.json
 ```
 
-If clearing a finished-but-uncleared dashboard, save history first per standard protocol.
+**Never clear a dashboard without archiving first.** Previous swarm data must always be preserved in `{tracker_root}/Archive/`.
 
 ### Step 8: Present stream decomposition to user
 

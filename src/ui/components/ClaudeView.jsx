@@ -19,6 +19,8 @@ function stripAnsi(str) {
     .replace(/\x1b[()][0-9A-B]/g, '')              // Character set selection
     .replace(/\x1b[\x20-\x2f]*[\x40-\x7e]/g, '')  // Other escape sequences
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, ''); // Control chars (keep \t \n \r)
+}
+
 const MODEL_OPTIONS = {
   claude: [
     { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
@@ -77,6 +79,46 @@ function toolInputSummary(name, input) {
   }
 }
 
+// Thinking bubble — shown for extended thinking blocks (collapsible)
+function ThinkingBubble({ msg }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasContent = msg.text && msg.text.trim().length > 0;
+  return (
+    <div className="claude-thinking-bubble">
+      <div
+        className="claude-thinking-header"
+        onClick={() => hasContent && setExpanded(e => !e)}
+        style={{ cursor: hasContent ? 'pointer' : 'default' }}
+      >
+        <div className="claude-thinking-dots">
+          <span /><span /><span />
+        </div>
+        <span className="claude-thinking-label">Thinking</span>
+        {hasContent && (
+          <span className="claude-thinking-toggle">{expanded ? '▼' : '▶'}</span>
+        )}
+      </div>
+      {expanded && hasContent && (
+        <div className="claude-thinking-content">{msg.text}</div>
+      )}
+    </div>
+  );
+}
+
+// Live processing indicator — shown at bottom of conversation while Claude is running
+function ProcessingIndicator() {
+  return (
+    <div className="claude-thinking-bubble claude-processing-live">
+      <div className="claude-thinking-header" style={{ cursor: 'default' }}>
+        <div className="claude-thinking-dots">
+          <span /><span /><span />
+        </div>
+        <span className="claude-thinking-label">Thinking...</span>
+      </div>
+    </div>
+  );
+}
+
 // Single collapsible tool call block
 function ToolCallBlock({ block }) {
   const [expanded, setExpanded] = useState(false);
@@ -116,6 +158,9 @@ function ToolCallBlock({ block }) {
 
 // A single conversation message
 function ConversationMessage({ msg }) {
+  if (msg.type === 'thinking') {
+    return <ThinkingBubble msg={msg} />;
+  }
   if (msg.type === 'user') {
     return (
       <div className="claude-message claude-user">
@@ -409,6 +454,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
             });
           } else if (block.type === 'thinking') {
             dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
+            // Add thinking block as a collapsible bubble in the conversation
+            appendMsg({ type: 'thinking', text: block.thinking || '' });
           }
         }
         break;
@@ -508,25 +555,72 @@ export default function ClaudeView({ onClose, hideHeader }) {
   handleChunkRef.current = handleChunk;
   finishRef.current = finishProcessing;
 
-  // Build conversation history string from messages for context continuity
+  // Build tiered conversation history — recent messages in full detail,
+  // older messages summarized. Returns a string for injection into the prompt.
+  // Tiers:
+  //   - Last RECENT_COUNT messages: full text, full tool details
+  //   - Older messages: condensed (user prompts + assistant summaries only)
+  //   - Very old messages (beyond OLDER_CAP): skipped entirely
+  const RECENT_COUNT = 10;  // full detail for last N messages
+  const OLDER_CAP = 30;     // condensed for next N beyond recent
+
   function buildConversationContext(currentMessages) {
+    // Filter to meaningful messages (skip system, thinking)
+    const meaningful = currentMessages.filter(m =>
+      m.type === 'user' || m.type === 'assistant' || m.type === 'tool_call'
+    );
+    if (meaningful.length === 0) return '';
+
+    const total = meaningful.length;
+    const recentStart = Math.max(0, total - RECENT_COUNT);
+    const olderStart = Math.max(0, recentStart - OLDER_CAP);
+
     const parts = [];
-    for (const msg of currentMessages) {
-      if (msg.type === 'user') {
-        parts.push('[User]: ' + msg.text);
-      } else if (msg.type === 'assistant') {
-        parts.push('[Assistant]: ' + msg.text);
-      } else if (msg.type === 'tool_call') {
-        const summary = toolInputSummary(msg.block.name, msg.block.input);
-        parts.push('[Tool Call]: ' + msg.block.name + (summary ? ' — ' + summary : ''));
-        if (msg.block._result) {
-          const resultPreview = toolResultText(msg.block._result);
-          // Truncate long tool results to keep context manageable
-          parts.push('[Tool Result]: ' + (resultPreview.length > 500 ? resultPreview.substring(0, 500) + '...' : resultPreview));
+
+    // Older tier — condensed summaries only
+    if (olderStart < recentStart) {
+      parts.push('--- Earlier in this conversation (condensed) ---');
+      for (let i = olderStart; i < recentStart; i++) {
+        const msg = meaningful[i];
+        if (msg.type === 'user') {
+          // Truncate long user messages in older tier
+          const preview = msg.text.length > 200 ? msg.text.substring(0, 200) + '...' : msg.text;
+          parts.push('[User]: ' + preview);
+        } else if (msg.type === 'assistant') {
+          // First 150 chars of assistant responses in older tier
+          const preview = msg.text?.length > 150 ? msg.text.substring(0, 150) + '...' : (msg.text || '');
+          if (preview) parts.push('[Assistant]: ' + preview);
+        } else if (msg.type === 'tool_call') {
+          // Just tool name + summary in older tier, skip results
+          const summary = toolInputSummary(msg.block?.name, msg.block?.input);
+          parts.push('[Tool]: ' + (msg.block?.name || '?') + (summary ? ' — ' + summary : ''));
         }
       }
-      // Skip system messages — they're internal UI state
+      if (olderStart > 0) {
+        parts.unshift('[' + olderStart + ' earlier messages omitted]');
+      }
     }
+
+    // Recent tier — full detail
+    if (recentStart < total) {
+      parts.push('--- Recent conversation ---');
+      for (let i = recentStart; i < total; i++) {
+        const msg = meaningful[i];
+        if (msg.type === 'user') {
+          parts.push('[User]: ' + msg.text);
+        } else if (msg.type === 'assistant') {
+          parts.push('[Assistant]: ' + (msg.text || ''));
+        } else if (msg.type === 'tool_call') {
+          const summary = toolInputSummary(msg.block?.name, msg.block?.input);
+          parts.push('[Tool Call]: ' + (msg.block?.name || '?') + (summary ? ' — ' + summary : ''));
+          if (msg.block?._result) {
+            const resultPreview = toolResultText(msg.block._result);
+            parts.push('[Tool Result]: ' + (resultPreview.length > 500 ? resultPreview.substring(0, 500) + '...' : resultPreview));
+          }
+        }
+      }
+    }
+
     return parts.join('\n');
   }
 
@@ -597,6 +691,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
   async function sendText(text, attachments = []) {
     if (!text || !api) return;
 
+    // Snapshot current messages BEFORE appending the new user message
+    // so conversation context reflects what came before this prompt
+    const currentMsgs = messagesRef.current;
+
     appendMsg({ type: 'user', text, attachments });
     dispatch({ type: 'CLAUDE_SET_PROCESSING', value: true });
     dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
@@ -619,6 +717,23 @@ export default function ClaudeView({ onClose, hideHeader }) {
       // Only inject system prompt on fresh sessions — resumed sessions already have context
       const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir);
 
+      // Build conversation history context.
+      // For resumed sessions, the CLI already has full history — but we still inject
+      // recent messages as a lightweight refresher since context compaction may have
+      // dropped details. For fresh sessions with prior messages (e.g. loaded from
+      // history), this provides the full conversational thread.
+      let finalPrompt = text;
+      const historyContext = buildConversationContext(currentMsgs);
+      if (historyContext) {
+        finalPrompt =
+          '<conversation_history>\n' +
+          historyContext +
+          '\n</conversation_history>\n\n' +
+          'Refer to the conversation history above for context. ' +
+          'The user\'s current message follows:\n\n' +
+          text;
+      }
+
       if (dashboardId) {
         api.logChatEvent(dashboardId, {
           level: 'info',
@@ -631,7 +746,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         provider,
         taskId,
         dashboardId,
-        prompt: text,
+        prompt: finalPrompt,
         systemPrompt: systemPrompt || undefined,
         resumeSessionId: sessionIdRef.current || undefined,
         model: selectedModel || undefined,
@@ -725,6 +840,22 @@ export default function ClaudeView({ onClose, hideHeader }) {
     }
   }
 
+  async function stopChat() {
+    if (!api || activeTaskIdsRef.current.size === 0) return;
+    try {
+      await api.killAllWorkers();
+    } catch (e) {
+      // ignore — workers may already be dead
+    }
+    // Clean up local state
+    activeTaskIdsRef.current.clear();
+    codexStreamedTaskIdsRef.current.clear();
+    currentTextIndexRef.current = null;
+    dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+    dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Stopped' });
+    appendMsg({ type: 'system', text: 'Agent stopped by user.' });
+  }
+
   async function loadHistoryConversation(conv) {
     if (isProcessing || !api) return;
     try {
@@ -752,15 +883,16 @@ export default function ClaudeView({ onClose, hideHeader }) {
     return d.toLocaleDateString();
   }
 
-  const providerLabel = provider === 'codex' ? 'Codex' : 'Claude Code';
   const activeModelLabel = getModelOptions(provider).find((option) => option.value === model)?.label || model;
+  const projectPath = getDashboardProject(dashboardId);
+  const projectDisplayName = projectPath ? projectPath.replace(/\/+$/, '').split('/').pop() : null;
 
   return (
     <div className={`claude-view${hideHeader ? ' claude-view--no-header' : ''}`}>
       {!hideHeader && (
         <div className="claude-view-header">
           <span className="claude-view-title">Agent Chat</span>
-          <span className="claude-view-project">{providerLabel}</span>
+          {projectDisplayName && <span className="claude-view-project">{projectDisplayName}</span>}
           <span className="claude-view-project">{activeModelLabel}</span>
           <span className={'claude-view-status' + (isProcessing ? ' active' : '')}>{status}</span>
           <button
@@ -836,6 +968,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
           {messages.map(msg => (
             <ConversationMessage key={msg.id} msg={msg} />
           ))}
+          {/* Show animated dots when processing and last message isn't already a thinking block */}
+          {isProcessing && messages.length > 0 && messages[messages.length - 1]?.type !== 'thinking' && (
+            <ProcessingIndicator />
+          )}
         </div>
       </div>
 
@@ -870,23 +1006,6 @@ export default function ClaudeView({ onClose, hideHeader }) {
       )}
 
       <div className="claude-prompt-bar">
-        <select
-          className="claude-model-select"
-          value={model}
-          onChange={e => handleModelSelect(e.target.value)}
-        >
-          {getModelOptions(provider).map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <button
-          className="claude-attach-btn"
-          onClick={openFilePicker}
-          title="Attach image"
-          disabled={isProcessing}
-        >📎</button>
         <textarea
           ref={textareaRef}
           className="claude-prompt-input"
@@ -909,13 +1028,43 @@ export default function ClaudeView({ onClose, hideHeader }) {
           style={{ display: 'none' }}
           onChange={e => { handleFiles(Array.from(e.target.files)); e.target.value = ''; }}
         />
-        <button
-          className="claude-send-btn"
-          onClick={sendMessage}
-          disabled={!prompt.trim() && pendingAttachments.length === 0}
-        >
-          Send
-        </button>
+        <div className="claude-prompt-controls">
+          <div className="claude-prompt-controls-left">
+            <select
+              className="claude-model-select"
+              value={model}
+              onChange={e => handleModelSelect(e.target.value)}
+            >
+              {getModelOptions(provider).map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <button
+              className="claude-attach-btn"
+              onClick={openFilePicker}
+              title="Attach image"
+              disabled={isProcessing}
+            >📎</button>
+          </div>
+          {isProcessing ? (
+            <button
+              className="claude-send-btn claude-stop-btn"
+              onClick={stopChat}
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              className="claude-send-btn"
+              onClick={sendMessage}
+              disabled={!prompt.trim() && pendingAttachments.length === 0}
+            >
+              Send
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

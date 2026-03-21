@@ -103,19 +103,25 @@ Create queue directories as needed:
 mkdir -p {tracker_root}/queue/{queueId}/progress
 ```
 
-### Clearing Slots Before Use
+### Clearing Slots Before Use — Archive First
 
-Before writing to any assigned slot (dashboard or queue):
+Before writing to any assigned slot, **always archive if the dashboard contains previous swarm data** (`initialization.json` has `task` not `null`):
 
 ```bash
-# For dashboards:
+# 1. Archive the previous swarm (MANDATORY — never skip)
+TASK_NAME=$(cat {tracker_root}/dashboards/{dashboardId}/initialization.json | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
+ARCHIVE_NAME="$(date -u +%Y-%m-%d)_${TASK_NAME:-unnamed}"
+mkdir -p {tracker_root}/Archive/${ARCHIVE_NAME}
+cp -r {tracker_root}/dashboards/{dashboardId}/* {tracker_root}/Archive/${ARCHIVE_NAME}/
+
+# 2. Then clear
 rm -f {tracker_root}/dashboards/{dashboardId}/progress/*.json
 
 # For queues:
 rm -f {tracker_root}/queue/{queueId}/progress/*.json
 ```
 
-If clearing a finished-but-uncleared dashboard, save a history summary to `{tracker_root}/history/` first.
+**Never clear a dashboard without archiving first.** Previous swarm data must always be preserved in `{tracker_root}/Archive/`. Also save a history summary to `{tracker_root}/history/`.
 
 ---
 
@@ -143,8 +149,8 @@ A dashboard becomes available when:
 
 3. **If eligible queue found** — Execute promotion:
 
-   **Step A — Save history from the freed dashboard (if applicable):**
-   If the freed dashboard had a completed swarm, save its history per standard protocol.
+   **Step A — Archive and save history from the freed dashboard (MANDATORY):**
+   If the freed dashboard had a completed swarm, **archive it first** (copy to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/`), then save its history summary per standard protocol. Never clear without archiving.
 
    **Step B — Copy queue files to dashboard:**
    ```bash

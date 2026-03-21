@@ -987,10 +987,8 @@ body {
 }
 
 .agent-card:hover {
-  background:
-    rgba(130,110,240,0.06) padding-box,
-    linear-gradient(135deg, #e0d7ff 0%, #9b7cf0 35%, rgba(102,126,234,0.25) 70%, rgba(102,126,234,0.03) 100%) border-box;
-  border: 1px solid transparent;
+  background: rgba(130,110,240,0.06);
+  border: 1px solid rgba(155,124,240,0.4);
   box-shadow:
     0 0 6px rgba(155,124,240,0.35),
     0 0 14px rgba(155,124,240,0.12);
@@ -4818,6 +4816,83 @@ a:hover {
   padding: 8px 12px;
 }
 
+/* ----- Thinking bubble (extended thinking / processing indicator) ----- */
+@keyframes thinking-dot {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+
+.claude-thinking-bubble {
+  align-self: flex-start;
+  background: rgba(155, 124, 240, 0.06);
+  border: 1px solid rgba(155, 124, 240, 0.18);
+  border-radius: 10px;
+  overflow: hidden;
+  max-width: 85%;
+}
+
+.claude-thinking-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+}
+
+.claude-thinking-dots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.claude-thinking-dots span {
+  display: block;
+  width: 6px;
+  height: 6px;
+  background: var(--color-in-progress);
+  border-radius: 50%;
+  animation: thinking-dot 1.4s ease-in-out infinite;
+}
+
+.claude-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+.claude-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+.claude-thinking-label {
+  font-size: 0.75rem;
+  color: var(--color-in-progress);
+  font-style: italic;
+}
+
+.claude-thinking-toggle {
+  margin-left: auto;
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.claude-thinking-content {
+  padding: 8px 12px 10px;
+  border-top: 1px solid rgba(155, 124, 240, 0.12);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.6;
+  max-height: 200px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Live processing indicator — pulses gently while Claude is working */
+.claude-processing-live {
+  animation: processing-pulse 2s ease-in-out infinite;
+}
+
+@keyframes processing-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 /* Tool call blocks */
 .claude-tool-call {
   align-self: flex-start;
@@ -4967,15 +5042,28 @@ a:hover {
 /* Prompt bar */
 .claude-prompt-bar {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface-raised);
 }
 
+.claude-prompt-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.claude-prompt-controls-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .claude-prompt-input {
-  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
   resize: none;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -5014,6 +5102,8 @@ a:hover {
 
 .claude-send-btn:hover { opacity: 0.85; }
 .claude-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.claude-stop-btn { background: #ef4444; }
+.claude-stop-btn:hover { background: #dc2626; opacity: 1; }
 
 .claude-model-select {
   padding: 8px 10px;
