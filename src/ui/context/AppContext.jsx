@@ -171,6 +171,29 @@ function appReducerCore(state, action) {
       return { ...state, claudePendingAttachments: state.claudePendingAttachments.filter(a => a.id !== action.id) };
     case 'CLAUDE_CLEAR_ATTACHMENTS':
       return { ...state, claudePendingAttachments: [] };
+    // --- Stashed dashboard updates (for non-active dashboards with running workers) ---
+    case 'CLAUDE_STASH_APPEND_MSG': {
+      const did = action.dashboardId;
+      const stashedMsgs = state.claudeChatStash[did] || loadSavedMessages(did) || [CLAUDE_WELCOME_MSG];
+      const updatedMsgs = [...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }];
+      const newStash = { ...state.claudeChatStash, [did]: updatedMsgs };
+      try { localStorage.setItem(claudeMessagesKey(did), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
+      return { ...state, claudeChatStash: newStash };
+    }
+    case 'CLAUDE_STASH_UPDATE_MESSAGES': {
+      const did = action.dashboardId;
+      const stashedMsgs = state.claudeChatStash[did] || loadSavedMessages(did) || [CLAUDE_WELCOME_MSG];
+      const updatedMsgs = action.updater(stashedMsgs);
+      const newStash = { ...state.claudeChatStash, [did]: updatedMsgs };
+      try { localStorage.setItem(claudeMessagesKey(did), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
+      return { ...state, claudeChatStash: newStash };
+    }
+    case 'CLAUDE_STASH_SET_PROCESSING': {
+      const did = action.dashboardId;
+      const existing = state.claudeProcessingStash[did] || {};
+      const newProcStash = { ...state.claudeProcessingStash, [did]: { ...existing, isProcessing: action.value, status: action.status || existing.status || 'Ready' } };
+      return { ...state, claudeProcessingStash: newProcStash };
+    }
     default:
       return state;
   }

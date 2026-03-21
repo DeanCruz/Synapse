@@ -281,6 +281,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const codexStashRef = useRef({});       // { [dashboardId]: Set of taskIds }
   const textIndexStashRef = useRef({});   // { [dashboardId]: currentTextIndex }
   const toolIndexStashRef = useRef({});   // { [dashboardId]: toolCallIndexMap }
+  // Global map: taskId → dashboardId (persists across switches so we can route output)
+  const taskDashboardMapRef = useRef({});
 
   useEffect(() => {
     if (prevDashboardRef.current !== dashboardId) {
@@ -342,27 +344,118 @@ export default function ClaudeView({ onClose, hideHeader }) {
     }).catch(() => {});
   }, [api, dashboardId]);
 
-  // Set up push listeners — use refs so the closure always calls latest functions
+  // Set up push listeners — route output to correct dashboard (current or stashed)
   useEffect(() => {
     if (!api) return;
 
+    // Helper: check if a taskId belongs to any dashboard (current or stashed)
+    function isKnownTask(taskId) {
+      if (activeTaskIdsRef.current.has(taskId)) return true;
+      for (const did in activeTaskStashRef.current) {
+        if (activeTaskStashRef.current[did]?.has(taskId)) return true;
+      }
+      return false;
+    }
+
+    // Helper: check if taskId belongs to the currently active dashboard
+    function isCurrentDashboardTask(taskId) {
+      return activeTaskIdsRef.current.has(taskId);
+    }
+
+    // Helper: find which stashed dashboard owns this task
+    function getStashedDashboard(taskId) {
+      return taskDashboardMapRef.current[taskId] || null;
+    }
+
     const workerListener = api.on('worker-output', (data) => {
-      if (!activeTaskIdsRef.current.has(data.taskId)) return;
-      if (handleChunkRef.current) handleChunkRef.current(data);
+      if (!isKnownTask(data.taskId)) return;
+
+      if (isCurrentDashboardTask(data.taskId)) {
+        // Active dashboard — process normally
+        if (handleChunkRef.current) handleChunkRef.current(data);
+      } else {
+        // Non-active dashboard — buffer chunks into stashed messages
+        const targetDash = getStashedDashboard(data.taskId);
+        if (!targetDash) return;
+        const chunk = data.chunk;
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const evt = JSON.parse(trimmed);
+            // Only capture text and tool_use from assistant events for stashed dashboards
+            if (evt.type === 'assistant') {
+              const content = evt.message?.content || evt.content || [];
+              for (const block of content) {
+                if (block.type === 'text') {
+                  const cleaned = stripAnsi(block.text);
+                  if (cleaned && cleaned.trim()) {
+                    dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'assistant', text: cleaned } });
+                  }
+                } else if (block.type === 'tool_use' || block.type === 'server_tool_use') {
+                  dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
+                } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
+                  dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'thinking', text: block.thinking || '' } });
+                }
+              }
+            } else if (evt.type === 'content_block_stop') {
+              // Handle streaming format for stashed dashboards (simplified — just capture the final block)
+              // Full streaming state for stashed dashboards isn't tracked, but content_block_stop
+              // with complete data will be handled when the assistant event arrives
+            } else if (evt.type === 'system') {
+              if (evt.subtype === 'init') {
+                dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: `Connected — model: ${evt.model || '?'}, ${(evt.tools || []).length} tools available` } });
+              }
+            } else if (evt.type === 'result') {
+              if (evt.session_id) {
+                // Stash the session ID for this dashboard
+                const storedSession = sessionMapRef.current[targetDash] || {};
+                sessionMapRef.current[targetDash] = { ...storedSession, sessionId: evt.session_id };
+              }
+            }
+          } catch (e) {
+            // Non-JSON output for stashed dashboard — skip (progress bars, etc.)
+          }
+        }
+      }
     });
 
     const completeListener = api.on('worker-complete', (data) => {
-      if (!activeTaskIdsRef.current.has(data.taskId)) return;
-      if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
-        appendMsg({ type: 'assistant', text: data.lastMessage });
+      if (!isKnownTask(data.taskId)) return;
+
+      if (isCurrentDashboardTask(data.taskId)) {
+        // Active dashboard — process normally
+        if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
+          appendMsg({ type: 'assistant', text: data.lastMessage });
+        }
+        if (data.errorOutput) {
+          dispatch({
+            type: 'CLAUDE_APPEND_MSG',
+            msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true }
+          });
+        }
+        if (finishRef.current) finishRef.current(data.taskId);
+      } else {
+        // Non-active dashboard — update stashed state
+        const targetDash = getStashedDashboard(data.taskId);
+        if (!targetDash) return;
+        if (data.provider === 'codex' && data.lastMessage) {
+          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'assistant', text: data.lastMessage } });
+        }
+        if (data.errorOutput) {
+          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true } });
+        }
+        // Remove from stashed active tasks and update processing state
+        const stashedSet = activeTaskStashRef.current[targetDash];
+        if (stashedSet) {
+          stashedSet.delete(data.taskId);
+          if (stashedSet.size === 0) {
+            dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', dashboardId: targetDash, value: false, status: 'Ready' });
+          }
+        }
+        delete taskDashboardMapRef.current[data.taskId];
       }
-      if (data.errorOutput) {
-        dispatch({
-          type: 'CLAUDE_APPEND_MSG',
-          msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true }
-        });
-      }
-      if (finishRef.current) finishRef.current(data.taskId);
     });
 
     return () => {
@@ -606,6 +699,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
   function finishProcessing(taskId) {
     activeTaskIdsRef.current.delete(taskId);
     codexStreamedTaskIdsRef.current.delete(taskId);
+    delete taskDashboardMapRef.current[taskId];
     // Only mark as not processing when ALL workers are done
     if (activeTaskIdsRef.current.size === 0) {
       dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
@@ -798,6 +892,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
     const taskId = '_claude_' + Date.now();
     activeTaskIdsRef.current.add(taskId);
     codexStreamedTaskIdsRef.current.delete(taskId);
+    // Register in global map so output can be routed even after dashboard switch
+    taskDashboardMapRef.current[taskId] = dashboardId;
 
     try {
       const settings = await api.getSettings();
