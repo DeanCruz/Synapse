@@ -883,15 +883,16 @@ export default function ClaudeView({ onClose, hideHeader }) {
     return d.toLocaleDateString();
   }
 
-  const providerLabel = provider === 'codex' ? 'Codex' : 'Claude Code';
   const activeModelLabel = getModelOptions(provider).find((option) => option.value === model)?.label || model;
+  const projectPath = getDashboardProject(dashboardId);
+  const projectDisplayName = projectPath ? projectPath.replace(/\/+$/, '').split('/').pop() : null;
 
   return (
     <div className={`claude-view${hideHeader ? ' claude-view--no-header' : ''}`}>
       {!hideHeader && (
         <div className="claude-view-header">
           <span className="claude-view-title">Agent Chat</span>
-          <span className="claude-view-project">{providerLabel}</span>
+          {projectDisplayName && <span className="claude-view-project">{projectDisplayName}</span>}
           <span className="claude-view-project">{activeModelLabel}</span>
           <span className={'claude-view-status' + (isProcessing ? ' active' : '')}>{status}</span>
           <button
