@@ -59,6 +59,7 @@ const initialState = {
   modalDashboardId: null, // which dashboard a modal was opened for
   claudeDashboardId: null, // which dashboard the Claude view is associated with
   claudeViewMode: 'expanded', // 'minimized' | 'collapsed' | 'expanded' | 'maximized'
+  claudeEverOpened: false,   // true once the Claude panel has been opened — keeps it mounted
   connected: false,
   // Persistent Claude chat state (per-dashboard)
   claudeMessages: loadSavedMessages('dashboard1') || [CLAUDE_WELCOME_MSG],
@@ -125,7 +126,13 @@ function appReducerCore(state, action) {
       };
     }
     case 'SET_VIEW':
-      return { ...state, activeView: action.view, claudeDashboardId: action.dashboardId || state.claudeDashboardId || state.currentDashboardId };
+      return {
+        ...state,
+        activeView: action.view,
+        claudeDashboardId: action.dashboardId || state.claudeDashboardId || state.currentDashboardId,
+        // Once opened, keep mounted forever for background persistence
+        claudeEverOpened: state.claudeEverOpened || action.view === 'claude',
+      };
     case 'OPEN_MODAL':
       return { ...state, activeModal: action.modal, modalDashboardId: action.dashboardId || state.currentDashboardId };
     case 'CLOSE_MODAL':

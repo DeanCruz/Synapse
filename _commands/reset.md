@@ -36,7 +36,16 @@
        - `patterns` — brief note on what worked well or poorly (e.g., "tasks with shared file deps caused conflicts", "right-sizing at 3 files per task worked well")
    - Write to `{tracker_root}/history/{YYYY-MM-DD}_{task_name}.json`.
 
-4. **Clear the dashboard:**
+4. **Archive the dashboard** (MANDATORY — never skip):
+   - Copy the entire dashboard directory to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/`:
+     ```bash
+     TASK_NAME=$(cat {tracker_root}/dashboards/{dashboardId}/initialization.json | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
+     ARCHIVE_NAME="$(date -u +%Y-%m-%d)_${TASK_NAME:-unnamed}"
+     mkdir -p {tracker_root}/Archive/${ARCHIVE_NAME}
+     cp -r {tracker_root}/dashboards/{dashboardId}/* {tracker_root}/Archive/${ARCHIVE_NAME}/
+     ```
+
+5. **Clear the dashboard:**
    - Delete all `.json` files in `{tracker_root}/dashboards/{dashboardId}/progress/`.
    - Write `initialization.json`:
      ```json
@@ -47,7 +56,7 @@
      { "entries": [] }
      ```
 
-5. **Report:** "Dashboard {dashboardId} cleared. History saved to `history/{filename}.json`."
+6. **Report:** "Dashboard {dashboardId} cleared. Archived to `Archive/{archive_name}/`. History saved to `history/{filename}.json`."
 
 ---
 
@@ -55,6 +64,6 @@
 
 1. For each dashboard from `dashboard1` through `dashboard5`:
    - If `initialization.json` has `task: null`, skip (already empty).
-   - Otherwise, save history summary and clear (same as steps 3-4 above).
+   - Otherwise, archive, save history summary, and clear (same as steps 3-5 above).
 
-2. **Report:** "All dashboards cleared. {N} history summaries saved."
+2. **Report:** "All dashboards cleared. {N} archived and history summaries saved."

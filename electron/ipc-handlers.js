@@ -521,9 +521,23 @@ function registerIPCHandlers(getMainWindow) {
   // Build system prompt for ClaudeView chat — reads Synapse CLAUDE.md + project CLAUDE.md
   ipcMain.handle('get-chat-system-prompt', async (_event, projectDir) => {
     const parts = [];
+    const synapseRoot = path.resolve(__dirname, '..');
 
-    // Read Synapse CLAUDE.md
-    const synapseClaudeMd = path.join(path.resolve(__dirname, '..'), 'CLAUDE.md');
+    // Path reference block — agent must always know both directories
+    parts.push(
+      '# Directory References\n\n' +
+      'TRACKER ROOT (Synapse): ' + synapseRoot + '\n' +
+      'PROJECT ROOT (target project): ' + (projectDir || synapseRoot) + '\n\n' +
+      'When looking for commands and instructions, ALWAYS check the Synapse directory (TRACKER ROOT) first:\n' +
+      '  1. {tracker_root}/_commands/{command}.md — Synapse swarm commands (highest priority)\n' +
+      '  2. {tracker_root}/_commands/project/{command}.md — Synapse project commands\n' +
+      '  3. {project_root}/_commands/{command}.md — Project-specific commands (lowest priority)\n\n' +
+      'Agent instructions live at: {tracker_root}/agent/instructions/\n' +
+      'All code work happens in PROJECT ROOT. All Synapse commands/instructions/dashboards live in TRACKER ROOT.'
+    );
+
+    // Read Synapse CLAUDE.md FIRST — Synapse context takes priority
+    const synapseClaudeMd = path.join(synapseRoot, 'CLAUDE.md');
     try {
       const content = fs.readFileSync(synapseClaudeMd, 'utf-8');
       parts.push('# Synapse Context\n' + content);
@@ -535,15 +549,6 @@ function registerIPCHandlers(getMainWindow) {
       try {
         const content = fs.readFileSync(projectClaudeMd, 'utf-8');
         parts.push('\n# Project Context\n' + content);
-      } catch (e) { /* ignore */ }
-
-      // Check parent directory for master CLAUDE.md
-      const parentClaudeMd = path.join(path.dirname(projectDir), 'CLAUDE.md');
-      try {
-        if (parentClaudeMd !== projectClaudeMd) {
-          const content = fs.readFileSync(parentClaudeMd, 'utf-8');
-          parts.push('\n# Parent Project Context\n' + content);
-        }
       } catch (e) { /* ignore */ }
     }
 

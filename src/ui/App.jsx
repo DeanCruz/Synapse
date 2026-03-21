@@ -230,6 +230,7 @@ export default function App() {
   const claudeViewMode = state.claudeViewMode;
   const claudeDashboardId = state.claudeDashboardId || currentDashboardId;
   const showClaudeFloat = activeView === 'claude';
+  const claudeEverOpened = state.claudeEverOpened;
 
   function renderMainContent() {
     switch (activeView) {
@@ -289,9 +290,10 @@ export default function App() {
         <SettingsModal onClose={closeModal} />
       )}
 
-      {/* Floating Claude chat panel */}
-      {showClaudeFloat && (
+      {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
+      {(showClaudeFloat || claudeEverOpened) && (
         <ClaudeFloatingPanel
+          isVisible={showClaudeFloat}
           dashboardId={claudeDashboardId}
           viewMode={claudeViewMode}
           onClose={() => dispatch({ type: 'SET_VIEW', view: 'dashboard' })}
@@ -303,38 +305,42 @@ export default function App() {
 }
 
 // ── ClaudeFloatingPanel — wraps ClaudeView in a floating container ──────────
-function ClaudeFloatingPanel({ dashboardId, viewMode, onClose, onSetMode }) {
-  const dispatch = useDispatch();
-
-  if (viewMode === 'minimized') {
-    return (
-      <div className="claude-float claude-float--minimized">
-        <button className="claude-pill" onClick={() => onSetMode('collapsed')}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.4"/>
-            <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
-            <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
-            <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
-          </svg>
-          <span>Claude</span>
-        </button>
-      </div>
-    );
-  }
-
+// Always mounted once opened so IPC listeners stay alive during background runs.
+// isVisible=false hides via CSS (display:none) without unmounting.
+function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onClose, onSetMode }) {
   return (
-    <div className={`claude-float claude-float--${viewMode}`}>
-      <div className="claude-view">
-        <ClaudeFloatingHeader
-          dashboardId={dashboardId}
-          viewMode={viewMode}
-          onClose={onClose}
-          onSetMode={onSetMode}
-        />
-        {(viewMode === 'expanded' || viewMode === 'maximized') && (
+    <div
+      className={`claude-float claude-float--${viewMode}`}
+      style={!isVisible ? { display: 'none' } : undefined}
+    >
+      {viewMode === 'minimized' ? (
+        <>
+          <button className="claude-pill" onClick={() => onSetMode('collapsed')}>
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.4"/>
+              <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
+              <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
+              <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
+            </svg>
+            <span>Claude</span>
+          </button>
+          {/* ClaudeView always mounted (hidden) so listeners stay alive */}
+          <div style={{ display: 'none' }}>
+            <ClaudeView onClose={onClose} hideHeader />
+          </div>
+        </>
+      ) : (
+        <div className="claude-view">
+          <ClaudeFloatingHeader
+            dashboardId={dashboardId}
+            viewMode={viewMode}
+            onClose={onClose}
+            onSetMode={onSetMode}
+          />
+          {/* Always mount ClaudeView — collapsed mode hides body via CSS */}
           <ClaudeView onClose={onClose} hideHeader />
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

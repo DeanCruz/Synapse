@@ -52,7 +52,12 @@ function spawnWorker(opts) {
     args.push('--resume', opts.resumeSessionId);
   }
 
-  if (opts.projectDir) {
+  // Always add Synapse directory first — agent needs access to commands and instructions
+  var synapseRoot = path.resolve(__dirname, '../..');
+  args.push('--add-dir', synapseRoot);
+
+  // Then add the target project directory if different from Synapse
+  if (opts.projectDir && path.resolve(opts.projectDir) !== synapseRoot) {
     args.push('--add-dir', opts.projectDir);
   }
 

@@ -98,7 +98,7 @@ The master agent reads **extensively**. It reads more than any worker will. It r
 - Include in every agent prompt: the specific files to modify, the conventions from `{project_root}/CLAUDE.md`, code snippets the agent needs to see, clear success criteria, **and both `{tracker_root}` and `{project_root}` paths**
 - Create the master XML task file documenting the full plan
 - Write the strategy rationale plan file
-- **Populate the dashboard before presenting the plan to the user** — clear the progress directory, write the full plan to `initialization.json` (all tasks, all waves, all dependencies — static plan data only), and write an initialization entry to `logs.json`. This gives the user a live visual representation of the plan on the dashboard while they review and approve it. **`initialization.json` is write-once — the master never updates it after planning.**
+- **Populate the dashboard before presenting the plan to the user** — **if the dashboard contains data from a previous swarm, archive it first** by copying the full dashboard directory to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/` before clearing. Then clear the progress directory, write the full plan to `initialization.json` (all tasks, all waves, all dependencies — static plan data only), and write an initialization entry to `logs.json`. This gives the user a live visual representation of the plan on the dashboard while they review and approve it. **`initialization.json` is write-once — the master never updates it after planning.** **Never clear a dashboard without archiving first — previous swarm data must always be preserved.**
 
 Planning is where the master agent earns its value. A well-planned swarm executes fast with zero confusion. A poorly-planned swarm produces broken code, conflicting edits, and wasted cycles. **Invest heavily in planning. Never rush it.**
 
@@ -156,6 +156,18 @@ During a swarm, the master agent writes to exactly these files at `{tracker_root
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
 Everything else is a worker's job. The master agent writes **nothing** into `{project_root}`.
+
+### Archive Before Clear — NON-NEGOTIABLE
+
+**The master agent must ALWAYS archive a dashboard before clearing it.** Previous swarm data is never discarded — it is moved to the Archive for future reference.
+
+When the master needs to clear a dashboard (e.g., to start a new swarm on a dashboard that has previous data):
+
+1. **Check if the dashboard has data** — read `initialization.json`. If `task` is not `null`, the dashboard has a previous swarm.
+2. **Archive the dashboard** — copy the entire dashboard directory (`initialization.json`, `logs.json`, `progress/`) to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/`.
+3. **Then clear** — delete progress files, reset `initialization.json` and `logs.json` to empty state.
+
+This applies everywhere a dashboard is cleared: `!p_track` initialization, `!reset`, `!master_plan_track` slot clearing, queue-to-dashboard promotion, and any other operation that overwrites dashboard state. **No exceptions.**
 
 ### After a Swarm Completes
 
@@ -315,9 +327,12 @@ Any command prefixed with `!p` **forces the agent into master dispatch mode.** T
 
 When any `!p` command is invoked, the following happens unconditionally:
 
-1. **The agent enters master dispatch mode.** It becomes the orchestrator. It does NOT write code. Its only responsibilities are: gather context, plan, dispatch, status, and report.
-2. **Reading this file (`{tracker_root}/CLAUDE.md`) is NON-NEGOTIABLE.** This must be done before any planning or dispatch begins.
-3. **All Synapse rules apply in full.** Every principle, every constraint, every protocol defined here is binding for the duration of the swarm.
+1. **The agent enters master dispatch mode.** It becomes the orchestrator. It does NOT write code. Its only responsibilities are: gather context, plan, dispatch, status, and report. **The master agent NEVER implements anything itself — it dispatches worker agents to do ALL implementation work. No exceptions, regardless of how long the prompt is or how simple a task seems.**
+2. **Reading the command file is NON-NEGOTIABLE.** For `!p_track`, the master MUST read `{tracker_root}/_commands/p_track.md` in full and follow it step by step. For `!p`, read `{tracker_root}/_commands/p.md`. **Do not skip this. Do not "remember" what the command does. Read the file every time.**
+3. **Reading `{tracker_root}/agent/instructions/tracker_master_instructions.md` is NON-NEGOTIABLE.** This file maps every dashboard panel to the exact fields that drive it. The master must read it before writing any dashboard files. **Do not skip this. Do not summarize from memory. Read it.**
+4. **Reading this file (`{tracker_root}/CLAUDE.md`) is NON-NEGOTIABLE.** This must be done before any planning or dispatch begins.
+5. **All Synapse rules apply in full.** Every principle, every constraint, every protocol defined here is binding for the duration of the swarm.
+6. **The master MUST use the dashboard.** All tasks are written to `initialization.json`, all progress is tracked via worker progress files, all events are logged to `logs.json`. The dashboard is the user's primary window into the swarm. **Skipping the dashboard is never acceptable.**
 
 ### Automatic Parallel Mode
 

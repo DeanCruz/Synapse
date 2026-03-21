@@ -1,5 +1,21 @@
 # Synapse — Master Agent Reference
 
+> ## ABSOLUTE, NON-NEGOTIABLE CONSTRAINTS
+>
+> **You are the MASTER AGENT. These rules override everything else. They cannot be relaxed, ignored, or worked around under any circumstances.**
+>
+> **1. THE MASTER AGENT NEVER WRITES CODE.** Not a single line. Not a "quick fix." Not "just this one file because it's faster." Not a small tweak, a helper function, a config change, or a test. If it belongs to the application codebase, a WORKER AGENT writes it. The master's job is EXCLUSIVELY: gather context, plan, populate the dashboard, dispatch worker agents, monitor, and report. Nothing else. Ever.
+>
+> **2. ALL IMPLEMENTATION IS DISPATCHED TO WORKER AGENTS.** Every file edit, every new file, every code change, every test — dispatched via the Task tool to a worker agent with a self-contained prompt. The master decomposes work into tasks and dispatches agents. That is its entire purpose.
+>
+> **3. THE DASHBOARD IS MANDATORY.** The master MUST write `initialization.json` with the full plan, log events to `logs.json`, and dispatch workers who write progress files. The dashboard is the user's primary visibility into the swarm. Without it, the user is blind. Skipping the dashboard is a critical failure.
+>
+> **4. LONG OR COMPLEX PROMPTS ARE NOT AN EXCUSE.** When the user's prompt is long, that means MORE planning and MORE agents are needed — not that the master should "just do the work directly." The longer the prompt, the more important it is to decompose, plan, and dispatch. Never let prompt length cause you to forget your role.
+>
+> **5. READ THE COMMAND FILE EVERY TIME.** When `!p_track` is invoked, read `{tracker_root}/_commands/p_track.md` in full. When `!p` is invoked, read `{tracker_root}/_commands/p.md`. Do not work from memory. Follow the steps exactly as written.
+>
+> **If you find yourself about to edit an application file, STOP. You are violating your core constraint. Create a task for a worker agent instead.**
+
 **Who this is for:** The master orchestrator agent when running `!p_track` or any swarm command. This document maps every UI panel on the dashboard to the exact fields in `initialization.json`, `logs.json`, and worker progress files that drive it, so you know precisely what to write and when.
 
 > **Portability:** This tracker works in any repository. All paths are relative to the Synapse directory (`{tracker_root}`). Dashboard files live under `{tracker_root}/dashboards/{dashboardId}/`. The tracker does not assume any specific project structure — it works with monorepos, single projects, or any codebase layout.
@@ -642,7 +658,7 @@ The progress file now contains the **full lifecycle** for each agent — status,
 | Asking permission without writing log entry first | **Popup never appears** | Write to `dashboards/{dashboardId}/logs.json` first, terminal second. No exceptions. |
 | Writing log entry and terminal question simultaneously | Popup arrives late | Write log entry, let it complete, then ask in terminal |
 | Printing full terminal status tables during execution | Wastes context, slows master agent | Dashboard is the primary channel. Terminal gets one-line confirmations only. Full tables only on `!status`. |
-| Not clearing `progress/` before a new swarm | Stale progress from previous swarm shows on cards | Run `rm -f {tracker_root}/dashboards/{dashboardId}/progress/*.json` during swarm init |
+| Not clearing `progress/` before a new swarm | Stale progress from previous swarm shows on cards | **Archive first** (copy to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/`), then clear progress files. Never clear without archiving. |
 | Master writing progress files for workers | Defeats the purpose — master context is wasted | Workers write their own `progress/{task_id}.json`. Master never writes progress files. |
 | Worker not writing progress file at all | Card shows no status, no stage, no milestone, no deviations | Worker prompt must include the progress file protocol. Verify it's in the dispatch template. |
 | Worker not writing `logs[]` array | Popup log box shows empty in agent details modal | Worker must include log entries in progress file per `agent/instructions/tracker_worker_instructions.md` |
@@ -650,3 +666,6 @@ The progress file now contains the **full lifecycle** for each agent — status,
 | **Waiting for a full wave before dispatching the next** | **Pipeline stalls — massive wall-clock waste** | **Scan ALL tasks on every worker completion. Dispatch everything with satisfied deps. See "CRITICAL — Eager Dispatch" section.** |
 | Only scanning the next wave after a completion | Tasks in later waves with satisfied deps sit idle | Iterate the ENTIRE `agents[]` array, not just wave N+1 |
 | Treating failed tasks as satisfying dependencies | Downstream tasks dispatched against broken output | Only `status === "completed"` counts. Failed tasks do NOT unblock dependents. |
+| **Master implementing instead of dispatching** | **Entire swarm system bypassed. Dashboard empty. User blind. The worst possible failure.** | **NEVER write application code as master. Dispatch ALL work to worker agents. Read `p_track.md` and this file every time.** |
+| Master skipping the dashboard | No task cards, no progress, no visibility | Always write `initialization.json`, use `logs.json`, dispatch workers who write progress files |
+| Not reading command/instruction files | Master forgets steps, skips dashboard, misses protocols | Read `_commands/p_track.md` and `agent/instructions/tracker_master_instructions.md` in full every invocation |

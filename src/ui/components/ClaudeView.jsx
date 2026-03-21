@@ -50,6 +50,46 @@ function toolInputSummary(name, input) {
   }
 }
 
+// Thinking bubble — shown for extended thinking blocks (collapsible)
+function ThinkingBubble({ msg }) {
+  const [expanded, setExpanded] = useState(false);
+  const hasContent = msg.text && msg.text.trim().length > 0;
+  return (
+    <div className="claude-thinking-bubble">
+      <div
+        className="claude-thinking-header"
+        onClick={() => hasContent && setExpanded(e => !e)}
+        style={{ cursor: hasContent ? 'pointer' : 'default' }}
+      >
+        <div className="claude-thinking-dots">
+          <span /><span /><span />
+        </div>
+        <span className="claude-thinking-label">Thinking</span>
+        {hasContent && (
+          <span className="claude-thinking-toggle">{expanded ? '▼' : '▶'}</span>
+        )}
+      </div>
+      {expanded && hasContent && (
+        <div className="claude-thinking-content">{msg.text}</div>
+      )}
+    </div>
+  );
+}
+
+// Live processing indicator — shown at bottom of conversation while Claude is running
+function ProcessingIndicator() {
+  return (
+    <div className="claude-thinking-bubble claude-processing-live">
+      <div className="claude-thinking-header" style={{ cursor: 'default' }}>
+        <div className="claude-thinking-dots">
+          <span /><span /><span />
+        </div>
+        <span className="claude-thinking-label">Thinking...</span>
+      </div>
+    </div>
+  );
+}
+
 // Single collapsible tool call block
 function ToolCallBlock({ block }) {
   const [expanded, setExpanded] = useState(false);
@@ -89,6 +129,9 @@ function ToolCallBlock({ block }) {
 
 // A single conversation message
 function ConversationMessage({ msg }) {
+  if (msg.type === 'thinking') {
+    return <ThinkingBubble msg={msg} />;
+  }
   if (msg.type === 'user') {
     return (
       <div className="claude-message claude-user">
@@ -363,6 +406,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
             });
           } else if (block.type === 'thinking') {
             dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
+            // Add thinking block as a collapsible bubble in the conversation
+            appendMsg({ type: 'thinking', text: block.thinking || '' });
           }
         }
         break;
@@ -440,25 +485,72 @@ export default function ClaudeView({ onClose, hideHeader }) {
   handleChunkRef.current = handleChunk;
   finishRef.current = finishProcessing;
 
-  // Build conversation history string from messages for context continuity
+  // Build tiered conversation history — recent messages in full detail,
+  // older messages summarized. Returns a string for injection into the prompt.
+  // Tiers:
+  //   - Last RECENT_COUNT messages: full text, full tool details
+  //   - Older messages: condensed (user prompts + assistant summaries only)
+  //   - Very old messages (beyond OLDER_CAP): skipped entirely
+  const RECENT_COUNT = 10;  // full detail for last N messages
+  const OLDER_CAP = 30;     // condensed for next N beyond recent
+
   function buildConversationContext(currentMessages) {
+    // Filter to meaningful messages (skip system, thinking)
+    const meaningful = currentMessages.filter(m =>
+      m.type === 'user' || m.type === 'assistant' || m.type === 'tool_call'
+    );
+    if (meaningful.length === 0) return '';
+
+    const total = meaningful.length;
+    const recentStart = Math.max(0, total - RECENT_COUNT);
+    const olderStart = Math.max(0, recentStart - OLDER_CAP);
+
     const parts = [];
-    for (const msg of currentMessages) {
-      if (msg.type === 'user') {
-        parts.push('[User]: ' + msg.text);
-      } else if (msg.type === 'assistant') {
-        parts.push('[Assistant]: ' + msg.text);
-      } else if (msg.type === 'tool_call') {
-        const summary = toolInputSummary(msg.block.name, msg.block.input);
-        parts.push('[Tool Call]: ' + msg.block.name + (summary ? ' — ' + summary : ''));
-        if (msg.block._result) {
-          const resultPreview = toolResultText(msg.block._result);
-          // Truncate long tool results to keep context manageable
-          parts.push('[Tool Result]: ' + (resultPreview.length > 500 ? resultPreview.substring(0, 500) + '...' : resultPreview));
+
+    // Older tier — condensed summaries only
+    if (olderStart < recentStart) {
+      parts.push('--- Earlier in this conversation (condensed) ---');
+      for (let i = olderStart; i < recentStart; i++) {
+        const msg = meaningful[i];
+        if (msg.type === 'user') {
+          // Truncate long user messages in older tier
+          const preview = msg.text.length > 200 ? msg.text.substring(0, 200) + '...' : msg.text;
+          parts.push('[User]: ' + preview);
+        } else if (msg.type === 'assistant') {
+          // First 150 chars of assistant responses in older tier
+          const preview = msg.text?.length > 150 ? msg.text.substring(0, 150) + '...' : (msg.text || '');
+          if (preview) parts.push('[Assistant]: ' + preview);
+        } else if (msg.type === 'tool_call') {
+          // Just tool name + summary in older tier, skip results
+          const summary = toolInputSummary(msg.block?.name, msg.block?.input);
+          parts.push('[Tool]: ' + (msg.block?.name || '?') + (summary ? ' — ' + summary : ''));
         }
       }
-      // Skip system messages — they're internal UI state
+      if (olderStart > 0) {
+        parts.unshift('[' + olderStart + ' earlier messages omitted]');
+      }
     }
+
+    // Recent tier — full detail
+    if (recentStart < total) {
+      parts.push('--- Recent conversation ---');
+      for (let i = recentStart; i < total; i++) {
+        const msg = meaningful[i];
+        if (msg.type === 'user') {
+          parts.push('[User]: ' + msg.text);
+        } else if (msg.type === 'assistant') {
+          parts.push('[Assistant]: ' + (msg.text || ''));
+        } else if (msg.type === 'tool_call') {
+          const summary = toolInputSummary(msg.block?.name, msg.block?.input);
+          parts.push('[Tool Call]: ' + (msg.block?.name || '?') + (summary ? ' — ' + summary : ''));
+          if (msg.block?._result) {
+            const resultPreview = toolResultText(msg.block._result);
+            parts.push('[Tool Result]: ' + (resultPreview.length > 500 ? resultPreview.substring(0, 500) + '...' : resultPreview));
+          }
+        }
+      }
+    }
+
     return parts.join('\n');
   }
 
@@ -529,6 +621,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
   async function sendText(text, attachments = []) {
     if (!text || !api) return;
 
+    // Snapshot current messages BEFORE appending the new user message
+    // so conversation context reflects what came before this prompt
+    const currentMsgs = messagesRef.current;
+
     appendMsg({ type: 'user', text, attachments });
     dispatch({ type: 'CLAUDE_SET_PROCESSING', value: true });
     dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
@@ -546,6 +642,23 @@ export default function ClaudeView({ onClose, hideHeader }) {
       // Only inject system prompt on fresh sessions — resumed sessions already have context
       const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir);
 
+      // Build conversation history context.
+      // For resumed sessions, the CLI already has full history — but we still inject
+      // recent messages as a lightweight refresher since context compaction may have
+      // dropped details. For fresh sessions with prior messages (e.g. loaded from
+      // history), this provides the full conversational thread.
+      let finalPrompt = text;
+      const historyContext = buildConversationContext(currentMsgs);
+      if (historyContext) {
+        finalPrompt =
+          '<conversation_history>\n' +
+          historyContext +
+          '\n</conversation_history>\n\n' +
+          'Refer to the conversation history above for context. ' +
+          'The user\'s current message follows:\n\n' +
+          text;
+      }
+
       if (dashboardId) {
         api.logChatEvent(dashboardId, {
           level: 'info',
@@ -557,7 +670,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
       await api.spawnWorker({
         taskId,
         dashboardId,
-        prompt: text,
+        prompt: finalPrompt,
         systemPrompt: systemPrompt || undefined,
         resumeSessionId: sessionIdRef.current || undefined,
         model: selectedModel,
@@ -750,6 +863,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
           {messages.map(msg => (
             <ConversationMessage key={msg.id} msg={msg} />
           ))}
+          {/* Show animated dots when processing and last message isn't already a thinking block */}
+          {isProcessing && messages.length > 0 && messages[messages.length - 1]?.type !== 'thinking' && (
+            <ProcessingIndicator />
+          )}
         </div>
       </div>
 
