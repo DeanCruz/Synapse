@@ -290,12 +290,14 @@ export default function ClaudeView({ onClose, hideHeader }) {
     }
   }, [dashboardId]);
 
-  // Auto-scroll on new messages
+  // Auto-scroll on new messages or dashboard switch
   useEffect(() => {
-    if (conversationRef.current) {
-      conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
-    }
-  }, [messages]);
+    requestAnimationFrame(() => {
+      if (conversationRef.current) {
+        conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+      }
+    });
+  }, [messages, dashboardId]);
 
   // Load conversation list when history panel opens (filtered by current dashboard)
   useEffect(() => {
