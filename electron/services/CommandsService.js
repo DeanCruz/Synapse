@@ -3,6 +3,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 
 const SYNAPSE_ROOT = path.resolve(__dirname, '../..');
 const COMMANDS_DIR = path.join(SYNAPSE_ROOT, '_commands');
@@ -260,11 +261,199 @@ function listProjectCommands(projectDir) {
   return listCommands(dir);
 }
 
+/**
+ * Save a command into a specific subfolder of _commands/.
+ *
+ * @param {string} name — command name (without .md)
+ * @param {string} content — full markdown content
+ * @param {string} folderName — subfolder name (e.g., "Synapse", "project")
+ * @returns {object} result
+ */
+function saveCommandInFolder(name, content, folderName) {
+  var dir = path.join(COMMANDS_DIR, folderName);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  var safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_');
+  var filePath = path.join(dir, safeName + '.md');
+  fs.writeFileSync(filePath, content, 'utf8');
+  return { success: true, name: safeName, filePath: filePath };
+}
+
+/**
+ * Create a new command folder.
+ *
+ * @param {string} folderName — folder name
+ * @returns {object} result
+ */
+function createCommandFolder(folderName) {
+  var safeName = folderName.replace(/[^a-zA-Z0-9_-]/g, '_');
+  var dirPath = path.join(COMMANDS_DIR, safeName);
+  if (fs.existsSync(dirPath)) {
+    return { success: false, error: 'Folder already exists' };
+  }
+  fs.mkdirSync(dirPath, { recursive: true });
+  return { success: true, name: safeName, path: dirPath };
+}
+
+/**
+ * Generate a command file using Claude CLI.
+ * Reads CLAUDE.md and existing commands for context, then generates a full command .md file.
+ *
+ * @param {string} description — user's description of what the command should do
+ * @param {string} folderName — target folder (e.g., "Synapse", "project")
+ * @param {string} commandName — desired command name
+ * @param {object} [opts] — options
+ * @param {string} [opts.cliPath] — path to Claude binary
+ * @param {string} [opts.model] — model to use
+ * @param {Function} [opts.onProgress] — callback for progress updates
+ * @returns {Promise<{success: boolean, name?: string, filePath?: string, content?: string, error?: string}>}
+ */
+function generateCommand(description, folderName, commandName, opts) {
+  opts = opts || {};
+  var cliPath = opts.cliPath || 'claude';
+
+  return new Promise(function (resolve) {
+    // Read CLAUDE.md for context
+    var claudeMdPath = path.join(SYNAPSE_ROOT, 'CLAUDE.md');
+    var claudeMdContent = '';
+    try {
+      claudeMdContent = fs.readFileSync(claudeMdPath, 'utf8');
+    } catch (e) {
+      // Continue without it
+    }
+
+    // Read a few example commands from the target folder for style reference
+    var exampleDir = path.join(COMMANDS_DIR, folderName);
+    var examples = '';
+    try {
+      if (fs.existsSync(exampleDir)) {
+        var files = fs.readdirSync(exampleDir).filter(function (f) {
+          return f.endsWith('.md') && !f.startsWith('.');
+        }).slice(0, 3);
+        files.forEach(function (f) {
+          var content = fs.readFileSync(path.join(exampleDir, f), 'utf8');
+          examples += '\n--- Example: ' + f + ' ---\n' + content.slice(0, 2000) + '\n';
+        });
+      }
+    } catch (e) {
+      // Continue without examples
+    }
+
+    var systemPrompt = [
+      'You are a command file generator for Synapse, a distributed agent swarm control system.',
+      'Your task is to generate a complete, production-quality command .md file.',
+      '',
+      'The command file will be saved to: _commands/' + folderName + '/' + commandName + '.md',
+      '',
+      'IMPORTANT RULES:',
+      '- Output ONLY the raw markdown content of the command file. No code fences, no explanation, no preamble.',
+      '- Follow the exact structure and style of the example commands provided below.',
+      '- The command must start with a H1 heading: # `!' + commandName + '`',
+      '- Include **Purpose:** and **Syntax:** fields.',
+      '- Include detailed step-by-step instructions.',
+      '- Use {tracker_root} and {project_root} path placeholders where appropriate.',
+      '- Be thorough and specific — the command file should be self-contained.',
+      '',
+      '--- CLAUDE.md (project context) ---',
+      claudeMdContent.slice(0, 8000),
+      '',
+      '--- Example command files for reference ---',
+      examples || '(no examples available)',
+    ].join('\n');
+
+    var userPrompt = 'Generate a command file for: ' + description;
+
+    var args = ['--print', '--max-turns', '1'];
+    if (opts.model) {
+      args.push('--model', opts.model);
+    }
+    args.push('--append-system-prompt', systemPrompt);
+    args.push(userPrompt);
+
+    var output = '';
+    var proc = spawn(cliPath, args, {
+      cwd: SYNAPSE_ROOT,
+      env: Object.assign({}, process.env, { ELECTRON_RUN_AS_NODE: undefined }),
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+
+    proc.stdout.on('data', function (chunk) {
+      output += chunk.toString();
+    });
+
+    proc.stderr.on('data', function (chunk) {
+      // Ignore stderr but could log for debugging
+    });
+
+    proc.on('close', function (code) {
+      if (code !== 0 || !output.trim()) {
+        resolve({ success: false, error: 'Claude CLI exited with code ' + code });
+        return;
+      }
+
+      // Parse the streamed JSON output to extract the text content
+      var content = '';
+      var lines = output.split('\n');
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        try {
+          var parsed = JSON.parse(line);
+          if (parsed.type === 'assistant' && parsed.message && parsed.message.content) {
+            // Extract text blocks
+            parsed.message.content.forEach(function (block) {
+              if (block.type === 'text') {
+                content += block.text;
+              }
+            });
+          } else if (parsed.type === 'content_block_delta' && parsed.delta && parsed.delta.text) {
+            content += parsed.delta.text;
+          } else if (parsed.type === 'result' && parsed.result) {
+            // Final result format
+            content = parsed.result;
+          }
+        } catch (e) {
+          // Not JSON, might be raw text output
+          content += line + '\n';
+        }
+      }
+
+      content = content.trim();
+      if (!content) {
+        resolve({ success: false, error: 'No content generated' });
+        return;
+      }
+
+      // Strip code fences if Claude wrapped the output
+      content = content.replace(/^```(?:markdown|md)?\s*\n/i, '').replace(/\n```\s*$/, '');
+
+      // Save the generated command
+      var safeName = commandName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      var dir = path.join(COMMANDS_DIR, folderName);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      var filePath = path.join(dir, safeName + '.md');
+      fs.writeFileSync(filePath, content, 'utf8');
+
+      resolve({ success: true, name: safeName, filePath: filePath, content: content });
+    });
+
+    proc.on('error', function (err) {
+      resolve({ success: false, error: 'Failed to spawn Claude CLI: ' + err.message });
+    });
+  });
+}
+
 module.exports = {
   listCommands,
   getCommand,
   saveCommand,
+  saveCommandInFolder,
   deleteCommand,
+  createCommandFolder,
+  generateCommand,
   loadProjectClaudeMd,
   listProjectCommands,
   parseCommandFile,

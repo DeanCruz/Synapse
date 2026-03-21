@@ -1643,18 +1643,16 @@ a:hover {
 .timeline-close {
   background: none;
   border: none;
-  color: var(--text-tertiary);
-  font-size: 0.8rem;
+  color: #ffffff;
+  font-size: 1rem;
   cursor: pointer;
-  padding: 3px 7px;
-  border-radius: 6px;
-  transition: color 0.2s, background 0.2s;
-  font-family: var(--sans);
+  padding: 4px;
+  line-height: 1;
+  transition: opacity 0.2s;
 }
 
 .timeline-close:hover {
-  color: var(--text);
-  background: rgba(255,255,255,0.06);
+  opacity: 0.7;
 }
 
 .timeline-panel-body {
@@ -3307,8 +3305,8 @@ a:hover {
   border-bottom-color: rgba(0,0,0,0.08);
 }
 
-[data-theme="light"] .timeline-close:hover {
-  background: rgba(0,0,0,0.06);
+[data-theme="light"] .timeline-close {
+  color: #000000;
 }
 
 [data-theme="light"] .timeline-entry:not(:last-of-type)::before {
@@ -3787,8 +3785,8 @@ a:hover {
   border-bottom-color: var(--border);
 }
 
-[data-theme="custom"] .timeline-close:hover {
-  background: var(--surface);
+[data-theme="custom"] .timeline-close {
+  color: var(--text);
 }
 
 [data-theme="custom"] .timeline-entry:not(:last-of-type)::before {
@@ -4688,11 +4686,18 @@ a:hover {
 .claude-conversation,
 .claude-view-conversation {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* Prevent messages from shrinking — let the container scroll instead */
+.claude-conversation > *,
+.claude-view-conversation > * {
+  flex-shrink: 0;
 }
 
 /* Message bubbles */
@@ -4864,6 +4869,12 @@ a:hover {
 
 .claude-thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
 .claude-thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* No animation on old/completed thinking bubbles */
+.claude-thinking-bubble.thinking-done .claude-thinking-dots span {
+  animation: none;
+  opacity: 0.4;
+}
 
 .claude-thinking-label {
   font-size: 0.75rem;
@@ -5128,7 +5139,7 @@ a:hover {
 .claude-stop-btn:hover { background: #dc2626; opacity: 1; }
 
 .claude-model-select {
-  padding: 8px 10px;
+  padding: 8px 24px 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -5234,6 +5245,45 @@ a:hover {
   font-size: 0.68rem;
   color: var(--text-tertiary);
   font-weight: 400;
+}
+
+.commands-folder-add-btn {
+  width: 20px;
+  height: 20px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: none;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+  flex-shrink: 0;
+}
+
+.commands-folder-header:hover .commands-folder-add-btn {
+  opacity: 1;
+}
+
+.commands-folder-add-btn:hover {
+  color: var(--text);
+  border-color: var(--text-tertiary);
+}
+
+.commands-new-folder-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+}
+
+.commands-new-folder-input .commands-editor-input {
+  flex: 1;
+  padding: 4px 8px;
+  font-size: 0.78rem;
 }
 
 .commands-folder-items {
@@ -5422,6 +5472,32 @@ a:hover {
   cursor: pointer;
 }
 .commands-save-btn:hover { opacity: 0.85; }
+.commands-save-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.commands-generator-textarea {
+  min-height: 120px;
+}
+
+.commands-generator-error {
+  color: #ef4444;
+  font-size: 0.78rem;
+  padding: 8px 12px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  margin-top: 8px;
+}
+
+.commands-generator-status {
+  font-size: 0.78rem;
+  color: var(--color-in-progress);
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: rgba(155, 124, 240, 0.06);
+  border: 1px solid rgba(155, 124, 240, 0.15);
+  border-radius: 8px;
+  animation: processing-pulse 2s ease-in-out infinite;
+}
 
 /* Worker terminal modal — updated for conversation layout */
 .worker-terminal { flex: 1; overflow-y: auto; }

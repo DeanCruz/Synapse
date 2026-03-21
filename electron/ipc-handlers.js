@@ -656,6 +656,18 @@ function registerIPCHandlers(getMainWindow) {
     return CommandsService.deleteCommand(name, commandsDir || undefined);
   });
 
+  ipcMain.handle('create-command-folder', async (_event, folderName) => {
+    return CommandsService.createCommandFolder(folderName);
+  });
+
+  ipcMain.handle('save-command-in-folder', async (_event, name, content, folderName) => {
+    return CommandsService.saveCommandInFolder(name, content, folderName);
+  });
+
+  ipcMain.handle('generate-command', async (_event, description, folderName, commandName, opts) => {
+    return CommandsService.generateCommand(description, folderName, commandName, opts || {});
+  });
+
   ipcMain.handle('load-project-claude-md', async (_event, projectDir) => {
     return CommandsService.loadProjectClaudeMd(projectDir);
   });

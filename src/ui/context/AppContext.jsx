@@ -64,6 +64,7 @@ const initialState = {
   // Persistent Claude chat state (per-dashboard)
   claudeMessages: loadSavedMessages('dashboard1') || [CLAUDE_WELCOME_MSG],
   claudeChatStash: {}, // { [dashboardId]: messages } — in-memory cache for fast dashboard switching
+  claudeProcessingStash: {}, // { [dashboardId]: { isProcessing, status, pendingAttachments } }
   claudeIsProcessing: false,
   claudeStatus: 'Ready',
   claudeActiveTaskId: null,
@@ -100,10 +101,16 @@ function appReducerCore(state, action) {
       return { ...state, allDashboardLogs: newLogs };
     }
     case 'SWITCH_DASHBOARD': {
-      // Stash current dashboard's chat messages
+      // Stash current dashboard's chat messages AND processing state
       const stash = { ...state.claudeChatStash, [state.currentDashboardId]: state.claudeMessages };
-      // Restore target dashboard's chat messages
+      const procStash = { ...state.claudeProcessingStash, [state.currentDashboardId]: {
+        isProcessing: state.claudeIsProcessing,
+        status: state.claudeStatus,
+        pendingAttachments: state.claudePendingAttachments,
+      }};
+      // Restore target dashboard's chat messages and processing state
       const targetMessages = stash[action.id] || loadSavedMessages(action.id) || [CLAUDE_WELCOME_MSG];
+      const targetProc = procStash[action.id] || {};
       return {
         ...state,
         currentDashboardId: action.id,
@@ -116,12 +123,13 @@ function appReducerCore(state, action) {
         activeView: state.activeView === 'claude' ? 'claude' : 'dashboard',
         archiveViewActive: false,
         queueViewActive: false,
-        // Swap chat state
+        // Swap chat state — preserve processing state per dashboard
         claudeChatStash: stash,
+        claudeProcessingStash: procStash,
         claudeMessages: targetMessages,
-        claudeIsProcessing: false,
-        claudeStatus: 'Ready',
-        claudePendingAttachments: [],
+        claudeIsProcessing: targetProc.isProcessing || false,
+        claudeStatus: targetProc.status || 'Ready',
+        claudePendingAttachments: targetProc.pendingAttachments || [],
         claudeDashboardId: action.id,
       };
     }

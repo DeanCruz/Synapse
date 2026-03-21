@@ -91,6 +91,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getCommand: (name, commandsDir) => ipcRenderer.invoke('get-command', name, commandsDir),
   saveCommand: (name, content, commandsDir) => ipcRenderer.invoke('save-command', name, content, commandsDir),
   deleteCommand: (name, commandsDir) => ipcRenderer.invoke('delete-command', name, commandsDir),
+  createCommandFolder: (folderName) => ipcRenderer.invoke('create-command-folder', folderName),
+  saveCommandInFolder: (name, content, folderName) => ipcRenderer.invoke('save-command-in-folder', name, content, folderName),
+  generateCommand: (description, folderName, commandName, opts) => ipcRenderer.invoke('generate-command', description, folderName, commandName, opts),
   loadProjectClaudeMd: (projectDir) => ipcRenderer.invoke('load-project-claude-md', projectDir),
   listProjectCommands: (projectDir) => ipcRenderer.invoke('list-project-commands', projectDir),
 
