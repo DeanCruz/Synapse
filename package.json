@@ -13,6 +13,7 @@
     "appId": "com.synapse.app",
     "productName": "Synapse",
     "mac": {
+      "icon": "electron/assets/icon.icns",
       "target": "dmg",
       "category": "public.app-category.developer-tools"
     },
@@ -27,6 +28,10 @@
       {
         "from": "dashboards",
         "to": "dashboards"
+      },
+      {
+        "from": "electron/assets/icon.icns",
+        "to": "icon.icns"
       }
     ]
   },

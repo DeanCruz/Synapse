@@ -74,6 +74,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getProjectContext: (dirPath) => ipcRenderer.invoke('get-project-context', dirPath),
   scanProjectDirectory: (dirPath, depth) => ipcRenderer.invoke('scan-project-directory', dirPath, depth),
   detectClaudeCli: () => ipcRenderer.invoke('detect-claude-cli'),
+  detectAgentCli: (provider) => ipcRenderer.invoke('detect-agent-cli', provider),
 
   // Task Editor
   createSwarm: (dashboardId, opts) => ipcRenderer.invoke('create-swarm', dashboardId, opts),

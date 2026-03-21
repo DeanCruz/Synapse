@@ -1,4 +1,4 @@
-// Sidebar — Dashboard selector with status dots, per-dashboard Project/Claude buttons,
+// Sidebar — Dashboard selector with status dots, per-dashboard Project/Agent buttons,
 // collapse toggle, and queue section
 
 import React, { useState } from 'react';
@@ -42,7 +42,7 @@ export default function Sidebar() {
 
   function handleClaudeClick(e, dashboardId) {
     e.stopPropagation();
-    // Switch to the dashboard first, then open Claude
+    // Switch to the dashboard first, then open the agent chat
     if (dashboardId !== currentDashboardId) {
       dispatch({ type: 'SWITCH_DASHBOARD', id: dashboardId });
     }
@@ -99,7 +99,7 @@ export default function Sidebar() {
                 </button>
                 <button
                   className="dashboard-item-action-btn"
-                  title="Claude Chat"
+                  title="Agent Chat"
                   onClick={(e) => handleClaudeClick(e, id)}
                 >
                   <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
