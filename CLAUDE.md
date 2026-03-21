@@ -521,6 +521,7 @@ Synapse/                            ← {tracker_root}
 │   │   ├── reset.md                ← Clear dashboard data
 │   │   ├── dispatch.md             ← Manually dispatch tasks
 │   │   ├── retry.md                ← Re-run failed tasks
+│   │   ├── resume.md               ← Resume a stalled/interrupted swarm
 │   │   ├── cancel.md               ← Cancel the active swarm
 │   │   ├── cancel-safe.md          ← Graceful shutdown
 │   │   ├── logs.md                 ← View/filter log entries
@@ -629,6 +630,7 @@ When the user types a command prefixed with `!`, resolve it using the command re
 | `!master_plan_track {prompt}` | Multi-stream orchestration — decompose into independent swarms across dashboards. |
 | `!dispatch {id}` | Manually dispatch a specific pending task. `!dispatch --ready` dispatches all unblocked tasks. |
 | `!retry {id}` | Re-dispatch a failed task with a fresh agent. |
+| `!resume` | Resume a stalled/interrupted swarm — re-dispatch all incomplete tasks with full context. |
 | `!cancel` | Cancel the active swarm. `!cancel --force` skips confirmation. |
 | `!cancel-safe` | Graceful shutdown — let running tasks finish, cancel pending. |
 
