@@ -57,7 +57,7 @@ export default function TimelinePanel({ status, visible, onClose }) {
     <div className={`timeline-panel${visible ? ' expanded' : ''}`}>
       <div className="timeline-panel-header">
         <span className="timeline-panel-title">Timeline</span>
-        <button className="timeline-close-btn" onClick={onClose} aria-label="Close timeline">
+        <button className="timeline-close" onClick={onClose} aria-label="Close timeline">
           &#10005;
         </button>
       </div>

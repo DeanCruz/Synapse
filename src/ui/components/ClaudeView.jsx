@@ -80,11 +80,12 @@ function toolInputSummary(name, input) {
 }
 
 // Thinking bubble — shown for extended thinking blocks (collapsible)
-function ThinkingBubble({ msg }) {
+// isLatest controls whether the dots animate (only the most recent thinking block animates)
+function ThinkingBubble({ msg, isLatest }) {
   const [expanded, setExpanded] = useState(false);
   const hasContent = msg.text && msg.text.trim().length > 0;
   return (
-    <div className="claude-thinking-bubble">
+    <div className={'claude-thinking-bubble' + (isLatest ? '' : ' thinking-done')}>
       <div
         className="claude-thinking-header"
         onClick={() => hasContent && setExpanded(e => !e)}
@@ -169,9 +170,9 @@ function ToolCallBlock({ block }) {
 }
 
 // A single conversation message
-function ConversationMessage({ msg }) {
+function ConversationMessage({ msg, isLatestThinking }) {
   if (msg.type === 'thinking') {
-    return <ThinkingBubble msg={msg} />;
+    return <ThinkingBubble msg={msg} isLatest={isLatestThinking} />;
   }
   if (msg.type === 'user') {
     return (
@@ -266,6 +267,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const toolCallIndexRef = useRef({});
   // Index of current accumulating assistant text message
   const currentTextIndexRef = useRef(null);
+  // Streaming content block accumulator: { index -> { type, id, name, input_json, thinking } }
+  const streamingBlocksRef = useRef({});
   // Stable refs so IPC listeners always call latest functions
   const handleChunkRef = useRef(null);
   const finishRef = useRef(null);
@@ -273,35 +276,53 @@ export default function ClaudeView({ onClose, hideHeader }) {
   // Keep messagesRef in sync for async saves
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
-  // Swap session/conversation refs when dashboard changes
+  // Stash/restore per-dashboard refs when dashboard changes — never lose running workers
+  const activeTaskStashRef = useRef({});  // { [dashboardId]: Set of taskIds }
+  const codexStashRef = useRef({});       // { [dashboardId]: Set of taskIds }
+  const textIndexStashRef = useRef({});   // { [dashboardId]: currentTextIndex }
+  const toolIndexStashRef = useRef({});   // { [dashboardId]: toolCallIndexMap }
+  // Global map: taskId → dashboardId (persists across switches so we can route output)
+  const taskDashboardMapRef = useRef({});
+
   useEffect(() => {
     if (prevDashboardRef.current !== dashboardId) {
+      const prev = prevDashboardRef.current;
       // Stash current dashboard's session info
-      sessionMapRef.current[prevDashboardRef.current] = {
+      sessionMapRef.current[prev] = {
         sessionId: sessionIdRef.current,
         convId: convIdRef.current,
         convCreated: convCreatedRef.current,
       };
+      // Stash active task refs so workers keep being tracked when we switch back
+      activeTaskStashRef.current[prev] = new Set(activeTaskIdsRef.current);
+      codexStashRef.current[prev] = new Set(codexStreamedTaskIdsRef.current);
+      textIndexStashRef.current[prev] = currentTextIndexRef.current;
+      toolIndexStashRef.current[prev] = { ...toolCallIndexRef.current };
+
       // Restore target dashboard's session info
       const restored = sessionMapRef.current[dashboardId] || {};
       sessionIdRef.current = restored.sessionId || null;
       convIdRef.current = restored.convId || null;
       convCreatedRef.current = restored.convCreated || null;
-      // Reset streaming state
-      currentTextIndexRef.current = null;
-      toolCallIndexRef.current = {};
+      // Restore target dashboard's active task refs
+      activeTaskIdsRef.current = activeTaskStashRef.current[dashboardId] || new Set();
+      codexStreamedTaskIdsRef.current = codexStashRef.current[dashboardId] || new Set();
+      currentTextIndexRef.current = textIndexStashRef.current[dashboardId] ?? null;
+      toolCallIndexRef.current = toolIndexStashRef.current[dashboardId] || {};
       prevDashboardRef.current = dashboardId;
     }
   }, [dashboardId]);
 
   // Auto-scroll on new messages or dashboard switch
+  // Uses messages.length + last message text length to detect both new messages and content updates
+  const scrollTrigger = messages.length + (messages[messages.length - 1]?.text?.length || 0);
   useEffect(() => {
     requestAnimationFrame(() => {
       if (conversationRef.current) {
         conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
       }
     });
-  }, [messages, dashboardId]);
+  }, [scrollTrigger, dashboardId]);
 
   // Load conversation list when history panel opens (filtered by current dashboard)
   useEffect(() => {
@@ -323,27 +344,118 @@ export default function ClaudeView({ onClose, hideHeader }) {
     }).catch(() => {});
   }, [api, dashboardId]);
 
-  // Set up push listeners — use refs so the closure always calls latest functions
+  // Set up push listeners — route output to correct dashboard (current or stashed)
   useEffect(() => {
     if (!api) return;
 
+    // Helper: check if a taskId belongs to any dashboard (current or stashed)
+    function isKnownTask(taskId) {
+      if (activeTaskIdsRef.current.has(taskId)) return true;
+      for (const did in activeTaskStashRef.current) {
+        if (activeTaskStashRef.current[did]?.has(taskId)) return true;
+      }
+      return false;
+    }
+
+    // Helper: check if taskId belongs to the currently active dashboard
+    function isCurrentDashboardTask(taskId) {
+      return activeTaskIdsRef.current.has(taskId);
+    }
+
+    // Helper: find which stashed dashboard owns this task
+    function getStashedDashboard(taskId) {
+      return taskDashboardMapRef.current[taskId] || null;
+    }
+
     const workerListener = api.on('worker-output', (data) => {
-      if (!activeTaskIdsRef.current.has(data.taskId)) return;
-      if (handleChunkRef.current) handleChunkRef.current(data);
+      if (!isKnownTask(data.taskId)) return;
+
+      if (isCurrentDashboardTask(data.taskId)) {
+        // Active dashboard — process normally
+        if (handleChunkRef.current) handleChunkRef.current(data);
+      } else {
+        // Non-active dashboard — buffer chunks into stashed messages
+        const targetDash = getStashedDashboard(data.taskId);
+        if (!targetDash) return;
+        const chunk = data.chunk;
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const evt = JSON.parse(trimmed);
+            // Only capture text and tool_use from assistant events for stashed dashboards
+            if (evt.type === 'assistant') {
+              const content = evt.message?.content || evt.content || [];
+              for (const block of content) {
+                if (block.type === 'text') {
+                  const cleaned = stripAnsi(block.text);
+                  if (cleaned && cleaned.trim()) {
+                    dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'assistant', text: cleaned } });
+                  }
+                } else if (block.type === 'tool_use' || block.type === 'server_tool_use') {
+                  dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
+                } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
+                  dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'thinking', text: block.thinking || '' } });
+                }
+              }
+            } else if (evt.type === 'content_block_stop') {
+              // Handle streaming format for stashed dashboards (simplified — just capture the final block)
+              // Full streaming state for stashed dashboards isn't tracked, but content_block_stop
+              // with complete data will be handled when the assistant event arrives
+            } else if (evt.type === 'system') {
+              if (evt.subtype === 'init') {
+                dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: `Connected — model: ${evt.model || '?'}, ${(evt.tools || []).length} tools available` } });
+              }
+            } else if (evt.type === 'result') {
+              if (evt.session_id) {
+                // Stash the session ID for this dashboard
+                const storedSession = sessionMapRef.current[targetDash] || {};
+                sessionMapRef.current[targetDash] = { ...storedSession, sessionId: evt.session_id };
+              }
+            }
+          } catch (e) {
+            // Non-JSON output for stashed dashboard — skip (progress bars, etc.)
+          }
+        }
+      }
     });
 
     const completeListener = api.on('worker-complete', (data) => {
-      if (!activeTaskIdsRef.current.has(data.taskId)) return;
-      if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
-        appendMsg({ type: 'assistant', text: data.lastMessage });
+      if (!isKnownTask(data.taskId)) return;
+
+      if (isCurrentDashboardTask(data.taskId)) {
+        // Active dashboard — process normally
+        if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
+          appendMsg({ type: 'assistant', text: data.lastMessage });
+        }
+        if (data.errorOutput) {
+          dispatch({
+            type: 'CLAUDE_APPEND_MSG',
+            msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true }
+          });
+        }
+        if (finishRef.current) finishRef.current(data.taskId);
+      } else {
+        // Non-active dashboard — update stashed state
+        const targetDash = getStashedDashboard(data.taskId);
+        if (!targetDash) return;
+        if (data.provider === 'codex' && data.lastMessage) {
+          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'assistant', text: data.lastMessage } });
+        }
+        if (data.errorOutput) {
+          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true } });
+        }
+        // Remove from stashed active tasks and update processing state
+        const stashedSet = activeTaskStashRef.current[targetDash];
+        if (stashedSet) {
+          stashedSet.delete(data.taskId);
+          if (stashedSet.size === 0) {
+            dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', dashboardId: targetDash, value: false, status: 'Ready' });
+          }
+        }
+        delete taskDashboardMapRef.current[data.taskId];
       }
-      if (data.errorOutput) {
-        dispatch({
-          type: 'CLAUDE_APPEND_MSG',
-          msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true }
-        });
-      }
-      if (finishRef.current) finishRef.current(data.taskId);
     });
 
     return () => {
@@ -404,6 +516,15 @@ export default function ClaudeView({ onClose, hideHeader }) {
     }});
   }
 
+  // Test if a line is purely CLI progress/spinner output (no meaningful text)
+  function isProgressBarLine(str) {
+    // Strip all known progress bar, spinner, box-drawing, and braille characters
+    const stripped = str.replace(/[\u2580-\u259F\u2500-\u257F\u2800-\u28FF\u2588█▓▒░━─═●○◉◎◐◑◒◓⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⣾⣽⣻⢿⡿⣟⣯⣷▰▱▮▯■□▪▫◼◻⬛⬜⏳⏸⏵⏹✓✗✘→←↑↓•·…‥─╌╍╎╏┄┅┆┇┈┉┊┋]/g, '').trim();
+    // Also skip lines that are just dashes, equals, underscores, dots, or whitespace
+    const withoutFiller = stripped.replace(/[-=_.·•\s]/g, '').trim();
+    return withoutFiller.length === 0;
+  }
+
   function handleChunk(data) {
     const chunk = data.chunk;
     const lines = chunk.split('\n');
@@ -414,14 +535,11 @@ export default function ClaudeView({ onClose, hideHeader }) {
         const evt = JSON.parse(trimmed);
         processEvent(evt, data.taskId);
       } catch (e) {
-        // Non-JSON output from CLI — strip ANSI and skip empty/progress lines
+        // Non-JSON output from CLI — strip ANSI and skip progress/spinner lines
         const cleaned = stripAnsi(trimmed).trim();
-        // Also strip Unicode block/bar characters used for terminal progress bars
-        const withoutBlocks = cleaned.replace(/[\u2580-\u259F\u2500-\u257F\u2800-\u28FF\u2588█▓▒░━─═]/g, '').trim();
-        if (withoutBlocks) {
+        if (cleaned && !isProgressBarLine(cleaned)) {
           appendTextContent(cleaned + '\n');
         }
-        // else: skip — line was purely progress bar characters
       }
     }
   }
@@ -448,24 +566,86 @@ export default function ClaudeView({ onClose, hideHeader }) {
         for (const block of content) {
           if (block.type === 'text') {
             const cleaned = stripAnsi(block.text);
-            console.log('[ClaudeView] assistant text block:', JSON.stringify(cleaned?.substring(0, 200)));
             if (cleaned && cleaned.trim()) {
               appendTextContent(cleaned);
             }
-          } else if (block.type === 'tool_use') {
+          } else if (block.type === 'tool_use' || block.type === 'server_tool_use') {
             addToolCall({
               id: block.id,
               name: block.name,
               input: block.input,
             });
-          } else if (block.type === 'thinking') {
+          } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
             dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
-            // Add thinking block as a collapsible bubble in the conversation
             appendMsg({ type: 'thinking', text: block.thinking || '' });
           }
         }
         break;
       }
+
+      // --- Streaming content block events (Claude CLI stream-json format) ---
+      case 'content_block_start': {
+        const block = evt.content_block || {};
+        const idx = evt.index ?? 0;
+        if (block.type === 'tool_use' || block.type === 'server_tool_use') {
+          streamingBlocksRef.current[idx] = {
+            type: 'tool_use', id: block.id, name: block.name, input_json: '',
+          };
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: `Tool: ${block.name}` });
+        } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
+          streamingBlocksRef.current[idx] = { type: 'thinking', thinking: '' };
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
+        } else if (block.type === 'text') {
+          streamingBlocksRef.current[idx] = { type: 'text', text: '' };
+        }
+        break;
+      }
+
+      case 'content_block_delta': {
+        const idx = evt.index ?? 0;
+        const delta = evt.delta || {};
+        const acc = streamingBlocksRef.current[idx];
+        if (!acc) break;
+
+        if (delta.type === 'text_delta' && acc.type === 'text') {
+          const cleaned = stripAnsi(delta.text || '');
+          if (cleaned) appendTextContent(cleaned);
+        } else if (delta.type === 'thinking_delta' && acc.type === 'thinking') {
+          acc.thinking += (delta.thinking || '');
+        } else if (delta.type === 'input_json_delta' && acc.type === 'tool_use') {
+          acc.input_json += (delta.partial_json || '');
+        }
+        break;
+      }
+
+      case 'content_block_stop': {
+        const idx = evt.index ?? 0;
+        const acc = streamingBlocksRef.current[idx];
+        if (!acc) break;
+
+        if (acc.type === 'tool_use') {
+          let input = {};
+          try { input = JSON.parse(acc.input_json); } catch (e) { /* partial */ }
+          addToolCall({ id: acc.id, name: acc.name, input });
+        } else if (acc.type === 'thinking') {
+          appendMsg({ type: 'thinking', text: acc.thinking || '' });
+        } else if (acc.type === 'text') {
+          flushText();
+        }
+        delete streamingBlocksRef.current[idx];
+        break;
+      }
+
+      case 'message_start':
+      case 'message_delta':
+        // Message-level streaming events — session_id may appear here
+        if (evt.message?.id) { /* message started */ }
+        break;
+
+      case 'message_stop':
+        flushText();
+        streamingBlocksRef.current = {};
+        break;
 
       case 'user': {
         const content = evt.message?.content || [];
@@ -480,6 +660,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
 
       case 'result': {
         flushText();
+        streamingBlocksRef.current = {};
         if (evt.session_id) sessionIdRef.current = evt.session_id;
         break;
       }
@@ -506,6 +687,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         break;
 
       case 'rate_limit_event':
+      case 'ping':
         break;
 
       default:
@@ -517,6 +699,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
   function finishProcessing(taskId) {
     activeTaskIdsRef.current.delete(taskId);
     codexStreamedTaskIdsRef.current.delete(taskId);
+    delete taskDashboardMapRef.current[taskId];
     // Only mark as not processing when ALL workers are done
     if (activeTaskIdsRef.current.size === 0) {
       dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
@@ -709,6 +892,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
     const taskId = '_claude_' + Date.now();
     activeTaskIdsRef.current.add(taskId);
     codexStreamedTaskIdsRef.current.delete(taskId);
+    // Register in global map so output can be routed even after dashboard switch
+    taskDashboardMapRef.current[taskId] = dashboardId;
 
     try {
       const settings = await api.getSettings();
@@ -971,9 +1156,20 @@ export default function ClaudeView({ onClose, hideHeader }) {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          {messages.map(msg => (
-            <ConversationMessage key={msg.id} msg={msg} />
-          ))}
+          {(() => {
+            // Find last thinking index once, outside the map loop
+            let lastThinkingIdx = -1;
+            for (let i = messages.length - 1; i >= 0; i--) {
+              if (messages[i].type === 'thinking') { lastThinkingIdx = i; break; }
+            }
+            return messages.map((msg, idx) => (
+              <ConversationMessage
+                key={msg.id}
+                msg={msg}
+                isLatestThinking={msg.type === 'thinking' && idx === lastThinkingIdx && isProcessing}
+              />
+            ));
+          })()}
           {/* Show animated dots when processing and last message isn't already a thinking block */}
           {isProcessing && messages.length > 0 && messages[messages.length - 1]?.type !== 'thinking' && (
             <ProcessingIndicator />

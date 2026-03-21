@@ -64,6 +64,7 @@ const initialState = {
   // Persistent Claude chat state (per-dashboard)
   claudeMessages: loadSavedMessages('dashboard1') || [CLAUDE_WELCOME_MSG],
   claudeChatStash: {}, // { [dashboardId]: messages } — in-memory cache for fast dashboard switching
+  claudeProcessingStash: {}, // { [dashboardId]: { isProcessing, status, pendingAttachments } }
   claudeIsProcessing: false,
   claudeStatus: 'Ready',
   claudeActiveTaskId: null,
@@ -100,10 +101,16 @@ function appReducerCore(state, action) {
       return { ...state, allDashboardLogs: newLogs };
     }
     case 'SWITCH_DASHBOARD': {
-      // Stash current dashboard's chat messages
+      // Stash current dashboard's chat messages AND processing state
       const stash = { ...state.claudeChatStash, [state.currentDashboardId]: state.claudeMessages };
-      // Restore target dashboard's chat messages
+      const procStash = { ...state.claudeProcessingStash, [state.currentDashboardId]: {
+        isProcessing: state.claudeIsProcessing,
+        status: state.claudeStatus,
+        pendingAttachments: state.claudePendingAttachments,
+      }};
+      // Restore target dashboard's chat messages and processing state
       const targetMessages = stash[action.id] || loadSavedMessages(action.id) || [CLAUDE_WELCOME_MSG];
+      const targetProc = procStash[action.id] || {};
       return {
         ...state,
         currentDashboardId: action.id,
@@ -116,12 +123,13 @@ function appReducerCore(state, action) {
         activeView: state.activeView === 'claude' ? 'claude' : 'dashboard',
         archiveViewActive: false,
         queueViewActive: false,
-        // Swap chat state
+        // Swap chat state — preserve processing state per dashboard
         claudeChatStash: stash,
+        claudeProcessingStash: procStash,
         claudeMessages: targetMessages,
-        claudeIsProcessing: false,
-        claudeStatus: 'Ready',
-        claudePendingAttachments: [],
+        claudeIsProcessing: targetProc.isProcessing || false,
+        claudeStatus: targetProc.status || 'Ready',
+        claudePendingAttachments: targetProc.pendingAttachments || [],
         claudeDashboardId: action.id,
       };
     }
@@ -163,6 +171,29 @@ function appReducerCore(state, action) {
       return { ...state, claudePendingAttachments: state.claudePendingAttachments.filter(a => a.id !== action.id) };
     case 'CLAUDE_CLEAR_ATTACHMENTS':
       return { ...state, claudePendingAttachments: [] };
+    // --- Stashed dashboard updates (for non-active dashboards with running workers) ---
+    case 'CLAUDE_STASH_APPEND_MSG': {
+      const did = action.dashboardId;
+      const stashedMsgs = state.claudeChatStash[did] || loadSavedMessages(did) || [CLAUDE_WELCOME_MSG];
+      const updatedMsgs = [...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }];
+      const newStash = { ...state.claudeChatStash, [did]: updatedMsgs };
+      try { localStorage.setItem(claudeMessagesKey(did), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
+      return { ...state, claudeChatStash: newStash };
+    }
+    case 'CLAUDE_STASH_UPDATE_MESSAGES': {
+      const did = action.dashboardId;
+      const stashedMsgs = state.claudeChatStash[did] || loadSavedMessages(did) || [CLAUDE_WELCOME_MSG];
+      const updatedMsgs = action.updater(stashedMsgs);
+      const newStash = { ...state.claudeChatStash, [did]: updatedMsgs };
+      try { localStorage.setItem(claudeMessagesKey(did), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
+      return { ...state, claudeChatStash: newStash };
+    }
+    case 'CLAUDE_STASH_SET_PROCESSING': {
+      const did = action.dashboardId;
+      const existing = state.claudeProcessingStash[did] || {};
+      const newProcStash = { ...state.claudeProcessingStash, [did]: { ...existing, isProcessing: action.value, status: action.status || existing.status || 'Ready' } };
+      return { ...state, claudeProcessingStash: newProcStash };
+    }
     default:
       return state;
   }

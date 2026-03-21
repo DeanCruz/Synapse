@@ -308,39 +308,49 @@ export default function App() {
 // Always mounted once opened so IPC listeners stay alive during background runs.
 // isVisible=false hides via CSS (display:none) without unmounting.
 function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onClose, onSetMode }) {
+  const floatRef = React.useRef(null);
+  const prevMode = React.useRef(viewMode);
+
+  // Clear inline resize styles when leaving expanded mode so they don't
+  // bleed into minimized/collapsed/maximized layouts.
+  React.useEffect(() => {
+    if (prevMode.current === 'expanded' && viewMode !== 'expanded' && floatRef.current) {
+      floatRef.current.style.width = '';
+      floatRef.current.style.height = '';
+    }
+    prevMode.current = viewMode;
+  }, [viewMode]);
+
   return (
     <div
+      ref={floatRef}
       className={`claude-float claude-float--${viewMode}`}
       style={!isVisible ? { display: 'none' } : undefined}
     >
-      {viewMode === 'minimized' ? (
-        <>
-          <button className="claude-pill" onClick={() => onSetMode('expanded')}>
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.4"/>
-              <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
-              <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
-              <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
-            </svg>
-            <span>Claude</span>
-          </button>
-          {/* ClaudeView always mounted (hidden) so listeners stay alive */}
-          <div style={{ display: 'none' }}>
-            <ClaudeView onClose={onClose} hideHeader />
-          </div>
-        </>
-      ) : (
-        <div className="claude-view">
+      {/* Minimized: show pill button */}
+      {viewMode === 'minimized' && (
+        <button className="claude-pill" onClick={() => onSetMode('expanded')}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.4"/>
+            <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
+            <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
+            <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
+          </svg>
+          <span>Claude</span>
+        </button>
+      )}
+      {/* ClaudeView always in the same tree position so it never unmounts */}
+      <div className="claude-view" style={viewMode === 'minimized' ? { display: 'none' } : undefined}>
+        {viewMode !== 'minimized' && (
           <ClaudeFloatingHeader
             dashboardId={dashboardId}
             viewMode={viewMode}
             onClose={onClose}
             onSetMode={onSetMode}
           />
-          {/* Always mount ClaudeView — collapsed mode hides body via CSS */}
-          <ClaudeView onClose={onClose} hideHeader />
-        </div>
-      )}
+        )}
+        <ClaudeView onClose={onClose} hideHeader />
+      </div>
     </div>
   );
 }
