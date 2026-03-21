@@ -19,6 +19,8 @@ function stripAnsi(str) {
     .replace(/\x1b[()][0-9A-B]/g, '')              // Character set selection
     .replace(/\x1b[\x20-\x2f]*[\x40-\x7e]/g, '')  // Other escape sequences
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, ''); // Control chars (keep \t \n \r)
+}
+
 const MODEL_OPTIONS = {
   claude: [
     { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
@@ -838,6 +840,22 @@ export default function ClaudeView({ onClose, hideHeader }) {
     }
   }
 
+  async function stopChat() {
+    if (!api || activeTaskIdsRef.current.size === 0) return;
+    try {
+      await api.killAllWorkers();
+    } catch (e) {
+      // ignore — workers may already be dead
+    }
+    // Clean up local state
+    activeTaskIdsRef.current.clear();
+    codexStreamedTaskIdsRef.current.clear();
+    currentTextIndexRef.current = null;
+    dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+    dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Stopped' });
+    appendMsg({ type: 'system', text: 'Agent stopped by user.' });
+  }
+
   async function loadHistoryConversation(conv) {
     if (isProcessing || !api) return;
     try {
@@ -987,23 +1005,6 @@ export default function ClaudeView({ onClose, hideHeader }) {
       )}
 
       <div className="claude-prompt-bar">
-        <select
-          className="claude-model-select"
-          value={model}
-          onChange={e => handleModelSelect(e.target.value)}
-        >
-          {getModelOptions(provider).map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <button
-          className="claude-attach-btn"
-          onClick={openFilePicker}
-          title="Attach image"
-          disabled={isProcessing}
-        >📎</button>
         <textarea
           ref={textareaRef}
           className="claude-prompt-input"
@@ -1026,13 +1027,43 @@ export default function ClaudeView({ onClose, hideHeader }) {
           style={{ display: 'none' }}
           onChange={e => { handleFiles(Array.from(e.target.files)); e.target.value = ''; }}
         />
-        <button
-          className="claude-send-btn"
-          onClick={sendMessage}
-          disabled={!prompt.trim() && pendingAttachments.length === 0}
-        >
-          Send
-        </button>
+        <div className="claude-prompt-controls">
+          <div className="claude-prompt-controls-left">
+            <select
+              className="claude-model-select"
+              value={model}
+              onChange={e => handleModelSelect(e.target.value)}
+            >
+              {getModelOptions(provider).map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <button
+              className="claude-attach-btn"
+              onClick={openFilePicker}
+              title="Attach image"
+              disabled={isProcessing}
+            >📎</button>
+          </div>
+          {isProcessing ? (
+            <button
+              className="claude-send-btn claude-stop-btn"
+              onClick={stopChat}
+            >
+              Stop
+            </button>
+          ) : (
+            <button
+              className="claude-send-btn"
+              onClick={sendMessage}
+              disabled={!prompt.trim() && pendingAttachments.length === 0}
+            >
+              Send
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

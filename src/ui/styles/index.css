@@ -5042,15 +5042,28 @@ a:hover {
 /* Prompt bar */
 .claude-prompt-bar {
   display: flex;
-  align-items: flex-end;
+  flex-direction: column;
   gap: 8px;
   padding: 12px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface-raised);
 }
 
+.claude-prompt-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.claude-prompt-controls-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .claude-prompt-input {
-  flex: 1;
+  width: 100%;
+  box-sizing: border-box;
   resize: none;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -5089,6 +5102,8 @@ a:hover {
 
 .claude-send-btn:hover { opacity: 0.85; }
 .claude-send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.claude-stop-btn { background: #ef4444; }
+.claude-stop-btn:hover { background: #dc2626; opacity: 1; }
 
 .claude-model-select {
   padding: 8px 10px;
