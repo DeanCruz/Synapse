@@ -10,6 +10,15 @@ import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { renderMarkdown } from '../utils/markdown.js';
 import { getDashboardProject } from '../utils/dashboardProjects.js';
 
+// Strip ANSI escape codes and terminal control characters from text
+function stripAnsi(str) {
+  if (!str || typeof str !== 'string') return str;
+  return str
+    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')       // CSI sequences (colors, cursor, etc.)
+    .replace(/\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)/g, '') // OSC sequences
+    .replace(/\x1b[()][0-9A-B]/g, '')              // Character set selection
+    .replace(/\x1b[\x20-\x2f]*[\x40-\x7e]/g, '')  // Other escape sequences
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, ''); // Control chars (keep \t \n \r)
 const MODEL_OPTIONS = {
   claude: [
     { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
@@ -122,17 +131,31 @@ function ConversationMessage({ msg }) {
     );
   }
   if (msg.type === 'assistant') {
+    // DEBUG: log raw text content to console for diagnosis
+    console.log('[ClaudeView][RENDER] assistant msg text (' + (msg.text?.length || 0) + ' chars):', JSON.stringify(msg.text?.substring(0, 300)));
+    // DEBUG: also log char codes of first 50 chars
+    if (msg.text) {
+      const codes = Array.from(msg.text.substring(0, 50)).map(c => c.charCodeAt(0));
+      console.log('[ClaudeView][RENDER] char codes:', codes);
+    }
     return (
       <div className="claude-message claude-assistant">
-        <div
-          className="claude-message-text"
-          dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }}
-        />
+        <pre className="claude-message-text" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.75rem' }}>
+          {msg.text || '(empty)'}
+        </pre>
       </div>
     );
   }
   if (msg.type === 'tool_call') {
-    return <ToolCallBlock block={msg.block} />;
+    // DEBUG: render tool calls as visible debug blocks
+    return (
+      <div style={{ background: '#1a1a2e', border: '1px solid #444', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', maxWidth: '90%', fontSize: '0.75rem' }}>
+        <span style={{ color: '#f59e0b' }}>[TOOL_CALL]</span>{' '}
+        <span style={{ color: '#60a5fa' }}>{msg.block?.name || '(no name)'}</span>{' '}
+        <span style={{ color: '#888' }}>{toolInputSummary(msg.block?.name, msg.block?.input) || ''}</span>
+        {msg.block?._result && <span style={{ color: '#34d399' }}> ✓ has result</span>}
+      </div>
+    );
   }
   if (msg.type === 'system') {
     return (
@@ -143,12 +166,19 @@ function ConversationMessage({ msg }) {
   }
   if (msg.type === 'tool_result_standalone') {
     return (
-      <div className="claude-tool-result-standalone">
-        <pre className="claude-tool-result">{toolResultText(msg.content)}</pre>
+      <div style={{ background: '#1a1a2e', border: '1px solid #2d6', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', maxWidth: '90%', fontSize: '0.75rem' }}>
+        <span style={{ color: '#34d399' }}>[TOOL_RESULT_STANDALONE]</span>{' '}
+        <span style={{ color: '#ccc' }}>{String(toolResultText(msg.content)).substring(0, 100)}</span>
       </div>
     );
   }
-  return null;
+  // DEBUG: catch any unknown message types
+  return (
+    <div style={{ background: '#2a1a1a', border: '1px solid #f44', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', fontSize: '0.75rem' }}>
+      <span style={{ color: '#f44' }}>[UNKNOWN type="{msg.type}"]</span>{' '}
+      <span style={{ color: '#888' }}>{JSON.stringify(msg).substring(0, 150)}</span>
+    </div>
+  );
 }
 
 export default function ClaudeView({ onClose, hideHeader }) {
@@ -333,7 +363,14 @@ export default function ClaudeView({ onClose, hideHeader }) {
         const evt = JSON.parse(trimmed);
         processEvent(evt, data.taskId);
       } catch (e) {
-        appendTextContent(trimmed + '\n');
+        // Non-JSON output from CLI — strip ANSI and skip empty/progress lines
+        const cleaned = stripAnsi(trimmed).trim();
+        // Also strip Unicode block/bar characters used for terminal progress bars
+        const withoutBlocks = cleaned.replace(/[\u2580-\u259F\u2500-\u257F\u2800-\u28FF\u2588█▓▒░━─═]/g, '').trim();
+        if (withoutBlocks) {
+          appendTextContent(cleaned + '\n');
+        }
+        // else: skip — line was purely progress bar characters
       }
     }
   }
@@ -359,7 +396,11 @@ export default function ClaudeView({ onClose, hideHeader }) {
         const content = evt.message?.content || evt.content || [];
         for (const block of content) {
           if (block.type === 'text') {
-            appendTextContent(block.text);
+            const cleaned = stripAnsi(block.text);
+            console.log('[ClaudeView] assistant text block:', JSON.stringify(cleaned?.substring(0, 200)));
+            if (cleaned && cleaned.trim()) {
+              appendTextContent(cleaned);
+            }
           } else if (block.type === 'tool_use') {
             addToolCall({
               id: block.id,
@@ -415,6 +456,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         break;
 
       default:
+        console.log('[ClaudeView] unhandled event type:', evt.type, JSON.stringify(evt).substring(0, 200));
         break;
     }
   }
