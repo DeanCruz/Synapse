@@ -7,4 +7,4 @@ if [ -n "$PID" ]; then
   exit 1
 fi
 
-node "$DIR/src/server/index.js" "$@"
+cd "$DIR" && npm start
