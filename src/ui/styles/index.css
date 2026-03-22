@@ -2009,6 +2009,37 @@ a:hover {
   letter-spacing: 0.05em;
 }
 
+.sidebar-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sidebar-add-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-add-btn:hover {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
+  color: #34d399;
+}
+
+.dashboard-sidebar.collapsed .sidebar-add-btn {
+  display: none;
+}
+
 .sidebar-toggle-btn {
   width: 28px;
   height: 28px;
@@ -2178,7 +2209,96 @@ a:hover {
   background: rgba(52, 211, 153, 0.1);
 }
 .dashboard-item-action-btn svg { flex-shrink: 0; }
+
+.dashboard-delete-btn:hover {
+  color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
 .dashboard-sidebar.collapsed .dashboard-item-actions { display: none; }
+
+/* ----- Delete confirmation popup ----- */
+.sidebar-delete-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fade-in 0.15s ease;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.sidebar-delete-popup {
+  background: rgba(20, 20, 24, 0.98);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  max-width: 340px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.sidebar-delete-popup-title {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.sidebar-delete-popup-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 16px;
+}
+
+.sidebar-delete-popup-text strong {
+  color: var(--text);
+}
+
+.sidebar-delete-popup-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.sidebar-delete-popup-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.sidebar-delete-popup-btn.archive {
+  background: rgba(155, 124, 240, 0.15);
+  border-color: rgba(155, 124, 240, 0.3);
+  color: #b794f6;
+}
+
+.sidebar-delete-popup-btn.archive:hover {
+  background: rgba(155, 124, 240, 0.25);
+  border-color: rgba(155, 124, 240, 0.5);
+}
+
+.sidebar-delete-popup-btn.cancel {
+  background: var(--surface);
+  color: var(--text-secondary);
+}
+
+.sidebar-delete-popup-btn.cancel:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
 
 .dashboard-item.archived-item {
   border: 1px solid rgba(155, 124, 240, 0.15);
@@ -5058,6 +5178,8 @@ a:hover {
   background: var(--surface-raised);
   flex-wrap: wrap;
   align-items: center;
+  flex-shrink: 0;
+  overflow: visible;
 }
 
 .claude-suggestion-chip {

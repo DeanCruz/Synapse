@@ -28,7 +28,7 @@ Global directories (not per-dashboard):
 
 All commands accept an optional `{dashboardId}` as the **first positional argument**.
 
-**Rule:** If the first argument matches `dashboard[1-5]`, consume it as `{dashboardId}`. Otherwise, run auto-detection.
+**Rule:** If the first argument matches `dashboard\d+`, consume it as `{dashboardId}`. Otherwise, run auto-detection.
 
 ```
 !status                     → auto-detect
@@ -39,7 +39,7 @@ All commands accept an optional `{dashboardId}` as the **first positional argume
 !logs dashboard2 --level error → explicit: dashboard2 + filter
 ```
 
-Task IDs use `N.N` format (e.g., `2.3`), flags start with `--` — neither conflicts with `dashboard[1-5]`.
+Task IDs use `N.N` format (e.g., `2.3`), flags start with `--` — neither conflicts with `dashboard\d+`.
 
 ---
 
@@ -49,7 +49,7 @@ Used by read commands (`!status`, `!logs`, `!inspect`, `!deps`) when no dashboar
 
 **Algorithm:**
 
-1. Scan `dashboard1` through `dashboard5`.
+1. Scan all dashboards returned by `listDashboards()`.
 2. For each, read `initialization.json`. Skip any where `task` is `null` (empty dashboard).
 3. For dashboards with a task, derive `overallStatus` (see below) and find the latest activity timestamp (most recent `started_at` or `completed_at` from progress files, or `task.created` as fallback).
 4. Collect all non-empty dashboards as candidates.
@@ -89,14 +89,14 @@ Only used when no dashboard is pre-assigned and no `--dashboard` flag is specifi
 
 **Algorithm:**
 
-1. Scan `dashboard1` through `dashboard5` in order.
+1. Scan all dashboards returned by `listDashboards()` in order.
 2. For each dashboard:
    - Read `initialization.json`. If `task` is `null` → **available**. Return this dashboard.
    - If `task` is not null, read all files in `progress/`.
    - If no progress files exist → **stale claim** (plan was written but never dispatched). Treat as available.
    - If every progress file has status `"completed"` or `"failed"` → **finished but uncleared**. Save a history summary to `{tracker_root}/history/` before overwriting. Return this dashboard.
    - Otherwise (at least one agent is `"pending"` or `"in_progress"`) → **in use**. Skip.
-3. If all 5 are in use, display a summary table and ask the user:
+3. If all dashboards are in use, display a summary table and ask the user:
 
 ```markdown
 ## All Dashboards In Use

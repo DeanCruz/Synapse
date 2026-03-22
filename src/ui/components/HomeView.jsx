@@ -2,7 +2,7 @@
 // Replaces HomeView.js
 
 import React, { useState, useEffect } from 'react';
-import { DASHBOARD_LABELS } from '@/utils/constants.js';
+import { getDashboardLabel } from '@/utils/constants.js';
 
 /**
  * @param {object}   props.dashboardStates     - { [dashboardId]: statusObj }
@@ -116,7 +116,7 @@ function statusLabel(status) {
 
 function DashboardCard({ dashboard, onClick }) {
   const dotClass = statusDotClass(dashboard.status);
-  const label    = DASHBOARD_LABELS[dashboard.id] || dashboard.id;
+  const label    = getDashboardLabel(dashboard.id);
   const task     = dashboard.task;
 
   const completedCount = task ? ((task.completed_tasks || 0) + (task.failed_tasks || 0)) : 0;
@@ -175,7 +175,7 @@ function DashboardCard({ dashboard, onClick }) {
 }
 
 function IdleItem({ dashboard, onClick }) {
-  const label = DASHBOARD_LABELS[dashboard.id] || dashboard.id;
+  const label = getDashboardLabel(dashboard.id);
   return (
     <div className="home-idle-item" onClick={() => onClick && onClick(dashboard.id)}>
       <span className="home-card-dot idle" />

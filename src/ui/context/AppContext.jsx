@@ -188,6 +188,29 @@ function appReducerCore(state, action) {
       try { localStorage.setItem(claudeMessagesKey(did), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
       return { ...state, claudeChatStash: newStash };
     }
+    case 'REMOVE_DASHBOARD': {
+      // Clean up state when a dashboard is deleted
+      const rid = action.id;
+      const newDashStates = { ...state.dashboardStates };
+      delete newDashStates[rid];
+      const newAllProgress = { ...state.allDashboardProgress };
+      delete newAllProgress[rid];
+      const newAllLogs = { ...state.allDashboardLogs };
+      delete newAllLogs[rid];
+      const newChatStash = { ...state.claudeChatStash };
+      delete newChatStash[rid];
+      const newProcStash2 = { ...state.claudeProcessingStash };
+      delete newProcStash2[rid];
+      try { localStorage.removeItem(CLAUDE_MESSAGES_KEY_PREFIX + rid); } catch (e) { /* */ }
+      return {
+        ...state,
+        dashboardStates: newDashStates,
+        allDashboardProgress: newAllProgress,
+        allDashboardLogs: newAllLogs,
+        claudeChatStash: newChatStash,
+        claudeProcessingStash: newProcStash2,
+      };
+    }
     case 'CLAUDE_STASH_SET_PROCESSING': {
       const did = action.dashboardId;
       const existing = state.claudeProcessingStash[did] || {};

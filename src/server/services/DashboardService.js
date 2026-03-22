@@ -137,7 +137,11 @@ function listDashboards() {
       .filter(e => e.isDirectory() &&
         fs.existsSync(path.join(DASHBOARDS_DIR, e.name, 'initialization.json')))
       .map(e => e.name)
-      .sort();
+      .sort((a, b) => {
+        const numA = parseInt(a.replace('dashboard', ''), 10) || 0;
+        const numB = parseInt(b.replace('dashboard', ''), 10) || 0;
+        return numA - numB;
+      });
   } catch {
     return [];
   }
@@ -159,6 +163,31 @@ function copyDirSync(src, dest) {
   }
 }
 
+/**
+ * Delete a dashboard directory entirely (removes dir, init, logs, progress).
+ * Returns true if deleted, false if it didn't exist.
+ */
+function deleteDashboard(id) {
+  const dir = getDashboardDir(id);
+  if (!fs.existsSync(dir)) return false;
+  fs.rmSync(dir, { recursive: true, force: true });
+  return true;
+}
+
+/**
+ * Find the next available dashboard ID (dashboard1, dashboard2, ...).
+ * Scans existing dashboards and returns the lowest unused number.
+ */
+function nextDashboardId() {
+  const existing = listDashboards();
+  const nums = existing
+    .map(id => parseInt(id.replace('dashboard', ''), 10))
+    .filter(n => !isNaN(n));
+  let next = 1;
+  while (nums.includes(next)) next++;
+  return `dashboard${next}`;
+}
+
 module.exports = {
   getDashboardDir,
   ensureDashboard,
@@ -171,4 +200,6 @@ module.exports = {
   clearDashboardProgress,
   listDashboards,
   copyDirSync,
+  deleteDashboard,
+  nextDashboardId,
 };

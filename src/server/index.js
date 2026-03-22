@@ -126,11 +126,12 @@ function startup() {
     fs.mkdirSync(DASHBOARDS_DIR, { recursive: true });
   }
 
-  // 2. Ensure all 5 default dashboards exist
-  for (let i = 1; i <= 5; i++) {
-    ensureDashboard(`dashboard${i}`);
-  }
+  // 2. Ensure at least one default dashboard exists
   let dashboards = listDashboards();
+  if (dashboards.length === 0) {
+    ensureDashboard('dashboard1');
+    dashboards = listDashboards();
+  }
 
   // 3. Ensure Archive, History, and Queue directories exist
   if (!fs.existsSync(ARCHIVE_DIR)) {

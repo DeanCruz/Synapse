@@ -1,129 +1,200 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Synapse logo mark">
   <defs>
-    <linearGradient id="markStroke" x1="20" y1="20" x2="108" y2="108" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#8af7ff"/>
-      <stop offset="50%" stop-color="#34d8c7"/>
-      <stop offset="100%" stop-color="#a8ff6d"/>
-    </linearGradient>
-    <linearGradient id="markGlow" x1="20" y1="20" x2="108" y2="108" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#8af7ff" stop-opacity="0.25"/>
-      <stop offset="100%" stop-color="#a8ff6d" stop-opacity="0.15"/>
-    </linearGradient>
-    <filter id="nodeGlow">
-      <feGaussianBlur stdDeviation="2" result="blur"/>
+    <filter id="greyGlow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
       <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
+    <filter id="greenGlow">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="edgeGreenGlow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <style>
+      .sn{animation:sIn .35s ease-out forwards;opacity:0}
+      .se{animation:sIn .3s ease-out forwards;opacity:0}
+      @keyframes sIn{to{opacity:1}}
+    </style>
   </defs>
 
-  <!-- Background -->
-  <rect x="20" y="20" width="88" height="88" rx="24" fill="#ffffff" fill-opacity="0.02"/>
+  <rect x="8" y="4" width="112" height="120" rx="24" fill="#ffffff" fill-opacity="0.02"/>
 
-  <!-- Connection lines — edges between nodes forming an S-network -->
-  <!-- Top cluster connections -->
-  <line x1="38" y1="30" x2="64" y2="26" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="64" y1="26" x2="90" y2="34" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="38" y1="30" x2="52" y2="48" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="64" y1="26" x2="52" y2="48" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="64" y1="26" x2="80" y2="48" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="90" y1="34" x2="80" y2="48" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
+  <!-- Grey edges (background network) -->
+  <g stroke="#4a5568" stroke-linecap="round">
+    <line x1="16" y1="14" x2="38" y2="22" stroke-width="1.5" stroke-opacity="0.18"/>
+    <line x1="64" y1="10" x2="62" y2="20" stroke-width="1.5" stroke-opacity="0.2"/>
+    <line x1="64" y1="10" x2="38" y2="22" stroke-width="1.5" stroke-opacity="0.16"/>
+    <line x1="64" y1="10" x2="86" y2="26" stroke-width="1.5" stroke-opacity="0.16"/>
+    <line x1="108" y1="14" x2="86" y2="26" stroke-width="1.5" stroke-opacity="0.18"/>
+    <line x1="16" y1="14" x2="30" y2="36" stroke-width="1.5" stroke-opacity="0.16"/>
+    <line x1="52" y1="42" x2="62" y2="20" stroke-width="1.8" stroke-opacity="0.22"/>
+    <line x1="52" y1="42" x2="38" y2="22" stroke-width="1.8" stroke-opacity="0.22"/>
+    <line x1="52" y1="42" x2="30" y2="36" stroke-width="1.8" stroke-opacity="0.22"/>
+    <line x1="52" y1="42" x2="80" y2="44" stroke-width="1.8" stroke-opacity="0.22"/>
+    <line x1="80" y1="44" x2="86" y2="26" stroke-width="1.8" stroke-opacity="0.22"/>
+    <line x1="80" y1="44" x2="90" y2="60" stroke-width="1.8" stroke-opacity="0.22"/>
+    <line x1="80" y1="44" x2="64" y2="64" stroke-width="1.8" stroke-opacity="0.2"/>
+    <line x1="86" y1="72" x2="90" y2="60" stroke-width="1.8" stroke-opacity="0.22"/>
+    <line x1="86" y1="72" x2="98" y2="74" stroke-width="1.8" stroke-opacity="0.22"/>
+    <line x1="86" y1="72" x2="64" y2="64" stroke-width="1.8" stroke-opacity="0.2"/>
+    <line x1="42" y1="76" x2="38" y2="62" stroke-width="1.8" stroke-opacity="0.22"/>
+    <line x1="42" y1="76" x2="26" y2="50" stroke-width="1.5" stroke-opacity="0.18"/>
+    <line x1="42" y1="76" x2="64" y2="64" stroke-width="1.8" stroke-opacity="0.2"/>
+    <line x1="42" y1="76" x2="38" y2="98" stroke-width="1.8" stroke-opacity="0.2"/>
+    <line x1="16" y1="108" x2="38" y2="98" stroke-width="1.5" stroke-opacity="0.18"/>
+    <line x1="64" y1="114" x2="64" y2="102" stroke-width="1.5" stroke-opacity="0.2"/>
+    <line x1="64" y1="114" x2="38" y2="98" stroke-width="1.5" stroke-opacity="0.16"/>
+    <line x1="64" y1="114" x2="88" y2="98" stroke-width="1.5" stroke-opacity="0.16"/>
+    <line x1="108" y1="108" x2="88" y2="98" stroke-width="1.5" stroke-opacity="0.18"/>
+    <line x1="108" y1="108" x2="100" y2="86" stroke-width="1.5" stroke-opacity="0.16"/>
+  </g>
 
-  <!-- Middle S-curve connections -->
-  <line x1="52" y1="48" x2="80" y2="48" stroke="url(#markStroke)" stroke-width="2.5" stroke-opacity="0.6"/>
-  <line x1="80" y1="48" x2="96" y2="58" stroke="url(#markStroke)" stroke-width="2.5" stroke-opacity="0.6"/>
-  <line x1="96" y1="58" x2="86" y2="72" stroke="url(#markStroke)" stroke-width="2.5" stroke-opacity="0.6"/>
-  <line x1="86" y1="72" x2="64" y2="64" stroke="url(#markStroke)" stroke-width="2.5" stroke-opacity="0.6"/>
-  <line x1="52" y1="48" x2="64" y2="64" stroke="url(#markStroke)" stroke-width="2.5" stroke-opacity="0.6"/>
-  <line x1="80" y1="48" x2="64" y2="64" stroke="url(#markStroke)" stroke-width="2.5" stroke-opacity="0.6"/>
-  <line x1="64" y1="64" x2="42" y2="72" stroke="url(#markStroke)" stroke-width="2.5" stroke-opacity="0.6"/>
-  <line x1="42" y1="72" x2="32" y2="58" stroke="url(#markStroke)" stroke-width="2.5" stroke-opacity="0.6"/>
-  <line x1="32" y1="58" x2="52" y2="48" stroke="url(#markStroke)" stroke-width="2.5" stroke-opacity="0.6"/>
-  <line x1="96" y1="58" x2="64" y2="64" stroke="url(#markStroke)" stroke-width="1.5" stroke-opacity="0.3"/>
-  <line x1="32" y1="58" x2="64" y2="64" stroke="url(#markStroke)" stroke-width="1.5" stroke-opacity="0.3"/>
+  <!-- Green S-path curve (very subtle background trace) -->
+  <path class="se" style="animation-delay:0s"
+        d="M 86 26 C 70 16 46 16 38 22 C 30 28 28 34 30 36 C 28 42 24 48 26 50 C 28 58 32 62 38 62 C 52 66 78 64 90 60 C 100 56 100 68 98 74 C 96 80 100 84 100 86 C 100 94 94 100 88 98 C 76 96 50 104 38 98"
+        fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.12"/>
 
-  <!-- Bottom S-curve connections -->
-  <line x1="42" y1="72" x2="48" y2="84" stroke="url(#markStroke)" stroke-width="2.5" stroke-opacity="0.6"/>
-  <line x1="86" y1="72" x2="76" y2="84" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="64" y1="64" x2="48" y2="84" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.4"/>
-  <line x1="64" y1="64" x2="76" y2="84" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.4"/>
+  <!-- Green S-path edges (animated) -->
+  <!-- Top bar -->
+  <line class="se" style="animation-delay:.05s" x1="38" y1="22" x2="62" y2="20" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.05s" x1="62" y1="20" x2="86" y2="26" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <!-- Top to left hook -->
+  <line class="se" style="animation-delay:.15s" x1="38" y1="22" x2="30" y2="36" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.25s" x1="30" y1="36" x2="26" y2="50" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <!-- Left hook to middle bar -->
+  <line class="se" style="animation-delay:.35s" x1="26" y1="50" x2="38" y2="62" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <!-- Middle bar -->
+  <line class="se" style="animation-delay:.42s" x1="38" y1="62" x2="64" y2="64" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.48s" x1="64" y1="64" x2="90" y2="60" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <!-- Middle to right hook -->
+  <line class="se" style="animation-delay:.56s" x1="90" y1="60" x2="98" y2="74" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.64s" x1="98" y1="74" x2="100" y2="86" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <!-- Right hook to bottom bar -->
+  <line class="se" style="animation-delay:.72s" x1="100" y1="86" x2="88" y2="98" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <!-- Bottom bar -->
+  <line class="se" style="animation-delay:.8s" x1="88" y1="98" x2="64" y2="102" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.88s" x1="64" y1="102" x2="38" y2="98" stroke="#22c55e" stroke-width="2" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow)"/>
 
-  <!-- Bottom cluster connections -->
-  <line x1="48" y1="84" x2="76" y2="84" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="48" y1="84" x2="38" y2="100" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="48" y1="84" x2="64" y2="102" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="76" y1="84" x2="64" y2="102" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="76" y1="84" x2="90" y2="100" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="64" y1="102" x2="38" y2="100" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
-  <line x1="64" y1="102" x2="90" y2="100" stroke="url(#markStroke)" stroke-width="2" stroke-opacity="0.5"/>
+  <!-- Grey nodes (background network) -->
+  <circle cx="16" cy="14" r="3.5" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow)"/>
+  <circle cx="16" cy="14" r="2.2" fill="#4a4a55"/>
+  <circle cx="16" cy="14" r="1" fill="#666"/>
 
-  <!-- Primary S-path (thicker, more visible) -->
-  <path d="M 38 30 C 50 26 78 22 90 34 C 100 44 100 54 96 58 C 88 68 72 68 64 64 C 56 60 40 60 32 58 C 24 58 28 68 42 72 C 52 76 74 78 76 84 C 80 92 74 98 64 102"
-        fill="none" stroke="url(#markStroke)" stroke-width="3" stroke-linecap="round" stroke-opacity="0.35"/>
+  <circle cx="64" cy="10" r="4" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow)"/>
+  <circle cx="64" cy="10" r="2.5" fill="#4a4a55"/>
+  <circle cx="64" cy="10" r="1.2" fill="#666"/>
 
-  <!-- Nodes — layered: glow ring + solid core -->
-  <!-- Top row (3 nodes) -->
-  <circle cx="38" cy="30" r="6" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="38" cy="30" r="4" fill="#8af7ff"/>
-  <circle cx="38" cy="30" r="2" fill="#c5fbff"/>
+  <circle cx="108" cy="14" r="3.5" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow)"/>
+  <circle cx="108" cy="14" r="2.2" fill="#4a4a55"/>
+  <circle cx="108" cy="14" r="1" fill="#666"/>
 
-  <circle cx="64" cy="26" r="7" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="64" cy="26" r="4.5" fill="#6ef3f5"/>
-  <circle cx="64" cy="26" r="2.2" fill="#c5fbff"/>
+  <circle cx="52" cy="42" r="4.5" fill="#3a3f4a" fill-opacity="0.45" filter="url(#greyGlow)"/>
+  <circle cx="52" cy="42" r="3" fill="#555"/>
+  <circle cx="52" cy="42" r="1.4" fill="#6a6a70"/>
 
-  <circle cx="90" cy="34" r="6" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="90" cy="34" r="4" fill="#52e8dc"/>
-  <circle cx="90" cy="34" r="2" fill="#b0faf0"/>
+  <circle cx="80" cy="44" r="4.5" fill="#3a3f4a" fill-opacity="0.45" filter="url(#greyGlow)"/>
+  <circle cx="80" cy="44" r="3" fill="#555"/>
+  <circle cx="80" cy="44" r="1.4" fill="#6a6a70"/>
 
-  <!-- Upper-mid row -->
-  <circle cx="52" cy="48" r="5.5" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="52" cy="48" r="3.5" fill="#5aebd0"/>
-  <circle cx="52" cy="48" r="1.8" fill="#b0faf0"/>
+  <circle cx="86" cy="72" r="4.5" fill="#3a3f4a" fill-opacity="0.45" filter="url(#greyGlow)"/>
+  <circle cx="86" cy="72" r="3" fill="#555"/>
+  <circle cx="86" cy="72" r="1.4" fill="#6a6a70"/>
 
-  <circle cx="80" cy="48" r="5.5" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="80" cy="48" r="3.5" fill="#42dfc0"/>
-  <circle cx="80" cy="48" r="1.8" fill="#a0f5e0"/>
+  <circle cx="42" cy="76" r="4.5" fill="#3a3f4a" fill-opacity="0.45" filter="url(#greyGlow)"/>
+  <circle cx="42" cy="76" r="3" fill="#555"/>
+  <circle cx="42" cy="76" r="1.4" fill="#6a6a70"/>
 
-  <!-- Lateral nodes -->
-  <circle cx="96" cy="58" r="5" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="96" cy="58" r="3.2" fill="#34d8c7"/>
-  <circle cx="96" cy="58" r="1.6" fill="#8af0e0"/>
+  <circle cx="16" cy="108" r="3.5" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow)"/>
+  <circle cx="16" cy="108" r="2.2" fill="#4a4a55"/>
+  <circle cx="16" cy="108" r="1" fill="#666"/>
 
-  <circle cx="32" cy="58" r="5" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="32" cy="58" r="3.2" fill="#34d8c7"/>
-  <circle cx="32" cy="58" r="1.6" fill="#8af0e0"/>
+  <circle cx="64" cy="114" r="4" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow)"/>
+  <circle cx="64" cy="114" r="2.5" fill="#4a4a55"/>
+  <circle cx="64" cy="114" r="1.2" fill="#666"/>
 
-  <!-- Center hub (largest node) -->
-  <circle cx="64" cy="64" r="9" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="64" cy="64" r="6.5" fill="#34d8c7"/>
-  <circle cx="64" cy="64" r="3.5" fill="#8af7ff"/>
+  <circle cx="108" cy="108" r="3.5" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow)"/>
+  <circle cx="108" cy="108" r="2.2" fill="#4a4a55"/>
+  <circle cx="108" cy="108" r="1" fill="#666"/>
 
-  <!-- Lower-mid nodes -->
-  <circle cx="42" cy="72" r="5" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="42" cy="72" r="3.2" fill="#40d4a0"/>
-  <circle cx="42" cy="72" r="1.6" fill="#90f0c0"/>
-
-  <circle cx="86" cy="72" r="5" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="86" cy="72" r="3.2" fill="#40d4a0"/>
-  <circle cx="86" cy="72" r="1.6" fill="#90f0c0"/>
-
-  <!-- Lower row -->
-  <circle cx="48" cy="84" r="5.5" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="48" cy="84" r="3.5" fill="#5cd890"/>
-  <circle cx="48" cy="84" r="1.8" fill="#b0f5c0"/>
-
-  <circle cx="76" cy="84" r="5.5" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="76" cy="84" r="3.5" fill="#6cdc88"/>
-  <circle cx="76" cy="84" r="1.8" fill="#b8f5c0"/>
-
-  <!-- Bottom row (3 nodes) -->
-  <circle cx="38" cy="100" r="6" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="38" cy="100" r="4" fill="#82e478"/>
-  <circle cx="38" cy="100" r="2" fill="#c0f5b0"/>
-
-  <circle cx="64" cy="102" r="7" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="64" cy="102" r="4.5" fill="#92f06e"/>
-  <circle cx="64" cy="102" r="2.2" fill="#c8ffb0"/>
-
-  <circle cx="90" cy="100" r="6" fill="url(#markGlow)" filter="url(#nodeGlow)"/>
-  <circle cx="90" cy="100" r="4" fill="#a8ff6d"/>
-  <circle cx="90" cy="100" r="2" fill="#d0ffb8"/>
+  <!-- Green S nodes (animated draw-in along the S curve) -->
+  <!-- Top bar left -->
+  <g class="sn" style="animation-delay:.06s" filter="url(#greenGlow)">
+    <circle cx="38" cy="22" r="5.5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="38" cy="22" r="3.5" fill="#22c55e"/>
+    <circle cx="38" cy="22" r="1.8" fill="#86efac"/>
+  </g>
+  <!-- Top bar center -->
+  <g class="sn" style="animation-delay:.04s" filter="url(#greenGlow)">
+    <circle cx="62" cy="20" r="6.5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="62" cy="20" r="4.2" fill="#22c55e"/>
+    <circle cx="62" cy="20" r="2" fill="#86efac"/>
+  </g>
+  <!-- Top bar right -->
+  <g class="sn" style="animation-delay:.08s" filter="url(#greenGlow)">
+    <circle cx="86" cy="26" r="5.5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="86" cy="26" r="3.5" fill="#22c55e"/>
+    <circle cx="86" cy="26" r="1.8" fill="#86efac"/>
+  </g>
+  <!-- Left hook upper -->
+  <g class="sn" style="animation-delay:.18s" filter="url(#greenGlow)">
+    <circle cx="30" cy="36" r="4.5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="30" cy="36" r="3" fill="#22c55e"/>
+    <circle cx="30" cy="36" r="1.5" fill="#86efac"/>
+  </g>
+  <!-- Left hook lower -->
+  <g class="sn" style="animation-delay:.28s" filter="url(#greenGlow)">
+    <circle cx="26" cy="50" r="4.5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="26" cy="50" r="3" fill="#22c55e"/>
+    <circle cx="26" cy="50" r="1.5" fill="#86efac"/>
+  </g>
+  <!-- Middle bar left -->
+  <g class="sn" style="animation-delay:.38s" filter="url(#greenGlow)">
+    <circle cx="38" cy="62" r="5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="38" cy="62" r="3.2" fill="#22c55e"/>
+    <circle cx="38" cy="62" r="1.6" fill="#86efac"/>
+  </g>
+  <!-- Middle bar center (hub) -->
+  <g class="sn" style="animation-delay:.45s" filter="url(#greenGlow)">
+    <circle cx="64" cy="64" r="8" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="64" cy="64" r="5.5" fill="#22c55e"/>
+    <circle cx="64" cy="64" r="3" fill="#86efac"/>
+  </g>
+  <!-- Middle bar right -->
+  <g class="sn" style="animation-delay:.52s" filter="url(#greenGlow)">
+    <circle cx="90" cy="60" r="5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="90" cy="60" r="3.2" fill="#22c55e"/>
+    <circle cx="90" cy="60" r="1.6" fill="#86efac"/>
+  </g>
+  <!-- Right hook upper -->
+  <g class="sn" style="animation-delay:.6s" filter="url(#greenGlow)">
+    <circle cx="98" cy="74" r="4.5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="98" cy="74" r="3" fill="#22c55e"/>
+    <circle cx="98" cy="74" r="1.5" fill="#86efac"/>
+  </g>
+  <!-- Right hook lower -->
+  <g class="sn" style="animation-delay:.68s" filter="url(#greenGlow)">
+    <circle cx="100" cy="86" r="4.5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="100" cy="86" r="3" fill="#22c55e"/>
+    <circle cx="100" cy="86" r="1.5" fill="#86efac"/>
+  </g>
+  <!-- Bottom bar right -->
+  <g class="sn" style="animation-delay:.76s" filter="url(#greenGlow)">
+    <circle cx="88" cy="98" r="5.5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="88" cy="98" r="3.5" fill="#22c55e"/>
+    <circle cx="88" cy="98" r="1.8" fill="#86efac"/>
+  </g>
+  <!-- Bottom bar center -->
+  <g class="sn" style="animation-delay:.84s" filter="url(#greenGlow)">
+    <circle cx="64" cy="102" r="6.5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="64" cy="102" r="4.2" fill="#22c55e"/>
+    <circle cx="64" cy="102" r="2" fill="#86efac"/>
+  </g>
+  <!-- Bottom bar left -->
+  <g class="sn" style="animation-delay:.92s" filter="url(#greenGlow)">
+    <circle cx="38" cy="98" r="5.5" fill="#22c55e" fill-opacity="0.2"/>
+    <circle cx="38" cy="98" r="3.5" fill="#22c55e"/>
+    <circle cx="38" cy="98" r="1.8" fill="#86efac"/>
+  </g>
 </svg>

@@ -38,6 +38,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Dashboards
   getDashboards: () => ipcRenderer.invoke('get-dashboards'),
+  createDashboard: () => ipcRenderer.invoke('create-dashboard'),
+  deleteDashboard: (id) => ipcRenderer.invoke('delete-dashboard', id),
   getDashboardStatuses: () => ipcRenderer.invoke('get-dashboard-statuses'),
   getDashboardInit: (id) => ipcRenderer.invoke('get-dashboard-init', id),
   getDashboardLogs: (id) => ipcRenderer.invoke('get-dashboard-logs', id),

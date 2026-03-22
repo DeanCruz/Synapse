@@ -62,13 +62,12 @@ export const TIMELINE_COLORS = {
   in_progress: 'rgba(155,124,240,0.5)', failed: '#ef4444', pending: '#6E6E73',
 };
 
-export const DEFAULT_DASHBOARDS = ['dashboard1','dashboard2','dashboard3','dashboard4','dashboard5','dashboard6','dashboard7','dashboard8','dashboard9','dashboard10'];
-export const DASHBOARD_LABELS = {
-  dashboard1: 'Dashboard 1', dashboard2: 'Dashboard 2', dashboard3: 'Dashboard 3',
-  dashboard4: 'Dashboard 4', dashboard5: 'Dashboard 5', dashboard6: 'Dashboard 6',
-  dashboard7: 'Dashboard 7', dashboard8: 'Dashboard 8', dashboard9: 'Dashboard 9',
-  dashboard10: 'Dashboard 10',
-};
+// Dashboard labels are derived dynamically from dashboard IDs.
+// No hardcoded list — the sidebar is driven by dashboardList from the server.
+export function getDashboardLabel(id) {
+  const num = id.replace('dashboard', '');
+  return `Dashboard ${num}`;
+}
 
 export function initStatusColorsFromCSS() {
   const styles = getComputedStyle(document.documentElement);

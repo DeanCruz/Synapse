@@ -19,10 +19,13 @@ const {
   readDashboardProgressAsync,
   clearDashboardProgress,
   copyDirSync,
+  deleteDashboard,
+  nextDashboardId,
 } = require('../src/server/services/DashboardService');
 
 const {
   watchDashboard,
+  unwatchDashboard,
   startDashboardsWatcher,
   startQueueWatcher,
   stopAll: stopAllWatchers,
@@ -146,8 +149,9 @@ function ensureDirectories() {
     fs.mkdirSync(DASHBOARDS_DIR, { recursive: true });
   }
 
-  for (let i = 1; i <= 5; i++) {
-    ensureDashboard(`dashboard${i}`);
+  // Ensure at least one default dashboard exists
+  if (listDashboards().length === 0) {
+    ensureDashboard('dashboard1');
   }
 
   if (!fs.existsSync(ARCHIVE_DIR)) {
@@ -182,6 +186,24 @@ function registerIPCHandlers(getMainWindow) {
   // GET /api/dashboards -> get-dashboards
   ipcMain.handle('get-dashboards', async () => {
     return { dashboards: listDashboards() };
+  });
+
+  // POST /api/dashboards -> create-dashboard
+  ipcMain.handle('create-dashboard', async () => {
+    const id = nextDashboardId();
+    ensureDashboard(id);
+    watchDashboard(id, broadcastFn);
+    broadcastFn('dashboards_changed', { dashboards: listDashboards() });
+    return { success: true, id };
+  });
+
+  // DELETE /api/dashboards/:id -> delete-dashboard
+  ipcMain.handle('delete-dashboard', async (_event, id) => {
+    unwatchDashboard(id);
+    const deleted = deleteDashboard(id);
+    if (!deleted) return { success: false, error: 'Dashboard not found' };
+    broadcastFn('dashboards_changed', { dashboards: listDashboards() });
+    return { success: true };
   });
 
   // GET /api/dashboards/statuses -> get-dashboard-statuses
