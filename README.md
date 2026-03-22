@@ -7,7 +7,7 @@
 [![Electron](https://img.shields.io/badge/Electron-desktop%20app-47848F?logo=electron&logoColor=white)]()
 [![React](https://img.shields.io/badge/React%2019-UI-61DAFB?logo=react&logoColor=black)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-blueviolet?logo=anthropic&logoColor=white)]()
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: Source Available](https://img.shields.io/badge/license-Source%20Available-orange.svg)](LICENSE)
 
 **Plan, dispatch, and monitor parallel AI agent swarms from a native desktop app.**
 
@@ -28,7 +28,7 @@ Synapse decomposes complex tasks into independent units, dispatches multiple age
 | 1 agent, sequential tasks | N agents, parallel execution |
 | Context exhaustion on large tasks | Context distributed across workers |
 | No visibility into progress | Live dashboard with dependency graph |
-| Manual retry on failure | Automatic repair task dispatch |
+| Manual retry on failure | Circuit breaker with automatic replanning |
 | Terminal-only interaction | Native desktop GUI with built-in chat |
 
 </div>
@@ -114,12 +114,12 @@ Electron Main Process
 ├── ipc-handlers.js          ← IPC handler registration
 └── services/
     ├── ClaudeCodeService.js     ← Claude Code CLI integration
-    ├── SwarmOrchestrator.js     ← Self-managing dispatch engine
+    ├── SwarmOrchestrator.js     ← Self-managing dispatch engine + circuit breaker + replanner
     ├── ConversationService.js   ← Chat history persistence
     ├── ProjectService.js        ← Workspace/project detection
     ├── CommandsService.js       ← !command discovery and execution
     ├── TaskEditorService.js     ← Swarm builder backend
-    └── PromptBuilder.js         ← Worker prompt construction
+    └── PromptBuilder.js         ← Worker + replanner prompt construction
 
 React Renderer (Vite)
 ├── App.jsx                  ← Root with routing
@@ -141,7 +141,7 @@ Server
 
 The frontend lives in `src/ui/` — a React/Vite app rendered by Electron.
 
-`SwarmOrchestrator.js` is the desktop app's dispatch engine — it reads `initialization.json`, dispatches unblocked tasks via the Claude Code CLI, handles completions and failures, and updates dashboard files. This replaces the terminal-based master agent, so the app can run a full swarm without any terminal interaction.
+`SwarmOrchestrator.js` is the desktop app's dispatch engine — it reads `initialization.json`, dispatches unblocked tasks via the Claude Code CLI, handles completions and failures, and updates dashboard files. When cascading failures occur (3+ in a wave, or a single failure blocking 3+ downstream tasks), the built-in circuit breaker enters replanning mode: it spawns a Claude CLI process to analyze root cause, then applies the revised plan (modified tasks, new repair tasks, dependency rewiring, or simple retries) and resumes dispatch automatically. This replaces the terminal-based master agent, so the app can run a full swarm without any terminal interaction.
 
 ---
 
@@ -232,7 +232,7 @@ Commands work in both the built-in chat and the terminal Claude Code CLI.
 - **The master agent never writes code.** It reads, plans, dispatches, and reports. Workers do all implementation.
 - **Workers are self-contained.** Each gets a complete prompt — files to modify, conventions, code context, success criteria. No back-and-forth.
 - **Dependencies drive dispatch, not waves.** The moment a task's dependencies are satisfied, it launches — even if sibling tasks are still running.
-- **Failures don't stop the swarm.** A failed task blocks only its direct dependents. The master dispatches repair tasks automatically.
+- **Failures trigger automatic replanning.** A failed task blocks only its direct dependents. If failures cascade (3+ in a wave, or a single failure blocking 3+ downstream tasks), the circuit breaker spawns a replanner that analyzes root cause, rewires dependencies, adds repair tasks, and resumes dispatch automatically.
 
 </details>
 
@@ -247,7 +247,7 @@ A single agent on a large task will exhaust its context window — it forgets ea
 | **Read once, distill many** | Master reads your entire codebase during planning, then distills targeted prompts per worker. Each worker's context is small, focused, and complete. |
 | **Workers never search** | No wasted context on exploration. The master already embedded the patterns, conventions, and file contents directly in the prompt. |
 | **Upstream results flow downstream** | When Wave 1 completes, the master injects its outputs (files created, types exported, deviations) into Wave 2 prompts. No re-reading upstream work. |
-| **Write-once plan** | `initialization.json` written once. Workers own their progress files. Dashboard derives stats client-side. Zero status bookkeeping overhead. |
+| **Write-once plan** | `initialization.json` written once (updated only if the circuit breaker triggers replanning). Workers own their progress files. Dashboard derives stats client-side. Zero status bookkeeping overhead. |
 
 ---
 
@@ -283,6 +283,6 @@ A single agent on a large task will exhaust its context window — it forgets ea
 
 <div align="center">
 
-**MIT License** · Built with Electron + React + Vite
+**Source-Available License** · Built with Electron + React + Vite
 
 </div>

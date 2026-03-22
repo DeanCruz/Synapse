@@ -98,7 +98,7 @@ The master agent reads **extensively**. It reads more than any worker will. It r
 - Include in every agent prompt: the specific files to modify, the conventions from `{project_root}/CLAUDE.md`, code snippets the agent needs to see, clear success criteria, **and both `{tracker_root}` and `{project_root}` paths**
 - Create the master XML task file documenting the full plan
 - Write the strategy rationale plan file
-- **Populate the dashboard before presenting the plan to the user** — **if the dashboard contains data from a previous swarm, archive it first** by copying the full dashboard directory to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/` before clearing. Then clear the progress directory, write the full plan to `initialization.json` (all tasks, all waves, all dependencies — static plan data only), and write an initialization entry to `logs.json`. This gives the user a live visual representation of the plan on the dashboard while they review and approve it. **`initialization.json` is write-once — the master never updates it after planning.** **Never clear a dashboard without archiving first — previous swarm data must always be preserved.**
+- **Populate the dashboard before presenting the plan to the user** — **if the dashboard contains data from a previous swarm, archive it first** by copying the full dashboard directory to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/` before clearing. Then clear the progress directory, write the full plan to `initialization.json` (all tasks, all waves, all dependencies — static plan data only), and write an initialization entry to `logs.json`. This gives the user a live visual representation of the plan on the dashboard while they review and approve it. **`initialization.json` is write-once — the master never updates it after planning, unless the circuit breaker triggers automatic replanning (see Principle 5).** **Never clear a dashboard without archiving first — previous swarm data must always be preserved.**
 
 Planning is where the master agent earns its value. A well-planned swarm executes fast with zero confusion. A poorly-planned swarm produces broken code, conflicting edits, and wasted cycles. **Invest heavily in planning. Never rush it.**
 
@@ -498,6 +498,7 @@ This architecture dramatically reduces master agent context consumption:
 | No visibility into worker progress during execution | Live stage + milestone + log updates on dashboard |
 | Deviations only visible after completion | Deviations visible immediately |
 | Single swarm at a time | Up to 5 concurrent swarms across dashboards with auto-selection |
+| Cascading failures require manual intervention | Circuit breaker triggers automatic replanning via CLI |
 
 ---
 
@@ -710,16 +711,30 @@ Send as many agents as there are ready tasks. The bottleneck should be dependenc
 
 **Practical note:** The Task tool dispatches agents via tool calls. If a wave has more tasks than can be dispatched in a single message (~8-10 simultaneous tool calls), batch them into back-to-back dispatch rounds — but never wait for the first batch to complete before sending the second. Dispatch all ready tasks as fast as the tool allows.
 
-### 5. Errors Don't Stop the Swarm (But Cascading Failures Trigger Reassessment)
+### 5. Errors Don't Stop the Swarm (But Cascading Failures Trigger Automatic Replanning)
 
 A failed task blocks only its direct dependents. Everything else continues. Log the error, mark the task, keep dispatching.
 
-**Circuit breaker:** If 3+ tasks fail within the same wave, or if a failed task blocks more than half of all remaining tasks, the master must **pause dispatching** and assess:
-- Is there a shared root cause (bad assumption, missing dependency, environment issue)?
-- Does the plan need revision?
-- Should the swarm be cancelled?
+**Circuit breaker:** The orchestrator automatically enters replanning mode when any of these conditions are met:
+- **3+ tasks fail within the same wave** — suggests a shared root cause, not isolated failures
+- **A single failure blocks 3+ downstream tasks** — the failure is cascading through the dependency graph
+- **A single failure blocks more than half of all remaining tasks** — critical-path failure
 
-Present the assessment to the user. Either continue with justification, revise the plan, or cancel. Never blindly push through cascading failures.
+Whichever threshold is hit first triggers the circuit breaker.
+
+**Automatic replanning:** When the circuit breaker fires, the orchestrator:
+1. Sets swarm state to `'replanning'` (blocks new dispatches, notifies the dashboard)
+2. Spawns a Claude CLI process (`--print` mode) with full context: what completed, what failed and why (error logs, stage, deviations), the original dependency graph, and all pending tasks
+3. The replanner analyzes root cause and returns a structured JSON revision:
+   - `modified` — existing tasks with updated descriptions, rewired dependencies
+   - `added` — new repair/replacement tasks inserted into the graph (suffixed with `r`, e.g. `"2.1r"`)
+   - `removed` — tasks that are no longer viable (dangling `depends_on` references are auto-cleaned)
+   - `retry` — tasks to re-dispatch as-is (transient failures, old progress files are deleted)
+4. The orchestrator applies the revision to `initialization.json`, updates `total_tasks`, and resumes dispatch
+
+**Fallback:** If the replanner CLI fails to spawn, exits non-zero, or returns invalid JSON, the swarm pauses for manual intervention rather than pushing through blind. The user can then manually retry tasks or cancel the swarm.
+
+Never blindly push through cascading failures.
 
 ### 6. Plan Deep, Execute Fast
 
@@ -809,7 +824,7 @@ The verification agent gets a prompt listing ALL files changed across the swarm 
 
 ### initialization.json
 
-The static plan store, written once during planning and never updated after. Located at `{tracker_root}/dashboards/{dashboardId}/initialization.json`. Every field maps to UI elements on the dashboard, combined with progress file data. See `agent/instructions/tracker_master_instructions.md` for the complete field-to-UI mapping.
+The static plan store, written once during planning. Located at `{tracker_root}/dashboards/{dashboardId}/initialization.json`. Every field maps to UI elements on the dashboard, combined with progress file data. See `agent/instructions/tracker_master_instructions.md` for the complete field-to-UI mapping. The only exception to write-once is **automatic replanning** — when the circuit breaker triggers, the orchestrator updates `initialization.json` with modified, added, or removed tasks from the replanner output.
 
 **Key objects:**
 - `task` — The swarm metadata (name, type, directory, prompt, project, project_root, created, total_tasks, total_waves)
@@ -819,7 +834,7 @@ The static plan store, written once during planning and never updated after. Loc
 - `history[]` — Previous swarm records
 
 **Write rules:**
-- Write-once during planning — **never update after the planning phase**
+- Write-once during planning — **never update after the planning phase** unless the circuit breaker triggers automatic replanning (see Principle 5)
 - Always atomic: read → modify in memory → write full file
 - Never write partial JSON
 - No lifecycle fields: `status`, `started_at`, `completed_at`, `summary`, `assigned_agent`, `completed_tasks`, `failed_tasks`, `overall_status` are all absent — they are derived from progress files by the dashboard
