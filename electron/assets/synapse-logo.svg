@@ -5,56 +5,139 @@
       <stop offset="58%" stop-color="#0a1d2d"/>
       <stop offset="100%" stop-color="#06111b"/>
     </radialGradient>
-    <linearGradient id="emblem" x1="274" y1="262" x2="758" y2="756" gradientUnits="userSpaceOnUse">
+    <linearGradient id="edgeGrad" x1="160" y1="160" x2="864" y2="864" gradientUnits="userSpaceOnUse">
       <stop offset="0%" stop-color="#8af7ff"/>
-      <stop offset="52%" stop-color="#34d8c7"/>
+      <stop offset="50%" stop-color="#34d8c7"/>
       <stop offset="100%" stop-color="#a8ff6d"/>
     </linearGradient>
-    <linearGradient id="emblemDim" x1="286" y1="250" x2="734" y2="758" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#143246"/>
-      <stop offset="100%" stop-color="#0f2333"/>
+    <linearGradient id="glowFill" x1="160" y1="160" x2="864" y2="864" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8af7ff" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#a8ff6d" stop-opacity="0.12"/>
     </linearGradient>
+    <filter id="nodeGlow1024">
+      <feGaussianBlur stdDeviation="12" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="edgeSoftGlow">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
   </defs>
+
+  <!-- Background -->
   <rect width="1024" height="1024" rx="230" fill="#06111b"/>
   <rect x="56" y="56" width="912" height="912" rx="206" fill="url(#bgGlow)"/>
-  <path d="M 280 338
-           C 340 238 462 188 576 200
-           C 687 212 772 302 768 412
-           C 764 515 681 574 585 603
-           C 495 631 411 636 352 680
-           C 285 729 281 811 336 854"
-        fill="none" stroke="url(#emblemDim)" stroke-width="136" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
-  <path d="M 280 338
-           C 340 238 462 188 576 200
-           C 687 212 772 302 768 412
-           C 764 515 681 574 585 603
-           C 495 631 411 636 352 680
-           C 285 729 281 811 336 854"
-        fill="none" stroke="url(#emblem)" stroke-width="94" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="280" cy="338" r="30" fill="#8af7ff"/>
-  <circle cx="576" cy="200" r="26" fill="#34d8c7"/>
-  <circle cx="768" cy="412" r="30" fill="#a8ff6d"/>
-  <circle cx="336" cy="854" r="26" fill="#8af7ff"/>
-  <circle cx="512" cy="512" r="68" fill="#071721" stroke="#17384f" stroke-width="18"/>
-  <path d="M 430 508
-           C 430 447 478 403 540 403
-           C 580 403 614 419 638 447
-           C 653 465 654 490 639 505
-           C 623 522 592 523 556 530
-           C 487 542 459 575 459 622
-           C 459 680 506 724 570 724
-           C 614 724 651 707 680 676"
-        fill="none" stroke="#071721" stroke-width="128" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="M 430 508
-           C 430 447 478 403 540 403
-           C 580 403 614 419 638 447
-           C 653 465 654 490 639 505
-           C 623 522 592 523 556 530
-           C 487 542 459 575 459 622
-           C 459 680 506 724 570 724
-           C 614 724 651 707 680 676"
-        fill="none" stroke="url(#emblem)" stroke-width="80" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="540" cy="403" r="22" fill="#8af7ff"/>
-  <circle cx="556" cy="530" r="20" fill="#34d8c7"/>
-  <circle cx="570" cy="724" r="20" fill="#a8ff6d"/>
+
+  <!-- Connection lines — edges between nodes forming the S-network -->
+  <g stroke="url(#edgeGrad)" stroke-linecap="round" filter="url(#edgeSoftGlow)">
+    <!-- Top cluster -->
+    <line x1="304" y1="200" x2="512" y2="176" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="512" y1="176" x2="720" y2="224" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="304" y1="200" x2="416" y2="336" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="512" y1="176" x2="416" y2="336" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="512" y1="176" x2="640" y2="336" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="720" y1="224" x2="640" y2="336" stroke-width="14" stroke-opacity="0.5"/>
+
+    <!-- Upper-mid connections -->
+    <line x1="416" y1="336" x2="640" y2="336" stroke-width="18" stroke-opacity="0.55"/>
+    <line x1="640" y1="336" x2="768" y2="416" stroke-width="18" stroke-opacity="0.55"/>
+    <line x1="768" y1="416" x2="688" y2="528" stroke-width="18" stroke-opacity="0.55"/>
+    <line x1="688" y1="528" x2="512" y2="480" stroke-width="18" stroke-opacity="0.55"/>
+    <line x1="416" y1="336" x2="512" y2="480" stroke-width="18" stroke-opacity="0.55"/>
+    <line x1="640" y1="336" x2="512" y2="480" stroke-width="18" stroke-opacity="0.55"/>
+    <line x1="512" y1="480" x2="336" y2="528" stroke-width="18" stroke-opacity="0.55"/>
+    <line x1="336" y1="528" x2="256" y2="416" stroke-width="18" stroke-opacity="0.55"/>
+    <line x1="256" y1="416" x2="416" y2="336" stroke-width="18" stroke-opacity="0.55"/>
+
+    <!-- Cross connections (lighter) -->
+    <line x1="768" y1="416" x2="512" y2="480" stroke-width="10" stroke-opacity="0.25"/>
+    <line x1="256" y1="416" x2="512" y2="480" stroke-width="10" stroke-opacity="0.25"/>
+
+    <!-- Lower-mid connections -->
+    <line x1="336" y1="528" x2="384" y2="624" stroke-width="18" stroke-opacity="0.55"/>
+    <line x1="688" y1="528" x2="608" y2="624" stroke-width="14" stroke-opacity="0.45"/>
+    <line x1="512" y1="480" x2="384" y2="624" stroke-width="14" stroke-opacity="0.4"/>
+    <line x1="512" y1="480" x2="608" y2="624" stroke-width="14" stroke-opacity="0.4"/>
+
+    <!-- Bottom cluster -->
+    <line x1="384" y1="624" x2="608" y2="624" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="384" y1="624" x2="304" y2="760" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="384" y1="624" x2="512" y2="784" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="608" y1="624" x2="512" y2="784" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="608" y1="624" x2="720" y2="760" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="512" y1="784" x2="304" y2="760" stroke-width="14" stroke-opacity="0.5"/>
+    <line x1="512" y1="784" x2="720" y2="760" stroke-width="14" stroke-opacity="0.5"/>
+  </g>
+
+  <!-- Primary S-path (subtle flowing curve connecting the network) -->
+  <path d="M 304 200 C 400 176 624 152 720 224 C 800 296 800 384 768 416 C 704 496 576 496 512 480 C 448 464 320 464 256 416 C 192 416 224 496 336 528 C 416 552 592 576 608 624 C 640 700 592 760 512 784"
+        fill="none" stroke="url(#edgeGrad)" stroke-width="22" stroke-linecap="round" stroke-opacity="0.3"/>
+
+  <!-- Nodes — layered: outer glow + solid fill + bright center -->
+  <!-- Top row -->
+  <circle cx="304" cy="200" r="42" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="304" cy="200" r="28" fill="#8af7ff"/>
+  <circle cx="304" cy="200" r="14" fill="#c5fbff"/>
+
+  <circle cx="512" cy="176" r="50" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="512" cy="176" r="32" fill="#6ef3f5"/>
+  <circle cx="512" cy="176" r="16" fill="#c5fbff"/>
+
+  <circle cx="720" cy="224" r="42" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="720" cy="224" r="28" fill="#52e8dc"/>
+  <circle cx="720" cy="224" r="14" fill="#b0faf0"/>
+
+  <!-- Upper-mid row -->
+  <circle cx="416" cy="336" r="38" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="416" cy="336" r="25" fill="#5aebd0"/>
+  <circle cx="416" cy="336" r="12" fill="#b0faf0"/>
+
+  <circle cx="640" cy="336" r="38" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="640" cy="336" r="25" fill="#42dfc0"/>
+  <circle cx="640" cy="336" r="12" fill="#a0f5e0"/>
+
+  <!-- Lateral nodes -->
+  <circle cx="768" cy="416" r="34" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="768" cy="416" r="22" fill="#34d8c7"/>
+  <circle cx="768" cy="416" r="11" fill="#8af0e0"/>
+
+  <circle cx="256" cy="416" r="34" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="256" cy="416" r="22" fill="#34d8c7"/>
+  <circle cx="256" cy="416" r="11" fill="#8af0e0"/>
+
+  <!-- Center hub (largest) -->
+  <circle cx="512" cy="480" r="62" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="512" cy="480" r="44" fill="#34d8c7"/>
+  <circle cx="512" cy="480" r="24" fill="#8af7ff"/>
+
+  <!-- Lower-mid nodes -->
+  <circle cx="336" cy="528" r="34" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="336" cy="528" r="22" fill="#40d4a0"/>
+  <circle cx="336" cy="528" r="11" fill="#90f0c0"/>
+
+  <circle cx="688" cy="528" r="34" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="688" cy="528" r="22" fill="#40d4a0"/>
+  <circle cx="688" cy="528" r="11" fill="#90f0c0"/>
+
+  <!-- Lower row -->
+  <circle cx="384" cy="624" r="38" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="384" cy="624" r="25" fill="#5cd890"/>
+  <circle cx="384" cy="624" r="12" fill="#b0f5c0"/>
+
+  <circle cx="608" cy="624" r="38" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="608" cy="624" r="25" fill="#6cdc88"/>
+  <circle cx="608" cy="624" r="12" fill="#b8f5c0"/>
+
+  <!-- Bottom row -->
+  <circle cx="304" cy="760" r="42" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="304" cy="760" r="28" fill="#82e478"/>
+  <circle cx="304" cy="760" r="14" fill="#c0f5b0"/>
+
+  <circle cx="512" cy="784" r="50" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="512" cy="784" r="32" fill="#92f06e"/>
+  <circle cx="512" cy="784" r="16" fill="#c8ffb0"/>
+
+  <circle cx="720" cy="760" r="42" fill="url(#glowFill)" filter="url(#nodeGlow1024)"/>
+  <circle cx="720" cy="760" r="28" fill="#a8ff6d"/>
+  <circle cx="720" cy="760" r="14" fill="#d0ffb8"/>
 </svg>

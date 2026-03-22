@@ -16,6 +16,7 @@ const PUSH_CHANNELS = [
   'worker-output',
   'worker-complete',
   'worker-error',
+  'swarm-state',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
