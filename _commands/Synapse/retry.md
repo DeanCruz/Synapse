@@ -77,3 +77,7 @@
     ```
 
 13. **Display a brief confirmation** showing the retried task and its new agent assignment.
+
+---
+
+> For complex failures requiring a diagnostic-first approach, dispatch a repair worker using the protocol at `{tracker_root}/agent/instructions/failed_task.md` instead of `!retry`.

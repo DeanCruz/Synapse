@@ -5,6 +5,7 @@ import React, { useRef, useEffect } from 'react';
 import { STATUS_COLORS, STATUS_BG_COLORS } from '@/utils/constants.js';
 import AgentCard, { StatusBadge } from './AgentCard.jsx';
 import { drawDependencyLines, setupCardHoverEffects } from '../utils/dependencyLines.js';
+import { useAppState, useDispatch } from '../context/AppContext.jsx';
 
 // ---------------------------------------------------------------------------
 // WaveHeader
@@ -48,6 +49,19 @@ function WaveHeader({ wave }) {
 export default function WavePipeline({ status, activeStatFilter, onAgentClick }) {
   const containerRef = useRef(null);
   const svgRef = useRef(null);
+
+  const appState = useAppState();
+  const appDispatch = useDispatch();
+  const unblockedTasks = appState.unblockedTasks || [];
+
+  // Auto-dismiss unblocked tasks toast after 8 seconds
+  useEffect(() => {
+    if (unblockedTasks.length === 0) return;
+    const timer = setTimeout(() => {
+      appDispatch({ type: 'CLEAR_UNBLOCKED_TASKS' });
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [unblockedTasks, appDispatch]);
 
   const agents = status?.agents || [];
   const waves = status?.waves || [];
@@ -105,6 +119,14 @@ export default function WavePipeline({ status, activeStatFilter, onAgentClick })
 
   return (
     <div ref={containerRef} className="wave-pipeline">
+      {/* Unblocked tasks notification toast */}
+      {unblockedTasks.length > 0 && (
+        <div className="unblocked-toast" onClick={() => appDispatch({ type: 'CLEAR_UNBLOCKED_TASKS' })}>
+          <span className="unblocked-toast-icon">&#9654;</span>
+          <span>{unblockedTasks.length} task{unblockedTasks.length > 1 ? 's' : ''} ready for dispatch</span>
+          <span className="unblocked-toast-ids">{unblockedTasks.map(t => t.id).join(', ')}</span>
+        </div>
+      )}
       {/* Dependency lines SVG overlay — positioned absolute over the pipeline */}
       <svg ref={svgRef} className="chain-svg" />
 

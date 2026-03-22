@@ -22,6 +22,7 @@ const {
 const { listArchives, deleteArchive } = require('../services/ArchiveService');
 const { listHistory, buildHistorySummary, saveHistorySummary } = require('../services/HistoryService');
 const { listQueue, listQueueSummaries, readQueueInitAsync, readQueueLogsAsync, readQueueProgressAsync, getQueueDir } = require('../services/QueueService');
+const { getDispatchableTasks } = require('../services/DependencyService');
 const { readJSONAsync } = require('../utils/json');
 const { ARCHIVE_DIR, HISTORY_DIR, QUEUE_DIR, DEFAULT_INITIALIZATION, DEFAULT_LOGS } = require('../utils/constants');
 
@@ -30,6 +31,19 @@ const { ARCHIVE_DIR, HISTORY_DIR, QUEUE_DIR, DEFAULT_INITIALIZATION, DEFAULT_LOG
 function sendJSON(res, statusCode, data) {
   res.writeHead(statusCode, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify(data));
+}
+
+/**
+ * Sanitize a path parameter to prevent path traversal attacks.
+ * Rejects strings with "..", directory separators, or disallowed characters.
+ * @param {*} param — the raw path parameter from the URL
+ * @returns {string|null} — the sanitized value, or null if invalid
+ */
+function sanitizePathParam(param) {
+  if (typeof param !== 'string' || param.length === 0 || param.length > 100) return null;
+  if (/[.]{2}|[/\\]/.test(param)) return null;
+  if (!/^[a-zA-Z0-9_][a-zA-Z0-9_.\-]*$/.test(param)) return null;
+  return param;
 }
 
 // Parse dashboard ID and sub-path from URL like /api/dashboards/dashboard1/initialization
@@ -66,7 +80,11 @@ function handleApiRoute(req, res, url) {
   // --- API: Delete a dashboard ---
   const deleteRoute = url.pathname.match(/^\/api\/dashboards\/([^/]+)$/);
   if (deleteRoute && req.method === 'DELETE') {
-    const id = deleteRoute[1];
+    const id = sanitizePathParam(deleteRoute[1]);
+    if (!id) {
+      sendJSON(res, 400, { error: 'Invalid dashboard ID — must be alphanumeric with hyphens, underscores, or dots (max 100 chars, no path traversal)' });
+      return true;
+    }
     const deleted = deleteDashboard(id);
     if (!deleted) {
       sendJSON(res, 404, { error: 'Dashboard not found' });
@@ -216,7 +234,11 @@ function handleApiRoute(req, res, url) {
   // --- API: Get single archive ---
   const archiveRoute = url.pathname.match(/^\/api\/archives\/([^/]+)$/);
   if (archiveRoute && req.method === 'GET') {
-    const name = archiveRoute[1];
+    const name = sanitizePathParam(archiveRoute[1]);
+    if (!name) {
+      sendJSON(res, 400, { error: 'Invalid archive name — must be alphanumeric with hyphens, underscores, or dots (max 100 chars, no path traversal)' });
+      return true;
+    }
     const archiveDir = path.join(ARCHIVE_DIR, name);
     if (!fs.existsSync(archiveDir)) {
       sendJSON(res, 404, { error: 'Archive not found' });
@@ -242,7 +264,11 @@ function handleApiRoute(req, res, url) {
 
   // --- API: Delete single archive ---
   if (archiveRoute && req.method === 'DELETE') {
-    const name = archiveRoute[1];
+    const name = sanitizePathParam(archiveRoute[1]);
+    if (!name) {
+      sendJSON(res, 400, { error: 'Invalid archive name — must be alphanumeric with hyphens, underscores, or dots (max 100 chars, no path traversal)' });
+      return true;
+    }
     const deleted = deleteArchive(name);
     if (!deleted) {
       sendJSON(res, 404, { error: 'Archive not found' });
@@ -256,7 +282,12 @@ function handleApiRoute(req, res, url) {
   const route = parseDashboardRoute(url.pathname);
 
   if (route) {
-    const { id, subpath } = route;
+    const id = sanitizePathParam(route.id);
+    if (!id) {
+      sendJSON(res, 400, { error: 'Invalid dashboard ID — must be alphanumeric with hyphens, underscores, or dots (max 100 chars, no path traversal)' });
+      return true;
+    }
+    const { subpath } = route;
     const dashboardDir = getDashboardDir(id);
 
     // GET /api/dashboards/:id/initialization
@@ -280,6 +311,13 @@ function handleApiRoute(req, res, url) {
       readDashboardProgressAsync(id).then(data => {
         sendJSON(res, 200, data);
       });
+      return true;
+    }
+
+    // GET /api/dashboards/:id/dispatchable
+    if (subpath === 'dispatchable' && req.method === 'GET') {
+      const result = getDispatchableTasks(id);
+      sendJSON(res, 200, { dispatchable: result });
       return true;
     }
 
@@ -400,7 +438,11 @@ function handleApiRoute(req, res, url) {
   // --- API: Get single queue item (full data for dashboard view) ---
   const queueRoute = url.pathname.match(/^\/api\/queue\/([^/]+)$/);
   if (queueRoute && req.method === 'GET') {
-    const queueId = queueRoute[1];
+    const queueId = sanitizePathParam(queueRoute[1]);
+    if (!queueId) {
+      sendJSON(res, 400, { error: 'Invalid queue ID — must be alphanumeric with hyphens, underscores, or dots (max 100 chars, no path traversal)' });
+      return true;
+    }
     const queueDir = getQueueDir(queueId);
     if (!fs.existsSync(queueDir)) {
       sendJSON(res, 404, { error: 'Queue item not found' });

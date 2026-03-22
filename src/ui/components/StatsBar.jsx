@@ -57,7 +57,8 @@ export default function StatsBar({ onOpenTimeline }) {
   }, [computeElapsed, task?.started_at, task?.completed_at]);
 
   function handleFilter(filter) {
-    const next = activeStatFilter === filter ? null : filter;
+    // null (Total) always clears; others toggle
+    const next = filter === null || activeStatFilter === filter ? null : filter;
     dispatch({ type: 'SET', key: 'activeStatFilter', value: next });
   }
 
@@ -72,8 +73,8 @@ export default function StatsBar({ onOpenTimeline }) {
         value={total}
         label="Total"
         numberClass="total"
-        isActive={activeStatFilter === 'total'}
-        onClick={() => handleFilter('total')}
+        isActive={!activeStatFilter}
+        onClick={() => handleFilter(null)}
       />
       <StatCard
         id="completed"

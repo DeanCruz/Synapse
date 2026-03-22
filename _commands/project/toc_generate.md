@@ -74,6 +74,7 @@ Read every file in this directory (and subdirectories up to 2 levels deep). For 
 3. **Tags** — 3-8 lowercase tags for searchability. Include: technology (typescript, react, firestore), domain (auth, simulations, generation), role (service, hook, component, config, trigger, middleware), and any other relevant descriptors.
 4. **Related files** — Other files this file imports from, depends on, or is consumed by. List paths relative to project root. Only include direct, meaningful relationships — not every transitive import.
 5. **Exports** — Key exported symbols (functions, classes, types, constants) that other files consume. Only list the important ones, not every helper.
+6. **Content hash** — Run `shasum -a 256 {file_path} | cut -c1-8` (or equivalent) to get the first 8 characters of the file's SHA-256 hash. Report this value exactly.
 
 ## Context
 This directory belongs to the project at `{project_root}`.
@@ -88,6 +89,7 @@ Return a structured list, one entry per file:
 - **Tags:** {tag1}, {tag2}, {tag3}, ...
 - **Related:** `{path1}`, `{path2}`, ...
 - **Exports:** `{Symbol1}`, `{Symbol2}`, ...
+- **Hash:** `{first 8 chars of SHA-256}`
 
 Skip files that are purely auto-generated, lock files, or build artifacts.
 ```
@@ -154,11 +156,11 @@ List every significant file with its context. Group files by directory. Use this
 ## {directory_path}/
 {Brief directory description}
 
-- **`{filename}`** — {summary} [tags: {tag1}, {tag2}]
+- **`{filename}`** — {summary} [tags: {tag1}, {tag2}] <!-- hash:{8-char-hash} -->
   - Related: `{path1}`, `{path2}`
   - Exports: `Symbol1`, `Symbol2`
 
-- **`{filename}`** — {summary} [tags: {tag1}, {tag2}]
+- **`{filename}`** — {summary} [tags: {tag1}, {tag2}] <!-- hash:{8-char-hash} -->
   - Related: `{path1}`, `{path2}`
 ```
 
@@ -211,4 +213,5 @@ These rules are absolute. Violating any of them is a failure.
 - **Tags must be searchable.** Use consistent lowercase tags. Include technology, domain, role, and feature tags.
 - **Related files enable discovery.** When a service calls an API endpoint, link them. When a type is shared, link the source and all consumers.
 - **The project overview section is mandatory.** It goes at the top and provides the high-level context that individual file entries cannot convey — purpose, tech stack, architecture, and the overall structure.
+- **Content hashes are mandatory.** Every file entry must include a `<!-- hash:{8chars} -->` comment. This enables `!toc_update` to detect content changes without re-reading every file. If an agent fails to report a hash, use `00000000` as a placeholder.
 - **Update the date.** Set "Last updated" to today's date.

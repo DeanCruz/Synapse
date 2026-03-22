@@ -50,6 +50,7 @@ const initialState = {
   archiveViewActive: false,
   queueViewActive: false,
   queueItems: [],
+  unblockedTasks: [],
   priorDashboardId: null,
   activeLogFilter: 'all',
   activeStatFilter: null,
@@ -131,6 +132,7 @@ function appReducerCore(state, action) {
         claudeStatus: targetProc.status || 'Ready',
         claudePendingAttachments: targetProc.pendingAttachments || [],
         claudeDashboardId: action.id,
+        unblockedTasks: [],
       };
     }
     case 'SET_VIEW':
@@ -217,6 +219,10 @@ function appReducerCore(state, action) {
       const newProcStash = { ...state.claudeProcessingStash, [did]: { ...existing, isProcessing: action.value, status: action.status || existing.status || 'Ready' } };
       return { ...state, claudeProcessingStash: newProcStash };
     }
+    case 'SET_UNBLOCKED_TASKS':
+      return { ...state, unblockedTasks: action.tasks || [] };
+    case 'CLEAR_UNBLOCKED_TASKS':
+      return { ...state, unblockedTasks: [] };
     default:
       return state;
   }

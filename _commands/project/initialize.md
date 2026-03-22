@@ -77,6 +77,39 @@ Scan `{project_root}` for indicators of the project's technology:
 | `Dockerfile` / `docker-compose.*` | Docker |
 | `firebase.json` | Firebase |
 
+#### Monorepo Detection
+
+After detecting the base tech stack, check for monorepo/workspace patterns:
+
+| File/Pattern | Indicates | Workspace root field |
+|---|---|---|
+| `package.json` with `"workspaces"` field | npm/Yarn workspaces | `workspaces` array (glob patterns) |
+| `pnpm-workspace.yaml` | pnpm workspaces | `packages` array (glob patterns) |
+| `lerna.json` | Lerna monorepo | `packages` array |
+| `nx.json` | Nx monorepo | Detect via `workspace.json` or `project.json` files |
+| `turbo.json` | Turborepo | Uses npm/pnpm/yarn workspaces underneath |
+| `Cargo.toml` with `[workspace]` | Cargo workspace | `members` array |
+| `go.work` | Go workspace | `use` directives |
+
+For each detected pattern:
+1. Read the config file to extract the workspace/package list.
+2. Resolve glob patterns (e.g., `"packages/*"`) against the filesystem to get actual package directories.
+3. For each discovered package/workspace, read its own `package.json` (or `Cargo.toml`, `go.mod`) to get its name and description.
+
+Report in the detection output:
+
+| Property | Value |
+|---|---|
+| Monorepo | Yes — {type} (e.g., "npm workspaces", "pnpm", "Cargo workspace") |
+| Packages | {N} packages detected |
+
+List each package:
+| Package | Path | Description |
+|---|---|---|
+| @myorg/api | packages/api | REST API server |
+| @myorg/web | packages/web | Next.js frontend |
+| @myorg/shared | packages/shared | Shared types and utilities |
+
 Also scan for:
 - Has `CLAUDE.md` already
 - Has `_commands/` directory
@@ -127,9 +160,21 @@ Write the configuration file linking this project to Synapse:
   "tracker_root": "{tracker_root}",
   "tech_stack": ["{detected_tech1}", "{detected_tech2}"],
   "initialized_at": "{ISO_timestamp}",
-  "toc_path": ".synapse/toc.md"
+  "toc_path": ".synapse/toc.md",
+  "monorepo": {
+    "type": "npm_workspaces | pnpm | lerna | nx | turbo | cargo | go",
+    "packages": [
+      {
+        "name": "@myorg/api",
+        "path": "packages/api",
+        "description": "REST API server"
+      }
+    ]
+  }
 }
 ```
+
+If the project is NOT a monorepo, the `monorepo` field should be `null` (not omitted, explicitly `null`).
 
 **Output:**
 
@@ -203,6 +248,24 @@ Check for `{project_root}/.synapse/toc.md`:
   Warning: Skipping TOC generation (--skip-toc).
   Run !toc_generate later to create the project index.
   ```
+
+If a monorepo was detected in Step 2, pass the workspace information to `!toc_generate` via the `.synapse/config.json` file. The TOC generation agents should organize file entries by package:
+
+```markdown
+## @myorg/api (packages/api/)
+{files in this package}
+
+## @myorg/web (packages/web/)
+{files in this package}
+
+## @myorg/shared (packages/shared/)
+{files in this package}
+
+## Root-level files
+{files not in any package}
+```
+
+This organization makes it much easier to navigate large monorepos compared to a flat directory listing.
 
 ---
 

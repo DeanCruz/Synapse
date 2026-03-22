@@ -7,10 +7,13 @@ const {
   PROGRESS_RETRY_MS,
   PROGRESS_READ_DELAY_MS,
   RECONCILE_DEBOUNCE_MS,
+  RECONCILE_INTERVAL_MS,
+  DEPENDENCY_CHECK_DELAY_MS,
 } = require('../utils/constants');
-const { readJSON, readJSONWithRetry, isValidInitialization, isValidProgress } = require('../utils/json');
+const { readJSON, readJSONWithRetry, isValidInitialization, isValidProgress, isValidLogs } = require('../utils/json');
 const { getDashboardDir, ensureDashboard, listDashboards } = require('./DashboardService');
 const { listQueueSummaries } = require('./QueueService');
+const { computeNewlyUnblocked } = require('./DependencyService');
 
 // --- Dashboard Watcher Management ---
 
@@ -42,7 +45,7 @@ function watchDashboard(id, broadcastFn) {
     if (data && isValidInitialization(data)) {
       broadcastFn('initialization', { dashboardId: id, ...data });
     } else if (data) {
-      console.error(`[watcher] Invalid initialization.json schema in ${id}`);
+      console.error(`[watcher] Invalid initialization.json schema in ${id} — task type: ${typeof data.task}, agents type: ${typeof data.agents}, agents count: ${Array.isArray(data.agents) ? data.agents.length : 'N/A'}`);
     }
   });
 
@@ -50,7 +53,11 @@ function watchDashboard(id, broadcastFn) {
   fs.watchFile(logsFile, { persistent: true, interval: INIT_POLL_MS }, (curr, prev) => {
     if (curr.mtimeMs === prev.mtimeMs) return;
     const data = readJSON(logsFile);
-    if (data) broadcastFn('logs', { dashboardId: id, ...data });
+    if (data && isValidLogs(data)) {
+      broadcastFn('logs', { dashboardId: id, ...data });
+    } else if (data) {
+      console.error(`[watcher] Invalid logs.json schema in ${id} — entries type: ${typeof data.entries}, is array: ${Array.isArray(data.entries)}`);
+    }
   });
 
   // Watch progress/ directory — fs.watch for file changes
@@ -66,8 +73,23 @@ function watchDashboard(id, broadcastFn) {
           const data = await readJSONWithRetry(filePath, PROGRESS_RETRY_MS);
           if (data && isValidProgress(data)) {
             broadcastFn('agent_progress', { dashboardId: id, ...data });
+
+            // Dependency check: when a task completes, check if new tasks are unblocked
+            if (data.status === 'completed') {
+              setTimeout(() => {
+                try {
+                  const result = computeNewlyUnblocked(id, data.task_id);
+                  console.log(`[watcher] Dependency check: ${result.length} tasks unblocked by ${data.task_id} in ${id}`);
+                  if (result.length > 0) {
+                    broadcastFn('tasks_unblocked', { dashboardId: id, completedTaskId: data.task_id, unblocked: result });
+                  }
+                } catch (err) {
+                  console.error(`[watcher] Dependency check error for ${data.task_id} in ${id}:`, err);
+                }
+              }, DEPENDENCY_CHECK_DELAY_MS);
+            }
           } else if (data) {
-            console.error(`[watcher] Invalid progress schema in ${id}/${filename}`);
+            console.error(`[watcher] Invalid progress schema in ${id}/${filename} — task_id: ${JSON.stringify(data.task_id)}, status: ${JSON.stringify(data.status)}, stage: ${JSON.stringify(data.stage)}`);
           }
         } catch { /* ignore transient read errors */ }
       }, PROGRESS_READ_DELAY_MS);
@@ -181,6 +203,66 @@ function startQueueWatcher(broadcastFn) {
   });
 }
 
+// --- Periodic Reconciliation ---
+
+const lastKnownProgress = new Map(); // Map<dashboardId, Map<filename, mtimeMs>>
+let reconcileIntervalTimer = null;
+
+function reconcileProgressFiles(id, broadcastFn) {
+  const progressDir = path.join(getDashboardDir(id), 'progress');
+  try {
+    if (!fs.existsSync(progressDir)) return;
+    const files = fs.readdirSync(progressDir);
+
+    if (!lastKnownProgress.has(id)) {
+      lastKnownProgress.set(id, new Map());
+    }
+    const known = lastKnownProgress.get(id);
+
+    for (const file of files) {
+      if (!file.endsWith('.json')) continue;
+      const filePath = path.join(progressDir, file);
+      try {
+        const stat = fs.statSync(filePath);
+        const lastMtime = known.get(file);
+        if (lastMtime !== undefined && stat.mtimeMs <= lastMtime) continue;
+
+        known.set(file, stat.mtimeMs);
+        const data = readJSON(filePath);
+        if (data && isValidProgress(data)) {
+          broadcastFn('agent_progress', { dashboardId: id, ...data });
+
+          // Dependency check: when a task completes, check if new tasks are unblocked
+          if (data.status === 'completed') {
+            try {
+              const result = computeNewlyUnblocked(id, data.task_id);
+              console.log(`[watcher] Dependency check: ${result.length} tasks unblocked by ${data.task_id} in ${id}`);
+              if (result.length > 0) {
+                broadcastFn('tasks_unblocked', { dashboardId: id, completedTaskId: data.task_id, unblocked: result });
+              }
+            } catch (err) {
+              console.error(`[watcher] Dependency check error for ${data.task_id} in ${id}:`, err);
+            }
+          }
+        }
+      } catch { /* ignore individual file errors */ }
+    }
+  } catch { /* ignore directory errors */ }
+}
+
+function startReconciliation(broadcastFn) {
+  reconcileIntervalTimer = setInterval(() => {
+    for (const id of dashboardWatchers.keys()) {
+      reconcileProgressFiles(id, broadcastFn);
+    }
+  }, RECONCILE_INTERVAL_MS);
+}
+
+function stopReconciliation() {
+  clearInterval(reconcileIntervalTimer);
+  reconcileIntervalTimer = null;
+}
+
 /**
  * Stop all watchers — dashboard watchers, directory watcher, live reload, and pending timers.
  */
@@ -206,6 +288,8 @@ function stopAll() {
   clearTimeout(queueReconcileTimer);
   queueReconcileTimer = null;
 
+  // Stop periodic reconciliation
+  stopReconciliation();
 }
 
 module.exports = {
@@ -213,5 +297,7 @@ module.exports = {
   unwatchDashboard,
   startDashboardsWatcher,
   startQueueWatcher,
+  startReconciliation,
+  stopReconciliation,
   stopAll,
 };

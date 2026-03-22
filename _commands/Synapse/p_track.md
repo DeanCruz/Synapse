@@ -114,6 +114,27 @@ Before finalizing the task list, apply this heuristic: **if splitting a task doe
 - **Split candidates:** Tasks over 5 minutes, or tasks that block 3+ downstream tasks
 - **Sweet spot:** 4-8 tasks per swarm for most work; 10-15 for large cross-repo efforts
 
+### Step 6B: Context Budget Check
+
+Before proceeding to visualization and dispatch, verify that each task's prompt will fit within a reasonable context budget. Oversized prompts cause workers to miss critical details buried in noise.
+
+**Per-task prompt budget guidelines:**
+
+| Section | Max Lines | Notes |
+|---|---|---|
+| CONVENTIONS | ~200 lines | Extract only sections relevant to THIS task from CLAUDE.md. Do not dump the entire file. |
+| REFERENCE CODE | ~100 lines | Include one complete, representative example. If more patterns are needed, summarize the rest. |
+| UPSTREAM RESULTS | ~50 lines per dependency | Summarize to key facts: what was built, what files changed, what new exports exist. Do not paste raw summaries. |
+| CONTEXT | ~150 lines | Focus on architectural decisions and current file state. Link to files rather than inlining large blocks. |
+| Total prompt | ~800 lines | If a prompt exceeds this, the task should be split or context should be summarized further. |
+
+**When a prompt exceeds the budget:**
+
+1. **Summarize, don't paste.** Replace inline code blocks with one-line summaries and explicit file paths the worker can read.
+2. **Split the task.** If the context is genuinely needed and cannot be summarized, the task is too large — decompose it further.
+3. **Prioritize critical details.** Success criteria and critical gotchas should never be cut for space. Cut reference code and conventions first.
+4. **Use READ file lists.** Instead of inlining a 200-line file, add it to the READ list and tell the worker what to look for: "READ: src/auth/middleware.ts — focus on the `validateToken` function signature and error handling pattern."
+
 ### Step 7: Determine parallelization type
 
 Analyze the dependency graph and decide which visualization is more beneficial:
@@ -431,6 +452,17 @@ Set `history` to `[]` (or preserve from a previous initialization.json if releva
 
 Write to `{tracker_root}/dashboards/{dashboardId}/initialization.json`.
 
+#### 11B-validate. Validate the dependency graph
+
+Before writing `initialization.json`, validate the planned `agents[]` array:
+
+1. **Check for cycles:** Inspect the dependency graph for circular references. If any circular dependency is detected, STOP. Do not write initialization.json. Report the cycle to the user and re-plan the affected tasks to break the cycle.
+2. **Check for dangling references:** Verify that every entry in every task's `depends_on` array references an existing task ID in the `agents[]` array. If any task's `depends_on` references a non-existent task ID, STOP. Fix the reference before writing.
+3. **Check for self-references:** Verify that no task's own `id` appears in its `depends_on` array. If any task depends on itself, STOP. Remove the self-reference.
+4. **Check for orphans (warning only):** Identify non-Wave-1 tasks that have no dependencies AND nothing depends on them. Warn the user but proceed — orphans may be intentional standalone tasks.
+
+The master agent performs these checks by inspecting the planned `agents[]` array before writing it to `initialization.json`. This is a mental/logical check, not a code execution step — the master reviews the dependency graph it constructed and verifies these invariants hold. The `validateDependencyGraph` function in `src/server/utils/validation.js` documents the exact rules.
+
 #### 11C. Write logs.json — initialization entry
 
 Append to `entries` in `{tracker_root}/dashboards/{dashboardId}/logs.json`:
@@ -575,6 +607,13 @@ Omit this entire section for Wave 1 tasks with no dependencies.}
 CRITICAL:
 {critical details from XML <critical> — omit section if empty}
 
+SUCCESS CRITERIA:
+{Exactly what "done" looks like — specific, verifiable conditions. The worker should be able
+to check each criterion and confirm completion. Examples:
+- "The middleware is registered in src/app.ts before all route handlers"
+- "All existing tests still pass"
+- "The new endpoint returns 429 with Retry-After header when rate limited"}
+
 FILES:
 {list each file with its action}
   - READ:   {path}
@@ -600,14 +639,19 @@ Before writing any code, complete these steps in order:
    already provided above, skip this step — do not re-read what the master already extracted for you.
    NOTE: Your code work happens in {project_root}. Your progress reporting goes to {tracker_root}.
 
-3. SELF-ASSESSMENT — answer these specific questions before proceeding:
-   a. Can I identify EVERY file I need to modify? (If no → read the project structure)
-   b. Do I understand the PATTERNS I need to follow? (If no → read the reference files listed above)
-   c. Can I describe my implementation approach in one sentence? (If no → re-read the context)
-   d. Are there any AMBIGUITIES in the task description? (If yes → make the most reasonable
-      choice, document it as a deviation, and proceed)
-   If after reading 3 additional files you still lack clarity, report the specific gap
-   as a blocker in your return rather than reading the entire codebase.
+3. READINESS CHECKLIST — verify each item before writing code:
+   [ ] I have listed every file path I will modify or create (write them in a milestone)
+   [ ] I have read at least one existing file that follows the pattern I need to replicate
+   [ ] I can state in one sentence what this task produces (write it in a milestone)
+   [ ] For each file I will modify, I have read it and confirmed it exists at the expected path
+   [ ] If this task has upstream dependencies, I have reviewed the UPSTREAM RESULTS section
+       and confirmed the files/exports I depend on exist
+   
+   If any item fails:
+   - Missing file path → Glob for it, log the discovery as a milestone
+   - No pattern reference → Read the closest similar file, log it
+   - Upstream export missing → Log as a deviation and report in your return
+   - After 3 additional file reads without resolution → report as a blocker, do not read further
 
 ═══════════════════════════════════
 LIVE PROGRESS REPORTING — NON-NEGOTIABLE
@@ -615,11 +659,21 @@ LIVE PROGRESS REPORTING — NON-NEGOTIABLE
 
 You MUST report your progress throughout execution. This is how the dashboard shows real-time updates.
 
+INSTRUCTION MODE: {FULL | LITE}
+
+{If FULL:}
 FIRST: Read the worker instructions file:
   {tracker_root}/agent/instructions/tracker_worker_instructions.md
 
 Follow those instructions EXACTLY. They contain the full progress file schema,
 required reporting points, log format, and examples.
+
+{If LITE:}
+FIRST: Read the lite worker instructions file:
+  {tracker_root}/agent/instructions/tracker_worker_instructions_lite.md
+
+Follow those instructions EXACTLY. They contain the streamlined progress file schema
+and required reporting points for simple tasks.
 
 YOUR PROGRESS FILE: {tracker_root}/dashboards/{dashboardId}/progress/{id}.json
 YOUR TASK ID: {id}
@@ -659,6 +713,11 @@ STATUS: completed | failed
 SUMMARY: {one-sentence description of what was done}
 FILES CHANGED:
   - {path} ({created | modified | deleted})
+EXPORTS: (omit entirely if no new exports were introduced)
+  - {type: function|type|interface|endpoint|constant|file} {name} — {brief description}
+  - Example: function validateAuthToken — validates JWT and returns decoded payload
+  - Example: type UserProfile — user profile interface with avatar, bio, settings fields
+  - Example: endpoint POST /api/auth/refresh — refreshes expired access tokens
 DIVERGENT ACTIONS: (omit entirely if none — include if ANY deviation from the plan occurred)
   - {what was different from the plan and why}
 WARNINGS: (omit entirely if none)
@@ -679,8 +738,27 @@ Before dispatching each agent, verify the prompt contains all of these. A missin
 | **Upstream results** | For downstream tasks: summary, files changed, new exports, and deviations from each dependency |
 | **Success criteria** | The worker can unambiguously determine when the task is done |
 | **Critical details** | Edge cases, gotchas, and non-obvious constraints are explicitly stated |
+| **Instruction mode** | FULL or LITE is selected based on task complexity (see Instruction Mode Selection) |
 
 If any element is missing, add it before dispatch. Do not assume the worker will figure it out.
+
+
+#### Instruction Mode Selection
+
+The master selects FULL or LITE mode per-task based on complexity:
+
+| Criteria | FULL | LITE |
+|---|---|---|
+| Has upstream dependencies | ✓ | |
+| Modifies 3+ files | ✓ | |
+| Requires coordination with other tasks | ✓ | |
+| High deviation risk | ✓ | |
+| Simple, independent task | | ✓ |
+| Single-file modification | | ✓ |
+| No upstream dependencies | | ✓ |
+| Well-defined, mechanical change | | ✓ |
+
+Default to FULL when uncertain. LITE is an optimization for simple tasks — never use it for tasks with dependencies or coordination requirements.
 
 ---
 
@@ -690,7 +768,7 @@ If any element is missing, add it before dispatch. Do not assume the worker will
 
 #### A. Parse the agent's return
 
-Extract `STATUS`, `SUMMARY`, `FILES CHANGED`, `DIVERGENT ACTIONS`, `WARNINGS`, and `ERRORS` from the agent's response.
+Extract `STATUS`, `SUMMARY`, `FILES CHANGED`, `EXPORTS`, `DIVERGENT ACTIONS`, `WARNINGS`, and `ERRORS` from the agent's response.
 
 #### B. Update the master XML
 
@@ -731,10 +809,40 @@ Store the completed task's results in the master's working memory:
 - Task ID, title, status
 - Summary (the worker's SUMMARY line)
 - Files changed (the worker's FILES CHANGED list)
-- Any new interfaces, types, exports, or APIs introduced (extracted from the summary or worker return)
+- Any new interfaces, types, exports, or APIs introduced (from the worker's EXPORTS section, or extracted from the summary if EXPORTS is omitted)
 - Any deviations or warnings
 
 This cache is used to populate the `UPSTREAM RESULTS` section when dispatching downstream tasks. After context compaction, reconstruct the cache from prior conversation output or by re-reading the XML summaries.
+
+#### Upstream Result Summary Format
+
+When injecting upstream results into a downstream worker's prompt, use this structured format per dependency:
+
+```
+UPSTREAM RESULTS:
+--- Dependency: Task {id} — {title} ---
+STATUS: {completed | failed}
+SUMMARY: {worker's SUMMARY line verbatim}
+FILES CHANGED:
+  - {path} ({created | modified | deleted})
+NEW EXPORTS:
+  - {type} {name} — {description}
+DEVIATIONS: {none | list of deviations}
+KEY DETAILS: {1-2 sentences of specific technical details the downstream worker needs — 
+  e.g., "The new function is exported as `validateGraph` from `utils/validation.js` 
+  and accepts an `agents[]` array", or "The middleware is registered BEFORE route handlers 
+  in app.ts line 45"}
+--- End Dependency ---
+```
+
+**KEY DETAILS is the most important field.** It bridges the gap between the upstream worker's output and the downstream worker's needs. Without it, the downstream worker knows WHAT was done but not HOW — leading to redundant file reads or incorrect assumptions.
+
+Populate KEY DETAILS by:
+1. Reading the upstream worker's SUMMARY and FILES CHANGED
+2. Extracting the specific technical facts the downstream task needs (based on the downstream task's description in the plan)
+3. If the upstream summary is too vague, quickly read the modified files to extract the relevant details (function signatures, export names, file structure)
+
+**When multiple dependencies exist**, list each one in a separate `--- Dependency ---` block. Order them by relevance to the downstream task (most important first).
 
 #### E. Scan for newly dispatchable tasks — CRITICAL
 

@@ -183,6 +183,8 @@ This gives the worker full awareness of the state of the codebase.}
 STATUS: completed | failed
 SUMMARY: {one-line description of what was done}
 FILES CHANGED: {list of files modified/created/deleted}
+EXPORTS: (omit if no new exports)
+  - {type: function|type|interface|endpoint|constant|file} {name} — {description}
 WARNINGS: {anything the master should know — optional}
 ERRORS: {if failed, what went wrong}
 ```

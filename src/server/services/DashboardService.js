@@ -2,7 +2,7 @@ const fs = require('fs');
 const fsPromises = require('fs').promises;
 const path = require('path');
 const { DASHBOARDS_DIR, DEFAULT_INITIALIZATION, DEFAULT_LOGS } = require('../utils/constants');
-const { readJSON, readJSONAsync } = require('../utils/json');
+const { readJSON, readJSONAsync, writeAtomic } = require('../utils/json');
 
 // --- Dashboard Directory Helpers ---
 
@@ -29,12 +29,12 @@ function ensureDashboard(id) {
   // Ensure initialization.json exists (required by listDashboards validation)
   const initFile = path.join(dir, 'initialization.json');
   if (!fs.existsSync(initFile)) {
-    fs.writeFileSync(initFile, JSON.stringify(DEFAULT_INITIALIZATION, null, 2));
+    writeAtomic(initFile, DEFAULT_INITIALIZATION);
   }
   // Ensure logs.json exists
   const logsFile = path.join(dir, 'logs.json');
   if (!fs.existsSync(logsFile)) {
-    fs.writeFileSync(logsFile, JSON.stringify(DEFAULT_LOGS, null, 2));
+    writeAtomic(logsFile, DEFAULT_LOGS);
   }
 }
 
