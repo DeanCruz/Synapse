@@ -1,6 +1,6 @@
 # Completion Phase
 
-The completion phase begins when all worker agents have returned (completed or failed) and no more tasks are dispatchable. The master agent compiles a final report, optionally dispatches verification, updates project metadata, and archives the swarm data.
+The completion phase begins when all worker agents have returned with terminal status (completed or failed) and no more tasks are dispatchable. The master agent compiles a final report, optionally dispatches a verification agent, updates project metadata, writes final log entries, and prepares for archiving. This phase represents the transition from active swarm orchestration back to normal agent behavior.
 
 ---
 
@@ -11,176 +11,60 @@ All workers returned (completed or failed)
     |
     v
 +----------------------------------+
-| 1. COMPILE FINAL SUMMARY        |
-|                                  |
-|    What was accomplished         |
-|    What failed and why           |
-|    What needs follow-up          |
+| 1. UPDATE MASTER XML             |
+|    Set overall_status             |
+|    Verify all task summaries      |
 +----------------------------------+
     |
     v
 +----------------------------------+
-| 2. VERIFICATION (optional)       |
-|                                  |
-|    Dispatch verification agent   |
-|    Run tests, type checks, build |
-|    Catch integration issues      |
+| 2. WRITE COMPLETION LOG ENTRY    |
+|    Final log to logs.json         |
+|    "Swarm complete: N/M succeeded"|
 +----------------------------------+
     |
     v
 +----------------------------------+
-| 3. UPDATE PROJECT METADATA       |
-|                                  |
-|    Update TOC if structure changed|
-|    Update XML with final status  |
-|    Write completion log entry    |
+| 3. VERIFICATION (optional)       |
+|    Assess whether needed          |
+|    Dispatch verification agent    |
+|    Run tests, type checks, build  |
+|    Log verification results       |
 +----------------------------------+
     |
     v
 +----------------------------------+
-| 4. ARCHIVE (if needed)           |
-|                                  |
-|    Save history summary          |
-|    Archive dashboard data        |
-|    Return to normal mode         |
+| 4. READ LOGS AND COMPILE REPORT  |
+|    Read full logs.json            |
+|    Analyze all events             |
+|    Deliver structured final report|
++----------------------------------+
+    |
+    v
++----------------------------------+
+| 5. POST-SWARM CLEANUP            |
+|    Update project TOC if needed   |
+|    Save history (if applicable)   |
+|    Master resumes normal behavior |
 +----------------------------------+
 ```
 
 ---
 
-## Step 1: Compile Final Summary
+## Step 1: Update the Master XML
 
-When all tasks have reached a terminal state (completed or failed), the master compiles a comprehensive summary.
+When all tasks have reached terminal state, the master updates the XML task file at `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml`:
 
-### Summary Components
+- Set `<overall_status>` to `completed` (if all tasks succeeded or were repaired) or `failed` (if any tasks failed without recovery)
+- Verify that every task has its `<status>`, `<completed_at>`, and `<summary>` populated from earlier monitoring-phase updates
 
-The master gathers data from multiple sources:
-
-| Source | What to Extract |
-|---|---|
-| **Progress files** | Final status, summary, deviations for each task |
-| **Master XML** | Task descriptions, file lists, dependency chains |
-| **logs.json** | Timeline of events, errors, warnings |
-
-### Summary Structure
-
-```markdown
-## Swarm Complete: {task-slug}
-
-**Duration:** {elapsed time}
-**Tasks:** {completed}/{total} completed, {failed}/{total} failed
-
-### Completed Tasks
-| Task | Title | Summary | Duration |
-|---|---|---|---|
-| 1.1 | Create rate limiter | Created middleware with sliding window | 3m 22s |
-| 1.2 | Define config types | Defined RateLimitConfig interface | 1m 45s |
-
-### Failed Tasks (if any)
-| Task | Title | Error | Repair Status |
-|---|---|---|---|
-| 2.1 | Integrate auth routes | Missing dependency | Repaired (2.4r) |
-
-### Deviations
-| Task | Severity | Description |
-|---|---|---|
-| 1.3 | MODERATE | Used interface instead of type alias |
-| 2.2 | CRITICAL | Changed function signature for compatibility |
-
-### Files Changed (aggregate)
-- src/middleware/rateLimiter.ts (created)
-- src/middleware/index.ts (modified)
-- src/types/rateLimit.ts (created)
-- ...
-
-### Follow-Up Items
-- {Items that need manual attention}
-- {Integration concerns from deviations}
-```
-
-### What the Master Assesses
-
-During compilation, the master evaluates:
-
-1. **Complete success** -- All tasks completed, no deviations requiring attention
-2. **Partial success** -- Some tasks completed with deviations or partial work
-3. **Failures recovered** -- Tasks failed but were repaired successfully
-4. **Unrecoverable failures** -- Tasks that failed and could not be repaired
-5. **Downstream impact** -- Whether CRITICAL deviations affected other tasks
+The XML is the authoritative long-term record of the swarm. It contains the complete history: descriptions, context, dependency chains, status, summaries, logs, and timing for every task.
 
 ---
 
-## Step 2: Verification
+## Step 2: Write Completion Log Entry
 
-After all tasks complete, the master assesses whether a verification step is warranted.
-
-### When Verification Is Needed
-
-| Condition | Verification | Reason |
-|---|---|---|
-| Swarm modified code across multiple files | **Recommended** | Integration issues between workers |
-| Any tasks reported CRITICAL deviations | **Strongly recommended** | Deviations may break assumptions |
-| Swarm was purely additive (new files only) | Optional | Lower risk of integration issues |
-| Single-file modifications, no dependencies | Optional | Workers validated independently |
-
-### Verification Agent
-
-If verification is warranted, the master dispatches a verification agent with:
-
-- A list of ALL files changed across the swarm (aggregated from all worker returns)
-- The project's standard validation commands (from CLAUDE.md or project conventions)
-- Instructions to run tests, type checking, build validation, or linting
-
-```
-You are the verification agent for the "{task-slug}" swarm.
-
-All implementation is complete. Your job is to verify that the combined
-changes work together correctly.
-
-FILES CHANGED ACROSS SWARM:
-  - src/middleware/rateLimiter.ts (created by task 1.1)
-  - src/types/rateLimit.ts (created by task 1.2)
-  - src/routes/auth.ts (modified by task 2.1)
-  - src/routes/users.ts (modified by task 2.2)
-
-VERIFICATION STEPS:
-1. Run the project's test suite
-2. Run type checking (if applicable)
-3. Run the build (if applicable)
-4. Check for import/export consistency across changed files
-
-Report any failures with specific file and line references.
-```
-
-### Verification Scope
-
-The verification agent focuses on **integration issues** that individual workers cannot detect:
-
-- Import/export mismatches between files modified by different workers
-- Type inconsistencies across module boundaries
-- Build failures from incompatible changes
-- Test failures from cross-cutting changes
-
----
-
-## Step 3: Update Project Metadata
-
-### Master XML Finalization
-
-The master reads the XML task file and updates the overall status:
-
-```xml
-<metadata>
-  <overall_status>completed</overall_status>
-  <!-- or "failed" if unrecoverable failures exist -->
-</metadata>
-```
-
-Each task in the XML should already have its `<status>`, `<completed_at>`, and `<summary>` set from the monitoring phase updates.
-
-### Completion Log Entry
-
-The master writes a final entry to `logs.json`:
+The master captures a live timestamp and appends a final entry to `{tracker_root}/dashboards/{dashboardId}/logs.json`:
 
 ```json
 {
@@ -188,26 +72,179 @@ The master writes a final entry to `logs.json`:
   "task_id": "0.0",
   "agent": "Orchestrator",
   "level": "info",
-  "message": "Swarm complete: 7/8 tasks succeeded in 12m 34s -- 1 task repaired, 2 deviations",
+  "message": "Swarm complete: 7/8 tasks succeeded, 1 failed in 12m 34s",
   "task_name": "add-rate-limiting"
 }
 ```
 
-The dashboard displays a green "Complete" badge in the log panel header when it detects that all progress files show terminal status.
+The dashboard displays a green "Complete" badge in the log panel header when it detects that the count of progress files with terminal status (completed or failed) equals `task.total_tasks` and no progress files show `in_progress`.
 
-### TOC Update
-
-If the swarm created, moved, or restructured files in the project, and a project TOC exists at `{project_root}/.synapse/toc.md`, the master updates it to reflect the new file structure.
-
-This is done only when the TOC already exists. The master does not create a TOC as part of the completion phase.
+Note that the master does NOT update `initialization.json` on completion. The dashboard derives `overall_status` and timing from the aggregate of worker progress files. The elapsed timer freezes when all workers have `completed_at` set in their progress files.
 
 ---
 
-## Step 4: Archiving
+## Step 3: Post-Swarm Verification
+
+After all tasks complete, the master assesses whether a verification step is warranted. Verification catches integration issues that individual workers cannot detect -- problems that only emerge when changes from multiple workers are combined.
+
+### When Verification Is Needed
+
+| Condition | Verification Recommendation | Reason |
+|---|---|---|
+| Swarm modified existing code across multiple files | **Recommended** | Cross-file integration issues between workers |
+| Any tasks reported CRITICAL deviations | **Strongly recommended** | Deviations may break downstream assumptions |
+| Any tasks reported warnings about unexpected state | **Recommended** | Warnings may indicate latent issues |
+| Swarm was purely additive (new files only, no modifications) | Optional | Lower risk of integration issues |
+| All tasks succeeded with no warnings or deviations | May skip | Low risk |
+
+### Verification Agent Prompt
+
+If verification is warranted, the master dispatches a single verification agent:
+
+```
+You are verifying the combined output of a {N}-task parallel swarm: "{task-slug}"
+
+## Files Changed
+{Complete list from the master's result cache -- all files created/modified/deleted
+across all tasks, with the task ID that changed each file}
+
+## What To Verify
+1. Run the project's test suite (if one exists)
+2. Run type checking (if applicable)
+3. Run the build (if applicable)
+4. Check for integration issues:
+   - Missing imports between files changed by different workers
+   - Conflicting exports or type definitions
+   - Broken references between modified files
+   - Inconsistent naming or patterns across changes
+
+## Report
+Return:
+- TESTS: pass | fail | no test suite
+- TYPES: pass | fail | N/A
+- BUILD: pass | fail | N/A
+- ISSUES: {list of any integration problems found, or "None"}
+```
+
+### Cross-Repository Verification
+
+When the swarm spans multiple repositories, the verification agent also checks:
+
+1. **Type/interface consistency** -- For every shared type or API contract modified, verify that all consuming repos use the updated signature
+2. **Import path validity** -- Verify that cross-repo imports resolve correctly after file moves or renames
+3. **Contract alignment** -- If the swarm modified both a backend API and its frontend consumer, verify request/response shapes match
+
+### Logging Verification Results
+
+The master logs the verification result to `logs.json`:
+
+```json
+{
+  "timestamp": "2026-03-22T14:47:00Z",
+  "task_id": "0.0",
+  "agent": "Orchestrator",
+  "level": "info",
+  "message": "Verification: Tests pass (24/24), types pass, build pass, no integration issues",
+  "task_name": "add-rate-limiting"
+}
+```
+
+If verification found issues:
+
+```json
+{
+  "timestamp": "2026-03-22T14:47:00Z",
+  "task_id": "0.0",
+  "agent": "Orchestrator",
+  "level": "warn",
+  "message": "Verification: Tests pass, but 2 type errors found -- missing export in src/types/rateLimit.ts",
+  "task_name": "add-rate-limiting"
+}
+```
+
+---
+
+## Step 4: Final Report
+
+The master reads `{tracker_root}/dashboards/{dashboardId}/logs.json` in full, analyzes all entries for the current task, and delivers a structured final report.
+
+### Final Report Template
+
+```markdown
+## Swarm Complete: {task-slug}
+
+**{completed}/{total} tasks** -- **{W} waves** -- **{0 or N} failures** -- **Type: {Waves|Chains}**
+
+### What Was Done
+{2-4 sentences. What was the goal? What was accomplished? Any significant decisions?}
+
+### Files Changed
+| File | Action | Task |
+|---|---|---|
+| {path} | created / modified / deleted | {task id} |
+
+### Important Logs and Observations
+{Summary of the most significant log entries -- not every log, just the ones that
+matter. Focus on: unexpected findings, key decisions, performance notes.}
+
+### Divergent Actions
+(Only if any agents deviated -- omit entirely if all followed the plan)
+- **{task id} -- {title}:** {what was different and why}
+
+### Warnings
+(Only if agents reported unexpected findings -- omit entirely if none)
+- **{task id}:** {warning description}
+
+### Failures
+(Only if tasks failed -- omit entirely if all succeeded)
+- **{task id} -- {title}:** {what failed and why}
+- **Blocked by failure:** {any tasks that could not run as a result}
+
+### Verification
+(Only if a verification step was run -- omit entirely if skipped)
+- **Tests:** {pass | fail | no test suite}
+- **Types:** {pass | fail | N/A}
+- **Build:** {pass | fail | N/A}
+- **Issues:** {list of integration problems, or "None"}
+
+### Recommendations and Next Steps
+(Only if applicable -- omit if the task is fully complete)
+- {Recommendation based on what was learned during execution}
+
+### Artifacts
+- **XML:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml`
+- **Plan:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
+- **Dashboard:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
+- **Logs:** `{tracker_root}/dashboards/{dashboardId}/logs.json`
+```
+
+### What the Master Assesses
+
+During report compilation, the master evaluates the overall outcome:
+
+| Outcome | Description | Report Tone |
+|---|---|---|
+| **Complete success** | All tasks completed, no significant deviations | Straightforward summary |
+| **Success with deviations** | All tasks completed, some deviated from plan | Note deviations, assess impact |
+| **Partial success** | Some tasks completed, some failed | Report both; recommend follow-up |
+| **Failures recovered** | Tasks failed but repair workers succeeded | Note the recovery, original errors, and final state |
+| **Unrecoverable failures** | Tasks failed and could not be repaired | Explain what blocked recovery, recommend manual intervention |
+
+---
+
+## Step 5: Post-Swarm Cleanup
+
+### Project TOC Update
+
+If the swarm created, moved, or restructured files in the project, and a project TOC exists at `{project_root}/.synapse/toc.md`, the master updates it to reflect the new file structure.
+
+This update is done only when:
+- A TOC already exists (the master does not create one during completion)
+- The swarm actually changed the project's file structure (new files, moved files, deleted files)
 
 ### History Summary
 
-When a swarm completes, the master may save a history summary to `{tracker_root}/history/`:
+The master may save a history summary to `{tracker_root}/history/` for future reference via the `!history` command:
 
 ```json
 {
@@ -223,35 +260,14 @@ When a swarm completes, the master may save a history summary to `{tracker_root}
 }
 ```
 
-### Dashboard Archiving
+### Dashboard Data Preservation
 
-If the dashboard will be reused for a new swarm, the current swarm data must be archived first. This happens during the next swarm's planning phase, not during the current completion phase.
+The completed swarm data remains on the dashboard until cleared by the next swarm or `!reset`. When a new swarm needs the dashboard, the planning phase archives the existing data to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/` before clearing. This archiving happens during the next swarm's planning, not during the current completion.
 
-When archiving occurs:
-
-```
-1. Copy entire dashboard directory to:
-   {tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/
-
-2. Clear progress files:
-   rm -f {tracker_root}/dashboards/{dashboardId}/progress/*.json
-
-3. Reset initialization.json and logs.json for the new swarm
-```
-
-**Previous swarm data is never discarded.** The archive preserves:
-
+The archive preserves:
 - `initialization.json` -- The complete plan
 - `logs.json` -- The full event timeline
-- `progress/` -- All worker progress files with stage histories, milestones, and logs
-
-### What Gets Archived
-
-| File | Contents |
-|---|---|
-| `initialization.json` | Static plan: task metadata, agent entries, waves, chains |
-| `logs.json` | Complete event log from initialization through completion |
-| `progress/*.json` | Full lifecycle data for every worker: stages, milestones, deviations, logs |
+- `progress/` -- All worker progress files with stages, milestones, deviations, and logs
 
 ### Archive Directory Structure
 
@@ -272,34 +288,52 @@ When archiving occurs:
       ...
 ```
 
+Previous swarm data is never discarded. This is a non-negotiable constraint -- every swarm that runs through a dashboard is preserved in the archive for future reference.
+
 ---
 
-## Step 5: Return to Normal Mode
+## Return to Normal Mode
 
-Once the swarm is complete and the final report is delivered:
-
-1. The master agent's orchestrator restrictions are lifted
-2. The master may resume normal agent behavior (including direct code edits) if the user requests non-parallel work
-3. The dashboard continues showing the completed swarm until cleared by the next swarm or `!reset`
+Once the swarm is complete and the final report is delivered, the master agent's orchestrator restrictions are lifted. It may resume normal agent behavior (including direct code edits) if the user requests non-parallel work.
 
 ### Conditions for Exiting Orchestrator Mode
 
 The master exits orchestrator mode when ALL of the following are true:
 
-- All workers have returned with terminal status (completed or failed)
-- No repair tasks are pending or in progress
-- The final report has been compiled and presented to the user
-- No verification agent is currently running
+1. All workers have returned with terminal status (completed or failed)
+2. No repair tasks are pending or in progress
+3. The final report has been compiled and presented to the user
+4. No verification agent is currently running
+
+The no-code restriction applies exclusively during active swarm orchestration. Once the swarm is over, the agent operates normally.
 
 ---
 
-## Partial Completion
+## Dashboard Final State
 
-Not every swarm finishes cleanly. The master must handle partial completion scenarios:
+When all tasks reach terminal status, the dashboard shows:
+
+| Element | State |
+|---|---|
+| **Progress bar** | 100% (or less if tasks failed) |
+| **Stat cards** | Completed = N, Failed = M, In Progress = 0, Pending = 0 |
+| **Elapsed timer** | Frozen at final duration |
+| **Agent cards** | All green (completed) or red (failed), with duration badges |
+| **Deviation badges** | Yellow on any card with deviations |
+| **Log panel** | Green "Complete" badge next to entry count |
+| **Dependency lines** | All rendered; green for completed chains |
+
+The dashboard remains in this state until cleared.
+
+---
+
+## Partial Completion Scenarios
+
+Not every swarm finishes cleanly. The master must handle several partial completion scenarios.
 
 ### Some Tasks Failed, Others Succeeded
 
-The master reports both:
+The master reports both successes and failures:
 
 ```markdown
 ## Swarm Partially Complete: {task-slug}
@@ -312,35 +346,22 @@ The master reports both:
 - Create test fixtures manually, then run `!retry 3.1` and `!retry 3.2`
 ```
 
-### Circuit Breaker Triggered
-
-If the circuit breaker fired during execution, the completion report includes the replanning details. See [Circuit Breaker](./circuit-breaker.md) for the full replanning protocol.
-
 ### Worker Partial Completion
 
-Individual workers may report partial completion (80%+ done but hit a blocker). The master includes these in the report:
+Individual workers may report partial completion (80%+ of the task done but a blocker on the remainder). Workers set `status: "completed"` (not `"failed"`) for partial completion, with a clear summary stating what was done and what remains.
+
+The master includes these in the report:
 
 ```markdown
 ### Partially Completed Tasks
 | Task | Title | Done | Remaining |
 |---|---|---|---|
-| 2.3 | Create user endpoints | 3/4 endpoints | /users/delete blocked by missing migration |
+| 2.3 | Create user endpoints | 3/4 endpoints | /users/delete blocked by missing soft-delete migration |
 ```
 
----
+### Circuit Breaker Was Triggered
 
-## Dashboard Final State
-
-When all tasks reach terminal status, the dashboard shows:
-
-- **Progress bar** at 100% (or less if tasks failed)
-- **Stat cards**: Completed = N, Failed = M, In Progress = 0, Pending = 0
-- **Elapsed timer**: Frozen at final duration
-- **Agent cards**: All green (completed) or red (failed)
-- **Log panel**: "Complete" badge next to entry count
-- **Dependency lines**: All green for completed chains
-
-The dashboard remains in this state until cleared by the next swarm or `!reset`.
+If the circuit breaker fired and replanning occurred during execution, the completion report includes the replanning details: what triggered it, what the root cause was, what revision was applied, and how the revised plan executed. See [Circuit Breaker](./circuit-breaker.md) for the full protocol.
 
 ---
 
