@@ -135,6 +135,24 @@ export function useDashboardData() {
     fetchDashboardData(state.currentDashboardId);
   }, [state.currentDashboardId, fetchDashboardData]);
 
+  // Eagerly fetch the dashboard list + statuses on mount (don't rely on push event timing)
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api) return;
+    api.getDashboards().then(result => {
+      if (result && result.dashboards) {
+        dispatch({ type: 'SET', key: 'dashboardList', value: result.dashboards });
+      }
+    }).catch(() => {});
+    api.getDashboardStatuses().then(result => {
+      if (result && result.statuses) {
+        Object.entries(result.statuses).forEach(([id, status]) => {
+          dispatch({ type: 'SET_DASHBOARD_STATE', id, status });
+        });
+      }
+    }).catch(() => {});
+  }, [dispatch]);
+
   // Set up IPC push listeners once on mount
   useEffect(() => {
     const api = window.electronAPI;
