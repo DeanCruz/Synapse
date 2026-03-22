@@ -191,8 +191,40 @@ export function useDashboardData() {
       dispatch({ type: 'SET', key: 'dashboardList', value: data.dashboards || [] });
     });
 
+    addListener('init_state', (data) => {
+      if (!data.dashboardId) return;
+      const { dashboardId, initialization, progress, logs } = data;
+
+      // Update per-dashboard caches
+      if (initialization) {
+        if (dashboardId === currentDashboardIdRef.current) {
+          dispatch({ type: 'SET_INIT', data: initialization });
+        }
+      }
+      if (progress) {
+        progressRef.current[dashboardId] = progress;
+        dispatch({ type: 'SET_DASHBOARD_PROGRESS', dashboardId, progress });
+        if (dashboardId === currentDashboardIdRef.current) {
+          dispatch({ type: 'SET_PROGRESS', data: progress });
+        }
+      }
+      if (logs) {
+        dispatch({ type: 'SET_DASHBOARD_LOGS', dashboardId, logs });
+        if (dashboardId === currentDashboardIdRef.current) {
+          dispatch({ type: 'SET_LOGS', data: logs });
+        }
+      }
+    });
+
     addListener('queue_changed', (data) => {
       dispatch({ type: 'SET', key: 'queueItems', value: data.queue || [] });
+    });
+
+    addListener('tasks_unblocked', (data) => {
+      if (!data.dashboardId || !data.unblocked) return;
+      if (data.dashboardId === currentDashboardIdRef.current) {
+        dispatch({ type: 'SET_UNBLOCKED_TASKS', tasks: data.unblocked, completedTaskId: data.completedTaskId });
+      }
     });
 
     dispatch({ type: 'SET', key: 'connected', value: true });
@@ -202,6 +234,39 @@ export function useDashboardData() {
       listenersRef.current = [];
     };
   }, []); // Connect once on mount
+
+  // Connection health monitoring — detect stale connection and re-fetch
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api) return;
+
+    let lastEventTime = Date.now();
+    const HEALTH_CHECK_INTERVAL = 30000; // 30 seconds
+    const STALE_THRESHOLD = 60000; // 60 seconds without any event
+
+    // Track when any event arrives
+    const heartbeatHandler = api.on('heartbeat', () => {
+      lastEventTime = Date.now();
+    });
+
+    const progressHandler = api.on('agent_progress', () => {
+      lastEventTime = Date.now();
+    });
+
+    const interval = setInterval(() => {
+      if (Date.now() - lastEventTime > STALE_THRESHOLD) {
+        console.warn('[useDashboardData] Connection appears stale, re-fetching...');
+        fetchDashboardData(currentDashboardIdRef.current);
+        lastEventTime = Date.now(); // Reset to avoid rapid re-fetches
+      }
+    }, HEALTH_CHECK_INTERVAL);
+
+    return () => {
+      clearInterval(interval);
+      api.off('heartbeat', heartbeatHandler);
+      api.off('agent_progress', progressHandler);
+    };
+  }, [fetchDashboardData]);
 
   // Re-merge when init or progress changes
   useEffect(() => {

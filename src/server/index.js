@@ -28,12 +28,14 @@ const {
   ensureDashboard,
   readDashboardInit,
   readDashboardProgress,
+  readDashboardLogs,
 } = require('./services/DashboardService');
 
 const {
   watchDashboard,
   startDashboardsWatcher,
   startQueueWatcher,
+  startReconciliation,
   stopAll: stopAllWatchers,
 } = require('./services/WatcherService');
 
@@ -97,6 +99,21 @@ const server = http.createServer((req, res) => {
       }
     }
 
+    // Send combined init_state for reconnection catch-up
+    for (const id of dashboardsToSend) {
+      const init = readDashboardInit(id);
+      const progress = readDashboardProgress(id);
+      const logs = readDashboardLogs(id);
+      if (init) {
+        res.write(`event: init_state\ndata: ${JSON.stringify({
+          dashboardId: id,
+          initialization: init,
+          progress: progress || {},
+          logs: logs || { entries: [] }
+        })}\n\n`);
+      }
+    }
+
     // Send initial queue data
     const queueSummaries = listQueueSummaries();
     if (queueSummaries.length > 0) {
@@ -154,6 +171,9 @@ function startup() {
 
   // 5b. Start the queue directory watcher
   startQueueWatcher(broadcast);
+
+  // 5c. Start periodic reconciliation for missed fs.watch events
+  startReconciliation(broadcast);
 
   // 6. Start heartbeat
   startHeartbeat();

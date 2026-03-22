@@ -128,6 +128,44 @@ function isValidLogs(data) {
   return true;
 }
 
+// --- Atomic Write Helpers ---
+
+/**
+ * Write data to a file atomically (sync).
+ * Writes to a .tmp file first, then renames to the target path.
+ * If data is an object, it is JSON-stringified with 2-space indent.
+ * On error, cleans up the .tmp file and rethrows.
+ */
+function writeAtomic(filePath, data) {
+  const tmpPath = filePath + '.tmp';
+  const content = (typeof data === 'object' && data !== null) ? JSON.stringify(data, null, 2) : data;
+  try {
+    fs.writeFileSync(tmpPath, content, 'utf-8');
+    fs.renameSync(tmpPath, filePath);
+  } catch (err) {
+    try { fs.unlinkSync(tmpPath); } catch (_) { /* ignore cleanup error */ }
+    throw err;
+  }
+}
+
+/**
+ * Write data to a file atomically (async).
+ * Writes to a .tmp file first, then renames to the target path.
+ * If data is an object, it is JSON-stringified with 2-space indent.
+ * On error, cleans up the .tmp file and rethrows.
+ */
+async function writeAtomicAsync(filePath, data) {
+  const tmpPath = filePath + '.tmp';
+  const content = (typeof data === 'object' && data !== null) ? JSON.stringify(data, null, 2) : data;
+  try {
+    await fsPromises.writeFile(tmpPath, content, 'utf-8');
+    await fsPromises.rename(tmpPath, filePath);
+  } catch (err) {
+    try { await fsPromises.unlink(tmpPath); } catch (_) { /* ignore cleanup error */ }
+    throw err;
+  }
+}
+
 module.exports = {
   readJSON,
   readJSONAsync,
@@ -135,4 +173,6 @@ module.exports = {
   isValidInitialization,
   isValidProgress,
   isValidLogs,
+  writeAtomic,
+  writeAtomicAsync,
 };

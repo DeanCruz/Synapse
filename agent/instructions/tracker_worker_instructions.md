@@ -148,7 +148,13 @@ Use the output directly. **Never guess or construct timestamps from memory.**
 
 ### Atomic Writes
 
-Write the full file every time. Since you are the sole writer, simply construct the entire JSON object in memory and write it all at once. The Write tool does this naturally.
+Write the full file every time. Since you are the sole writer, simply construct the entire JSON object in memory and write it all at once. The Write tool does this naturally — it writes to a temporary file and renames it into place, so the target file is never in a partially-written state.
+
+**Always use the Write tool for progress file updates.** Do not use manual `echo` or `cat` shell commands to write JSON files — those do not guarantee atomic writes and can produce truncated files if interrupted. The Write tool is the correct and safest approach for all progress file updates.
+
+If for any reason you must write a file via shell (e.g., in a script), use the write-then-rename pattern:
+1. Write to `{filePath}.tmp`
+2. Rename `{filePath}.tmp` to `{filePath}` (rename is atomic on POSIX and NTFS)
 
 ### Log Entry Format
 

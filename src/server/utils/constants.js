@@ -13,7 +13,9 @@ const INIT_POLL_MS = 100;           // fs.watchFile polling interval for initial
 const PROGRESS_RETRY_MS = 80;       // Retry delay for reading progress files that may be mid-write
 const PROGRESS_READ_DELAY_MS = 30;  // Initial delay before reading a changed progress file
 const RECONCILE_DEBOUNCE_MS = 300;  // Debounce interval for reconciling dashboard directory changes
+const RECONCILE_INTERVAL_MS = 5000;  // Periodic reconciliation interval for progress file scan
 const HEARTBEAT_MS = 15000;         // SSE heartbeat ping interval
+const DEPENDENCY_CHECK_DELAY_MS = 100; // Delay after progress file status change before running dependency check
 
 const MIME_TYPES = {
   '.html': 'text/html',
@@ -37,7 +39,9 @@ module.exports = {
   PROGRESS_RETRY_MS,
   PROGRESS_READ_DELAY_MS,
   RECONCILE_DEBOUNCE_MS,
+  RECONCILE_INTERVAL_MS,
   HEARTBEAT_MS,
+  DEPENDENCY_CHECK_DELAY_MS,
   MIME_TYPES,
   DEFAULT_INITIALIZATION,
   DEFAULT_LOGS,

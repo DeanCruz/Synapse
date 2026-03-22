@@ -7,6 +7,7 @@
   --bg: #0a0a0c;
   --surface: rgba(255,255,255,0.04);
   --surface-hover: rgba(255,255,255,0.07);
+  --surface-raised: #1c1c1e;
   --border: rgba(255,255,255,0.08);
   --border-hover: rgba(255,255,255,0.15);
   --text: #F5F5F7;
@@ -716,8 +717,7 @@ body {
   gap: 16px;
   overflow-x: auto;
   min-height: 300px;
-  padding-top: 20px;
-  padding-bottom: 60px;
+  padding: 20px 16px 60px;
 }
 
 /* ----- Wave Column — glass card ----- */
@@ -768,11 +768,13 @@ body {
   line-height: 1.4;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+  margin-left: 6px;
 }
 
 .wave-count {
   font-size: 0.7rem;
   color: var(--text-tertiary);
+  margin-left: 8px;
   margin-bottom: 12px;
 }
 
@@ -780,6 +782,38 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* ----- Unblocked Tasks Toast Notification ----- */
+.unblocked-toast {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  margin-bottom: 12px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  border-radius: 8px;
+  color: #34d399;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  animation: slideInDown 0.3s ease-out;
+}
+.unblocked-toast:hover {
+  background: rgba(52, 211, 153, 0.15);
+}
+.unblocked-toast-icon {
+  font-size: 0.7rem;
+}
+.unblocked-toast-ids {
+  color: var(--text-tertiary);
+  font-weight: 400;
+  margin-left: auto;
+}
+@keyframes slideInDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ============================================================
@@ -3320,6 +3354,7 @@ a:hover {
   --bg: #f5f5f7;
   --surface: rgba(0,0,0,0.035);
   --surface-hover: rgba(0,0,0,0.065);
+  --surface-raised: #ffffff;
   --border: rgba(0,0,0,0.1);
   --border-hover: rgba(0,0,0,0.18);
   --text: #1d1d1f;
@@ -3442,6 +3477,7 @@ a:hover {
   --bg: #0b1628;
   --surface: rgba(100,180,255,0.05);
   --surface-hover: rgba(100,180,255,0.09);
+  --surface-raised: #142236;
   --border: rgba(100,180,255,0.1);
   --border-hover: rgba(100,180,255,0.2);
   --text: #e0eaf5;
@@ -3514,6 +3550,7 @@ a:hover {
   --bg: #1a100a;
   --surface: rgba(255,160,60,0.05);
   --surface-hover: rgba(255,160,60,0.1);
+  --surface-raised: #2a1a0e;
   --border: rgba(255,160,60,0.1);
   --border-hover: rgba(255,160,60,0.2);
   --text: #f5ede4;

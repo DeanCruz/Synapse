@@ -16,6 +16,12 @@
 !toc firebase config
 ```
 
+**Tag-based filtering:**
+
+- `!toc #tag` — Search only entries tagged with `{tag}`. The `#` prefix triggers tag-only mode.
+- `!toc #tag1 #tag2` — Search entries tagged with ALL specified tags (AND logic).
+- `!toc #tag query` — Search entries tagged with `{tag}` AND matching `{query}` in name/summary.
+
 ---
 
 ## Execution Steps
@@ -25,6 +31,22 @@
 Read `{project_root}/.synapse/toc.md` in full. This is the project's semantic index — it contains summaries, tags, related files, and context for every indexed file.
 
 ### Step 2: Identify candidate files
+
+#### Tag-Only Mode
+
+If the query starts with `#` or contains `#`-prefixed terms, extract all tag terms (strip the `#` prefix).
+
+1. Parse the TOC for all entries and their `[tags: ...]` brackets.
+2. Filter to entries where ALL specified tags appear in the entry's tag list (case-insensitive).
+3. If the query also contains non-tag terms (e.g., `!toc #api user`), further filter by text-matching those terms against filenames and summaries.
+4. Tag-filtered results skip the general relevance ranking — they are already narrowed by explicit tag matching. Sort them by directory grouping instead.
+
+Example:
+- `!toc #api` — returns all files tagged with `api`
+- `!toc #api #backend` — returns files tagged with BOTH `api` AND `backend`
+- `!toc #hook explore` — returns files tagged with `hook` whose name or summary matches "explore"
+
+#### General Text Matching
 
 Search the TOC for entries matching the user's query. Match against:
 
@@ -49,6 +71,17 @@ If a candidate is NOT what the user wants, drop it and note why.
 
 ### Step 4: Report results
 
+When presenting results, also show related files for each match to provide contextual discovery:
+
+#### Related File Traversal
+
+After identifying the top candidates, check their `Related:` entries in the TOC. For each related file:
+1. Look up its TOC entry.
+2. If it exists, include its path and summary in the result's "Related Context" section.
+3. Do NOT recurse further — only show direct (1-hop) related files to avoid information overload.
+
+Only include related files that are themselves documented in the TOC (so their summaries are available). Limit to 3 related files per result to keep output concise. Prioritize related files that are most likely useful — types/interfaces over tests, services over utilities.
+
 Present the results in this format:
 
 ```markdown
@@ -60,10 +93,15 @@ Present the results in this format:
 - **Path:** `{path_relative_to_project_root}`
 - **Summary:** {1-2 sentence description from TOC + verification}
 - **Tags:** {relevant tags}
-- **Related:** {other files this connects to, if any}
+- **Related Context:**
+  - `{related_path_1}` — {summary of that related file, from the TOC}
+  - `{related_path_2}` — {summary of that related file, from the TOC}
 
 **2. {File name}**
 - ...
+
+### Tag Matches (if tag search)
+Found {N} files tagged with #{tag}.
 
 ### Not Found (if applicable)
 If no relevant files were found, suggest:

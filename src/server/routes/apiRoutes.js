@@ -22,6 +22,7 @@ const {
 const { listArchives, deleteArchive } = require('../services/ArchiveService');
 const { listHistory, buildHistorySummary, saveHistorySummary } = require('../services/HistoryService');
 const { listQueue, listQueueSummaries, readQueueInitAsync, readQueueLogsAsync, readQueueProgressAsync, getQueueDir } = require('../services/QueueService');
+const { getDispatchableTasks } = require('../services/DependencyService');
 const { readJSONAsync } = require('../utils/json');
 const { ARCHIVE_DIR, HISTORY_DIR, QUEUE_DIR, DEFAULT_INITIALIZATION, DEFAULT_LOGS } = require('../utils/constants');
 
@@ -310,6 +311,13 @@ function handleApiRoute(req, res, url) {
       readDashboardProgressAsync(id).then(data => {
         sendJSON(res, 200, data);
       });
+      return true;
+    }
+
+    // GET /api/dashboards/:id/dispatchable
+    if (subpath === 'dispatchable' && req.method === 'GET') {
+      const result = getDispatchableTasks(id);
+      sendJSON(res, 200, { dispatchable: result });
       return true;
     }
 

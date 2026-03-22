@@ -67,6 +67,10 @@ A completed task may unblock tasks in wave 3, wave 5, and wave 7 simultaneously.
 
 **Think of it this way:** if you removed the `wave` field from every agent, the dispatch logic should not change at all. Waves are a UI label. Dependencies are the only dispatch constraint.
 
+### Upstream Result Injection
+
+When dispatching a newly unblocked task, the master MUST populate the `UPSTREAM RESULTS` section of the worker prompt with structured summaries of all completed dependencies. See the "Upstream Result Summary Format" in `_commands/Synapse/p_track.md` Step 15D for the exact format. The KEY DETAILS field is critical — it provides the specific technical context (function signatures, export names, file locations) that the downstream worker needs to avoid redundant file reads.
+
 ### On Failure — Automatic Recovery via Repair Tasks
 
 When a worker returns with `status: "failed"`, the master does NOT treat the failed task as completed. **Failed tasks do not satisfy dependencies.** Any downstream task with the failed task in its `depends_on` remains blocked. However, the master MUST still run the eager dispatch scan — other dependency chains unrelated to the failure may have been freed by concurrent completions.
@@ -197,6 +201,79 @@ The master agent's job is to keep the pipeline **maximally saturated**. Every id
 | Not rewiring `depends_on` after creating a repair task | Downstream tasks still point at the failed task ID, which will never complete | Replace every reference to the failed task's ID with the repair task's ID in all `depends_on` arrays |
 | Skipping the planning/diagnosis phase in repair workers | Repair worker repeats the same mistake, fails again | Always dispatch repair workers with `failed_task.md` protocol — diagnosis before implementation is mandatory |
 
+
+---
+
+## Automatic Dependency Tracking — Server-Side Alerts
+
+The Synapse server now automatically monitors task completions and proactively identifies which downstream tasks become dispatchable. This supplements the master agent's manual eager dispatch scan with server-side intelligence.
+
+### How It Works
+
+When any worker's progress file changes to `status: "completed"`, the server:
+
+1. **Detects the completion** via `fs.watch` on the `progress/` directory
+2. **Runs a dependency scan** after a brief delay (`DEPENDENCY_CHECK_DELAY_MS` = 100ms) to allow file writes to settle
+3. **Identifies newly unblocked tasks** by calling `DependencyService.computeNewlyUnblocked(dashboardId, completedTaskId)` — this efficiently checks only tasks that depend on the completed task
+4. **Broadcasts a `tasks_unblocked` SSE event** if any tasks became dispatchable
+
+### The `tasks_unblocked` SSE Event
+
+When the server detects newly dispatchable tasks, it broadcasts:
+
+```json
+{
+  "dashboardId": "dashboard1",
+  "completedTaskId": "1.1",
+  "unblocked": [
+    {
+      "id": "2.1",
+      "title": "Add auth middleware",
+      "wave": 2,
+      "depends_on": ["1.1"],
+      "dependency_status": { "1.1": "completed" }
+    }
+  ]
+}
+```
+
+The dashboard displays a green toast notification showing which tasks are ready for dispatch.
+
+### The `/api/dashboards/:id/dispatchable` Endpoint
+
+The master agent (or any client) can query dispatchable tasks at any time:
+
+```
+GET /api/dashboards/:id/dispatchable
+```
+
+Response:
+```json
+{
+  "dispatchable": [
+    {
+      "id": "2.1",
+      "title": "Add auth middleware",
+      "wave": 2,
+      "depends_on": ["1.1"],
+      "dependency_status": { "1.1": "completed" }
+    }
+  ]
+}
+```
+
+This returns all tasks where every dependency is completed and the task has no progress file (still pending).
+
+### Relationship to Manual Eager Dispatch
+
+The automatic dependency tracking is a **complement** to the manual eager dispatch procedure, not a replacement. The master agent still follows the full eager dispatch protocol (Steps 1-5 in the section above) on every worker completion. The server-side alerts provide:
+
+- **Proactive notification** — the dashboard shows unblocked tasks immediately, before the master finishes processing
+- **Redundancy** — if the master misses a dispatch opportunity, the server alerts catch it
+- **Visibility** — the user sees real-time dependency resolution on the dashboard
+
+The manual procedure remains the authoritative dispatch mechanism. The server alerts are an acceleration layer.
+
 ---
 
 ## Locating the Tracker
@@ -233,6 +310,8 @@ node {tracker_root}/server.js
 ```
 
 Dashboard: Synapse Electron app (server runs on port `3456`, configurable via `PORT` env var).
+
+API: `/api/dashboards/:id/dispatchable` — query currently dispatchable tasks
 
 ---
 
