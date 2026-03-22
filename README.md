@@ -69,7 +69,7 @@ Synapse is fully standalone — it can live anywhere and work with any project. 
 !p_track {your prompt here}
 ```
 
-Your target project should have its own `CLAUDE.md` describing its tech stack and conventions. Run `!scaffold` to generate one if missing, or `!initialize` for full project setup (creates `.synapse/` directory for TOC, context cache, etc.).
+Your target project should have its own `CLAUDE.md` describing its tech stack and conventions. Run `!scaffold` to generate one if missing, or `!initialize` for full project setup (creates `.synapse/` directory for TOC, configuration, etc.).
 
 ---
 

@@ -580,13 +580,16 @@ function registerIPCHandlers(getMainWindow) {
       parts.push('# Synapse Context\n' + content);
     } catch (e) { /* ignore */ }
 
-    // Read project CLAUDE.md if available
+    // Read all project CLAUDE.md files (root + one-level-deep child directories)
     if (projectDir) {
-      const projectClaudeMd = path.join(projectDir, 'CLAUDE.md');
-      try {
-        const content = fs.readFileSync(projectClaudeMd, 'utf-8');
-        parts.push('\n# Project Context\n' + content);
-      } catch (e) { /* ignore */ }
+      const projectContexts = ProjectService.getProjectContext(projectDir);
+      for (const ctx of projectContexts) {
+        const dirName = path.basename(path.dirname(ctx.path));
+        const label = ctx.path === path.join(projectDir, 'CLAUDE.md')
+          ? 'Project Context'
+          : dirName + ' Context';
+        parts.push('\n# ' + label + '\n' + ctx.content);
+      }
     }
 
     return parts.join('\n\n');

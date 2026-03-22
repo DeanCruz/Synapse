@@ -114,6 +114,27 @@ Before finalizing the task list, apply this heuristic: **if splitting a task doe
 - **Split candidates:** Tasks over 5 minutes, or tasks that block 3+ downstream tasks
 - **Sweet spot:** 4-8 tasks per swarm for most work; 10-15 for large cross-repo efforts
 
+### Step 6B: Context Budget Check
+
+Before proceeding to visualization and dispatch, verify that each task's prompt will fit within a reasonable context budget. Oversized prompts cause workers to miss critical details buried in noise.
+
+**Per-task prompt budget guidelines:**
+
+| Section | Max Lines | Notes |
+|---|---|---|
+| CONVENTIONS | ~200 lines | Extract only sections relevant to THIS task from CLAUDE.md. Do not dump the entire file. |
+| REFERENCE CODE | ~100 lines | Include one complete, representative example. If more patterns are needed, summarize the rest. |
+| UPSTREAM RESULTS | ~50 lines per dependency | Summarize to key facts: what was built, what files changed, what new exports exist. Do not paste raw summaries. |
+| CONTEXT | ~150 lines | Focus on architectural decisions and current file state. Link to files rather than inlining large blocks. |
+| Total prompt | ~800 lines | If a prompt exceeds this, the task should be split or context should be summarized further. |
+
+**When a prompt exceeds the budget:**
+
+1. **Summarize, don't paste.** Replace inline code blocks with one-line summaries and explicit file paths the worker can read.
+2. **Split the task.** If the context is genuinely needed and cannot be summarized, the task is too large — decompose it further.
+3. **Prioritize critical details.** Success criteria and critical gotchas should never be cut for space. Cut reference code and conventions first.
+4. **Use READ file lists.** Instead of inlining a 200-line file, add it to the READ list and tell the worker what to look for: "READ: src/auth/middleware.ts — focus on the `validateToken` function signature and error handling pattern."
+
 ### Step 7: Determine parallelization type
 
 Analyze the dependency graph and decide which visualization is more beneficial:
@@ -575,6 +596,13 @@ Omit this entire section for Wave 1 tasks with no dependencies.}
 CRITICAL:
 {critical details from XML <critical> — omit section if empty}
 
+SUCCESS CRITERIA:
+{Exactly what "done" looks like — specific, verifiable conditions. The worker should be able
+to check each criterion and confirm completion. Examples:
+- "The middleware is registered in src/app.ts before all route handlers"
+- "All existing tests still pass"
+- "The new endpoint returns 429 with Retry-After header when rate limited"}
+
 FILES:
 {list each file with its action}
   - READ:   {path}
@@ -659,6 +687,11 @@ STATUS: completed | failed
 SUMMARY: {one-sentence description of what was done}
 FILES CHANGED:
   - {path} ({created | modified | deleted})
+EXPORTS: (omit entirely if no new exports were introduced)
+  - {type: function|type|interface|endpoint|constant|file} {name} — {brief description}
+  - Example: function validateAuthToken — validates JWT and returns decoded payload
+  - Example: type UserProfile — user profile interface with avatar, bio, settings fields
+  - Example: endpoint POST /api/auth/refresh — refreshes expired access tokens
 DIVERGENT ACTIONS: (omit entirely if none — include if ANY deviation from the plan occurred)
   - {what was different from the plan and why}
 WARNINGS: (omit entirely if none)
@@ -690,7 +723,7 @@ If any element is missing, add it before dispatch. Do not assume the worker will
 
 #### A. Parse the agent's return
 
-Extract `STATUS`, `SUMMARY`, `FILES CHANGED`, `DIVERGENT ACTIONS`, `WARNINGS`, and `ERRORS` from the agent's response.
+Extract `STATUS`, `SUMMARY`, `FILES CHANGED`, `EXPORTS`, `DIVERGENT ACTIONS`, `WARNINGS`, and `ERRORS` from the agent's response.
 
 #### B. Update the master XML
 
@@ -731,7 +764,7 @@ Store the completed task's results in the master's working memory:
 - Task ID, title, status
 - Summary (the worker's SUMMARY line)
 - Files changed (the worker's FILES CHANGED list)
-- Any new interfaces, types, exports, or APIs introduced (extracted from the summary or worker return)
+- Any new interfaces, types, exports, or APIs introduced (from the worker's EXPORTS section, or extracted from the summary if EXPORTS is omitted)
 - Any deviations or warnings
 
 This cache is used to populate the `UPSTREAM RESULTS` section when dispatching downstream tasks. After context compaction, reconstruct the cache from prior conversation output or by re-reading the XML summaries.

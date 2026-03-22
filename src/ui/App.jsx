@@ -25,17 +25,43 @@ import AgentDetails from './components/modals/AgentDetails.jsx';
 import { getDashboardProject } from './utils/dashboardProjects.js';
 
 // ── ClearDashboardSection ────────────────────────────────────────────────────
-function ClearDashboardSection({ visible, onClear }) {
+function ClearDashboardSection({ visible, onClear, taskName }) {
+  const [showConfirm, setShowConfirm] = useState(false);
+
   if (!visible) return null;
   return (
     <section className="clear-dashboard-section">
       <button
         className="clear-dashboard-btn"
         aria-label="Clear current dashboard"
-        onClick={onClear}
+        onClick={() => setShowConfirm(true)}
       >
         Clear Dashboard
       </button>
+      {showConfirm && (
+        <div className="sidebar-delete-overlay" onClick={() => setShowConfirm(false)}>
+          <div className="sidebar-delete-popup" onClick={e => e.stopPropagation()}>
+            <div className="sidebar-delete-popup-title">Clear Dashboard?</div>
+            <p className="sidebar-delete-popup-text">
+              Are you sure you want to remove the dashboard{taskName ? <> for <strong>{taskName}</strong></> : ''}? The current task will be archived before clearing.
+            </p>
+            <div className="sidebar-delete-popup-actions">
+              <button
+                className="sidebar-delete-popup-btn archive"
+                onClick={() => { setShowConfirm(false); onClear(); }}
+              >
+                Remove
+              </button>
+              <button
+                className="sidebar-delete-popup-btn cancel"
+                onClick={() => setShowConfirm(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -59,7 +85,7 @@ function ProgressSection({ onOpenTimeline }) {
 function DashboardContent() {
   const state = useAppState();
   const dispatch = useDispatch();
-  const { currentStatus, currentLogs, activeLogFilter, currentProgress } = state;
+  const { currentStatus, currentLogs, activeLogFilter, activeStatFilter, currentProgress } = state;
 
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(null);
@@ -78,7 +104,13 @@ function DashboardContent() {
     || task?.overall_status === 'completed_with_errors';
 
   async function handleClear() {
-    await window.electronAPI?.clearDashboard(state.currentDashboardId).catch(() => {});
+    const api = window.electronAPI;
+    if (!api) return;
+    // Archive the current task before clearing
+    if (hasTask) {
+      await api.archiveDashboard(state.currentDashboardId).catch(() => {});
+    }
+    await api.clearDashboard(state.currentDashboardId).catch(() => {});
   }
 
   const dashboardId = state.currentDashboardId;
@@ -121,10 +153,10 @@ function DashboardContent() {
       {hasTask ? (
         <>
           {taskType === 'Chains'
-            ? <ChainPipeline status={currentStatus} onAgentClick={setSelectedAgent} />
-            : <WavePipeline status={currentStatus} onAgentClick={setSelectedAgent} />
+            ? <ChainPipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} />
+            : <WavePipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} />
           }
-          <ClearDashboardSection visible={showClear} onClear={handleClear} />
+          <ClearDashboardSection visible={showClear} onClear={handleClear} taskName={task?.name} />
         </>
       ) : (
         <EmptyState />

@@ -195,6 +195,24 @@ Every deviation **must** include a `severity` field. Classify each deviation int
 
 The master agent uses severity to decide whether to re-plan downstream tasks (`CRITICAL`), note for review (`MODERATE`), or ignore (`MINOR`).
 
+### What Counts as a Deviation — Concrete Examples
+
+A deviation is ANYTHING you did that was not explicitly specified in your dispatch prompt. When in doubt, report it — under-reporting is worse than over-reporting.
+
+**Common deviations workers should catch:**
+
+| What Happened | Severity | Example Deviation Entry |
+|---|---|---|
+| Modified a file not in the FILES list | MODERATE | "Modified src/utils/helpers.ts to add a missing export — not in original file list but required for the new endpoint to compile" |
+| Used a different API/library method than the prompt suggested | MODERATE | "Used `fs.promises.readFile` instead of the suggested `fs.readFileSync` — async version is consistent with the existing codebase pattern" |
+| Added error handling or validation not specified in the task | MINOR | "Added input validation for empty strings on the name field — not specified but prevents a runtime error discovered during implementation" |
+| Changed a function signature (parameters, return type) | CRITICAL | "Changed `createUser(name, email)` to `createUser(userData: CreateUserInput)` — upstream interface was incompatible with the existing validation middleware" |
+| Created a helper function, utility, or file not in the plan | MODERATE | "Created src/utils/sanitize.ts with `sanitizeInput()` helper — extracting shared logic between the two endpoints this task creates" |
+| Skipped a step from the task description | MODERATE | "Skipped adding the migration file — the database schema already has the required column from a previous migration" |
+| Discovered and fixed a pre-existing bug while implementing | MINOR | "Fixed off-by-one error in existing pagination logic — discovered while adding the new endpoint, the bug would have caused the new endpoint to return incorrect page counts" |
+
+**The rule is simple: if someone diffed your changes against the task description, would they find anything not mentioned? If yes, it's a deviation. Report it.**
+
 ### Reading Upstream Results — NON-NEGOTIABLE for Dependent Tasks
 
 If your task has upstream dependencies (listed in your dispatch prompt), you **MUST read the progress files of every upstream dependency** before starting implementation. This is not optional — the master's dispatch prompt may contain a summary, but the progress files contain the **ground truth**: what actually happened, what deviated, what failed, and what the upstream worker logged.
@@ -384,3 +402,35 @@ Not every task finishes cleanly. If you complete **80%+ of the task** but hit a 
 7. **Include logs** — the popup log box renders from your `logs[]` array
 8. **Set status lifecycle fields** — `started_at` on first write, `completed_at` on completion/failure
 9. **Summary must be descriptive** — "Created auth middleware with rate limiting — 3 endpoints" not "Done"
+
+---
+
+## Return Format — EXPORTS Field
+
+When your task introduces new public functions, types, interfaces, endpoints, constants, or files that downstream tasks may depend on, include an `EXPORTS:` section in your return format between `FILES CHANGED:` and `DIVERGENT ACTIONS:`.
+
+**What qualifies as an export:**
+- New public functions, methods, or classes
+- New TypeScript/JSDoc types or interfaces
+- New API endpoints or routes
+- New constants or configuration values
+- New files that other tasks will import from
+
+**Format:**
+```
+EXPORTS:
+  - {type: function|type|interface|endpoint|constant|file} {name} — {brief description}
+```
+
+**Examples:**
+```
+EXPORTS:
+  - function validateAuthToken — validates JWT and returns decoded payload
+  - type UserProfile — user profile interface with avatar, bio, settings fields
+  - endpoint POST /api/auth/refresh — refreshes expired access tokens
+```
+
+**Rules:**
+- Omit the EXPORTS section entirely if no new exports were introduced
+- Only include exports that downstream tasks might need — internal helpers don't qualify
+- The master uses EXPORTS to construct the UPSTREAM RESULTS section of downstream worker prompts

@@ -6,6 +6,30 @@
 
 ---
 
+## When to Use Retry vs Repair
+
+| Scenario | Approach | Command/Protocol |
+|---|---|---|
+| Transient failure (timeout, flaky test, network error) | Simple retry | `!retry {id}` — re-dispatch with same approach + failure context |
+| Clear, fixable root cause (wrong path, missing import, typo) | Retry with guidance | `!retry {id}` — master adds specific remediation to prompt |
+| Unknown root cause or complex failure | Repair task | Dispatch with `failed_task.md` protocol — worker diagnoses first |
+| Previous worker left partial/broken state | Repair task | Needs cleanup phase before re-implementation |
+| Failure affects downstream task contracts | Repair task | Needs Major Deviation Gate assessment |
+
+**Decision flow:**
+1. Can you identify the exact root cause from the failure logs?
+   - YES and it's a simple fix -> `!retry` with remediation guidance
+   - YES but it requires cleanup of partial work -> Repair task
+   - NO -> Repair task (worker will diagnose)
+2. Did the previous worker write partial files that need cleanup?
+   - YES -> Repair task (cleanup phase required)
+   - NO -> Either approach works; prefer `!retry` for speed
+3. Does the fix potentially change the task's output contract (interfaces, exports, file structure)?
+   - YES -> Repair task (Major Deviation Gate applies)
+   - NO -> `!retry` is safe
+
+---
+
 ## Your Mission
 
 A previous worker attempted a task and failed. The master has created a **repair task** that replaces the failed task in the dependency chain. Downstream tasks are blocked on YOU now. Your dispatch prompt includes:

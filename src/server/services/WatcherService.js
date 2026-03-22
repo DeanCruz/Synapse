@@ -8,7 +8,7 @@ const {
   PROGRESS_READ_DELAY_MS,
   RECONCILE_DEBOUNCE_MS,
 } = require('../utils/constants');
-const { readJSON, readJSONWithRetry, isValidInitialization, isValidProgress } = require('../utils/json');
+const { readJSON, readJSONWithRetry, isValidInitialization, isValidProgress, isValidLogs } = require('../utils/json');
 const { getDashboardDir, ensureDashboard, listDashboards } = require('./DashboardService');
 const { listQueueSummaries } = require('./QueueService');
 
@@ -42,7 +42,7 @@ function watchDashboard(id, broadcastFn) {
     if (data && isValidInitialization(data)) {
       broadcastFn('initialization', { dashboardId: id, ...data });
     } else if (data) {
-      console.error(`[watcher] Invalid initialization.json schema in ${id}`);
+      console.error(`[watcher] Invalid initialization.json schema in ${id} — task type: ${typeof data.task}, agents type: ${typeof data.agents}, agents count: ${Array.isArray(data.agents) ? data.agents.length : 'N/A'}`);
     }
   });
 
@@ -50,7 +50,11 @@ function watchDashboard(id, broadcastFn) {
   fs.watchFile(logsFile, { persistent: true, interval: INIT_POLL_MS }, (curr, prev) => {
     if (curr.mtimeMs === prev.mtimeMs) return;
     const data = readJSON(logsFile);
-    if (data) broadcastFn('logs', { dashboardId: id, ...data });
+    if (data && isValidLogs(data)) {
+      broadcastFn('logs', { dashboardId: id, ...data });
+    } else if (data) {
+      console.error(`[watcher] Invalid logs.json schema in ${id} — entries type: ${typeof data.entries}, is array: ${Array.isArray(data.entries)}`);
+    }
   });
 
   // Watch progress/ directory — fs.watch for file changes
@@ -67,7 +71,7 @@ function watchDashboard(id, broadcastFn) {
           if (data && isValidProgress(data)) {
             broadcastFn('agent_progress', { dashboardId: id, ...data });
           } else if (data) {
-            console.error(`[watcher] Invalid progress schema in ${id}/${filename}`);
+            console.error(`[watcher] Invalid progress schema in ${id}/${filename} — task_id: ${JSON.stringify(data.task_id)}, status: ${JSON.stringify(data.status)}, stage: ${JSON.stringify(data.stage)}`);
           }
         } catch { /* ignore transient read errors */ }
       }, PROGRESS_READ_DELAY_MS);

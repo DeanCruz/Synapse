@@ -59,5 +59,5 @@ When resolving `{project_root}`, warn (but don't block) if:
 ## Notes
 
 - `{project_root}` is always an absolute path. Relative paths provided to `!project set` must be resolved to absolute.
-- The `.synapse/` directory inside the target project is where Synapse stores project-scoped data (TOC, profile, context cache). Projects should add `.synapse/` to their `.gitignore`.
+- The `.synapse/` directory inside the target project is where Synapse stores project-scoped data (TOC, configuration). Projects should add `.synapse/` to their `.gitignore`.
 - Different dashboard slots can serve different projects. The resolved `{project_root}` is stored in `initialization.json` at `task.project_root` when a swarm starts.
