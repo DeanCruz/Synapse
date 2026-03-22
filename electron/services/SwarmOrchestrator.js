@@ -145,6 +145,7 @@ function onTaskFailed(dashboardId, taskId) {
 
   // Check circuit breaker: 3+ failures in same wave
   var failedInWave = 0;
+  var triggerWave = agent ? agent.wave : null;
   if (agent) {
     for (var fid in swarm.failedTasks) {
       var fa = findAgent(init, fid);
@@ -152,11 +153,44 @@ function onTaskFailed(dashboardId, taskId) {
     }
   }
   if (failedInWave >= 3) {
-    swarm.state = 'paused';
+    swarm.state = 'replanning';
     appendLog(dashboardId, {
       level: 'warn',
-      message: 'Circuit breaker triggered — 3+ failures in Wave ' + agent.wave + '. Swarm paused.',
+      message: 'Circuit breaker triggered — 3+ failures in Wave ' + triggerWave + '. Entering replan mode.',
     });
+    if (broadcastFn) {
+      broadcastFn('swarm-state', { dashboardId: dashboardId, state: 'replanning' });
+    }
+    startReplan(dashboardId, triggerWave);
+    return;
+  }
+
+  // Also check blast radius: does this failure block >50% of remaining tasks?
+  var remainingCount = 0;
+  var blockedByThis = 0;
+  for (var bi = 0; bi < init.agents.length; bi++) {
+    var bAgent = init.agents[bi];
+    if (swarm.completedTasks[bAgent.id] || swarm.failedTasks[bAgent.id]) continue;
+    if (swarm.dispatchedTasks[bAgent.id]) continue;
+    remainingCount++;
+    var bDeps = bAgent.depends_on || [];
+    for (var bd = 0; bd < bDeps.length; bd++) {
+      if (bDeps[bd] === taskId) {
+        blockedByThis++;
+        break;
+      }
+    }
+  }
+  if (blockedByThis >= 3 || (remainingCount > 0 && blockedByThis / remainingCount > 0.5)) {
+    swarm.state = 'replanning';
+    appendLog(dashboardId, {
+      level: 'warn',
+      message: 'Circuit breaker triggered — task ' + taskId + ' blocks ' + blockedByThis + '/' + remainingCount + ' remaining tasks. Entering replan mode.',
+    });
+    if (broadcastFn) {
+      broadcastFn('swarm-state', { dashboardId: dashboardId, state: 'replanning' });
+    }
+    startReplan(dashboardId, triggerWave);
     return;
   }
 
@@ -410,6 +444,277 @@ function handleProgressUpdate(dashboardId, taskId, progressData) {
   } else if (progressData.status === 'failed') {
     onTaskFailed(dashboardId, taskId);
   }
+}
+
+// --- Replanning ---
+
+/**
+ * Spawn a Claude CLI process to analyze failures and produce a revised plan.
+ * On success, applies the revised plan to initialization.json and resumes dispatch.
+ */
+function startReplan(dashboardId, triggerWave) {
+  var swarm = activeSwarms[dashboardId];
+  if (!swarm) return;
+
+  var init = readDashboardInit(dashboardId);
+  var progress = readDashboardProgress(dashboardId);
+
+  var replanPrompt = PromptBuilder.buildReplanPrompt({
+    dashboardId: dashboardId,
+    init: init,
+    progress: progress,
+    failedTasks: swarm.failedTasks,
+    completedTasks: swarm.completedTasks,
+    failedInWave: triggerWave,
+  });
+
+  var replanSystem = PromptBuilder.buildReplanSystemPrompt();
+
+  appendLog(dashboardId, {
+    level: 'info',
+    message: 'Spawning replanner CLI to analyze failures and revise plan...',
+  });
+
+  var cliPath = swarm.cliPath || 'claude';
+  var args = [
+    '--print',
+    '--output-format', 'text',
+  ];
+
+  if (swarm.model) {
+    args.push('--model', swarm.model);
+  }
+
+  if (swarm.dangerouslySkipPermissions) {
+    args.push('--dangerously-skip-permissions');
+  }
+
+  args.push('--append-system-prompt', replanSystem);
+
+  var env = Object.assign({}, process.env);
+  delete env.ELECTRON_RUN_AS_NODE;
+  delete env.CLAUDECODE;
+
+  var proc = require('child_process').spawn(cliPath, args, {
+    cwd: swarm.projectPath || process.cwd(),
+    env: env,
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  // Send the replan prompt via stdin
+  proc.stdin.write(replanPrompt);
+  proc.stdin.end();
+
+  var output = '';
+  var errorOutput = '';
+
+  proc.stdout.on('data', function (chunk) {
+    output += chunk.toString();
+  });
+
+  proc.stderr.on('data', function (chunk) {
+    errorOutput += chunk.toString();
+  });
+
+  proc.on('close', function (code) {
+    if (!activeSwarms[dashboardId]) return; // swarm was cancelled during replan
+
+    if (code !== 0) {
+      appendLog(dashboardId, {
+        level: 'error',
+        message: 'Replanner CLI exited with code ' + code + '. Pausing swarm for manual intervention.',
+      });
+      swarm.state = 'paused';
+      if (broadcastFn) {
+        broadcastFn('swarm-state', { dashboardId: dashboardId, state: 'paused' });
+      }
+      return;
+    }
+
+    // Parse the JSON output from the replanner
+    var replan = null;
+    try {
+      // Strip markdown fences if the model wrapped it anyway
+      var cleaned = output.trim();
+      if (cleaned.startsWith('```')) {
+        cleaned = cleaned.replace(/^```(?:json)?\s*/, '').replace(/\s*```$/, '');
+      }
+      replan = JSON.parse(cleaned);
+    } catch (e) {
+      appendLog(dashboardId, {
+        level: 'error',
+        message: 'Replanner output was not valid JSON. Pausing swarm. Output: ' + output.substring(0, 200),
+      });
+      swarm.state = 'paused';
+      if (broadcastFn) {
+        broadcastFn('swarm-state', { dashboardId: dashboardId, state: 'paused' });
+      }
+      return;
+    }
+
+    applyReplan(dashboardId, replan);
+  });
+
+  proc.on('error', function (err) {
+    if (!activeSwarms[dashboardId]) return;
+    appendLog(dashboardId, {
+      level: 'error',
+      message: 'Replanner CLI failed to spawn: ' + err.message + '. Pausing swarm.',
+    });
+    swarm.state = 'paused';
+    if (broadcastFn) {
+      broadcastFn('swarm-state', { dashboardId: dashboardId, state: 'paused' });
+    }
+  });
+}
+
+/**
+ * Apply a replan result to initialization.json and the swarm state,
+ * then resume dispatching.
+ *
+ * @param {string} dashboardId
+ * @param {object} replan — { summary, modified, added, removed, retry }
+ */
+function applyReplan(dashboardId, replan) {
+  var swarm = activeSwarms[dashboardId];
+  if (!swarm) return;
+
+  var init = readDashboardInit(dashboardId);
+  if (!init || !init.agents) {
+    swarm.state = 'paused';
+    return;
+  }
+
+  var summary = replan.summary || 'No summary provided';
+  appendLog(dashboardId, {
+    level: 'info',
+    message: 'Replanner analysis: ' + summary,
+  });
+
+  var modified = replan.modified || [];
+  var added = replan.added || [];
+  var removed = replan.removed || [];
+  var retry = replan.retry || [];
+
+  // 1. Remove tasks
+  if (removed.length > 0) {
+    var removedSet = {};
+    for (var r = 0; r < removed.length; r++) removedSet[removed[r]] = true;
+
+    init.agents = init.agents.filter(function (a) { return !removedSet[a.id]; });
+
+    // Clean up depends_on references pointing at removed tasks
+    for (var ra = 0; ra < init.agents.length; ra++) {
+      if (init.agents[ra].depends_on) {
+        init.agents[ra].depends_on = init.agents[ra].depends_on.filter(function (dep) {
+          return !removedSet[dep];
+        });
+      }
+    }
+
+    // Clean up swarm tracking for removed tasks
+    for (var ri = 0; ri < removed.length; ri++) {
+      delete swarm.failedTasks[removed[ri]];
+      delete swarm.completedTasks[removed[ri]];
+      delete swarm.dispatchedTasks[removed[ri]];
+    }
+
+    appendLog(dashboardId, {
+      level: 'info',
+      message: 'Removed ' + removed.length + ' task(s) from plan: ' + removed.join(', '),
+    });
+  }
+
+  // 2. Modify existing tasks
+  if (modified.length > 0) {
+    for (var m = 0; m < modified.length; m++) {
+      var mod = modified[m];
+      for (var mi = 0; mi < init.agents.length; mi++) {
+        if (init.agents[mi].id === mod.id) {
+          // Merge only the fields provided in the modification
+          if (mod.title !== undefined) init.agents[mi].title = mod.title;
+          if (mod.description !== undefined) init.agents[mi].description = mod.description;
+          if (mod.depends_on !== undefined) init.agents[mi].depends_on = mod.depends_on;
+          if (mod.wave !== undefined) init.agents[mi].wave = mod.wave;
+          if (mod.layer !== undefined) init.agents[mi].layer = mod.layer;
+          break;
+        }
+      }
+    }
+
+    appendLog(dashboardId, {
+      level: 'info',
+      message: 'Modified ' + modified.length + ' task(s): ' + modified.map(function (m) { return m.id; }).join(', '),
+    });
+  }
+
+  // 3. Add new tasks (repair/replacement tasks)
+  if (added.length > 0) {
+    for (var a = 0; a < added.length; a++) {
+      init.agents.push(added[a]);
+    }
+
+    // Update wave totals
+    for (var wa = 0; wa < added.length; wa++) {
+      var addedWave = added[wa].wave;
+      if (addedWave && init.waves) {
+        var waveFound = false;
+        for (var wi = 0; wi < init.waves.length; wi++) {
+          if (init.waves[wi].id === addedWave) {
+            init.waves[wi].total = (init.waves[wi].total || 0) + 1;
+            waveFound = true;
+            break;
+          }
+        }
+        if (!waveFound) {
+          init.waves.push({ id: addedWave, name: 'Wave ' + addedWave, total: 1 });
+        }
+      }
+    }
+
+    appendLog(dashboardId, {
+      level: 'info',
+      message: 'Added ' + added.length + ' new task(s): ' + added.map(function (a) { return a.id; }).join(', '),
+    });
+  }
+
+  // 4. Handle retries (clear failed state, delete old progress file)
+  if (retry.length > 0) {
+    for (var rt = 0; rt < retry.length; rt++) {
+      var retryId = retry[rt];
+      delete swarm.failedTasks[retryId];
+
+      // Delete old progress file so the worker starts fresh
+      var progressFile = path.join(swarm.trackerRoot, 'dashboards', dashboardId, 'progress', retryId + '.json');
+      try { fs.unlinkSync(progressFile); } catch (e) { /* ignore */ }
+    }
+
+    appendLog(dashboardId, {
+      level: 'info',
+      message: 'Retrying ' + retry.length + ' task(s): ' + retry.join(', '),
+    });
+  }
+
+  // 5. Update total_tasks count
+  if (init.task) {
+    init.task.total_tasks = init.agents.length;
+  }
+
+  // 6. Write updated initialization.json
+  var initFile = path.join(DASHBOARDS_DIR, dashboardId, 'initialization.json');
+  fs.writeFileSync(initFile, JSON.stringify(init, null, 2));
+
+  appendLog(dashboardId, {
+    level: 'info',
+    message: 'Replan applied. Resuming swarm dispatch.',
+  });
+
+  // 7. Resume dispatching
+  swarm.state = 'running';
+  if (broadcastFn) {
+    broadcastFn('swarm-state', { dashboardId: dashboardId, state: 'running' });
+  }
+  dispatchReady(dashboardId);
 }
 
 // --- Helpers ---
