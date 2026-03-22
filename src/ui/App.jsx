@@ -81,6 +81,17 @@ function ProgressSection({ onOpenTimeline }) {
   );
 }
 
+// ── ReplanningBanner — shown when circuit breaker fires ──────────────────────
+function ReplanningBanner({ visible }) {
+  if (!visible) return null;
+  return (
+    <div className="replanning-banner">
+      <span className="replanning-dot" />
+      <span>Circuit breaker triggered — replanning in progress</span>
+    </div>
+  );
+}
+
 // ── DashboardContent — main pipeline area ────────────────────────────────────
 function DashboardContent() {
   const state = useAppState();
@@ -149,6 +160,7 @@ function DashboardContent() {
       </div>
 
       <ProgressSection onOpenTimeline={() => setTimelineOpen(true)} />
+      <ReplanningBanner visible={task?.overall_status === 'replanning'} />
 
       {hasTask ? (
         <>

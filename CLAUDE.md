@@ -152,6 +152,7 @@ During a swarm, the master agent writes to exactly these files at `{tracker_root
 |---|---|
 | `dashboards/{dashboardId}/initialization.json` | Static plan data (written ONCE during planning) |
 | `dashboards/{dashboardId}/logs.json` | Timestamped event log for the dashboard |
+| `dashboards/{dashboardId}/master_state.json` | State checkpoint for context compaction recovery |
 | `tasks/{date}/parallel_{name}.xml` | Master task record (plan, status, summaries) |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
@@ -196,6 +197,10 @@ The master agent's most critical skill is **context efficiency** — gathering e
 7. **Cache awareness.** After context compaction, you lose file contents from earlier reads. Re-read critical files rather than working from stale memory.
 
 8. **Summarize, don't hoard.** After reading a file for context, extract the relevant facts and move on. You don't need to keep the entire file contents in working memory.
+
+9. **Budget worker prompts.** Each worker prompt should target ~8000 tokens or less. Break down the prompt into sections (description, context, conventions, upstream results, instructions) and estimate each. If total exceeds the budget, split the task or summarize conventions. Bloated prompts are the primary cause of worker context exhaustion.
+
+10. **Filter conventions by relevance.** When injecting project CLAUDE.md content into worker prompts, include only the convention categories that apply to the specific task. A worker creating a backend utility function does not need frontend styling conventions. For large CLAUDE.md files (500+ lines), always summarize rather than quote.
 
 ### Project `.synapse/` Directory
 
@@ -576,6 +581,7 @@ Synapse/                            ← {tracker_root}
 │   ├── dashboard1/
 │   │   ├── initialization.json
 │   │   ├── logs.json
+│   │   ├── master_state.json          ← Master state checkpoint (context recovery)
 │   │   └── progress/
 │   └── dashboard2/ ... dashboard5/
 ├── queue/                          ← Overflow queue slots
@@ -720,17 +726,9 @@ A failed task blocks only its direct dependents. Everything else continues. Log 
 
 Whichever threshold is hit first triggers the circuit breaker.
 
-**Automatic replanning:** When the circuit breaker fires, the orchestrator:
-1. Sets swarm state to `'replanning'` (blocks new dispatches, notifies the dashboard)
-2. Spawns a Claude CLI process (`--print` mode) with full context: what completed, what failed and why (error logs, stage, deviations), the original dependency graph, and all pending tasks
-3. The replanner analyzes root cause and returns a structured JSON revision:
-   - `modified` — existing tasks with updated descriptions, rewired dependencies
-   - `added` — new repair/replacement tasks inserted into the graph (suffixed with `r`, e.g. `"2.1r"`)
-   - `removed` — tasks that are no longer viable (dangling `depends_on` references are auto-cleaned)
-   - `retry` — tasks to re-dispatch as-is (transient failures, old progress files are deleted)
-4. The orchestrator applies the revision to `initialization.json`, updates `total_tasks`, and resumes dispatch
+**Automatic replanning:** When the circuit breaker fires, the master performs replanning inline: (a) pauses all new dispatches, (b) reads all progress files to build a full picture of completed, failed, and blocked tasks, (c) analyzes root cause from failure patterns, (d) produces a revision plan with four categories — `modified` (updated pending tasks), `added` (new repair tasks with `r`-suffixed IDs), `removed` (no longer viable tasks), and `retry` (re-dispatch as-is) — (e) applies the revision to `initialization.json` (the documented exception to write-once), and (f) resumes dispatch.
 
-**Fallback:** If the replanner CLI fails to spawn, exits non-zero, or returns invalid JSON, the swarm pauses for manual intervention rather than pushing through blind. The user can then manually retry tasks or cancel the swarm.
+**Fallback:** If replanning analysis fails to produce a valid revision (e.g., the master cannot determine root cause or all remaining tasks are blocked), the swarm pauses for manual intervention rather than pushing through blind. The user can then manually retry tasks or cancel the swarm.
 
 Never blindly push through cascading failures.
 
@@ -865,6 +863,10 @@ The progress file now contains the **full lifecycle** for each agent. The `logs[
 - The server watches the directory via `fs.watch` and broadcasts `agent_progress` SSE events
 - The master clears this directory when initializing a new swarm
 - Progress files are ephemeral — they exist only during the active swarm
+
+### master_state.json
+
+The master's state checkpoint, written after every dispatch event. Contains: completed task IDs and summaries, in-progress task IDs, failed tasks with repair IDs, ready-to-dispatch tasks, upstream result summaries, and the next agent number. Used for recovery after context compaction. Not watched by the server — purely for master self-recovery. Located at `{tracker_root}/dashboards/{dashboardId}/master_state.json`.
 
 ---
 

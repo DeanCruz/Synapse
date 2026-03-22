@@ -135,6 +135,52 @@ Before proceeding to visualization and dispatch, verify that each task's prompt 
 3. **Prioritize critical details.** Success criteria and critical gotchas should never be cut for space. Cut reference code and conventions first.
 4. **Use READ file lists.** Instead of inlining a 200-line file, add it to the READ list and tell the worker what to look for: "READ: src/auth/middleware.ts — focus on the `validateToken` function signature and error handling pattern."
 
+### Step 6C: Token Budget Estimate
+
+After constructing each worker's dispatch prompt, the master should estimate the token budget of the prompt by breaking it into sections:
+
+| Section | Description | Typical range |
+|---|---|---|
+| Task description | What the worker must do | 200-500 tokens |
+| File context | Code snippets the worker needs to see | 500-2000 tokens |
+| Conventions | Extracted CLAUDE.md sections | 300-800 tokens |
+| Upstream results | Summaries from completed dependency tasks | 200-600 tokens |
+| Critical details | Edge cases, gotchas, constraints | 200-400 tokens |
+| Instructions | Worker protocol, progress file path, return format | 400-600 tokens |
+
+**Budget limit: 8000 tokens (~32KB of text).** If a worker prompt exceeds this estimate:
+
+1. **Split the task** — If the prompt is large because the task touches too many files, decompose it into smaller tasks.
+2. **Summarize conventions** — Instead of quoting full CLAUDE.md sections, extract only the 3-5 most relevant rules as bullet points.
+3. **Trim reference code** — Include only the specific functions/types the worker needs, not entire files. Use line ranges.
+4. **Condense upstream results** — One-line summaries per completed task, not full progress file contents.
+
+> **Prompt bloat is the #1 cause of worker context exhaustion.** A worker that receives a 15,000-token prompt has already consumed 15% of its context window before writing a single line of code. Keep prompts lean — every token should earn its place.
+
+### Step 6D: Convention Relevance Checklist
+
+Before extracting CLAUDE.md content for a worker prompt, assess which convention categories are relevant to THIS specific task:
+
+| Category | Include when... | Skip when... |
+|---|---|---|
+| Naming conventions | Task creates new files, functions, variables, or types | Task only modifies existing code |
+| File structure / organization | Task creates new files or moves files | Task modifies existing files in-place |
+| Import conventions | Task adds new imports or creates new modules | Task doesn't touch imports |
+| Testing patterns | Task involves writing or modifying tests | Task has no test component |
+| Error handling | Task involves error paths, try/catch, or validation | Task is purely additive/cosmetic |
+| API conventions | Task creates or modifies API endpoints | Task doesn't touch APIs |
+| Styling conventions | Task involves UI/CSS/component styling | Task is backend-only |
+| Git conventions | Never — workers don't commit | Always skip |
+
+**Rules:**
+1. Only extract CLAUDE.md sections that match checked categories above
+2. If the project CLAUDE.md exceeds 500 lines, ALWAYS summarize rather than quote — extract the 5-10 most relevant rules as bullet points
+3. Cap convention content at ~200 lines in the worker prompt
+4. If no categories apply (rare), include a 3-line summary of the project's tech stack and primary patterns
+
+This filtering should be applied per-worker, not globally — different tasks need different convention subsets.
+
+
 ### Step 7: Determine parallelization type
 
 Analyze the dependency graph and decide which visualization is more beneficial:
@@ -521,6 +567,8 @@ The dashboard is now live with the full plan — all tasks visible as pending ca
 
 ## Phase 2: Execution — Dependency-Driven Dispatch
 
+> **WAVES ARE VISUAL ONLY.** Dispatch is driven exclusively by individual task dependencies (`depends_on` arrays), not by wave boundaries. A task in wave 5 with all dependencies satisfied is dispatchable immediately — even if waves 2, 3, and 4 still have running tasks. If you removed the `wave` field from every agent, the dispatch logic should not change at all.
+
 ### Step 12: Begin execution
 
 The dashboard is already populated with the full plan from Step 11. All tasks are visible as pending. Now begin dispatching agents.
@@ -770,6 +818,22 @@ Default to FULL when uncertain. LITE is an optimization for simple tasks — nev
 
 Extract `STATUS`, `SUMMARY`, `FILES CHANGED`, `EXPORTS`, `DIVERGENT ACTIONS`, `WARNINGS`, and `ERRORS` from the agent's response.
 
+#### A-2. Worker Return Validation
+
+After parsing the agent's return text, the master must validate these required sections before treating it as a successful completion:
+
+| Section | Required? | Validation |
+|---|---|---|
+| STATUS | Yes | Must be present. Must be one of: `COMPLETED`, `FAILED`, `PARTIAL`. If missing, treat the return as a failure — log `"error"` level: `"Worker returned without STATUS section — treating as failure."` |
+| SUMMARY | Yes | Must be present and non-generic. If empty or matches generic patterns (`"Done"`, `"Completed"`, `"Finished"`, `"Task complete"`), log `"warn"` level: `"Worker returned generic summary — quality check needed."` Still count as completed, but flag for review. |
+| FILES CHANGED | Conditional | If the task was expected to modify files (i.e., the task description mentions creating, modifying, or editing files), this section should list specific file paths. If empty or missing for a file-modifying task, log `"warn"` level: `"Worker reported no files changed for a task expected to modify files."` |
+| DIVERGENT ACTIONS | Optional | If present, parse each deviation and log at `"deviation"` level in logs.json. |
+
+**Processing rules:**
+- If STATUS is `FAILED`, follow the existing failure recovery procedure (repair task creation or circuit breaker).
+- If STATUS is `PARTIAL`, treat as completed but log a `"warn"` entry and include the incomplete items in the final report.
+- If STATUS is missing entirely, treat as a failure — create a repair task per the standard procedure.
+
 #### B. Update the master XML
 
 Read the XML. Find the task by `id`:
@@ -897,6 +961,24 @@ After a failure, decide scope of recovery:
 - **If the failure blocks >50% of remaining pending tasks** → **replan the swarm.** The dependency graph is too damaged for piecemeal fixes. Reassess the decomposition, merge tasks if needed, and re-dispatch.
 - **If the failure blocks <50% of remaining tasks** → **retry the individual task.** Fix the prompt (using the taxonomy above), re-dispatch, and continue the swarm.
 - **If the same task fails twice** → escalate to the user regardless of blast radius.
+
+#### Circuit Breaker Check
+
+After every failure event, before proceeding to the eager dispatch scan, the master must evaluate three circuit breaker thresholds:
+
+**Threshold A — Wave-level cascade:** 3+ tasks have failed within the same wave. Count all progress files with `status: "failed"` grouped by the wave ID from `initialization.json` agents[].
+
+**Threshold B — Downstream blockage:** A single failed task blocks 3+ downstream tasks. Scan agents[] for any task whose `depends_on` contains the failed task's ID (or the repair task ID that replaced it) and count how many are transitively blocked.
+
+**Threshold C — Majority blockage:** A single failure blocks more than half of all remaining non-completed tasks.
+
+If ANY threshold is hit, the circuit breaker fires. The master must:
+1. Log a `"warn"` level entry to `logs.json`: `"Circuit breaker triggered — threshold {A|B|C} hit. Entering replanning mode."`
+2. Set a replanning flag (internal master state) that blocks all new dispatches
+3. Proceed to the replanning procedure documented in `{tracker_root}/agent/instructions/tracker_master_instructions.md` — "Circuit Breaker — Automatic Replanning" section
+
+**Example — Threshold B triggered:**
+Task 2.1 fails. The master scans agents[] and finds that tasks 3.1, 3.2, 3.3, and 4.1 all have `depends_on` chains that include 2.1 (directly or transitively). That's 4 blocked tasks — exceeding the threshold of 3. The circuit breaker fires. The master pauses dispatches, enters the replanning procedure, analyzes root cause, and produces a revision plan.
 
 ---
 
@@ -1045,6 +1127,53 @@ Focus on: unexpected findings, key decisions, performance notes.}
 - **Dashboard:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
 - **Logs:** `{tracker_root}/dashboards/{dashboardId}/logs.json`
 ```
+
+---
+
+### Master State Checkpoint
+
+After every dispatch event (worker dispatched, worker completed, worker failed), the master should write a state checkpoint to:
+
+```
+{tracker_root}/dashboards/{dashboardId}/master_state.json
+```
+
+The checkpoint contains:
+
+```json
+{
+  "last_updated": "2026-03-21T15:30:00Z",
+  "completed": [
+    { "id": "1.1", "summary": "Created auth middleware — 3 endpoints protected" },
+    { "id": "1.2", "summary": "Set up database schema — 4 tables created" }
+  ],
+  "in_progress": ["2.1", "2.3"],
+  "failed": [
+    { "id": "2.2", "summary": "Failed: missing dependency express-rate-limit", "repair_id": "2.4r" }
+  ],
+  "ready_to_dispatch": ["3.1"],
+  "upstream_results": {
+    "1.1": "Created auth middleware with rate limiting for /api/auth, /api/users, /api/admin. Exports: authMiddleware, rateLimiter.",
+    "1.2": "Created User, Session, Permission, AuditLog tables. Migration file: 001_initial_schema.sql."
+  },
+  "next_agent_number": 5,
+  "permanently_failed": []
+}
+```
+
+**Write rules:**
+- Write the full file on every update (atomic, like progress files)
+- This is the master's own state file — workers never read or write it
+- `upstream_results` stores one-line summaries per completed task, used for injecting into downstream worker prompts
+- `next_agent_number` tracks the agent numbering counter so re-dispatch after compaction uses the right numbers
+- Keep summaries short (one line each) — this file should stay under 2000 tokens
+
+**Recovery procedure:** If the master experiences context compaction (detected by losing track of which tasks are dispatched), it should:
+1. Read `dashboards/{dashboardId}/master_state.json`
+2. Read `dashboards/{dashboardId}/initialization.json` (for the full plan)
+3. Read all files in `dashboards/{dashboardId}/progress/` (for ground truth)
+4. Cross-reference checkpoint against progress files (progress files are authoritative if they conflict)
+5. Resume the eager dispatch loop
 
 ---
 

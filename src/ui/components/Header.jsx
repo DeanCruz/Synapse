@@ -137,6 +137,9 @@ export default function Header() {
 
         {/* Active agents count badge */}
         <span className="active-badge">{activeCount} active</span>
+        {task?.overall_status === 'replanning' && (
+          <span className="replanning-badge">Replanning</span>
+        )}
       </div>
     </header>
   );

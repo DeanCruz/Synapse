@@ -50,7 +50,11 @@ The dashboard server watches this directory and broadcasts changes to the browse
     { "at": "2026-02-25T14:05:00Z", "level": "info", "msg": "Starting task — reading context" },
     { "at": "2026-02-25T14:05:10Z", "level": "info", "msg": "Read CLAUDE.md — found auth patterns" },
     { "at": "2026-02-25T14:06:01Z", "level": "info", "msg": "Rate limiter created for /api/auth endpoint" }
-  ]
+  ],
+  "prompt_size": {
+    "total_chars": 12500,
+    "estimated_tokens": 3571
+  }
 }
 ```
 
@@ -69,6 +73,7 @@ The dashboard server watches this directory and broadcasts changes to the browse
 | `milestones` | array | Significant accomplishments during execution. Append-only. |
 | `deviations` | array | Any divergences from the original plan. Append-only. |
 | `logs` | array | Detailed log entries for the popup log box. Append-only. |
+| `prompt_size` | object \| null | Optional. Size metrics of the dispatch prompt received. Contains `total_chars` (integer) and `estimated_tokens` (integer). |
 
 ### Status Values
 
@@ -99,6 +104,10 @@ Progress through these stages in order:
 ### Mandatory writes (skipping any of these is a failure):
 
 1. **Before starting work** — Write your initial progress file with `status: "in_progress"`, `stage: "reading_context"`, and a log entry saying you're starting.
+
+   Optionally, measure the size of your dispatch prompt and include it as `prompt_size` in your initial write. This helps the master agent calibrate future prompt budgets.
+
+   To calculate prompt size, count the total characters of your full dispatch prompt (everything the master sent you). Estimate tokens as `Math.ceil(totalChars / 3.5)`. This is approximate — precision is not required.
 
 2. **After initial write, if you have dependencies** — Read all upstream dependency progress files (see **Reading Upstream Results** below). Log what you found. If any upstream task failed or has `CRITICAL` deviations, adapt before proceeding.
 

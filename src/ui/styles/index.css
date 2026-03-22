@@ -5971,3 +5971,43 @@ a:hover {
   outline-offset: -2px;
   background: rgba(155, 124, 240, 0.06);
 }
+
+/* ── Replanning state ────────────────────────────────────────────────────── */
+.replanning-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: 8px;
+  color: #f59e0b;
+  font-size: 13px;
+  margin: 0 16px 8px;
+}
+
+.replanning-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  animation: replanning-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes replanning-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.replanning-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}

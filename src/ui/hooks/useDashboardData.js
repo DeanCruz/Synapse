@@ -7,7 +7,7 @@ import { useAppState, useDispatch } from '../context/AppContext.jsx';
 /**
  * Merge static plan data (init) with dynamic progress data into a renderable status.
  */
-export function mergeState(init, progress) {
+export function mergeState(init, progress, logs) {
   if (!init || !init.task) {
     return { active_task: null, agents: [], waves: [], chains: [], history: [] };
   }
@@ -56,6 +56,25 @@ export function mergeState(init, progress) {
     task.overall_status = 'in_progress';
   } else {
     task.overall_status = task.overall_status || 'pending';
+  }
+
+  // Check for replanning state from circuit breaker
+  if (task.overall_status === 'in_progress' && logs && logs.entries) {
+    const hasCircuitBreaker = logs.entries.some(e =>
+      e.level === 'warn' && e.message && e.message.includes('Circuit breaker triggered')
+    );
+    if (hasCircuitBreaker) {
+      // Check if replanning has completed (look for "Replanning complete" info entry AFTER the circuit breaker entry)
+      const cbIndex = logs.entries.findLastIndex(e =>
+        e.level === 'warn' && e.message && e.message.includes('Circuit breaker triggered')
+      );
+      const resumedAfter = logs.entries.slice(cbIndex + 1).some(e =>
+        e.level === 'info' && e.message && e.message.includes('Replanning complete')
+      );
+      if (!resumedAfter) {
+        task.overall_status = 'replanning';
+      }
+    }
   }
 
   const waves = (init.waves || []).map(waveDef => {
@@ -288,8 +307,8 @@ export function useDashboardData() {
 
   // Re-merge when init or progress changes
   useEffect(() => {
-    const { currentInit, currentProgress } = state;
-    const merged = mergeState(currentInit, currentProgress);
+    const { currentInit, currentProgress, currentLogs } = state;
+    const merged = mergeState(currentInit, currentProgress, currentLogs);
     dispatch({ type: 'SET_STATUS', data: merged });
-  }, [state.currentInit, state.currentProgress]);
+  }, [state.currentInit, state.currentProgress, state.currentLogs]);
 }

@@ -247,6 +247,14 @@ function reconcileProgressFiles(id, broadcastFn) {
         }
       } catch { /* ignore individual file errors */ }
     }
+
+    // Clean up stale entries for deleted progress files
+    const currentFiles = new Set(files.filter(f => f.endsWith('.json')));
+    for (const trackedFile of known.keys()) {
+      if (!currentFiles.has(trackedFile)) {
+        known.delete(trackedFile);
+      }
+    }
   } catch { /* ignore directory errors */ }
 }
 
