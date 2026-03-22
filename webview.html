@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Synapse</title>
+  <!-- CSP is enforced by the VSCode webview host via getWebviewHtml.ts —
+       no inline policy needed here. Fonts are bundled or served via
+       webview URIs (no external CDN in webview context). -->
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/ui/webview-main.jsx"></script>
+</body>
+</html>

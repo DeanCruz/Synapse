@@ -1,10 +1,11 @@
 // AgentDetails — Shows agent details: id, title, status, wave, layer, directory,
-// summary, dependencies, meta grid, milestones, deviations, and activity log.
+// summary, dependencies, meta grid, milestones, deviations, retry action, and activity log.
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import Modal from './Modal.jsx';
 import { STATUS_COLORS, STATUS_BG_COLORS, colorWithAlpha } from '../../utils/constants.js';
 import { formatTime, calcDuration, formatElapsed } from '../../utils/format.js';
+import { detectEnvironment } from '../../hooks/useElectronAPI.js';
 
 function StatusBadge({ status }) {
   const label = (status || '').replace(/_/g, ' ');
@@ -23,14 +24,58 @@ function StatusBadge({ status }) {
   );
 }
 
-export default function AgentDetails({ onClose, agent, progressData, findAgentFn }) {
-  const logsBoxRef = useRef(null);
+/**
+ * Resolve the platform API for retry actions.
+ */
+function getPlatformAPI() {
+  const env = detectEnvironment();
+  if (env === 'electron' || env === 'webview') {
+    return window.electronAPI || null;
+  }
+  return null;
+}
 
+/** Severity badge color mapping */
+const SEVERITY_STYLES = {
+  CRITICAL: { bg: 'rgba(241,76,76,0.15)', color: '#f14c4c', border: 'rgba(241,76,76,0.3)' },
+  MODERATE: { bg: 'rgba(204,167,0,0.15)', color: '#cca700', border: 'rgba(204,167,0,0.3)' },
+  MINOR:    { bg: 'rgba(255,255,255,0.06)', color: 'var(--text-secondary, #888)', border: 'rgba(255,255,255,0.1)' },
+};
+
+export default function AgentDetails({ onClose, agent, progressData, findAgentFn, dashboardId }) {
+  const logsBoxRef = useRef(null);
+  const prevLogCountRef = useRef(0);
+
+  // Auto-scroll logs on initial render and when new logs arrive
   useEffect(() => {
-    if (logsBoxRef.current) {
-      logsBoxRef.current.scrollTop = logsBoxRef.current.scrollHeight;
+    const el = logsBoxRef.current;
+    if (!el) return;
+    const agentProg = progressData ? progressData[agent.id] : null;
+    const logCount = agentProg && agentProg.logs ? agentProg.logs.length : 0;
+    if (logCount !== prevLogCountRef.current) {
+      prevLogCountRef.current = logCount;
+      // Only auto-scroll if user is near the bottom (within 60px)
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+      if (atBottom || logCount <= 5) {
+        el.scrollTop = el.scrollHeight;
+      }
     }
-  }, []);
+  });
+
+  // Retry handler for this agent
+  const handleRetry = useCallback(async () => {
+    if (!dashboardId || !agent.id) return;
+    const api = getPlatformAPI();
+    if (!api) return;
+
+    try {
+      if (api.retryTask) {
+        await api.retryTask({ dashboardId, taskId: agent.id });
+      }
+    } catch (_) {
+      // Retry failure is non-fatal
+    }
+  }, [dashboardId, agent.id]);
 
   const agentProg = progressData ? progressData[agent.id] : null;
 
@@ -56,6 +101,8 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
     durationStr = formatElapsed(merged.started_at) + ' (running)';
   }
 
+  const isFailed = merged.status === 'failed';
+
   return (
     <Modal title="" onClose={onClose} className="agent-details-modal-wrapper">
       {/* Custom header layout matching original */}
@@ -64,6 +111,18 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
           <span className="agent-details-id">{agent.id}</span>
           <span className="agent-details-name">{agent.title}</span>
         </div>
+        {isFailed && (
+          <button
+            className="agent-details-retry-btn"
+            onClick={handleRetry}
+            title="Retry this failed task"
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M2 8a6 6 0 0 1 10.2-4.3L14 2v4h-4l1.6-1.6A4.5 4.5 0 1 0 12.5 8" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinecap="round"/>
+            </svg>
+            Retry
+          </button>
+        )}
       </div>
 
       <div className="task-details-body">
@@ -180,15 +239,31 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
         {/* Deviations */}
         {agentProg && agentProg.deviations && agentProg.deviations.length > 0 && (
           <div className="agent-deviations">
-            <span className="agent-deviations-label">⚠ Deviations from Plan</span>
-            {agentProg.deviations.map((dev, i) => (
-              <div key={i} className="agent-deviation-item">
-                {dev.at && (
-                  <span className="agent-deviation-time">{formatTime(dev.at)}</span>
-                )}
-                {dev.description || ''}
-              </div>
-            ))}
+            <span className="agent-deviations-label">Deviations from Plan ({agentProg.deviations.length})</span>
+            {agentProg.deviations.map((dev, i) => {
+              const severity = dev.severity || 'MODERATE';
+              const sevStyle = SEVERITY_STYLES[severity] || SEVERITY_STYLES.MODERATE;
+              return (
+                <div key={i} className="agent-deviation-item">
+                  <div className="agent-deviation-header">
+                    {dev.at && (
+                      <span className="agent-deviation-time">{formatTime(dev.at)}</span>
+                    )}
+                    <span
+                      className="agent-deviation-severity"
+                      style={{
+                        backgroundColor: sevStyle.bg,
+                        color: sevStyle.color,
+                        border: '1px solid ' + sevStyle.border,
+                      }}
+                    >
+                      {severity}
+                    </span>
+                  </div>
+                  <span className="agent-deviation-desc">{dev.description || ''}</span>
+                </div>
+              );
+            })}
           </div>
         )}
 

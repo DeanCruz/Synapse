@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-label="Synapse logo">
+  <defs>
+    <radialGradient id="bgGlow" cx="50%" cy="38%" r="72%">
+      <stop offset="0%" stop-color="#123a52"/>
+      <stop offset="58%" stop-color="#0a1d2d"/>
+      <stop offset="100%" stop-color="#06111b"/>
+    </radialGradient>
+    <linearGradient id="emblem" x1="274" y1="262" x2="758" y2="756" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8af7ff"/>
+      <stop offset="52%" stop-color="#34d8c7"/>
+      <stop offset="100%" stop-color="#a8ff6d"/>
+    </linearGradient>
+    <linearGradient id="emblemDim" x1="286" y1="250" x2="734" y2="758" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#143246"/>
+      <stop offset="100%" stop-color="#0f2333"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" rx="230" fill="#06111b"/>
+  <rect x="56" y="56" width="912" height="912" rx="206" fill="url(#bgGlow)"/>
+  <path d="M 280 338
+           C 340 238 462 188 576 200
+           C 687 212 772 302 768 412
+           C 764 515 681 574 585 603
+           C 495 631 411 636 352 680
+           C 285 729 281 811 336 854"
+        fill="none" stroke="url(#emblemDim)" stroke-width="136" stroke-linecap="round" stroke-linejoin="round" opacity="0.96"/>
+  <path d="M 280 338
+           C 340 238 462 188 576 200
+           C 687 212 772 302 768 412
+           C 764 515 681 574 585 603
+           C 495 631 411 636 352 680
+           C 285 729 281 811 336 854"
+        fill="none" stroke="url(#emblem)" stroke-width="94" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="280" cy="338" r="30" fill="#8af7ff"/>
+  <circle cx="576" cy="200" r="26" fill="#34d8c7"/>
+  <circle cx="768" cy="412" r="30" fill="#a8ff6d"/>
+  <circle cx="336" cy="854" r="26" fill="#8af7ff"/>
+  <circle cx="512" cy="512" r="68" fill="#071721" stroke="#17384f" stroke-width="18"/>
+  <path d="M 430 508
+           C 430 447 478 403 540 403
+           C 580 403 614 419 638 447
+           C 653 465 654 490 639 505
+           C 623 522 592 523 556 530
+           C 487 542 459 575 459 622
+           C 459 680 506 724 570 724
+           C 614 724 651 707 680 676"
+        fill="none" stroke="#071721" stroke-width="128" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 430 508
+           C 430 447 478 403 540 403
+           C 580 403 614 419 638 447
+           C 653 465 654 490 639 505
+           C 623 522 592 523 556 530
+           C 487 542 459 575 459 622
+           C 459 680 506 724 570 724
+           C 614 724 651 707 680 676"
+        fill="none" stroke="url(#emblem)" stroke-width="80" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="540" cy="403" r="22" fill="#8af7ff"/>
+  <circle cx="556" cy="530" r="20" fill="#34d8c7"/>
+  <circle cx="570" cy="724" r="20" fill="#a8ff6d"/>
+</svg>

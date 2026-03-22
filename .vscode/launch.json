@@ -1,0 +1,45 @@
+{
+  // Launch configurations for developing and debugging the Synapse VS Code extension.
+  // Use "Run Extension" to open an Extension Development Host with the extension loaded.
+  // Use "Watch Extension + Run" to start the TypeScript watcher and launch together.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/extension/**/*.js"
+      ],
+      "sourceMaps": true,
+      "preLaunchTask": "npm: build:extension",
+      "env": {
+        "VSCODE_DEBUG_MODE": "true"
+      }
+    },
+    {
+      "name": "Run Extension (Skip Build)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/dist/extension/**/*.js"
+      ],
+      "sourceMaps": true
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Watch Extension + Run",
+      "configurations": [
+        "Run Extension"
+      ],
+      "preLaunchTask": "npm: watch:extension"
+    }
+  ]
+}

@@ -1,8 +1,17 @@
-// useDashboardData — Connects to IPC/SSE push events and merges init + progress
-// Replaces IPCClient.js + SSEClient.js + the mergeState logic from DashboardVM.
+// useDashboardData — Connects to IPC/webview-bridge push events and merges
+// init + progress data into renderable status objects.
+//
+// Works across three environments:
+//   - Electron: window.electronAPI set by preload (IPC push events)
+//   - Webview:  window.electronAPI set by webview-main.jsx bridge (postMessage events)
+//   - Browser:  no API — hook gracefully no-ops
+//
+// The webview bridge exposes the same .on()/.off()/.getDashboardInit()/etc.
+// surface as the Electron preload, so all listener and fetch logic is shared.
 
 import { useEffect, useCallback, useRef } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
+import { detectEnvironment } from './useElectronAPI.js';
 
 /**
  * Merge static plan data (init) with dynamic progress data into a renderable status.
@@ -75,7 +84,22 @@ export function mergeState(init, progress) {
 }
 
 /**
- * Hook: connect to Electron IPC push events and dispatch state updates.
+ * Resolve the platform API for data transport.
+ * Returns window.electronAPI in Electron and webview (bridge-as-electronAPI pattern),
+ * or null in plain browser mode.
+ */
+function getPlatformAPI() {
+  const env = detectEnvironment();
+  if (env === 'electron' || env === 'webview') {
+    return window.electronAPI || null;
+  }
+  return null;
+}
+
+/**
+ * Hook: connect to IPC/webview-bridge push events and dispatch state updates.
+ * Works in Electron (preload IPC), VSCode webview (bridge events), and
+ * gracefully no-ops in plain browser mode.
  * Must be called once at the App level.
  */
 export function useDashboardData() {
@@ -109,9 +133,9 @@ export function useDashboardData() {
     return 'idle';
   }, []);
 
-  // Fetch all data for a dashboard via IPC pull (used on mount + dashboard switch)
+  // Fetch all data for a dashboard via IPC/bridge pull (used on mount + dashboard switch)
   const fetchDashboardData = useCallback(async (id) => {
-    const api = window.electronAPI;
+    const api = getPlatformAPI();
     if (!api) return;
 
     try {
@@ -135,9 +159,9 @@ export function useDashboardData() {
     fetchDashboardData(state.currentDashboardId);
   }, [state.currentDashboardId, fetchDashboardData]);
 
-  // Set up IPC push listeners once on mount
+  // Set up IPC/bridge push listeners once on mount
   useEffect(() => {
-    const api = window.electronAPI;
+    const api = getPlatformAPI();
     if (!api) return;
 
     const addListener = (channel, handler) => {

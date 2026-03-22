@@ -1,0 +1,42 @@
+# Exclude everything by default
+**/*
+
+# Include extension manifest and metadata
+!package.json
+!README.md
+!LICENSE
+!synapse-logo.svg
+
+# Include compiled extension output
+!dist/
+!dist/extension/
+!dist/extension/**
+
+# Include compiled webview output
+!dist/webview/
+!dist/webview/**
+
+# Explicitly exclude development and non-extension files
+electron/**
+src/**
+node_modules/**
+.git/**
+tasks/**
+dashboards/**
+Archive/**
+queue/**
+history/**
+agent/**
+_commands/**
+scripts/**
+public/**
+.synapse/**
+*.md
+!README.md
+.vscodeignore
+.gitignore
+vite.config.js
+webview.html
+index.html
+tsconfig.json
+package-lock.json

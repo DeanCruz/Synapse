@@ -1,17 +1,111 @@
 {
   "name": "synapse",
   "version": "1.0.0",
+  "publisher": "synapse",
   "description": "Synapse is a distributed control system for coordinating autonomous agent swarms. It optimizes context usage, parallelizes execution, and provides a centralized control plane for complex software development tasks.",
-  "main": "electron/main.js",
+  "icon": "synapse-logo.svg",
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension/extension.js",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:synapse.swarmSidebar",
+    "onCommand:synapse.openDashboard",
+    "onCommand:synapse.showExtensionLog"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "synapse-sidebar",
+          "title": "Synapse",
+          "icon": "synapse-logo.svg"
+        }
+      ]
+    },
+    "views": {
+      "synapse-sidebar": [
+        {
+          "type": "webview",
+          "id": "synapse.swarmSidebar",
+          "name": "Swarm Control"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "synapse.openDashboard",
+        "title": "Synapse: Open Dashboard",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.showExtensionLog",
+        "title": "Synapse: Show Extension Log",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.pTrack",
+        "title": "Synapse: Tracked Swarm (!p_track)",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.p",
+        "title": "Synapse: Parallel Swarm (!p)",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.status",
+        "title": "Synapse: Show Status",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.logs",
+        "title": "Synapse: Show Logs",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.inspect",
+        "title": "Synapse: Inspect Task",
+        "category": "Synapse"
+      },
+      {
+        "command": "synapse.retry",
+        "title": "Synapse: Retry Task",
+        "category": "Synapse"
+      }
+    ],
+    "configuration": {
+      "title": "Synapse",
+      "properties": {
+        "synapse.extension.autoRevealOutput": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Synapse output channel after activation."
+        }
+      }
+    }
+  },
   "scripts": {
     "build": "vite build",
-    "start": "vite build && unset ELECTRON_RUN_AS_NODE && electron .",
+    "build:webview": "VITE_BUILD_TARGET=webview vite build",
+    "build:extension": "tsc -p src/extension/tsconfig.json",
+    "watch:extension": "tsc -p src/extension/tsconfig.json --watch --preserveWatchOutput",
+    "package:extension": "npm run build:extension && npm run build:webview && node scripts/package-extension.mjs",
+    "vscode:prepublish": "npm run build:extension && npm run build:webview",
+    "start": "vite build && unset ELECTRON_RUN_AS_NODE && electron electron/main.js",
     "dev": "vite build --watch",
     "dist": "vite build && electron-builder --mac"
   },
   "build": {
     "appId": "com.synapse.app",
     "productName": "Synapse",
+    "extraMetadata": {
+      "main": "electron/main.js"
+    },
     "mac": {
       "icon": "electron/assets/icon.icns",
       "target": "dmg",
@@ -36,9 +130,11 @@
     ]
   },
   "devDependencies": {
+    "@types/vscode": "^1.110.0",
     "@vitejs/plugin-react": "^6.0.1",
     "electron": "^41.0.3",
     "electron-builder": "^26.8.1",
+    "typescript": "^5.9.3",
     "vite": "^8.0.0"
   },
   "dependencies": {

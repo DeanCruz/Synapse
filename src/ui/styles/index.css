@@ -1254,6 +1254,50 @@ body {
   margin-right: 6px;
 }
 
+.agent-deviation-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.agent-deviation-severity {
+  font-size: 0.58rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.agent-deviation-desc {
+  display: block;
+  line-height: 1.4;
+}
+
+/* ----- Retry button in agent details ----- */
+.agent-details-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px;
+  border: 1px solid rgba(241,76,76,0.3);
+  border-radius: 6px;
+  background: rgba(241,76,76,0.1);
+  color: #f14c4c;
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.agent-details-retry-btn:hover {
+  background: rgba(241,76,76,0.2);
+  border-color: rgba(241,76,76,0.5);
+}
+
 /* ----- Milestones list in agent details popup ----- */
 .agent-milestones {
   display: flex;
@@ -1545,6 +1589,55 @@ body {
   color: var(--text);
   word-break: break-word;
   font-size: 0.72rem;
+}
+
+/* ----- Log row deviation highlight ----- */
+.log-row-deviation {
+  background: rgba(234,179,8,0.03);
+  border-left: 2px solid rgba(234,179,8,0.3);
+  padding-left: 6px;
+}
+
+/* ----- Log retry button ----- */
+.log-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  margin-left: 8px;
+  border: 1px solid rgba(241,76,76,0.3);
+  border-radius: 4px;
+  background: rgba(241,76,76,0.08);
+  color: #f14c4c;
+  font-size: 0.62rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.log-retry-btn:hover {
+  background: rgba(241,76,76,0.2);
+}
+
+/* ----- Log toggle badges (error/deviation count) ----- */
+.log-toggle-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.6rem;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+.log-toggle-badge-error {
+  background: rgba(241,76,76,0.12);
+  color: #f14c4c;
+}
+
+.log-toggle-badge-deviation {
+  background: rgba(234,179,8,0.12);
+  color: #eab308;
 }
 
 /* ============================================================

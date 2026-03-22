@@ -1,8 +1,10 @@
-// App — Root component. Wires IPC, fetches initial data, renders layout.
+// App — Root component. Wires IPC/webview-bridge, fetches initial data, renders layout.
+// Works in Electron, VSCode webview (bridge-as-electronAPI), and plain browser.
 
 import React, { useEffect, useState, useCallback } from 'react';
 import { useAppState, useDispatch } from './context/AppContext.jsx';
 import { useDashboardData } from './hooks/useDashboardData.js';
+import { detectEnvironment } from './hooks/useElectronAPI.js';
 import { initStatusColorsFromCSS } from '@/utils/constants.js';
 
 import Header from './components/Header.jsx';
@@ -23,6 +25,18 @@ import PlanningModal from './components/modals/PlanningModal.jsx';
 import SettingsModal from './components/modals/SettingsModal.jsx';
 import AgentDetails from './components/modals/AgentDetails.jsx';
 import { getDashboardProject } from './utils/dashboardProjects.js';
+
+/**
+ * Resolve the platform API — works in Electron (preload), webview (bridge on
+ * window.electronAPI), or returns null in plain browser mode.
+ */
+function getPlatformAPI() {
+  const env = detectEnvironment();
+  if (env === 'electron' || env === 'webview') {
+    return window.electronAPI || null;
+  }
+  return null;
+}
 
 // ── ClearDashboardSection ────────────────────────────────────────────────────
 function ClearDashboardSection({ visible, onClear }) {
@@ -78,7 +92,8 @@ function DashboardContent() {
     || task?.overall_status === 'completed_with_errors';
 
   async function handleClear() {
-    await window.electronAPI?.clearDashboard(state.currentDashboardId).catch(() => {});
+    const api = getPlatformAPI();
+    if (api) await api.clearDashboard(state.currentDashboardId).catch(() => {});
   }
 
   const dashboardId = state.currentDashboardId;
@@ -140,6 +155,7 @@ function DashboardContent() {
         logs={currentLogs}
         activeFilter={activeLogFilter}
         onFilterChange={(level) => dispatch({ type: 'SET', key: 'activeLogFilter', value: level })}
+        dashboardId={dashboardId}
       />
 
       {selectedAgent && (
@@ -148,6 +164,7 @@ function DashboardContent() {
           progressData={currentProgress}
           findAgentFn={findAgent}
           onClose={() => setSelectedAgent(null)}
+          dashboardId={dashboardId}
         />
       )}
     </>
@@ -172,13 +189,19 @@ export default function App() {
     }
   }, []);
 
-  // Fetch initial data (dashboard statuses + queue) once IPC is available
+  // Fetch initial data (dashboard statuses + queue) once API is available.
+  // Uses specific legacy methods that work on both Electron preload and
+  // the webview bridge (instead of the generic invoke('api', ...) pattern).
   const fetchInitialData = useCallback(async () => {
-    const api = window.electronAPI;
+    const api = getPlatformAPI();
     if (!api) return;
 
     try {
-      const statusesResult = await api.invoke?.('api', { path: '/api/dashboards/statuses' });
+      // Prefer the dedicated legacy method; fall back to generic invoke
+      // for Electron where the generic IPC route may still be used.
+      const statusesResult = api.getDashboardStatuses
+        ? await api.getDashboardStatuses()
+        : await api.invoke?.('api', { path: '/api/dashboards/statuses' });
       if (statusesResult?.statuses) {
         Object.entries(statusesResult.statuses).forEach(([id, status]) => {
           dispatch({ type: 'SET_DASHBOARD_STATE', id, status });
@@ -189,7 +212,9 @@ export default function App() {
     }
 
     try {
-      const queueResult = await api.invoke?.('api', { path: '/api/queue' });
+      const queueResult = api.getQueue
+        ? await api.getQueue()
+        : await api.invoke?.('api', { path: '/api/queue' });
       if (queueResult?.queue) {
         dispatch({ type: 'SET', key: 'queueItems', value: queueResult.queue });
       }
@@ -211,6 +236,12 @@ export default function App() {
 
   function handleSwitchDashboard(id) {
     dispatch({ type: 'SWITCH_DASHBOARD', id });
+    // Notify the extension host (webview bridge) about the dashboard switch
+    // so the sidebar and other extension surfaces stay in sync
+    const api = getPlatformAPI();
+    if (api && api.invoke) {
+      api.invoke('switchDashboard', id).catch(() => {});
+    }
   }
 
   async function handleArchiveClick(archive) {
@@ -309,7 +340,7 @@ function ClaudeFloatingPanel({ dashboardId, viewMode, onClose, onSetMode }) {
   const [modelLabel, setModelLabel] = useState('');
 
   useEffect(() => {
-    const api = window.electronAPI || null;
+    const api = getPlatformAPI();
     if (!api) return;
     api.getSettings().then((settings) => {
       setProviderLabel((settings.agentProvider || 'claude') === 'codex' ? 'Codex' : 'Claude Code');

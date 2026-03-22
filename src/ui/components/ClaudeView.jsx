@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { renderMarkdown } from '../utils/markdown.js';
 import { getDashboardProject } from '../utils/dashboardProjects.js';
+import { useElectronAPI, useIsWebview } from '../hooks/useElectronAPI.js';
 
 const MODEL_OPTIONS = {
   claude: [
@@ -152,7 +153,8 @@ function ConversationMessage({ msg }) {
 }
 
 export default function ClaudeView({ onClose, hideHeader }) {
-  const api = window.electronAPI || null;
+  const api = useElectronAPI();
+  const isWebview = useIsWebview();
   const state = useAppState();
   const dispatch = useDispatch();
 
@@ -265,10 +267,21 @@ export default function ClaudeView({ onClose, hideHeader }) {
       if (finishRef.current) finishRef.current(data.taskId);
     });
 
+    const errorListener = api.on('worker-error', (data) => {
+      if (!activeTaskIdsRef.current.has(data.taskId)) return;
+      appendMsg({
+        type: 'system',
+        text: 'Worker error: ' + (data.error || 'Unknown error'),
+        isError: true,
+      });
+      if (finishRef.current) finishRef.current(data.taskId);
+    });
+
     return () => {
       if (api) {
         api.off('worker-output', workerListener);
         api.off('worker-complete', completeListener);
+        if (errorListener) api.off('worker-error', errorListener);
       }
     };
   }, [api, dispatch]);
@@ -538,17 +551,32 @@ export default function ClaudeView({ onClose, hideHeader }) {
 
   async function openFilePicker() {
     if (!api) return;
-    const result = await api.selectImageFile();
-    if (result && result.base64) {
-      dispatch({
-        type: 'CLAUDE_ADD_ATTACHMENT',
-        attachment: {
-          id: Date.now() + Math.random(),
-          name: result.name || 'image',
-          type: result.mimeType || 'image/png',
-          dataUrl: `data:${result.mimeType || 'image/png'};base64,${result.base64}`,
-        },
-      });
+
+    // In webview context, selectImageFile may go through the bridge which
+    // may not have a native dialog — fall back to the hidden file input.
+    if (isWebview && fileInputRef.current) {
+      fileInputRef.current.click();
+      return;
+    }
+
+    try {
+      const result = await api.selectImageFile();
+      if (result && result.base64) {
+        dispatch({
+          type: 'CLAUDE_ADD_ATTACHMENT',
+          attachment: {
+            id: Date.now() + Math.random(),
+            name: result.name || 'image',
+            type: result.mimeType || 'image/png',
+            dataUrl: `data:${result.mimeType || 'image/png'};base64,${result.base64}`,
+          },
+        });
+      }
+    } catch (err) {
+      // If native dialog fails (e.g., in webview), fall back to HTML input
+      if (fileInputRef.current) {
+        fileInputRef.current.click();
+      }
     }
   }
 
@@ -623,12 +651,13 @@ export default function ClaudeView({ onClose, hideHeader }) {
           name: a.name,
         }));
         const saved = await api.saveTempImages(toSave);
-        const paths = saved.filter(s => s.path).map(s => s.path);
+        const paths = (saved || []).filter(s => s && s.path).map(s => s.path);
         if (paths.length > 0) {
           finalPrompt = (text ? text + '\n\n' : '') + paths.join('\n');
         }
       } catch (err) {
-        // proceed without paths if save fails
+        // In webview context, saveTempImages may not be available — proceed
+        // without image paths. The prompt text alone will be sent.
       }
       dispatch({ type: 'CLAUDE_CLEAR_ATTACHMENTS' });
     }
