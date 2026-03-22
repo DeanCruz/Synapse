@@ -300,31 +300,34 @@ Use this explicit algorithm to validate the dependency graph before proceeding:
 
 Before writing any plan data, the master must claim an available dashboard. This ensures new swarms never interfere with in-progress dashboards.
 
-**If the user specified `--dashboard dashboardN`:**
-- Use that dashboard directly.
-- If it has an active swarm (in-progress agents), warn the user and require confirmation before overwriting.
-- If it has a completed swarm, save a history summary to `{tracker_root}/history/` before overwriting.
+**Resolution order (first match wins):**
 
-**If no dashboard was specified (auto-selection):**
-1. Scan `dashboard1` through `dashboard5` in order.
-2. For each dashboard, read `{tracker_root}/dashboards/{dashboardId}/initialization.json`:
-   - If `task` is `null` → **available**. Claim this dashboard.
-   - If `task` is not null, read all files in `progress/`:
-     - If no progress files exist → **stale** (plan written but never dispatched). Treat as available.
-     - If every progress file has status `"completed"` or `"failed"` → **finished but uncleared**. Save a history summary to `{tracker_root}/history/`, then claim this dashboard.
-     - Otherwise → **in use**. Skip to next dashboard.
-3. If all 5 dashboards are in use, display a summary table:
+1. **Pre-assigned dashboard from chat context (highest priority).** If your system prompt contains a `DASHBOARD ID:` directive, you are running inside a chat view that is bound to that specific dashboard. **Use it unconditionally** — do not scan, do not auto-select, do not override. Each chat view is associated with exactly one dashboard, and you must write to that dashboard. This is how the user sees your swarm in the correct panel.
 
-```markdown
-## All Dashboards In Use
+2. **Explicit `--dashboard dashboardN` flag.** If the user specified `--dashboard dashboardN` in the command, use that dashboard directly.
+   - If it has an active swarm (in-progress agents), warn the user and require confirmation before overwriting.
+   - If it has a completed swarm, save a history summary to `{tracker_root}/history/` before overwriting.
 
-| Dashboard | Task | Status | Progress |
-|---|---|---|---|
-| dashboard1 | {task.name} | {overall_status} | {completed}/{total} |
-| ... | ... | ... | ... |
+3. **Auto-selection (fallback — only when no dashboard is pre-assigned or explicitly specified):**
+   1. Scan `dashboard1` through `dashboard5` in order.
+   2. For each dashboard, read `{tracker_root}/dashboards/{dashboardId}/initialization.json`:
+      - If `task` is `null` → **available**. Claim this dashboard.
+      - If `task` is not null, read all files in `progress/`:
+        - If no progress files exist → **stale** (plan written but never dispatched). Treat as available.
+        - If every progress file has status `"completed"` or `"failed"` → **finished but uncleared**. Save a history summary to `{tracker_root}/history/`, then claim this dashboard.
+        - Otherwise → **in use**. Skip to next dashboard.
+   3. If all 5 dashboards are in use, display a summary table:
 
-Pick a dashboard to overwrite, or run `!reset {dashboardId}` first.
-```
+   ```markdown
+   ## All Dashboards In Use
+
+   | Dashboard | Task | Status | Progress |
+   |---|---|---|---|
+   | dashboard1 | {task.name} | {overall_status} | {completed}/{total} |
+   | ... | ... | ... | ... |
+
+   Pick a dashboard to overwrite, or run `!reset {dashboardId}` first.
+   ```
 
 4. Set `{dashboardId}` to the selected dashboard. Announce: **"Using {dashboardId} for this swarm."**
 

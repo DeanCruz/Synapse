@@ -16,6 +16,8 @@ const {
   readDashboardProgressAsync,
   clearDashboardProgress,
   copyDirSync,
+  deleteDashboard,
+  nextDashboardId,
 } = require('../services/DashboardService');
 const { listArchives, deleteArchive } = require('../services/ArchiveService');
 const { listHistory, buildHistorySummary, saveHistorySummary } = require('../services/HistoryService');
@@ -50,6 +52,27 @@ function handleApiRoute(req, res, url) {
   // --- API: List dashboards ---
   if (url.pathname === '/api/dashboards' && req.method === 'GET') {
     sendJSON(res, 200, { dashboards: listDashboards() });
+    return true;
+  }
+
+  // --- API: Create a new dashboard ---
+  if (url.pathname === '/api/dashboards' && req.method === 'POST') {
+    const id = nextDashboardId();
+    ensureDashboard(id);
+    sendJSON(res, 201, { success: true, id });
+    return true;
+  }
+
+  // --- API: Delete a dashboard ---
+  const deleteRoute = url.pathname.match(/^\/api\/dashboards\/([^/]+)$/);
+  if (deleteRoute && req.method === 'DELETE') {
+    const id = deleteRoute[1];
+    const deleted = deleteDashboard(id);
+    if (!deleted) {
+      sendJSON(res, 404, { error: 'Dashboard not found' });
+      return true;
+    }
+    sendJSON(res, 200, { success: true });
     return true;
   }
 

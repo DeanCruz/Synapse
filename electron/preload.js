@@ -38,6 +38,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Dashboards
   getDashboards: () => ipcRenderer.invoke('get-dashboards'),
+  createDashboard: () => ipcRenderer.invoke('create-dashboard'),
+  deleteDashboard: (id) => ipcRenderer.invoke('delete-dashboard', id),
   getDashboardStatuses: () => ipcRenderer.invoke('get-dashboard-statuses'),
   getDashboardInit: (id) => ipcRenderer.invoke('get-dashboard-init', id),
   getDashboardLogs: (id) => ipcRenderer.invoke('get-dashboard-logs', id),
@@ -99,7 +101,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listProjectCommands: (projectDir) => ipcRenderer.invoke('list-project-commands', projectDir),
 
   // Chat context
-  getChatSystemPrompt: (projectDir) => ipcRenderer.invoke('get-chat-system-prompt', projectDir),
+  getChatSystemPrompt: (projectDir, dashboardId) => ipcRenderer.invoke('get-chat-system-prompt', projectDir, dashboardId),
   logChatEvent: (dashboardId, entry) => ipcRenderer.invoke('log-chat-event', dashboardId, entry),
 
   // Attachments
