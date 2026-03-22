@@ -4698,13 +4698,19 @@ a:hover {
 .claude-conversation > *,
 .claude-view-conversation > * {
   flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Message bubbles */
 .claude-message {
   max-width: 85%;
+  min-width: 0;
   border-radius: 12px;
   padding: 10px 14px;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .claude-user {
@@ -4820,6 +4826,8 @@ a:hover {
   font-size: 0.75rem;
   color: var(--text-tertiary);
   padding: 6px 12px;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .claude-system-msg.claude-error {
@@ -4916,6 +4924,7 @@ a:hover {
 .claude-tool-call {
   align-self: flex-start;
   max-width: 90%;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
@@ -5030,22 +5039,25 @@ a:hover {
 .claude-tool-result-standalone {
   align-self: flex-start;
   max-width: 90%;
+  min-width: 0;
   padding: 8px 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: break-word;
+  word-break: break-word;
+  white-space: pre-wrap;
 }
 
 /* Suggestion chips */
 .claude-suggestion-chips {
   display: flex;
   gap: 6px;
-  padding: 8px 16px 0;
+  padding: 8px 16px;
   background: var(--surface-raised);
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .claude-suggestion-chip {
@@ -5070,6 +5082,140 @@ a:hover {
 .claude-suggestion-chip:disabled {
   opacity: 0.35;
   cursor: not-allowed;
+}
+
+/* Quick access editor */
+.claude-quick-access-editor-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.claude-quick-access-add-btn {
+  font-size: 14px !important;
+  font-weight: 600;
+  padding: 2px 10px !important;
+  line-height: 1;
+  font-family: inherit !important;
+  color: var(--text-tertiary) !important;
+  border-style: dashed !important;
+}
+
+.claude-quick-access-add-btn:hover:not(:disabled) {
+  color: var(--accent) !important;
+  border-color: var(--accent) !important;
+}
+
+.claude-quick-access-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 1000;
+  padding: 8px 0;
+}
+
+.claude-quick-access-popup-header {
+  padding: 6px 12px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.claude-quick-access-folder {
+  margin: 0;
+}
+
+.claude-quick-access-folder-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.claude-quick-access-folder-toggle:hover {
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+.claude-quick-access-folder-arrow {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  transition: transform 0.15s;
+  display: inline-block;
+  width: 12px;
+  text-align: center;
+}
+
+.claude-quick-access-folder-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.claude-quick-access-folder-name {
+  flex: 1;
+}
+
+.claude-quick-access-folder-count {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.claude-quick-access-folder-items {
+  padding: 2px 0 4px;
+}
+
+.claude-quick-access-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 30px;
+  cursor: pointer;
+  transition: background 0.1s;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.claude-quick-access-item:hover {
+  background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+}
+
+.claude-quick-access-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.claude-quick-access-item-label {
+  flex: 1;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+}
+
+.claude-quick-access-item-mode {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 /* Prompt bar */

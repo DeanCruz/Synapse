@@ -201,12 +201,22 @@ function appReducerCore(state, action) {
 
 const CLAUDE_PERSIST_ACTIONS = new Set(['CLAUDE_SET_MESSAGES', 'CLAUDE_APPEND_MSG', 'CLAUDE_UPDATE_MESSAGES']);
 
+// Debounced localStorage persistence — avoids serializing on every streaming delta
+let persistTimer = null;
+function schedulePersist(dashboardId, messages) {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    try {
+      localStorage.setItem(claudeMessagesKey(dashboardId), JSON.stringify(messages));
+    } catch (e) { /* quota exceeded or private browsing */ }
+  }, 500);
+}
+
 function appReducer(state, action) {
   const newState = appReducerCore(state, action);
   if (CLAUDE_PERSIST_ACTIONS.has(action.type)) {
-    try {
-      localStorage.setItem(claudeMessagesKey(newState.currentDashboardId), JSON.stringify(newState.claudeMessages));
-    } catch (e) { /* quota exceeded or private browsing */ }
+    schedulePersist(newState.currentDashboardId, newState.claudeMessages);
   }
   return newState;
 }

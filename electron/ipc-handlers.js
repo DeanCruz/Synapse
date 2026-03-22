@@ -525,15 +525,24 @@ function registerIPCHandlers(getMainWindow) {
   CodexService.init(broadcastFn);
 
   // Build system prompt for in-app agent chat — reads Synapse CLAUDE.md + project CLAUDE.md
-  ipcMain.handle('get-chat-system-prompt', async (_event, projectDir) => {
+  ipcMain.handle('get-chat-system-prompt', async (_event, projectDir, dashboardId) => {
     const parts = [];
     const synapseRoot = path.resolve(__dirname, '..');
 
-    // Path reference block — agent must always know both directories
+    // Path reference block — agent must always know both directories AND its dashboard
     parts.push(
       '# Directory References\n\n' +
       'TRACKER ROOT (Synapse): ' + synapseRoot + '\n' +
-      'PROJECT ROOT (target project): ' + (projectDir || synapseRoot) + '\n\n' +
+      'PROJECT ROOT (target project): ' + (projectDir || synapseRoot) + '\n' +
+      'DASHBOARD ID: ' + (dashboardId || 'dashboard1') + '\n\n' +
+      'You are the agent for **' + (dashboardId || 'dashboard1') + '**. This is your PRE-ASSIGNED dashboard — ' +
+      'it was set by the chat view that spawned you. This dashboard binding is AUTHORITATIVE.\n' +
+      'When running !p_track or any swarm command, use this dashboard directly — do NOT scan or auto-select a different one.\n' +
+      'When running !master_plan_track, use this dashboard for your primary stream (S1) and scan OTHER dashboards for additional streams.\n\n' +
+      'Dashboard paths:\n' +
+      '  - initialization.json: ' + synapseRoot + '/dashboards/' + (dashboardId || 'dashboard1') + '/initialization.json\n' +
+      '  - logs.json: ' + synapseRoot + '/dashboards/' + (dashboardId || 'dashboard1') + '/logs.json\n' +
+      '  - Progress files: ' + synapseRoot + '/dashboards/' + (dashboardId || 'dashboard1') + '/progress/{task_id}.json\n\n' +
       'When looking for commands and instructions, ALWAYS check the Synapse directory (TRACKER ROOT) first:\n' +
       '  1. {tracker_root}/_commands/{command}.md — Synapse swarm commands (highest priority)\n' +
       '  2. {tracker_root}/_commands/project/{command}.md — Synapse project commands\n' +

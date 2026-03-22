@@ -248,6 +248,9 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const [model, setModel] = useState(resolveModel('claude'));
   const [showHistory, setShowHistory] = useState(false);
   const [conversations, setConversations] = useState([]);
+  const [showQuickAccessEditor, setShowQuickAccessEditor] = useState(false);
+  const [expandedFolders, setExpandedFolders] = useState({});
+  const quickAccessEditorRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -316,13 +319,23 @@ export default function ClaudeView({ onClose, hideHeader }) {
   // Auto-scroll on new messages or dashboard switch
   // Uses messages.length + last message text length to detect both new messages and content updates
   const scrollTrigger = messages.length + (messages[messages.length - 1]?.text?.length || 0);
+  function scrollToBottom() {
+    if (!conversationRef.current) return;
+    conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
+  }
   useEffect(() => {
-    requestAnimationFrame(() => {
-      if (conversationRef.current) {
-        conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
-      }
-    });
+    // Double-rAF ensures the DOM has been painted before we measure scrollHeight
+    requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
   }, [scrollTrigger, dashboardId]);
+
+  // Scroll to bottom on initial mount and whenever the conversation ref attaches
+  useEffect(() => {
+    // Immediate attempt + delayed fallback to catch late-rendering content
+    scrollToBottom();
+    requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
+    const timer = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load conversation list when history panel opens (filtered by current dashboard)
   useEffect(() => {
@@ -472,22 +485,89 @@ export default function ClaudeView({ onClose, hideHeader }) {
     dispatch({ type: 'CLAUDE_APPEND_MSG', msg });
   }
 
-  function flushText() {
-    currentTextIndexRef.current = null;
-  }
+  // --- Buffered streaming for maximum throughput ---
+  // Accumulates deltas and flushes to React state at most every 32ms (~30fps).
+  // This avoids dispatching a state update + re-render on every single character delta.
+  const STREAM_FLUSH_MS = 32;
 
-  function appendTextContent(text) {
+  // Text buffer
+  const textBufferRef = useRef('');
+  const textFlushTimerRef = useRef(null);
+
+  // Thinking buffer
+  const thinkingBufferRef = useRef('');
+  const thinkingFlushTimerRef = useRef(null);
+  const currentThinkingIndexRef = useRef(null);
+
+  function commitTextBuffer() {
+    const buffered = textBufferRef.current;
+    if (!buffered) return;
+    textBufferRef.current = '';
+    textFlushTimerRef.current = null;
+
     dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
       if (currentTextIndexRef.current !== null && currentTextIndexRef.current < prev.length) {
         const idx = currentTextIndexRef.current;
         const updated = prev.slice();
-        updated[idx] = { ...updated[idx], text: updated[idx].text + text };
+        updated[idx] = { ...updated[idx], text: updated[idx].text + buffered };
         return updated;
       }
-      const newMsg = { id: Date.now() + Math.random(), type: 'assistant', text };
+      const newMsg = { id: Date.now() + Math.random(), type: 'assistant', text: buffered };
       currentTextIndexRef.current = prev.length;
       return [...prev, newMsg];
     }});
+  }
+
+  function commitThinkingBuffer() {
+    const buffered = thinkingBufferRef.current;
+    if (!buffered) return;
+    thinkingBufferRef.current = '';
+    thinkingFlushTimerRef.current = null;
+
+    dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
+      if (currentThinkingIndexRef.current !== null && currentThinkingIndexRef.current < prev.length) {
+        const idx = currentThinkingIndexRef.current;
+        const updated = prev.slice();
+        updated[idx] = { ...updated[idx], text: updated[idx].text + buffered };
+        return updated;
+      }
+      const newMsg = { id: Date.now() + Math.random(), type: 'thinking', text: buffered };
+      currentThinkingIndexRef.current = prev.length;
+      return [...prev, newMsg];
+    }});
+  }
+
+  function flushText() {
+    // Force-commit any buffered text immediately
+    if (textFlushTimerRef.current) {
+      clearTimeout(textFlushTimerRef.current);
+      textFlushTimerRef.current = null;
+    }
+    commitTextBuffer();
+    currentTextIndexRef.current = null;
+  }
+
+  function flushThinking() {
+    if (thinkingFlushTimerRef.current) {
+      clearTimeout(thinkingFlushTimerRef.current);
+      thinkingFlushTimerRef.current = null;
+    }
+    commitThinkingBuffer();
+    currentThinkingIndexRef.current = null;
+  }
+
+  function appendTextContent(text) {
+    textBufferRef.current += text;
+    if (!textFlushTimerRef.current) {
+      textFlushTimerRef.current = setTimeout(commitTextBuffer, STREAM_FLUSH_MS);
+    }
+  }
+
+  function appendThinkingContent(text) {
+    thinkingBufferRef.current += text;
+    if (!thinkingFlushTimerRef.current) {
+      thinkingFlushTimerRef.current = setTimeout(commitThinkingBuffer, STREAM_FLUSH_MS);
+    }
   }
 
   function appendToolResult(toolUseId, content) {
@@ -508,6 +588,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
 
   function addToolCall(block) {
     flushText();
+    flushThinking();
     dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
       if (block.id) {
         toolCallIndexRef.current[block.id] = prev.length;
@@ -611,7 +692,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
           const cleaned = stripAnsi(delta.text || '');
           if (cleaned) appendTextContent(cleaned);
         } else if (delta.type === 'thinking_delta' && acc.type === 'thinking') {
-          acc.thinking += (delta.thinking || '');
+          const thinking = delta.thinking || '';
+          if (thinking) appendThinkingContent(thinking);
         } else if (delta.type === 'input_json_delta' && acc.type === 'tool_use') {
           acc.input_json += (delta.partial_json || '');
         }
@@ -628,7 +710,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
           try { input = JSON.parse(acc.input_json); } catch (e) { /* partial */ }
           addToolCall({ id: acc.id, name: acc.name, input });
         } else if (acc.type === 'thinking') {
-          appendMsg({ type: 'thinking', text: acc.thinking || '' });
+          flushThinking();
         } else if (acc.type === 'text') {
           flushText();
         }
@@ -644,6 +726,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
 
       case 'message_stop':
         flushText();
+        flushThinking();
         streamingBlocksRef.current = {};
         break;
 
@@ -660,6 +743,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
 
       case 'result': {
         flushText();
+        flushThinking();
         streamingBlocksRef.current = {};
         if (evt.session_id) sessionIdRef.current = evt.session_id;
         break;
@@ -707,6 +791,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
     }
     currentTextIndexRef.current = null;
     flushText();
+    flushThinking();
 
     // Log completion to dashboard
     if (api && dashboardId) {
@@ -906,7 +991,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         : (settings.claudeCliPath || null);
 
       // Only inject system prompt on fresh sessions — resumed sessions already have context
-      const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir);
+      const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir, dashboardId);
 
       // Build conversation history context.
       // For resumed sessions, the CLI already has full history — but we still inject
@@ -984,12 +1069,120 @@ export default function ClaudeView({ onClose, hideHeader }) {
     await sendText(finalPrompt, attachmentsSnapshot);
   }
 
-  const SUGGESTIONS = [
-    { label: '!p_track', command: '!p_track ', autoSend: false },
-    { label: '!dispatch --ready', command: '!dispatch --ready', autoSend: true },
-    { label: '!status', command: '!status', autoSend: true },
-    { label: '!cancel', command: '!cancel', autoSend: true },
-  ];
+  // All available commands organized by folder
+  const ALL_COMMANDS = {
+    Synapse: [
+      { label: '!p_track', command: '!p_track ', autoSend: false },
+      { label: '!p', command: '!p ', autoSend: false },
+      { label: '!master_plan_track', command: '!master_plan_track ', autoSend: false },
+      { label: '!dispatch --ready', command: '!dispatch --ready', autoSend: true },
+      { label: '!status', command: '!status', autoSend: true },
+      { label: '!logs', command: '!logs', autoSend: true },
+      { label: '!inspect', command: '!inspect ', autoSend: false },
+      { label: '!deps', command: '!deps', autoSend: true },
+      { label: '!retry', command: '!retry ', autoSend: false },
+      { label: '!resume', command: '!resume', autoSend: true },
+      { label: '!cancel', command: '!cancel', autoSend: true },
+      { label: '!cancel-safe', command: '!cancel-safe', autoSend: true },
+      { label: '!reset', command: '!reset', autoSend: false },
+      { label: '!start', command: '!start', autoSend: true },
+      { label: '!stop', command: '!stop', autoSend: true },
+      { label: '!history', command: '!history', autoSend: true },
+      { label: '!project', command: '!project ', autoSend: false },
+      { label: '!guide', command: '!guide', autoSend: true },
+      { label: '!update_dashboard', command: '!update_dashboard ', autoSend: false },
+    ],
+    Project: [
+      { label: '!context', command: '!context ', autoSend: false },
+      { label: '!review', command: '!review', autoSend: true },
+      { label: '!health', command: '!health', autoSend: true },
+      { label: '!plan', command: '!plan ', autoSend: false },
+      { label: '!scope', command: '!scope ', autoSend: false },
+      { label: '!trace', command: '!trace ', autoSend: false },
+      { label: '!contracts', command: '!contracts', autoSend: true },
+      { label: '!env_check', command: '!env_check', autoSend: true },
+      { label: '!scaffold', command: '!scaffold', autoSend: true },
+      { label: '!initialize', command: '!initialize', autoSend: true },
+      { label: '!onboard', command: '!onboard', autoSend: true },
+      { label: '!toc', command: '!toc ', autoSend: false },
+      { label: '!toc_generate', command: '!toc_generate', autoSend: true },
+      { label: '!toc_update', command: '!toc_update', autoSend: true },
+      { label: '!commands', command: '!commands', autoSend: true },
+      { label: '!help', command: '!help', autoSend: true },
+      { label: '!profiles', command: '!profiles', autoSend: true },
+    ],
+    Profiles: [
+      { label: '!analyst', command: '!analyst ', autoSend: false },
+      { label: '!architect', command: '!architect ', autoSend: false },
+      { label: '!copywriter', command: '!copywriter ', autoSend: false },
+      { label: '!customer-success', command: '!customer-success ', autoSend: false },
+      { label: '!devops', command: '!devops ', autoSend: false },
+      { label: '!founder', command: '!founder ', autoSend: false },
+      { label: '!growth', command: '!growth ', autoSend: false },
+      { label: '!legal', command: '!legal ', autoSend: false },
+      { label: '!marketing', command: '!marketing ', autoSend: false },
+      { label: '!pricing', command: '!pricing ', autoSend: false },
+      { label: '!product', command: '!product ', autoSend: false },
+      { label: '!qa', command: '!qa ', autoSend: false },
+      { label: '!sales', command: '!sales ', autoSend: false },
+      { label: '!security', command: '!security ', autoSend: false },
+      { label: '!technical-writer', command: '!technical-writer ', autoSend: false },
+    ],
+  };
+
+  const QUICK_ACCESS_STORAGE_KEY = 'synapse-quick-access-commands';
+  const DEFAULT_QUICK_ACCESS = ['!p_track', '!dispatch --ready', '!status', '!cancel'];
+
+  function loadQuickAccessCommands() {
+    try {
+      const stored = localStorage.getItem(QUICK_ACCESS_STORAGE_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return DEFAULT_QUICK_ACCESS;
+  }
+
+  const [quickAccessLabels, setQuickAccessLabels] = useState(loadQuickAccessCommands);
+
+  function saveQuickAccessCommands(labels) {
+    setQuickAccessLabels(labels);
+    try { localStorage.setItem(QUICK_ACCESS_STORAGE_KEY, JSON.stringify(labels)); } catch {}
+  }
+
+  // Resolve label to full command object
+  function findCommand(label) {
+    for (const folder of Object.values(ALL_COMMANDS)) {
+      const found = folder.find(c => c.label === label);
+      if (found) return found;
+    }
+    return { label, command: label, autoSend: false };
+  }
+
+  function toggleQuickAccessCommand(label) {
+    const current = [...quickAccessLabels];
+    const idx = current.indexOf(label);
+    if (idx >= 0) {
+      current.splice(idx, 1);
+    } else {
+      current.push(label);
+    }
+    saveQuickAccessCommands(current);
+  }
+
+  function toggleFolder(folder) {
+    setExpandedFolders(prev => ({ ...prev, [folder]: !prev[folder] }));
+  }
+
+  // Close quick access editor on outside click
+  useEffect(() => {
+    if (!showQuickAccessEditor) return;
+    function handleClickOutside(e) {
+      if (quickAccessEditorRef.current && !quickAccessEditorRef.current.contains(e.target)) {
+        setShowQuickAccessEditor(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showQuickAccessEditor]);
 
   function handleSuggestion(s) {
     if (s.autoSend) {
@@ -1178,17 +1371,63 @@ export default function ClaudeView({ onClose, hideHeader }) {
       </div>
 
       <div className="claude-suggestion-chips">
-        {SUGGESTIONS.map(s => (
+        {quickAccessLabels.map(label => {
+          const cmd = findCommand(label);
+          return (
+            <button
+              key={cmd.command}
+              className="claude-suggestion-chip"
+              onClick={() => handleSuggestion(cmd)}
+              disabled={isProcessing}
+              title={cmd.autoSend ? `Send: ${cmd.command}` : `Fill: ${cmd.command}`}
+            >
+              {cmd.label}
+            </button>
+          );
+        })}
+        <div className="claude-quick-access-editor-wrapper" ref={quickAccessEditorRef}>
           <button
-            key={s.command}
-            className="claude-suggestion-chip"
-            onClick={() => handleSuggestion(s)}
-            disabled={isProcessing}
-            title={s.autoSend ? `Send: ${s.command}` : `Fill: ${s.command}`}
-          >
-            {s.label}
-          </button>
-        ))}
+            className="claude-suggestion-chip claude-quick-access-add-btn"
+            onClick={() => setShowQuickAccessEditor(prev => !prev)}
+            title="Customize quick access buttons"
+          >+</button>
+          {showQuickAccessEditor && (
+            <div className="claude-quick-access-popup">
+              <div className="claude-quick-access-popup-header">Quick Access Commands</div>
+              {Object.entries(ALL_COMMANDS).map(([folder, commands]) => (
+                <div key={folder} className="claude-quick-access-folder">
+                  <button
+                    className="claude-quick-access-folder-toggle"
+                    onClick={() => toggleFolder(folder)}
+                  >
+                    <span className={`claude-quick-access-folder-arrow ${expandedFolders[folder] ? 'expanded' : ''}`}>▶</span>
+                    <span className="claude-quick-access-folder-name">{folder}</span>
+                    <span className="claude-quick-access-folder-count">
+                      {commands.filter(c => quickAccessLabels.includes(c.label)).length}/{commands.length}
+                    </span>
+                  </button>
+                  {expandedFolders[folder] && (
+                    <div className="claude-quick-access-folder-items">
+                      {commands.map(cmd => (
+                        <label key={cmd.label} className="claude-quick-access-item">
+                          <input
+                            type="checkbox"
+                            checked={quickAccessLabels.includes(cmd.label)}
+                            onChange={() => toggleQuickAccessCommand(cmd.label)}
+                          />
+                          <span className="claude-quick-access-item-label">{cmd.label}</span>
+                          <span className="claude-quick-access-item-mode">
+                            {cmd.autoSend ? 'auto' : 'fill'}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {pendingAttachments.length > 0 && (

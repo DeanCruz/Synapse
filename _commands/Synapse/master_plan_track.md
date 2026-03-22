@@ -132,20 +132,23 @@ For each independent stream, define:
 
 Follow the slot management protocol from `tracker_multi_plan_instructions.md`:
 
-#### 7A. Scan available dashboards
+#### 7A. Identify your pre-assigned dashboard and scan for additional slots
 
-Scan `dashboard1` through `dashboard5` using the standard `selectDashboard()` algorithm from `{tracker_root}/agent/instructions/dashboard_resolution.md`:
+**Pre-assigned dashboard (from chat context).** If your system prompt contains a `DASHBOARD ID:` directive, you are running inside a chat view bound to that specific dashboard. Your pre-assigned dashboard is **always claimed first** for Stream 1 (S1) — do not scan or auto-select a different dashboard for it. This is how the user sees your primary swarm in the correct panel.
+
+**Scan remaining dashboards** for additional streams. Scan `dashboard1` through `dashboard5` (skipping your pre-assigned dashboard) using the standard `selectDashboard()` algorithm from `{tracker_root}/agent/instructions/dashboard_resolution.md`:
 - `task: null` → **available**
 - `task` not null but all progress files terminal → **finished, available after history save**
 - `task` not null with active agents → **in use, skip**
 
-Collect all available dashboard IDs in order.
+Collect all available dashboard IDs in order (your pre-assigned dashboard is already claimed — do not include it in the scan results).
 
 #### 7B. Assign slots
 
 Assign planning streams to slots in this priority:
-1. **Available dashboards first** — fill `dashboard1` through `dashboard5` in order of availability.
-2. **Queue slots for overflow** — if more streams than available dashboards, assign remaining streams to `queue1`, `queue2`, etc.
+1. **Pre-assigned dashboard for S1** — your chat-bound dashboard is always used for the first/primary stream.
+2. **Available dashboards for remaining streams** — fill scanned available dashboards in order.
+3. **Queue slots for overflow** — if more streams than available dashboards, assign remaining streams to `queue1`, `queue2`, etc.
 
 Create queue directories as needed:
 ```bash

@@ -892,9 +892,9 @@ In Wave mode, dependency lines are drawn between cards using BFS pathfinding thr
 
 The dashboard supports up to 5 simultaneous swarms via a sidebar that lists all dashboard instances (`dashboard1` through `dashboard5`). Each dashboard directory is an independent swarm with its own `initialization.json`, `logs.json`, and `progress/` directory. Different dashboards can serve different projects — the `task.project_root` field identifies which project each swarm belongs to.
 
-**Dashboard selection is automatic.** When `!p_track` starts, the master scans dashboards 1-5 for the first available slot — it will never overwrite an in-progress swarm. All commands (`!status`, `!logs`, `!inspect`, etc.) auto-detect the active dashboard when no dashboard is specified. See `agent/instructions/dashboard_resolution.md` for the full selection and detection protocol.
+**Dashboard selection follows a priority chain.** When an agent is spawned from the Synapse chat view, its system prompt contains a `DASHBOARD ID:` directive binding it to that chat's dashboard — this is always authoritative and the agent uses it unconditionally. If no pre-assigned dashboard exists, `--dashboard dashboardN` can force a specific slot. As a final fallback, the master scans dashboards 1-5 for the first available slot. The agent will never overwrite an in-progress swarm. All commands (`!status`, `!logs`, `!inspect`, etc.) auto-detect the active dashboard when no dashboard is specified. See `agent/instructions/dashboard_resolution.md` for the full selection and detection protocol.
 
-**Workers always know their dashboard.** The master includes `{dashboardId}` in every worker dispatch prompt. Workers write progress files to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — they never auto-detect.
+**Every agent always knows its dashboard.** Chat-spawned agents receive their dashboard ID via the system prompt. The master includes `{dashboardId}` in every worker dispatch prompt. Workers write progress files to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — they never auto-detect.
 
 ### Stat Cards
 

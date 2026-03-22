@@ -71,6 +71,22 @@ If auto-detection selects a dashboard, announce it: `"[dashboard3] ..."` prefix 
 
 Used by `!p_track` when starting a new swarm. The master must claim a dashboard before writing `initialization.json`.
 
+**Resolution order (first match wins):**
+
+### 1. Pre-assigned dashboard (highest priority)
+
+When an agent is spawned from the Synapse chat view, its system prompt contains a `DASHBOARD ID:` directive identifying the dashboard bound to that chat. **This is always authoritative** — the agent must use this dashboard unconditionally without scanning or auto-selecting.
+
+Each chat view in the Synapse Electron app is associated with exactly one dashboard. The agent spawned from that chat must write to that dashboard so the user sees the swarm in the correct panel. Pre-assigned dashboards are never overridden by auto-selection.
+
+### 2. Explicit `--dashboard` flag
+
+`!p_track --dashboard dashboard3 {prompt}` bypasses auto-selection and uses `dashboard3` directly. If it's in use, warn and require confirmation.
+
+### 3. Auto-selection (fallback)
+
+Only used when no dashboard is pre-assigned and no `--dashboard` flag is specified.
+
 **Algorithm:**
 
 1. Scan `dashboard1` through `dashboard5` in order.
@@ -94,8 +110,6 @@ Pick a dashboard to overwrite, or run `!reset {dashboardId}` first.
 ```
 
 4. If the user picks a dashboard, save history before overwriting if it had data.
-
-**User override:** `!p_track --dashboard dashboard3 {prompt}` bypasses auto-selection and uses `dashboard3` directly. If it's in use, warn and require confirmation.
 
 ---
 

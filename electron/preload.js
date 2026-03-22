@@ -99,7 +99,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listProjectCommands: (projectDir) => ipcRenderer.invoke('list-project-commands', projectDir),
 
   // Chat context
-  getChatSystemPrompt: (projectDir) => ipcRenderer.invoke('get-chat-system-prompt', projectDir),
+  getChatSystemPrompt: (projectDir, dashboardId) => ipcRenderer.invoke('get-chat-system-prompt', projectDir, dashboardId),
   logChatEvent: (dashboardId, entry) => ipcRenderer.invoke('log-chat-event', dashboardId, entry),
 
   // Attachments
