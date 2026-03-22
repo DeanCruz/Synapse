@@ -24,184 +24,149 @@
     </style>
   </defs>
 
-  <!-- Background -->
   <rect width="1024" height="1024" rx="230" fill="#06111b"/>
   <rect x="56" y="56" width="912" height="912" rx="206" fill="url(#bgGlow)"/>
 
-  <!-- Grey edges (background network) -->
-  <g stroke="#4a5568" stroke-linecap="round">
-    <line x1="128" y1="128" x2="312" y2="192" stroke-width="10" stroke-opacity="0.18"/>
-    <line x1="512" y1="96" x2="496" y2="176" stroke-width="10" stroke-opacity="0.2"/>
-    <line x1="512" y1="96" x2="312" y2="192" stroke-width="10" stroke-opacity="0.16"/>
-    <line x1="512" y1="96" x2="712" y2="224" stroke-width="10" stroke-opacity="0.16"/>
-    <line x1="896" y1="128" x2="712" y2="224" stroke-width="10" stroke-opacity="0.18"/>
-    <line x1="128" y1="128" x2="244" y2="304" stroke-width="10" stroke-opacity="0.16"/>
-    <line x1="428" y1="352" x2="496" y2="176" stroke-width="12" stroke-opacity="0.22"/>
-    <line x1="428" y1="352" x2="312" y2="192" stroke-width="12" stroke-opacity="0.22"/>
-    <line x1="428" y1="352" x2="244" y2="304" stroke-width="12" stroke-opacity="0.22"/>
-    <line x1="428" y1="352" x2="662" y2="368" stroke-width="12" stroke-opacity="0.22"/>
-    <line x1="662" y1="368" x2="712" y2="224" stroke-width="12" stroke-opacity="0.22"/>
-    <line x1="662" y1="368" x2="746" y2="496" stroke-width="12" stroke-opacity="0.22"/>
-    <line x1="662" y1="368" x2="512" y2="528" stroke-width="12" stroke-opacity="0.2"/>
-    <line x1="712" y1="592" x2="746" y2="496" stroke-width="12" stroke-opacity="0.22"/>
-    <line x1="712" y1="592" x2="813" y2="608" stroke-width="12" stroke-opacity="0.22"/>
-    <line x1="712" y1="592" x2="512" y2="528" stroke-width="12" stroke-opacity="0.2"/>
-    <line x1="344" y1="624" x2="312" y2="512" stroke-width="12" stroke-opacity="0.22"/>
-    <line x1="344" y1="624" x2="210" y2="416" stroke-width="10" stroke-opacity="0.18"/>
-    <line x1="344" y1="624" x2="512" y2="528" stroke-width="12" stroke-opacity="0.2"/>
-    <line x1="344" y1="624" x2="312" y2="800" stroke-width="12" stroke-opacity="0.2"/>
-    <line x1="128" y1="880" x2="312" y2="800" stroke-width="10" stroke-opacity="0.18"/>
-    <line x1="512" y1="928" x2="512" y2="832" stroke-width="10" stroke-opacity="0.2"/>
-    <line x1="512" y1="928" x2="312" y2="800" stroke-width="10" stroke-opacity="0.16"/>
-    <line x1="512" y1="928" x2="728" y2="800" stroke-width="10" stroke-opacity="0.16"/>
-    <line x1="896" y1="880" x2="728" y2="800" stroke-width="10" stroke-opacity="0.18"/>
-    <line x1="896" y1="880" x2="830" y2="704" stroke-width="10" stroke-opacity="0.16"/>
+  <!-- Grey edges (connecting grey and green nodes) -->
+  <g stroke="#c8ccd0" stroke-linecap="round">
+    <line x1="128" y1="128" x2="240" y2="272" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="128" y1="128" x2="512" y2="128" stroke-width="8" stroke-opacity="0.25"/>
+    <line x1="896" y1="128" x2="784" y2="272" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="896" y1="128" x2="512" y2="128" stroke-width="8" stroke-opacity="0.25"/>
+    <line x1="400" y1="320" x2="512" y2="128" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="400" y1="320" x2="240" y2="272" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="400" y1="320" x2="224" y2="432" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="400" y1="320" x2="624" y2="320" stroke-width="10" stroke-opacity="0.32"/>
+    <line x1="624" y1="320" x2="512" y2="128" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="624" y1="320" x2="784" y2="272" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="624" y1="320" x2="800" y2="432" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="112" y1="512" x2="224" y2="432" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="112" y1="512" x2="224" y2="592" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="912" y1="512" x2="800" y2="432" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="912" y1="512" x2="800" y2="592" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="512" y1="512" x2="400" y2="320" stroke-width="10" stroke-opacity="0.3"/>
+    <line x1="512" y1="512" x2="624" y2="320" stroke-width="10" stroke-opacity="0.3"/>
+    <line x1="512" y1="512" x2="224" y2="432" stroke-width="10" stroke-opacity="0.3"/>
+    <line x1="512" y1="512" x2="800" y2="432" stroke-width="10" stroke-opacity="0.3"/>
+    <line x1="512" y1="512" x2="224" y2="592" stroke-width="10" stroke-opacity="0.3"/>
+    <line x1="512" y1="512" x2="800" y2="592" stroke-width="10" stroke-opacity="0.3"/>
+    <line x1="512" y1="512" x2="400" y2="704" stroke-width="10" stroke-opacity="0.3"/>
+    <line x1="512" y1="512" x2="624" y2="704" stroke-width="10" stroke-opacity="0.3"/>
+    <line x1="400" y1="704" x2="512" y2="896" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="400" y1="704" x2="240" y2="752" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="400" y1="704" x2="224" y2="592" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="400" y1="704" x2="624" y2="704" stroke-width="10" stroke-opacity="0.32"/>
+    <line x1="624" y1="704" x2="512" y2="896" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="624" y1="704" x2="784" y2="752" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="624" y1="704" x2="800" y2="592" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="128" y1="896" x2="240" y2="752" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="128" y1="896" x2="512" y2="896" stroke-width="8" stroke-opacity="0.25"/>
+    <line x1="896" y1="896" x2="784" y2="752" stroke-width="10" stroke-opacity="0.35"/>
+    <line x1="896" y1="896" x2="512" y2="896" stroke-width="8" stroke-opacity="0.25"/>
   </g>
 
-  <!-- Green S-path curve (very subtle background trace) -->
-  <path class="se1" style="animation-delay:0s"
-        d="M 712 224 C 568 136 376 136 312 192 C 244 240 228 288 244 304 C 228 352 196 400 210 416 C 228 480 260 512 312 512 C 420 544 632 528 746 496 C 828 464 828 560 813 608 C 796 656 828 688 830 704 C 832 768 776 816 728 800 C 616 776 408 840 312 800"
-        fill="none" stroke="#22c55e" stroke-width="18" stroke-linecap="round" stroke-opacity="0.1"/>
+  <!-- Green S edges (diamond outline + S diagonal) -->
+  <line class="se1" style="animation-delay:.08s" x1="512" y1="128" x2="240" y2="272" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <line class="se1" style="animation-delay:.08s" x1="512" y1="128" x2="784" y2="272" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <line class="se1" style="animation-delay:.18s" x1="240" y1="272" x2="224" y2="432" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <line class="se1" style="animation-delay:.18s" x1="784" y1="272" x2="800" y2="432" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <line class="se1" style="animation-delay:.28s" x1="224" y1="432" x2="224" y2="592" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <line class="se1" style="animation-delay:.28s" x1="800" y1="432" x2="800" y2="592" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <!-- S diagonal — upper-left through center to lower-right -->
+  <line class="se1" style="animation-delay:.3s" x1="224" y1="432" x2="512" y2="512" stroke="#22c55e" stroke-width="18" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <line class="se1" style="animation-delay:.38s" x1="512" y1="512" x2="800" y2="592" stroke="#22c55e" stroke-width="18" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <line class="se1" style="animation-delay:.46s" x1="224" y1="592" x2="240" y2="752" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <line class="se1" style="animation-delay:.46s" x1="800" y1="592" x2="784" y2="752" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <line class="se1" style="animation-delay:.56s" x1="240" y1="752" x2="512" y2="896" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
+  <line class="se1" style="animation-delay:.56s" x1="784" y1="752" x2="512" y2="896" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow1024)"/>
 
-  <!-- Green S-path edges (animated) -->
-  <!-- Top bar -->
-  <line class="se1" style="animation-delay:.05s" x1="312" y1="192" x2="496" y2="176" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <line class="se1" style="animation-delay:.05s" x1="496" y1="176" x2="712" y2="224" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <!-- Top to left hook -->
-  <line class="se1" style="animation-delay:.15s" x1="312" y1="192" x2="244" y2="304" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <line class="se1" style="animation-delay:.25s" x1="244" y1="304" x2="210" y2="416" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <!-- Left hook to middle bar -->
-  <line class="se1" style="animation-delay:.35s" x1="210" y1="416" x2="312" y2="512" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <!-- Middle bar -->
-  <line class="se1" style="animation-delay:.42s" x1="312" y1="512" x2="512" y2="528" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <line class="se1" style="animation-delay:.48s" x1="512" y1="528" x2="746" y2="496" stroke="#22c55e" stroke-width="16" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <!-- Middle to right hook -->
-  <line class="se1" style="animation-delay:.56s" x1="746" y1="496" x2="813" y2="608" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <line class="se1" style="animation-delay:.64s" x1="813" y1="608" x2="830" y2="704" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <!-- Right hook to bottom bar -->
-  <line class="se1" style="animation-delay:.72s" x1="830" y1="704" x2="728" y2="800" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <!-- Bottom bar -->
-  <line class="se1" style="animation-delay:.8s" x1="728" y1="800" x2="512" y2="832" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
-  <line class="se1" style="animation-delay:.88s" x1="512" y1="832" x2="312" y2="800" stroke="#22c55e" stroke-width="14" stroke-linecap="round" stroke-opacity="0.55" filter="url(#edgeGreenGlow1024)"/>
+  <!-- Grey nodes -->
+  <circle cx="128" cy="128" r="28" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="128" cy="128" r="18" fill="#dce0e4"/><circle cx="128" cy="128" r="8" fill="#eef0f2"/>
 
-  <!-- Grey nodes (background network) -->
-  <circle cx="128" cy="128" r="28" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="128" cy="128" r="18" fill="#4a4a55"/>
-  <circle cx="128" cy="128" r="8" fill="#666"/>
+  <circle cx="896" cy="128" r="28" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="896" cy="128" r="18" fill="#dce0e4"/><circle cx="896" cy="128" r="8" fill="#eef0f2"/>
 
-  <circle cx="512" cy="96" r="30" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="512" cy="96" r="20" fill="#4a4a55"/>
-  <circle cx="512" cy="96" r="9" fill="#666"/>
+  <circle cx="400" cy="320" r="34" fill="#d0d4d8" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
+  <circle cx="400" cy="320" r="22" fill="#e0e4e8"/><circle cx="400" cy="320" r="11" fill="#eef0f2"/>
 
-  <circle cx="896" cy="128" r="28" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="896" cy="128" r="18" fill="#4a4a55"/>
-  <circle cx="896" cy="128" r="8" fill="#666"/>
+  <circle cx="624" cy="320" r="34" fill="#d0d4d8" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
+  <circle cx="624" cy="320" r="22" fill="#e0e4e8"/><circle cx="624" cy="320" r="11" fill="#eef0f2"/>
 
-  <circle cx="428" cy="352" r="34" fill="#3a3f4a" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
-  <circle cx="428" cy="352" r="22" fill="#555"/>
-  <circle cx="428" cy="352" r="11" fill="#6a6a70"/>
+  <circle cx="112" cy="512" r="28" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="112" cy="512" r="18" fill="#dce0e4"/><circle cx="112" cy="512" r="8" fill="#eef0f2"/>
 
-  <circle cx="662" cy="368" r="34" fill="#3a3f4a" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
-  <circle cx="662" cy="368" r="22" fill="#555"/>
-  <circle cx="662" cy="368" r="11" fill="#6a6a70"/>
+  <!-- Center hub (green, glowing) -->
+  <g class="sn1" style="animation-delay:.34s" filter="url(#greenGlow1024)">
+    <circle cx="512" cy="512" r="76" fill="#22c55e" fill-opacity="0.22"/>
+    <circle cx="512" cy="512" r="52" fill="#22c55e"/>
+    <circle cx="512" cy="512" r="28" fill="#86efac"/>
+  </g>
 
-  <circle cx="712" cy="592" r="34" fill="#3a3f4a" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
-  <circle cx="712" cy="592" r="22" fill="#555"/>
-  <circle cx="712" cy="592" r="11" fill="#6a6a70"/>
+  <circle cx="912" cy="512" r="28" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="912" cy="512" r="18" fill="#dce0e4"/><circle cx="912" cy="512" r="8" fill="#eef0f2"/>
 
-  <circle cx="344" cy="624" r="34" fill="#3a3f4a" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
-  <circle cx="344" cy="624" r="22" fill="#555"/>
-  <circle cx="344" cy="624" r="11" fill="#6a6a70"/>
+  <circle cx="400" cy="704" r="34" fill="#d0d4d8" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
+  <circle cx="400" cy="704" r="22" fill="#e0e4e8"/><circle cx="400" cy="704" r="11" fill="#eef0f2"/>
 
-  <circle cx="128" cy="880" r="28" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="128" cy="880" r="18" fill="#4a4a55"/>
-  <circle cx="128" cy="880" r="8" fill="#666"/>
+  <circle cx="624" cy="704" r="34" fill="#d0d4d8" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
+  <circle cx="624" cy="704" r="22" fill="#e0e4e8"/><circle cx="624" cy="704" r="11" fill="#eef0f2"/>
 
-  <circle cx="512" cy="928" r="30" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="512" cy="928" r="20" fill="#4a4a55"/>
-  <circle cx="512" cy="928" r="9" fill="#666"/>
+  <circle cx="128" cy="896" r="28" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="128" cy="896" r="18" fill="#dce0e4"/><circle cx="128" cy="896" r="8" fill="#eef0f2"/>
 
-  <circle cx="896" cy="880" r="28" fill="#3a3f4a" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="896" cy="880" r="18" fill="#4a4a55"/>
-  <circle cx="896" cy="880" r="8" fill="#666"/>
+  <circle cx="896" cy="896" r="28" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="896" cy="896" r="18" fill="#dce0e4"/><circle cx="896" cy="896" r="8" fill="#eef0f2"/>
 
-  <!-- Green S nodes (animated draw-in along the S curve) -->
-  <!-- Top bar left -->
-  <g class="sn1" style="animation-delay:.06s" filter="url(#greenGlow1024)">
-    <circle cx="312" cy="192" r="42" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="312" cy="192" r="28" fill="#22c55e"/>
-    <circle cx="312" cy="192" r="14" fill="#86efac"/>
+  <!-- Green S nodes -->
+  <g class="sn1" style="animation-delay:.05s" filter="url(#greenGlow1024)">
+    <circle cx="512" cy="128" r="48" fill="#22c55e" fill-opacity="0.18"/>
+    <circle cx="512" cy="128" r="32" fill="#22c55e"/>
+    <circle cx="512" cy="128" r="16" fill="#86efac"/>
   </g>
-  <!-- Top bar center -->
-  <g class="sn1" style="animation-delay:.04s" filter="url(#greenGlow1024)">
-    <circle cx="496" cy="176" r="50" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="496" cy="176" r="32" fill="#22c55e"/>
-    <circle cx="496" cy="176" r="16" fill="#86efac"/>
+  <g class="sn1" style="animation-delay:.12s" filter="url(#greenGlow1024)">
+    <circle cx="240" cy="272" r="38" fill="#22c55e" fill-opacity="0.18"/>
+    <circle cx="240" cy="272" r="25" fill="#22c55e"/>
+    <circle cx="240" cy="272" r="12" fill="#86efac"/>
   </g>
-  <!-- Top bar right -->
-  <g class="sn1" style="animation-delay:.08s" filter="url(#greenGlow1024)">
-    <circle cx="712" cy="224" r="42" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="712" cy="224" r="28" fill="#22c55e"/>
-    <circle cx="712" cy="224" r="14" fill="#86efac"/>
+  <g class="sn1" style="animation-delay:.12s" filter="url(#greenGlow1024)">
+    <circle cx="784" cy="272" r="38" fill="#22c55e" fill-opacity="0.18"/>
+    <circle cx="784" cy="272" r="25" fill="#22c55e"/>
+    <circle cx="784" cy="272" r="12" fill="#86efac"/>
   </g>
-  <!-- Left hook upper -->
-  <g class="sn1" style="animation-delay:.18s" filter="url(#greenGlow1024)">
-    <circle cx="244" cy="304" r="34" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="244" cy="304" r="22" fill="#22c55e"/>
-    <circle cx="244" cy="304" r="11" fill="#86efac"/>
+  <g class="sn1" style="animation-delay:.22s" filter="url(#greenGlow1024)">
+    <circle cx="224" cy="432" r="38" fill="#22c55e" fill-opacity="0.18"/>
+    <circle cx="224" cy="432" r="25" fill="#22c55e"/>
+    <circle cx="224" cy="432" r="12" fill="#86efac"/>
   </g>
-  <!-- Left hook lower -->
-  <g class="sn1" style="animation-delay:.28s" filter="url(#greenGlow1024)">
-    <circle cx="210" cy="416" r="34" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="210" cy="416" r="22" fill="#22c55e"/>
-    <circle cx="210" cy="416" r="11" fill="#86efac"/>
+  <g class="sn1" style="animation-delay:.22s" filter="url(#greenGlow1024)">
+    <circle cx="800" cy="432" r="38" fill="#22c55e" fill-opacity="0.18"/>
+    <circle cx="800" cy="432" r="25" fill="#22c55e"/>
+    <circle cx="800" cy="432" r="12" fill="#86efac"/>
   </g>
-  <!-- Middle bar left -->
-  <g class="sn1" style="animation-delay:.38s" filter="url(#greenGlow1024)">
-    <circle cx="312" cy="512" r="38" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="312" cy="512" r="25" fill="#22c55e"/>
-    <circle cx="312" cy="512" r="12" fill="#86efac"/>
+  <g class="sn1" style="animation-delay:.36s" filter="url(#greenGlow1024)">
+    <circle cx="224" cy="592" r="38" fill="#22c55e" fill-opacity="0.18"/>
+    <circle cx="224" cy="592" r="25" fill="#22c55e"/>
+    <circle cx="224" cy="592" r="12" fill="#86efac"/>
   </g>
-  <!-- Middle bar center (hub) -->
-  <g class="sn1" style="animation-delay:.45s" filter="url(#greenGlow1024)">
-    <circle cx="512" cy="528" r="62" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="512" cy="528" r="44" fill="#22c55e"/>
-    <circle cx="512" cy="528" r="24" fill="#86efac"/>
+  <g class="sn1" style="animation-delay:.36s" filter="url(#greenGlow1024)">
+    <circle cx="800" cy="592" r="38" fill="#22c55e" fill-opacity="0.18"/>
+    <circle cx="800" cy="592" r="25" fill="#22c55e"/>
+    <circle cx="800" cy="592" r="12" fill="#86efac"/>
   </g>
-  <!-- Middle bar right -->
-  <g class="sn1" style="animation-delay:.52s" filter="url(#greenGlow1024)">
-    <circle cx="746" cy="496" r="38" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="746" cy="496" r="25" fill="#22c55e"/>
-    <circle cx="746" cy="496" r="12" fill="#86efac"/>
+  <g class="sn1" style="animation-delay:.46s" filter="url(#greenGlow1024)">
+    <circle cx="240" cy="752" r="38" fill="#22c55e" fill-opacity="0.18"/>
+    <circle cx="240" cy="752" r="25" fill="#22c55e"/>
+    <circle cx="240" cy="752" r="12" fill="#86efac"/>
   </g>
-  <!-- Right hook upper -->
-  <g class="sn1" style="animation-delay:.6s" filter="url(#greenGlow1024)">
-    <circle cx="813" cy="608" r="34" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="813" cy="608" r="22" fill="#22c55e"/>
-    <circle cx="813" cy="608" r="11" fill="#86efac"/>
+  <g class="sn1" style="animation-delay:.46s" filter="url(#greenGlow1024)">
+    <circle cx="784" cy="752" r="38" fill="#22c55e" fill-opacity="0.18"/>
+    <circle cx="784" cy="752" r="25" fill="#22c55e"/>
+    <circle cx="784" cy="752" r="12" fill="#86efac"/>
   </g>
-  <!-- Right hook lower -->
-  <g class="sn1" style="animation-delay:.68s" filter="url(#greenGlow1024)">
-    <circle cx="830" cy="704" r="34" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="830" cy="704" r="22" fill="#22c55e"/>
-    <circle cx="830" cy="704" r="11" fill="#86efac"/>
-  </g>
-  <!-- Bottom bar right -->
-  <g class="sn1" style="animation-delay:.76s" filter="url(#greenGlow1024)">
-    <circle cx="728" cy="800" r="42" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="728" cy="800" r="28" fill="#22c55e"/>
-    <circle cx="728" cy="800" r="14" fill="#86efac"/>
-  </g>
-  <!-- Bottom bar center -->
-  <g class="sn1" style="animation-delay:.84s" filter="url(#greenGlow1024)">
-    <circle cx="512" cy="832" r="50" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="512" cy="832" r="32" fill="#22c55e"/>
-    <circle cx="512" cy="832" r="16" fill="#86efac"/>
-  </g>
-  <!-- Bottom bar left -->
-  <g class="sn1" style="animation-delay:.92s" filter="url(#greenGlow1024)">
-    <circle cx="312" cy="800" r="42" fill="#22c55e" fill-opacity="0.18"/>
-    <circle cx="312" cy="800" r="28" fill="#22c55e"/>
-    <circle cx="312" cy="800" r="14" fill="#86efac"/>
+  <g class="sn1" style="animation-delay:.56s" filter="url(#greenGlow1024)">
+    <circle cx="512" cy="896" r="48" fill="#22c55e" fill-opacity="0.18"/>
+    <circle cx="512" cy="896" r="32" fill="#22c55e"/>
+    <circle cx="512" cy="896" r="16" fill="#86efac"/>
   </g>
 </svg>
