@@ -5228,18 +5228,26 @@ a:hover {
 }
 
 .claude-quick-access-popup {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  right: 0;
-  width: 280px;
-  max-height: 400px;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 320px;
+  max-height: 420px;
   overflow-y: auto;
   background: var(--surface-raised);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  z-index: 1000;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  z-index: 1001;
   padding: 8px 0;
+}
+
+.claude-quick-access-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 1000;
 }
 
 .claude-quick-access-popup-header {

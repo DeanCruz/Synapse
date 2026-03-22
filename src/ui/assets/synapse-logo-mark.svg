@@ -1,7 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Synapse logo mark">
   <defs>
     <filter id="greyGlow">
-      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="greyEdgeGlow">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
       <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
     <filter id="greenGlow">
@@ -21,85 +25,73 @@
 
   <rect x="8" y="8" width="112" height="112" rx="24" fill="#ffffff" fill-opacity="0.02"/>
 
-  <!-- Grey edges (background network — connecting grey and green nodes) -->
-  <g stroke="#c8ccd0" stroke-linecap="round">
-    <!-- Corner to S nodes -->
-    <line x1="16" y1="16" x2="30" y2="34" stroke-width="1.5" stroke-opacity="0.4"/>
-    <line x1="16" y1="16" x2="64" y2="16" stroke-width="1.4" stroke-opacity="0.3"/>
-    <line x1="112" y1="16" x2="98" y2="34" stroke-width="1.5" stroke-opacity="0.4"/>
-    <line x1="112" y1="16" x2="64" y2="16" stroke-width="1.4" stroke-opacity="0.3"/>
-    <!-- Inner upper grey to S nodes -->
-    <line x1="50" y1="40" x2="64" y2="16" stroke-width="1.6" stroke-opacity="0.4"/>
-    <line x1="50" y1="40" x2="30" y2="34" stroke-width="1.6" stroke-opacity="0.4"/>
-    <line x1="50" y1="40" x2="28" y2="54" stroke-width="1.6" stroke-opacity="0.4"/>
-    <line x1="50" y1="40" x2="78" y2="40" stroke-width="1.6" stroke-opacity="0.38"/>
-    <line x1="78" y1="40" x2="64" y2="16" stroke-width="1.6" stroke-opacity="0.4"/>
-    <line x1="78" y1="40" x2="98" y2="34" stroke-width="1.6" stroke-opacity="0.4"/>
-    <line x1="78" y1="40" x2="100" y2="54" stroke-width="1.6" stroke-opacity="0.4"/>
-    <!-- Far sides to S mid nodes -->
-    <line x1="14" y1="64" x2="28" y2="54" stroke-width="1.5" stroke-opacity="0.4"/>
-    <line x1="14" y1="64" x2="28" y2="74" stroke-width="1.5" stroke-opacity="0.4"/>
-    <line x1="114" y1="64" x2="100" y2="54" stroke-width="1.5" stroke-opacity="0.4"/>
-    <line x1="114" y1="64" x2="100" y2="74" stroke-width="1.5" stroke-opacity="0.4"/>
-    <!-- Center hub to surrounding nodes -->
-    <line x1="64" y1="64" x2="50" y2="40" stroke-width="1.5" stroke-opacity="0.35"/>
-    <line x1="64" y1="64" x2="78" y2="40" stroke-width="1.5" stroke-opacity="0.35"/>
-    <line x1="64" y1="64" x2="28" y2="54" stroke-width="1.5" stroke-opacity="0.35"/>
-    <line x1="64" y1="64" x2="100" y2="54" stroke-width="1.5" stroke-opacity="0.35"/>
-    <line x1="64" y1="64" x2="28" y2="74" stroke-width="1.5" stroke-opacity="0.35"/>
-    <line x1="64" y1="64" x2="100" y2="74" stroke-width="1.5" stroke-opacity="0.35"/>
-    <line x1="64" y1="64" x2="50" y2="88" stroke-width="1.5" stroke-opacity="0.35"/>
-    <line x1="64" y1="64" x2="78" y2="88" stroke-width="1.5" stroke-opacity="0.35"/>
-    <!-- Inner lower grey to S nodes -->
-    <line x1="50" y1="88" x2="64" y2="112" stroke-width="1.6" stroke-opacity="0.4"/>
-    <line x1="50" y1="88" x2="30" y2="94" stroke-width="1.6" stroke-opacity="0.4"/>
-    <line x1="50" y1="88" x2="28" y2="74" stroke-width="1.6" stroke-opacity="0.4"/>
-    <line x1="50" y1="88" x2="78" y2="88" stroke-width="1.6" stroke-opacity="0.38"/>
-    <line x1="78" y1="88" x2="64" y2="112" stroke-width="1.6" stroke-opacity="0.4"/>
-    <line x1="78" y1="88" x2="98" y2="94" stroke-width="1.6" stroke-opacity="0.4"/>
-    <line x1="78" y1="88" x2="100" y2="74" stroke-width="1.6" stroke-opacity="0.4"/>
-    <!-- Corner to S nodes -->
-    <line x1="16" y1="112" x2="30" y2="94" stroke-width="1.5" stroke-opacity="0.4"/>
-    <line x1="16" y1="112" x2="64" y2="112" stroke-width="1.4" stroke-opacity="0.3"/>
-    <line x1="112" y1="112" x2="98" y2="94" stroke-width="1.5" stroke-opacity="0.4"/>
-    <line x1="112" y1="112" x2="64" y2="112" stroke-width="1.4" stroke-opacity="0.3"/>
+  <!-- Grey edges (background network) -->
+  <g stroke="#e8eaed" stroke-linecap="round" filter="url(#greyEdgeGlow)">
+    <line x1="16" y1="16" x2="30" y2="34" stroke-width="3" stroke-opacity="0.3"/>
+    <line x1="16" y1="16" x2="64" y2="16" stroke-width="2.8" stroke-opacity="0.25"/>
+    <line x1="112" y1="16" x2="98" y2="34" stroke-width="3" stroke-opacity="0.3"/>
+    <line x1="112" y1="16" x2="64" y2="16" stroke-width="2.8" stroke-opacity="0.25"/>
+    <line x1="50" y1="40" x2="64" y2="16" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="50" y1="40" x2="30" y2="34" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="50" y1="40" x2="28" y2="54" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="50" y1="40" x2="78" y2="40" stroke-width="3.2" stroke-opacity="0.28"/>
+    <line x1="78" y1="40" x2="64" y2="16" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="78" y1="40" x2="98" y2="34" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="78" y1="40" x2="100" y2="54" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="14" y1="64" x2="28" y2="54" stroke-width="3" stroke-opacity="0.3"/>
+    <line x1="14" y1="64" x2="28" y2="74" stroke-width="3" stroke-opacity="0.3"/>
+    <line x1="114" y1="64" x2="100" y2="54" stroke-width="3" stroke-opacity="0.3"/>
+    <line x1="114" y1="64" x2="100" y2="74" stroke-width="3" stroke-opacity="0.3"/>
+    <line x1="64" y1="64" x2="50" y2="40" stroke-width="3" stroke-opacity="0.28"/>
+    <line x1="64" y1="64" x2="78" y2="40" stroke-width="3" stroke-opacity="0.28"/>
+    <line x1="64" y1="64" x2="28" y2="54" stroke-width="3" stroke-opacity="0.28"/>
+    <line x1="64" y1="64" x2="100" y2="54" stroke-width="3" stroke-opacity="0.28"/>
+    <line x1="64" y1="64" x2="28" y2="74" stroke-width="3" stroke-opacity="0.28"/>
+    <line x1="64" y1="64" x2="100" y2="74" stroke-width="3" stroke-opacity="0.28"/>
+    <line x1="64" y1="64" x2="50" y2="88" stroke-width="3" stroke-opacity="0.28"/>
+    <line x1="64" y1="64" x2="78" y2="88" stroke-width="3" stroke-opacity="0.28"/>
+    <line x1="50" y1="88" x2="64" y2="112" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="50" y1="88" x2="30" y2="94" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="50" y1="88" x2="28" y2="74" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="50" y1="88" x2="78" y2="88" stroke-width="3.2" stroke-opacity="0.28"/>
+    <line x1="78" y1="88" x2="64" y2="112" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="78" y1="88" x2="98" y2="94" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="78" y1="88" x2="100" y2="74" stroke-width="3.2" stroke-opacity="0.3"/>
+    <line x1="16" y1="112" x2="30" y2="94" stroke-width="3" stroke-opacity="0.3"/>
+    <line x1="16" y1="112" x2="64" y2="112" stroke-width="2.8" stroke-opacity="0.25"/>
+    <line x1="112" y1="112" x2="98" y2="94" stroke-width="3" stroke-opacity="0.3"/>
+    <line x1="112" y1="112" x2="64" y2="112" stroke-width="2.8" stroke-opacity="0.25"/>
   </g>
 
-  <!-- Green S edges (diamond outline + S diagonal, no perpendicular) -->
-  <!-- Top point to shoulders -->
-  <line class="se" style="animation-delay:.08s" x1="64" y1="16" x2="30" y2="34" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <line class="se" style="animation-delay:.08s" x1="64" y1="16" x2="98" y2="34" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <!-- Shoulders down to mid-upper -->
-  <line class="se" style="animation-delay:.18s" x1="30" y1="34" x2="28" y2="54" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <line class="se" style="animation-delay:.18s" x1="98" y1="34" x2="100" y2="54" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <!-- Outer vertical rails -->
-  <line class="se" style="animation-delay:.28s" x1="28" y1="54" x2="28" y2="74" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <line class="se" style="animation-delay:.28s" x1="100" y1="54" x2="100" y2="74" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <!-- S diagonal — upper-left through center to lower-right -->
-  <line class="se" style="animation-delay:.3s" x1="28" y1="54" x2="64" y2="64" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <line class="se" style="animation-delay:.38s" x1="64" y1="64" x2="100" y2="74" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <!-- Mid-lower down to shoulders -->
-  <line class="se" style="animation-delay:.46s" x1="28" y1="74" x2="30" y2="94" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <line class="se" style="animation-delay:.46s" x1="100" y1="74" x2="98" y2="94" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <!-- Shoulders to bottom point -->
-  <line class="se" style="animation-delay:.56s" x1="30" y1="94" x2="64" y2="112" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
-  <line class="se" style="animation-delay:.56s" x1="98" y1="94" x2="64" y2="112" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-opacity="0.6" filter="url(#edgeGreenGlow)"/>
+  <!-- Green S edges -->
+  <line class="se" style="animation-delay:.08s" x1="64" y1="16" x2="30" y2="34" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.08s" x1="64" y1="16" x2="98" y2="34" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.18s" x1="30" y1="34" x2="28" y2="54" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.18s" x1="98" y1="34" x2="100" y2="54" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.28s" x1="28" y1="54" x2="28" y2="74" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.28s" x1="100" y1="54" x2="100" y2="74" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.3s" x1="28" y1="54" x2="64" y2="64" stroke="#22c55e" stroke-width="4.5" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.38s" x1="64" y1="64" x2="100" y2="74" stroke="#22c55e" stroke-width="4.5" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.46s" x1="28" y1="74" x2="30" y2="94" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.46s" x1="100" y1="74" x2="98" y2="94" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.56s" x1="30" y1="94" x2="64" y2="112" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
+  <line class="se" style="animation-delay:.56s" x1="98" y1="94" x2="64" y2="112" stroke="#22c55e" stroke-width="4" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow)"/>
 
-  <!-- Grey nodes -->
-  <circle cx="16" cy="16" r="3.5" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow)"/>
-  <circle cx="16" cy="16" r="2.2" fill="#dce0e4"/><circle cx="16" cy="16" r="1" fill="#eef0f2"/>
+  <!-- Grey nodes (with glow) -->
+  <circle cx="16" cy="16" r="4.5" fill="#e8ecf0" fill-opacity="0.5" filter="url(#greyGlow)"/>
+  <circle cx="16" cy="16" r="2.8" fill="#f2f4f5"/><circle cx="16" cy="16" r="1.2" fill="#f8f9fa"/>
 
-  <circle cx="112" cy="16" r="3.5" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow)"/>
-  <circle cx="112" cy="16" r="2.2" fill="#dce0e4"/><circle cx="112" cy="16" r="1" fill="#eef0f2"/>
+  <circle cx="112" cy="16" r="4.5" fill="#e8ecf0" fill-opacity="0.5" filter="url(#greyGlow)"/>
+  <circle cx="112" cy="16" r="2.8" fill="#f2f4f5"/><circle cx="112" cy="16" r="1.2" fill="#f8f9fa"/>
 
-  <circle cx="50" cy="40" r="4.5" fill="#d0d4d8" fill-opacity="0.45" filter="url(#greyGlow)"/>
-  <circle cx="50" cy="40" r="3" fill="#e0e4e8"/><circle cx="50" cy="40" r="1.4" fill="#eef0f2"/>
+  <circle cx="50" cy="40" r="5.5" fill="#e8ecf0" fill-opacity="0.55" filter="url(#greyGlow)"/>
+  <circle cx="50" cy="40" r="3.5" fill="#f2f4f5"/><circle cx="50" cy="40" r="1.6" fill="#f8f9fa"/>
 
-  <circle cx="78" cy="40" r="4.5" fill="#d0d4d8" fill-opacity="0.45" filter="url(#greyGlow)"/>
-  <circle cx="78" cy="40" r="3" fill="#e0e4e8"/><circle cx="78" cy="40" r="1.4" fill="#eef0f2"/>
+  <circle cx="78" cy="40" r="5.5" fill="#e8ecf0" fill-opacity="0.55" filter="url(#greyGlow)"/>
+  <circle cx="78" cy="40" r="3.5" fill="#f2f4f5"/><circle cx="78" cy="40" r="1.6" fill="#f8f9fa"/>
 
-  <circle cx="14" cy="64" r="3.5" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow)"/>
-  <circle cx="14" cy="64" r="2.2" fill="#dce0e4"/><circle cx="14" cy="64" r="1" fill="#eef0f2"/>
+  <circle cx="14" cy="64" r="4.5" fill="#e8ecf0" fill-opacity="0.5" filter="url(#greyGlow)"/>
+  <circle cx="14" cy="64" r="2.8" fill="#f2f4f5"/><circle cx="14" cy="64" r="1.2" fill="#f8f9fa"/>
 
   <!-- Center hub (green, glowing) -->
   <g class="sn" style="animation-delay:.34s" filter="url(#greenGlow)">
@@ -108,77 +100,67 @@
     <circle cx="64" cy="64" r="3.5" fill="#86efac"/>
   </g>
 
-  <circle cx="114" cy="64" r="3.5" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow)"/>
-  <circle cx="114" cy="64" r="2.2" fill="#dce0e4"/><circle cx="114" cy="64" r="1" fill="#eef0f2"/>
+  <circle cx="114" cy="64" r="4.5" fill="#e8ecf0" fill-opacity="0.5" filter="url(#greyGlow)"/>
+  <circle cx="114" cy="64" r="2.8" fill="#f2f4f5"/><circle cx="114" cy="64" r="1.2" fill="#f8f9fa"/>
 
-  <circle cx="50" cy="88" r="4.5" fill="#d0d4d8" fill-opacity="0.45" filter="url(#greyGlow)"/>
-  <circle cx="50" cy="88" r="3" fill="#e0e4e8"/><circle cx="50" cy="88" r="1.4" fill="#eef0f2"/>
+  <circle cx="50" cy="88" r="5.5" fill="#e8ecf0" fill-opacity="0.55" filter="url(#greyGlow)"/>
+  <circle cx="50" cy="88" r="3.5" fill="#f2f4f5"/><circle cx="50" cy="88" r="1.6" fill="#f8f9fa"/>
 
-  <circle cx="78" cy="88" r="4.5" fill="#d0d4d8" fill-opacity="0.45" filter="url(#greyGlow)"/>
-  <circle cx="78" cy="88" r="3" fill="#e0e4e8"/><circle cx="78" cy="88" r="1.4" fill="#eef0f2"/>
+  <circle cx="78" cy="88" r="5.5" fill="#e8ecf0" fill-opacity="0.55" filter="url(#greyGlow)"/>
+  <circle cx="78" cy="88" r="3.5" fill="#f2f4f5"/><circle cx="78" cy="88" r="1.6" fill="#f8f9fa"/>
 
-  <circle cx="16" cy="112" r="3.5" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow)"/>
-  <circle cx="16" cy="112" r="2.2" fill="#dce0e4"/><circle cx="16" cy="112" r="1" fill="#eef0f2"/>
+  <circle cx="16" cy="112" r="4.5" fill="#e8ecf0" fill-opacity="0.5" filter="url(#greyGlow)"/>
+  <circle cx="16" cy="112" r="2.8" fill="#f2f4f5"/><circle cx="16" cy="112" r="1.2" fill="#f8f9fa"/>
 
-  <circle cx="112" cy="112" r="3.5" fill="#d0d4d8" fill-opacity="0.4" filter="url(#greyGlow)"/>
-  <circle cx="112" cy="112" r="2.2" fill="#dce0e4"/><circle cx="112" cy="112" r="1" fill="#eef0f2"/>
+  <circle cx="112" cy="112" r="4.5" fill="#e8ecf0" fill-opacity="0.5" filter="url(#greyGlow)"/>
+  <circle cx="112" cy="112" r="2.8" fill="#f2f4f5"/><circle cx="112" cy="112" r="1.2" fill="#f8f9fa"/>
 
-  <!-- Green S nodes (diamond outline — no crossing) -->
-  <!-- Top point -->
+  <!-- Green S nodes -->
   <g class="sn" style="animation-delay:.05s" filter="url(#greenGlow)">
     <circle cx="64" cy="16" r="6" fill="#22c55e" fill-opacity="0.2"/>
     <circle cx="64" cy="16" r="4" fill="#22c55e"/>
     <circle cx="64" cy="16" r="2" fill="#86efac"/>
   </g>
-  <!-- Upper-left shoulder -->
   <g class="sn" style="animation-delay:.12s" filter="url(#greenGlow)">
     <circle cx="30" cy="34" r="5" fill="#22c55e" fill-opacity="0.2"/>
     <circle cx="30" cy="34" r="3.2" fill="#22c55e"/>
     <circle cx="30" cy="34" r="1.6" fill="#86efac"/>
   </g>
-  <!-- Upper-right shoulder -->
   <g class="sn" style="animation-delay:.12s" filter="url(#greenGlow)">
     <circle cx="98" cy="34" r="5" fill="#22c55e" fill-opacity="0.2"/>
     <circle cx="98" cy="34" r="3.2" fill="#22c55e"/>
     <circle cx="98" cy="34" r="1.6" fill="#86efac"/>
   </g>
-  <!-- Mid-upper-left -->
   <g class="sn" style="animation-delay:.22s" filter="url(#greenGlow)">
     <circle cx="28" cy="54" r="5" fill="#22c55e" fill-opacity="0.2"/>
     <circle cx="28" cy="54" r="3.2" fill="#22c55e"/>
     <circle cx="28" cy="54" r="1.6" fill="#86efac"/>
   </g>
-  <!-- Mid-upper-right -->
   <g class="sn" style="animation-delay:.22s" filter="url(#greenGlow)">
     <circle cx="100" cy="54" r="5" fill="#22c55e" fill-opacity="0.2"/>
     <circle cx="100" cy="54" r="3.2" fill="#22c55e"/>
     <circle cx="100" cy="54" r="1.6" fill="#86efac"/>
   </g>
-  <!-- Mid-lower-left -->
   <g class="sn" style="animation-delay:.36s" filter="url(#greenGlow)">
     <circle cx="28" cy="74" r="5" fill="#22c55e" fill-opacity="0.2"/>
     <circle cx="28" cy="74" r="3.2" fill="#22c55e"/>
     <circle cx="28" cy="74" r="1.6" fill="#86efac"/>
   </g>
-  <!-- Mid-lower-right -->
   <g class="sn" style="animation-delay:.36s" filter="url(#greenGlow)">
     <circle cx="100" cy="74" r="5" fill="#22c55e" fill-opacity="0.2"/>
     <circle cx="100" cy="74" r="3.2" fill="#22c55e"/>
     <circle cx="100" cy="74" r="1.6" fill="#86efac"/>
   </g>
-  <!-- Lower-left shoulder -->
   <g class="sn" style="animation-delay:.46s" filter="url(#greenGlow)">
     <circle cx="30" cy="94" r="5" fill="#22c55e" fill-opacity="0.2"/>
     <circle cx="30" cy="94" r="3.2" fill="#22c55e"/>
     <circle cx="30" cy="94" r="1.6" fill="#86efac"/>
   </g>
-  <!-- Lower-right shoulder -->
   <g class="sn" style="animation-delay:.46s" filter="url(#greenGlow)">
     <circle cx="98" cy="94" r="5" fill="#22c55e" fill-opacity="0.2"/>
     <circle cx="98" cy="94" r="3.2" fill="#22c55e"/>
     <circle cx="98" cy="94" r="1.6" fill="#86efac"/>
   </g>
-  <!-- Bottom point -->
   <g class="sn" style="animation-delay:.56s" filter="url(#greenGlow)">
     <circle cx="64" cy="112" r="6" fill="#22c55e" fill-opacity="0.2"/>
     <circle cx="64" cy="112" r="4" fill="#22c55e"/>

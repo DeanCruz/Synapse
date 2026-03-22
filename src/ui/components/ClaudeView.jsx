@@ -1392,40 +1392,43 @@ export default function ClaudeView({ onClose, hideHeader }) {
             title="Customize quick access buttons"
           >+</button>
           {showQuickAccessEditor && (
-            <div className="claude-quick-access-popup">
-              <div className="claude-quick-access-popup-header">Quick Access Commands</div>
-              {Object.entries(ALL_COMMANDS).map(([folder, commands]) => (
-                <div key={folder} className="claude-quick-access-folder">
-                  <button
-                    className="claude-quick-access-folder-toggle"
-                    onClick={() => toggleFolder(folder)}
-                  >
-                    <span className={`claude-quick-access-folder-arrow ${expandedFolders[folder] ? 'expanded' : ''}`}>▶</span>
-                    <span className="claude-quick-access-folder-name">{folder}</span>
-                    <span className="claude-quick-access-folder-count">
-                      {commands.filter(c => quickAccessLabels.includes(c.label)).length}/{commands.length}
-                    </span>
-                  </button>
-                  {expandedFolders[folder] && (
-                    <div className="claude-quick-access-folder-items">
-                      {commands.map(cmd => (
-                        <label key={cmd.label} className="claude-quick-access-item">
-                          <input
-                            type="checkbox"
-                            checked={quickAccessLabels.includes(cmd.label)}
-                            onChange={() => toggleQuickAccessCommand(cmd.label)}
-                          />
-                          <span className="claude-quick-access-item-label">{cmd.label}</span>
-                          <span className="claude-quick-access-item-mode">
-                            {cmd.autoSend ? 'auto' : 'fill'}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="claude-quick-access-overlay" onClick={() => setShowQuickAccessEditor(false)} />
+              <div className="claude-quick-access-popup">
+                <div className="claude-quick-access-popup-header">Quick Access Commands</div>
+                {Object.entries(ALL_COMMANDS).map(([folder, commands]) => (
+                  <div key={folder} className="claude-quick-access-folder">
+                    <button
+                      className="claude-quick-access-folder-toggle"
+                      onClick={() => toggleFolder(folder)}
+                    >
+                      <span className={`claude-quick-access-folder-arrow ${expandedFolders[folder] ? 'expanded' : ''}`}>▶</span>
+                      <span className="claude-quick-access-folder-name">{folder}</span>
+                      <span className="claude-quick-access-folder-count">
+                        {commands.filter(c => quickAccessLabels.includes(c.label)).length}/{commands.length}
+                      </span>
+                    </button>
+                    {expandedFolders[folder] && (
+                      <div className="claude-quick-access-folder-items">
+                        {commands.map(cmd => (
+                          <label key={cmd.label} className="claude-quick-access-item">
+                            <input
+                              type="checkbox"
+                              checked={quickAccessLabels.includes(cmd.label)}
+                              onChange={() => toggleQuickAccessCommand(cmd.label)}
+                            />
+                            <span className="claude-quick-access-item-label">{cmd.label}</span>
+                            <span className="claude-quick-access-item-mode">
+                              {cmd.autoSend ? 'auto' : 'fill'}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       </div>
