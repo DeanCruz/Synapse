@@ -6106,7 +6106,7 @@ a:hover {
 .claude-stop-btn:hover { background: #dc2626; opacity: 1; }
 
 .claude-model-select {
-  padding: 8px 24px 8px 10px;
+  padding: 8px 32px 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);

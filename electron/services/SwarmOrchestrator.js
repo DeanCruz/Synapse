@@ -60,6 +60,7 @@ function startSwarm(dashboardId, opts) {
     model: opts.model || '',
     cliPath: opts.cliPath || null,
     dangerouslySkipPermissions: opts.dangerouslySkipPermissions || false,
+    additionalContextDirs: opts.additionalContextDirs || [],
     trackerRoot: trackerRoot,
     dispatchedTasks: {},  // taskId -> true
     completedTasks: {},   // taskId -> true
@@ -222,10 +223,10 @@ function dispatchReady(dashboardId) {
   var init = readDashboardInit(dashboardId);
   if (!init || !init.agents) return;
 
-  var projectContexts = [];
-  if (swarm.projectPath) {
-    projectContexts = ProjectService.getProjectContext(swarm.projectPath);
-  }
+  var projectContexts = ProjectService.getProjectContextWithFallback(
+    swarm.projectPath,
+    swarm.additionalContextDirs
+  );
 
   for (var i = 0; i < init.agents.length; i++) {
     var agent = init.agents[i];
@@ -259,6 +260,7 @@ function dispatchReady(dashboardId) {
       taskId: taskId,
       dashboardId: dashboardId,
       trackerRoot: swarm.trackerRoot,
+      additionalContextDirs: swarm.additionalContextDirs,
     });
 
     var taskPrompt = PromptBuilder.buildTaskPrompt({
@@ -287,6 +289,7 @@ function dispatchReady(dashboardId) {
       model: swarm.model,
       cliPath: swarm.cliPath,
       dangerouslySkipPermissions: swarm.dangerouslySkipPermissions,
+      additionalContextDirs: swarm.additionalContextDirs,
     });
   }
 }

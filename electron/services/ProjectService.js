@@ -163,4 +163,31 @@ function detectAgentCLI(provider) {
   return provider === 'codex' ? detectCodexCLI() : detectClaudeCLI();
 }
 
-module.exports = { loadProject, getProjectContext, scanDirectory, detectClaudeCLI, detectCodexCLI, detectAgentCLI };
+/**
+ * Get project context with fallback to additional directories.
+ * Tries the primary project directory first. If no CLAUDE.md files are found,
+ * searches additional context directories as backup.
+ *
+ * @param {string} primaryDir — project directory to check first
+ * @param {string[]} [fallbackDirs] — additional directories to check if primary has no context
+ * @returns {{ path: string, content: string }[]}
+ */
+function getProjectContextWithFallback(primaryDir, fallbackDirs) {
+  // Try primary directory first
+  var contexts = primaryDir ? getProjectContext(primaryDir) : [];
+  if (contexts.length > 0) return contexts;
+
+  // Primary had no CLAUDE.md — try fallback directories
+  if (!fallbackDirs || fallbackDirs.length === 0) return contexts;
+
+  for (var i = 0; i < fallbackDirs.length; i++) {
+    try {
+      var fallbackContexts = getProjectContext(fallbackDirs[i]);
+      if (fallbackContexts.length > 0) return fallbackContexts;
+    } catch (e) { /* skip dirs that don't exist */ }
+  }
+
+  return [];
+}
+
+module.exports = { loadProject, getProjectContext, getProjectContextWithFallback, scanDirectory, detectClaudeCLI, detectCodexCLI, detectAgentCLI };
