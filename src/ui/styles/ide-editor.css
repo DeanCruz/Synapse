@@ -1,0 +1,193 @@
+/* ============================================================
+   IDE Editor — CodeEditor + EditorTabs
+   ============================================================ */
+
+/* --- Editor Tabs Bar --- */
+.editor-tabs-bar {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  min-height: 36px;
+  background: var(--bg, #0a0a0c);
+  border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+  flex-shrink: 0;
+}
+
+.editor-tabs-bar::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+/* Individual tab */
+.editor-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  border-right: 1px solid var(--border, rgba(255,255,255,0.08));
+  background: transparent;
+  color: var(--text-secondary, #A1A1A6);
+  font-family: var(--sans, 'DM Sans', sans-serif);
+  font-size: 0.75rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.editor-tab:hover {
+  color: var(--text, #F5F5F7);
+  background: var(--surface, rgba(255,255,255,0.04));
+}
+
+.editor-tab:focus-visible {
+  outline: 2px solid rgba(155, 124, 240, 0.55);
+  outline-offset: -2px;
+}
+
+/* Active tab */
+.editor-tab.active {
+  color: var(--text, #F5F5F7);
+  background: var(--surface, rgba(255,255,255,0.04));
+}
+
+/* Active tab top border accent */
+.editor-tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-in-progress, #9B7CF0);
+}
+
+/* Tab file name */
+.editor-tab-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+/* Dirty indicator dot */
+.editor-tab-dirty {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-in-progress, #9B7CF0);
+  flex-shrink: 0;
+}
+
+/* Close button on tab */
+.editor-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary, #A1A1A6);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.1s, background 0.1s, color 0.1s;
+  flex-shrink: 0;
+}
+
+.editor-tab:hover .editor-tab-close,
+.editor-tab.active .editor-tab-close {
+  opacity: 1;
+}
+
+.editor-tab-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text, #F5F5F7);
+}
+
+/* When dirty and close button is hidden, show dot; when hovering, show close instead */
+.editor-tab .editor-tab-dirty {
+  display: flex;
+}
+.editor-tab:hover .editor-tab-dirty {
+  display: none;
+}
+
+/* Empty state for tabs bar */
+.editor-tabs-empty {
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  color: var(--text-tertiary, rgba(255,255,255,0.3));
+  font-family: var(--sans, 'DM Sans', sans-serif);
+  font-size: 0.72rem;
+  font-style: italic;
+}
+
+/* --- Code Editor Container --- */
+.code-editor-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg, #0a0a0c);
+  position: relative;
+}
+
+.code-editor-monaco {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+/* Loading / empty states */
+.code-editor-loading,
+.code-editor-empty,
+.code-editor-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  color: var(--text-secondary, #A1A1A6);
+  font-family: var(--sans, 'DM Sans', sans-serif);
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 24px;
+}
+
+.code-editor-error {
+  color: var(--color-failed, #FF6B6B);
+}
+
+/* Saving indicator */
+.code-editor-saving {
+  position: absolute;
+  top: 8px;
+  right: 16px;
+  background: rgba(155, 124, 240, 0.15);
+  color: var(--color-in-progress, #9B7CF0);
+  font-family: var(--sans, 'DM Sans', sans-serif);
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 4px;
+  z-index: 10;
+  pointer-events: none;
+  animation: editorSaveFade 1.5s ease-out forwards;
+}
+
+@keyframes editorSaveFade {
+  0%   { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}

@@ -1,0 +1,83 @@
+/* ============================================================
+   IDE Sidebar — Code Explorer / Dashboards tab bar
+   ============================================================ */
+
+/* Tab bar container — horizontal row above the sidebar header */
+.sidebar-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 8px 4px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Individual tab */
+.sidebar-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.sidebar-tab:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.sidebar-tab:focus-visible {
+  outline: 2px solid rgba(155, 124, 240, 0.55);
+  outline-offset: 1px;
+}
+
+/* Active tab — purple accent highlight */
+.sidebar-tab.active {
+  color: var(--color-in-progress);
+  background: rgba(155, 124, 240, 0.1);
+}
+
+.sidebar-tab.active:hover {
+  background: rgba(155, 124, 240, 0.15);
+}
+
+/* Tab icon */
+.sidebar-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.sidebar-tab-icon svg {
+  display: block;
+}
+
+/* Collapsed sidebar — hide tab labels, show only icons */
+.dashboard-sidebar.collapsed .sidebar-tab-bar {
+  flex-direction: column;
+  padding: 6px 4px 4px;
+  gap: 2px;
+}
+
+.dashboard-sidebar.collapsed .sidebar-tab {
+  padding: 6px;
+  gap: 0;
+}
+
+.dashboard-sidebar.collapsed .sidebar-tab-label {
+  display: none;
+}

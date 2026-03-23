@@ -1382,6 +1382,9 @@ body {
   z-index: 50;
   max-height: 42px;
   transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Gradient glow — purple left → green right */
@@ -1425,6 +1428,7 @@ body {
   font-family: var(--sans);
   font-weight: 400;
   transition: color 0.2s;
+  flex-shrink: 0;
 }
 
 .log-toggle:hover {

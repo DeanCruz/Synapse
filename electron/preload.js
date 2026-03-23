@@ -19,6 +19,7 @@ const PUSH_CHANNELS = [
   'swarm-state',
   'terminal-output',
   'terminal-exit',
+  'ide-file-change',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -145,4 +146,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveTempFile: (base64, mimeType, name) => ipcRenderer.invoke('save-temp-file', base64, mimeType, name),
   selectImageFile: () => ipcRenderer.invoke('select-image-file'),
   readFileAsBase64: (filePath) => ipcRenderer.invoke('read-file-as-base64', filePath),
+
+  // IDE File System
+  ideReadFile: (filePath, workspaceRoot) => ipcRenderer.invoke('ide-read-file', filePath, workspaceRoot),
+  ideWriteFile: (filePath, content, workspaceRoot) => ipcRenderer.invoke('ide-write-file', filePath, content, workspaceRoot),
+  ideReadDir: (dirPath, options) => ipcRenderer.invoke('ide-read-dir', dirPath, options),
+  ideCreateFile: (filePath, content, workspaceRoot) => ipcRenderer.invoke('ide-create-file', filePath, content, workspaceRoot),
+  ideCreateFolder: (dirPath, workspaceRoot) => ipcRenderer.invoke('ide-create-folder', dirPath, workspaceRoot),
+  ideRename: (oldPath, newPath, workspaceRoot) => ipcRenderer.invoke('ide-rename', oldPath, newPath, workspaceRoot),
+  ideDelete: (targetPath, workspaceRoot) => ipcRenderer.invoke('ide-delete', targetPath, workspaceRoot),
+  ideSelectFolder: () => ipcRenderer.invoke('ide-select-folder'),
 });

@@ -5,6 +5,7 @@ import React, { useState, useCallback } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { getDashboardLabel } from '@/utils/constants.js';
 import { getDashboardProject } from '../utils/dashboardProjects.js';
+import '../styles/ide-sidebar.css';
 
 function StatusDot({ status }) {
   let cls = 'dashboard-item-status idle';
@@ -26,7 +27,7 @@ function getProjectDisplayName(dashboardId) {
 export default function Sidebar() {
   const state = useAppState();
   const dispatch = useDispatch();
-  const { currentDashboardId, dashboardStates, dashboardList, queueItems } = state;
+  const { currentDashboardId, dashboardStates, dashboardList, queueItems, activeView } = state;
 
   const [collapsed, setCollapsed] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, taskName } or null
@@ -115,8 +116,46 @@ export default function Sidebar() {
     setDeleteConfirm(null);
   }, [currentDashboardId, dashboards, dispatch]);
 
+  // Determine which sidebar tab is active
+  const isIdeActive = activeView === 'ide';
+  const isDashboardActive = !isIdeActive; // Default: dashboard tab active for all non-ide views
+
   return (
     <aside className={`dashboard-sidebar${collapsed ? ' collapsed' : ''}`}>
+      {/* Tab bar — Code Explorer / Dashboards */}
+      <div className="sidebar-tab-bar">
+        <button
+          className={`sidebar-tab${isIdeActive ? ' active' : ''}`}
+          title="Code Explorer"
+          aria-label="Code Explorer"
+          onClick={() => dispatch({ type: 'SET_VIEW', view: 'ide' })}
+        >
+          <span className="sidebar-tab-icon">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+              <path d="M5.5 4L2 8l3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M10.5 4L14 8l-3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+          <span className="sidebar-tab-label">Code Explorer</span>
+        </button>
+        <button
+          className={`sidebar-tab${isDashboardActive ? ' active' : ''}`}
+          title="Dashboards"
+          aria-label="Dashboards"
+          onClick={() => dispatch({ type: 'SET_VIEW', view: 'dashboard' })}
+        >
+          <span className="sidebar-tab-icon">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+              <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+              <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+              <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+              <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+            </svg>
+          </span>
+          <span className="sidebar-tab-label">Dashboards</span>
+        </button>
+      </div>
+
       {/* Header */}
       <div className="sidebar-header">
         <span className="sidebar-title">Dashboards</span>

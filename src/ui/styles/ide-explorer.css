@@ -1,0 +1,335 @@
+/* ============================================================
+   IDE File Explorer + Welcome Screen
+   ============================================================ */
+
+/* ----- File Explorer Container ----- */
+.ide-explorer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--sans);
+}
+
+.ide-explorer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ide-explorer-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ide-explorer-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.ide-explorer-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.ide-explorer-action-btn:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.ide-explorer-action-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ----- Tree Container ----- */
+.ide-explorer-tree {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 0;
+}
+
+.ide-explorer-tree::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ide-explorer-tree::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ide-explorer-tree::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+/* ----- Tree Node ----- */
+.ide-explorer-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  white-space: nowrap;
+  user-select: none;
+  transition: background 0.1s;
+  border-radius: 0;
+}
+
+.ide-explorer-item:hover {
+  background: var(--surface-hover);
+}
+
+.ide-explorer-item.active {
+  background: rgba(155, 124, 240, 0.12);
+  color: var(--text);
+}
+
+/* Indent levels — pad-left based on depth */
+.ide-explorer-item[data-depth="0"] { padding-left: 8px; }
+.ide-explorer-item[data-depth="1"] { padding-left: 22px; }
+.ide-explorer-item[data-depth="2"] { padding-left: 36px; }
+.ide-explorer-item[data-depth="3"] { padding-left: 50px; }
+.ide-explorer-item[data-depth="4"] { padding-left: 64px; }
+.ide-explorer-item[data-depth="5"] { padding-left: 78px; }
+.ide-explorer-item[data-depth="6"] { padding-left: 92px; }
+.ide-explorer-item[data-depth="7"] { padding-left: 106px; }
+.ide-explorer-item[data-depth="8"] { padding-left: 120px; }
+.ide-explorer-item[data-depth="9"] { padding-left: 134px; }
+.ide-explorer-item[data-depth="10"] { padding-left: 148px; }
+
+/* Chevron icon for folders */
+.ide-explorer-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: transform 0.15s ease;
+}
+
+.ide-explorer-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+/* Spacer when no chevron (files) */
+.ide-explorer-chevron-spacer {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* File/folder icon */
+.ide-explorer-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.ide-explorer-icon svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+}
+
+/* File name label */
+.ide-explorer-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Folder name styling */
+.ide-explorer-item.folder .ide-explorer-label {
+  font-weight: 500;
+}
+
+/* ----- Loading state ----- */
+.ide-explorer-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+}
+
+/* ----- Empty tree ----- */
+.ide-explorer-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+/* ============================================================
+   IDE Welcome Screen
+   ============================================================ */
+
+.ide-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 24px;
+}
+
+.ide-welcome-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-tertiary);
+}
+
+.ide-welcome-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.ide-welcome-title {
+  font-family: var(--display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.ide-welcome-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-width: 320px;
+  line-height: 1.5;
+  margin: -12px 0 0;
+}
+
+.ide-welcome-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 240px;
+}
+
+.ide-welcome-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.ide-welcome-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+
+.ide-welcome-btn:focus-visible {
+  outline: 2px solid rgba(155, 124, 240, 0.55);
+  outline-offset: 2px;
+}
+
+.ide-welcome-btn.primary {
+  background: linear-gradient(135deg, var(--color-purple-start), var(--color-purple-end));
+  border-color: transparent;
+  color: #fff;
+}
+
+.ide-welcome-btn.primary:hover {
+  filter: brightness(1.1);
+  border-color: transparent;
+}
+
+.ide-welcome-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.ide-welcome-btn-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ----- Keyboard shortcut hints ----- */
+.ide-welcome-shortcuts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.ide-welcome-shortcut {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ide-welcome-shortcut kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}

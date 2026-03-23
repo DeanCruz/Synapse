@@ -11,6 +11,8 @@ const CLAUDE_TABS_KEY_PREFIX = 'synapse-claude-tabs-';
 const CLAUDE_WELCOME_MSG = { id: 'welcome', type: 'system', text: 'Agent chat is ready. Type a message below to start.' };
 const DEFAULT_TAB = { id: 'default', name: 'Chat 1' };
 
+const IDE_WORKSPACES_KEY = 'synapse-ide-workspaces';
+
 function claudeMessagesKey(dashboardId, tabId) {
   const base = CLAUDE_MESSAGES_KEY_PREFIX + (dashboardId || 'dashboard1');
   if (tabId && tabId !== 'default') return base + '-' + tabId;
@@ -61,6 +63,23 @@ function loadSavedMessages(dashboardId, tabId) {
   return null;
 }
 
+function loadSavedWorkspaces() {
+  try {
+    const raw = localStorage.getItem(IDE_WORKSPACES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) { /* corrupt or unavailable */ }
+  return [];
+}
+
+function saveWorkspaces(workspaces) {
+  try { localStorage.setItem(IDE_WORKSPACES_KEY, JSON.stringify(workspaces)); } catch (e) { /* */ }
+}
+
+const savedWorkspaces = loadSavedWorkspaces();
+
 const initialState = {
   currentDashboardId: 'dashboard1',
   currentInit: null,
@@ -99,6 +118,13 @@ const initialState = {
   // Per-dashboard caches for sidebar state derivation
   allDashboardProgress: {},
   allDashboardLogs: {},
+  // IDE state — workspaces, open files, file trees, sidebar view
+  ideWorkspaces: savedWorkspaces, // [{ id, path, name }]
+  ideActiveWorkspaceId: savedWorkspaces.length > 0 ? savedWorkspaces[0].id : null,
+  ideOpenFiles: {}, // { [workspaceId]: [{ id, path, name, isDirty }] }
+  ideActiveFileId: {}, // { [workspaceId]: string }
+  ideFileTrees: {}, // { [workspaceId]: treeData }
+  ideSidebarView: 'explorer', // which sidebar panel is shown in IDE
 };
 
 function appReducerCore(state, action) {
@@ -361,6 +387,120 @@ function appReducerCore(state, action) {
       return { ...state, unblockedTasks: action.tasks || [] };
     case 'CLEAR_UNBLOCKED_TASKS':
       return { ...state, unblockedTasks: [] };
+    // --- IDE state management ---
+    case 'IDE_OPEN_WORKSPACE': {
+      const wsId = String(Date.now());
+      const newWorkspace = { id: wsId, path: action.path, name: action.name };
+      // Check if this path is already open
+      const existing = state.ideWorkspaces.find(w => w.path === action.path);
+      if (existing) {
+        // Just switch to the existing workspace
+        return { ...state, ideActiveWorkspaceId: existing.id };
+      }
+      const updatedWorkspaces = [...state.ideWorkspaces, newWorkspace];
+      saveWorkspaces(updatedWorkspaces);
+      return {
+        ...state,
+        ideWorkspaces: updatedWorkspaces,
+        ideActiveWorkspaceId: wsId,
+      };
+    }
+    case 'IDE_CLOSE_WORKSPACE': {
+      const closingWsId = action.workspaceId;
+      const updatedWorkspaces = state.ideWorkspaces.filter(w => w.id !== closingWsId);
+      // Clean up open files, active file, and file tree for this workspace
+      const newOpenFiles = { ...state.ideOpenFiles };
+      delete newOpenFiles[closingWsId];
+      const newActiveFileId = { ...state.ideActiveFileId };
+      delete newActiveFileId[closingWsId];
+      const newFileTrees = { ...state.ideFileTrees };
+      delete newFileTrees[closingWsId];
+      // Switch to adjacent workspace if the closed one was active
+      let newActiveWsId = state.ideActiveWorkspaceId;
+      if (newActiveWsId === closingWsId) {
+        if (updatedWorkspaces.length > 0) {
+          const closedIdx = state.ideWorkspaces.findIndex(w => w.id === closingWsId);
+          const newIdx = Math.min(closedIdx, updatedWorkspaces.length - 1);
+          newActiveWsId = updatedWorkspaces[newIdx].id;
+        } else {
+          newActiveWsId = null;
+        }
+      }
+      saveWorkspaces(updatedWorkspaces);
+      return {
+        ...state,
+        ideWorkspaces: updatedWorkspaces,
+        ideActiveWorkspaceId: newActiveWsId,
+        ideOpenFiles: newOpenFiles,
+        ideActiveFileId: newActiveFileId,
+        ideFileTrees: newFileTrees,
+      };
+    }
+    case 'IDE_SWITCH_WORKSPACE': {
+      return { ...state, ideActiveWorkspaceId: action.workspaceId };
+    }
+    case 'IDE_SET_FILE_TREE': {
+      const newFileTrees = { ...state.ideFileTrees, [action.workspaceId]: action.tree };
+      return { ...state, ideFileTrees: newFileTrees };
+    }
+    case 'IDE_OPEN_FILE': {
+      const wsId = action.workspaceId;
+      const currentFiles = state.ideOpenFiles[wsId] || [];
+      // Check if the file is already open (by path)
+      const existingFile = currentFiles.find(f => f.path === action.file.path);
+      if (existingFile) {
+        // Just switch to the existing file
+        const newActiveFileId = { ...state.ideActiveFileId, [wsId]: existingFile.id };
+        return { ...state, ideActiveFileId: newActiveFileId };
+      }
+      const fileId = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 7);
+      const newFile = { id: fileId, path: action.file.path, name: action.file.name, isDirty: false };
+      const updatedFiles = [...currentFiles, newFile];
+      const newOpenFiles = { ...state.ideOpenFiles, [wsId]: updatedFiles };
+      const newActiveFileId = { ...state.ideActiveFileId, [wsId]: fileId };
+      return { ...state, ideOpenFiles: newOpenFiles, ideActiveFileId: newActiveFileId };
+    }
+    case 'IDE_CLOSE_FILE': {
+      const wsId = action.workspaceId;
+      const currentFiles = state.ideOpenFiles[wsId] || [];
+      const updatedFiles = currentFiles.filter(f => f.id !== action.fileId);
+      const newOpenFiles = { ...state.ideOpenFiles, [wsId]: updatedFiles };
+      // Switch to adjacent file if the closed one was active
+      let newActiveId = state.ideActiveFileId[wsId];
+      if (newActiveId === action.fileId) {
+        if (updatedFiles.length > 0) {
+          const closedIdx = currentFiles.findIndex(f => f.id === action.fileId);
+          const newIdx = Math.min(closedIdx, updatedFiles.length - 1);
+          newActiveId = updatedFiles[newIdx].id;
+        } else {
+          newActiveId = null;
+        }
+      }
+      const newActiveFileId = { ...state.ideActiveFileId, [wsId]: newActiveId };
+      return { ...state, ideOpenFiles: newOpenFiles, ideActiveFileId: newActiveFileId };
+    }
+    case 'IDE_SWITCH_FILE': {
+      const newActiveFileId = { ...state.ideActiveFileId, [action.workspaceId]: action.fileId };
+      return { ...state, ideActiveFileId: newActiveFileId };
+    }
+    case 'IDE_MARK_FILE_DIRTY': {
+      const wsId = action.workspaceId;
+      const currentFiles = state.ideOpenFiles[wsId] || [];
+      const updatedFiles = currentFiles.map(f =>
+        f.id === action.fileId ? { ...f, isDirty: true } : f
+      );
+      const newOpenFiles = { ...state.ideOpenFiles, [wsId]: updatedFiles };
+      return { ...state, ideOpenFiles: newOpenFiles };
+    }
+    case 'IDE_MARK_FILE_CLEAN': {
+      const wsId = action.workspaceId;
+      const currentFiles = state.ideOpenFiles[wsId] || [];
+      const updatedFiles = currentFiles.map(f =>
+        f.id === action.fileId ? { ...f, isDirty: false } : f
+      );
+      const newOpenFiles = { ...state.ideOpenFiles, [wsId]: updatedFiles };
+      return { ...state, ideOpenFiles: newOpenFiles };
+    }
     default:
       return state;
   }

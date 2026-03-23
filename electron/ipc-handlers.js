@@ -872,6 +872,227 @@ function registerIPCHandlers(getMainWindow) {
     return { base64: 'data:' + mimeType + ';base64,' + data.toString('base64'), mimeType, name: path.basename(filePath) };
   });
 
+  // ---------------------------------------------------------------------------
+  // IDE File System handlers — namespaced with 'ide-' prefix
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Validate that a file path is within the given workspace root.
+   * Rejects directory traversal attempts.
+   */
+  function ideValidatePath(filePath, workspaceRoot) {
+    const resolved = path.resolve(filePath);
+    const resolvedRoot = path.resolve(workspaceRoot);
+    if (!resolved.startsWith(resolvedRoot + path.sep) && resolved !== resolvedRoot) {
+      throw new Error('Path escapes workspace root: ' + filePath);
+    }
+    return resolved;
+  }
+
+  /**
+   * Detect if a file is binary by reading the first 8KB and checking for null bytes.
+   */
+  function isBinaryFile(buffer) {
+    const sampleSize = Math.min(buffer.length, 8192);
+    for (let i = 0; i < sampleSize; i++) {
+      if (buffer[i] === 0) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Default filter for directory entries: skip hidden files and node_modules.
+   */
+  const IDE_DEFAULT_IGNORE = ['.git', 'node_modules', '.DS_Store', '__pycache__', '.next', '.cache', 'dist', 'build', '.venv', 'venv'];
+
+  /**
+   * Read a directory recursively into a tree structure.
+   * Uses lstat to avoid following symlinks.
+   */
+  async function ideReadDirRecursive(dirPath, ignore, maxDepth, currentDepth) {
+    if (currentDepth >= maxDepth) return [];
+
+    let entries;
+    try {
+      entries = await fsPromises.readdir(dirPath);
+    } catch (err) {
+      return [];
+    }
+
+    // Filter out ignored entries and hidden files
+    entries = entries.filter(name => {
+      if (name.startsWith('.') && ignore.includes(name)) return false;
+      if (name.startsWith('.')) return false;
+      if (ignore.includes(name)) return false;
+      return true;
+    });
+
+    // Sort: directories first, then alphabetical
+    const results = [];
+    for (const name of entries) {
+      const fullPath = path.join(dirPath, name);
+      try {
+        const stat = await fsPromises.lstat(fullPath);
+        if (stat.isSymbolicLink()) continue; // skip symlinks entirely
+        results.push({
+          name,
+          path: fullPath,
+          type: stat.isDirectory() ? 'directory' : 'file',
+          _isDir: stat.isDirectory(),
+        });
+      } catch (err) {
+        // Skip entries we can't stat
+        continue;
+      }
+    }
+
+    // Sort: directories first, then alphabetical case-insensitive
+    results.sort((a, b) => {
+      if (a._isDir && !b._isDir) return -1;
+      if (!a._isDir && b._isDir) return 1;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    });
+
+    // Recursively read children for directories
+    const tree = [];
+    for (const entry of results) {
+      const node = { name: entry.name, path: entry.path, type: entry.type };
+      if (entry._isDir) {
+        node.children = await ideReadDirRecursive(entry.path, ignore, maxDepth, currentDepth + 1);
+      }
+      tree.push(node);
+    }
+
+    return tree;
+  }
+
+  // --- ide-read-file: Read file contents, detect binary ---
+  ipcMain.handle('ide-read-file', async (_event, filePath, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(filePath, workspaceRoot);
+      const buffer = await fsPromises.readFile(filePath);
+      if (isBinaryFile(buffer)) {
+        return { success: true, binary: true, path: filePath, name: path.basename(filePath) };
+      }
+      return {
+        success: true,
+        binary: false,
+        content: buffer.toString('utf-8'),
+        path: filePath,
+        name: path.basename(filePath),
+      };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-write-file: Write content to a file ---
+  ipcMain.handle('ide-write-file', async (_event, filePath, content, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(filePath, workspaceRoot);
+      await fsPromises.writeFile(filePath, content, 'utf-8');
+      return { success: true, path: filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-read-dir: Recursive directory tree ---
+  ipcMain.handle('ide-read-dir', async (_event, dirPath, options) => {
+    try {
+      const opts = options || {};
+      const ignore = opts.ignore || IDE_DEFAULT_IGNORE;
+      const maxDepth = opts.maxDepth || 20;
+      const tree = await ideReadDirRecursive(dirPath, ignore, maxDepth, 0);
+      return {
+        success: true,
+        tree: {
+          name: path.basename(dirPath),
+          path: dirPath,
+          type: 'directory',
+          children: tree,
+        },
+      };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-create-file: Create a new file ---
+  ipcMain.handle('ide-create-file', async (_event, filePath, content, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(filePath, workspaceRoot);
+      // Ensure parent directory exists
+      await fsPromises.mkdir(path.dirname(filePath), { recursive: true });
+      // Fail if file already exists
+      try {
+        await fsPromises.access(filePath);
+        return { success: false, error: 'File already exists: ' + filePath };
+      } catch (_) {
+        // File doesn't exist — good, proceed
+      }
+      await fsPromises.writeFile(filePath, content || '', 'utf-8');
+      return { success: true, path: filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-create-folder: Create a new directory ---
+  ipcMain.handle('ide-create-folder', async (_event, dirPath, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(dirPath, workspaceRoot);
+      await fsPromises.mkdir(dirPath, { recursive: true });
+      return { success: true, path: dirPath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-rename: Rename a file or folder ---
+  ipcMain.handle('ide-rename', async (_event, oldPath, newPath, workspaceRoot) => {
+    try {
+      if (workspaceRoot) {
+        ideValidatePath(oldPath, workspaceRoot);
+        ideValidatePath(newPath, workspaceRoot);
+      }
+      await fsPromises.rename(oldPath, newPath);
+      return { success: true, oldPath, newPath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-delete: Delete a file or folder ---
+  ipcMain.handle('ide-delete', async (_event, targetPath, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(targetPath, workspaceRoot);
+      const stat = await fsPromises.lstat(targetPath);
+      if (stat.isDirectory()) {
+        await fsPromises.rm(targetPath, { recursive: true, force: true });
+      } else {
+        await fsPromises.unlink(targetPath);
+      }
+      return { success: true, path: targetPath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-select-folder: Native folder picker dialog for IDE ---
+  ipcMain.handle('ide-select-folder', async () => {
+    const { dialog } = require('electron');
+    const win = getMainWindow();
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openDirectory', 'createDirectory'],
+      title: 'Open Folder',
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
+
+
+
   // --- 3. Set up file watchers with IPC broadcast ---
 
   const dashboards = listDashboards();
