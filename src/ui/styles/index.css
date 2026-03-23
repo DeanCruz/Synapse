@@ -3936,6 +3936,11 @@ a:hover {
   border-color: rgba(108, 71, 214, 0.15);
 }
 
+[data-theme="light"] .claude-pill:hover {
+  background: rgba(155, 124, 240, 0.12);
+  box-shadow: 0 6px 20px rgba(155, 124, 240, 0.15);
+}
+
 /* --- Ocean Theme --- */
 [data-theme="ocean"] {
   --bg: #0b1628;
@@ -5278,10 +5283,10 @@ a:hover {
               box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Minimized: pill in bottom-right, above the bottom panel (42px) */
+/* Minimized: pill in bottom-right */
 .claude-float--minimized {
-  bottom: 62px;
-  right: 20px;
+  bottom: 32px;
+  right: 32px;
 }
 
 /* Collapsed: compact header bar */
