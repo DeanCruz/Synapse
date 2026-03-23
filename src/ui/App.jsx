@@ -26,9 +26,7 @@ import SettingsModal from './components/modals/SettingsModal.jsx';
 import AgentDetails from './components/modals/AgentDetails.jsx';
 import { getDashboardProject } from './utils/dashboardProjects.js';
 
-// Lazy import for GitManagerView — prevents crashes before the component exists
-let GitManagerView = null;
-try { GitManagerView = require('./components/git/GitManagerView.jsx').default; } catch(e) {}
+import GitManagerView from './components/git/GitManagerView.jsx';
 
 // ── ClearDashboardSection ────────────────────────────────────────────────────
 function ClearDashboardSection({ visible, onClear, taskName }) {
