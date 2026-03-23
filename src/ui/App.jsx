@@ -344,15 +344,48 @@ export default function App() {
 function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMode }) {
   const floatRef = React.useRef(null);
   const prevMode = React.useRef(viewMode);
+  const dragRef = React.useRef(null);
+  const handleRef = React.useRef(null);
 
   // Clear inline resize styles when leaving expanded mode so they don't
   // bleed into minimized/collapsed/maximized layouts.
   React.useEffect(() => {
     if (prevMode.current === 'expanded' && viewMode !== 'expanded' && floatRef.current) {
       floatRef.current.style.width = '';
-      floatRef.current.style.height = '';
     }
     prevMode.current = viewMode;
+  }, [viewMode]);
+
+  // Left-edge drag-to-resize (width only, right-anchored panel)
+  const onResizeStart = React.useCallback((e) => {
+    if (viewMode !== 'expanded' || !floatRef.current) return;
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = floatRef.current.getBoundingClientRect().width;
+    dragRef.current = { startX, startWidth };
+    if (handleRef.current) handleRef.current.classList.add('dragging');
+    document.body.style.cursor = 'ew-resize';
+    document.body.style.userSelect = 'none';
+
+    const onMove = (ev) => {
+      if (!dragRef.current || !floatRef.current) return;
+      // Dragging left = negative deltaX = wider panel (right-anchored)
+      const deltaX = ev.clientX - dragRef.current.startX;
+      const newWidth = Math.max(360, dragRef.current.startWidth - deltaX);
+      floatRef.current.style.width = newWidth + 'px';
+    };
+
+    const onUp = () => {
+      dragRef.current = null;
+      if (handleRef.current) handleRef.current.classList.remove('dragging');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   }, [viewMode]);
 
   return (
@@ -372,6 +405,14 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMo
           </svg>
           <span>Claude</span>
         </button>
+      )}
+      {/* Left-edge resize handle (expanded mode only) */}
+      {viewMode === 'expanded' && (
+        <div
+          ref={handleRef}
+          className="claude-float-resize-handle"
+          onMouseDown={onResizeStart}
+        />
       )}
       {/* ClaudeView always in the same tree position so it never unmounts */}
       <div className="claude-view" style={viewMode === 'minimized' ? { display: 'none' } : undefined}>
