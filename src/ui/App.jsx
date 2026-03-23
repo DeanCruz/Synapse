@@ -17,7 +17,6 @@ import ClaudeView from './components/ClaudeView.jsx';
 import WavePipeline from './components/WavePipeline.jsx';
 import ChainPipeline from './components/ChainPipeline.jsx';
 import TimelinePanel from './components/TimelinePanel.jsx';
-import MetricsPanel from './components/MetricsPanel.jsx';
 import BottomPanel from './components/BottomPanel.jsx';
 import CommandsModal from './components/modals/CommandsModal.jsx';
 import ProjectModal from './components/modals/ProjectModal.jsx';
@@ -148,7 +147,7 @@ function DashboardContent() {
 
       <ProgressSection onOpenTimeline={() => setTimelineOpen(true)} />
       <ReplanningBanner visible={task?.overall_status === 'replanning'} />
-      <MetricsPanel dashboardId={dashboardId} />
+
 
       {hasTask ? (
         <>
