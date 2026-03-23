@@ -1,0 +1,210 @@
+# Data Architecture
+
+All Synapse data files live at `{tracker_root}`. This document defines the schema, purpose, and write rules for every data file in the system.
+
+---
+
+## Context Savings
+
+This architecture dramatically reduces master agent context consumption:
+
+| Old Model | New Model |
+|---|---|
+| Single root-level `status.json` for all data | Per-dashboard `initialization.json` + `progress/` files |
+| Master reads/writes full status file on every progress update | Master writes `initialization.json` once; workers own all lifecycle data in progress files |
+| Master maintains counters (completed_tasks, failed_tasks) | Dashboard derives all stats from progress files — zero counter maintenance |
+| Master outputs full terminal status table on every event | Master outputs one-line confirmations only |
+| No visibility into worker progress during execution | Live stage + milestone + log updates on dashboard |
+| Deviations only visible after completion | Deviations visible immediately |
+| Single swarm at a time | Up to 5 concurrent swarms across dashboards with auto-selection |
+| Cascading failures require manual intervention | Circuit breaker triggers automatic replanning via CLI |
+| No sibling awareness between workers | shared_context + sibling_reads enable optional cross-worker data sharing |
+
+---
+
+## initialization.json
+
+**Purpose:** The static plan store, written once during planning.
+
+**Location:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
+
+Every field maps to UI elements on the dashboard, combined with progress file data. See `agent/instructions/tracker_master_instructions.md` for the complete field-to-UI mapping.
+
+The only exception to write-once is **automatic replanning** — when the circuit breaker triggers (see Principle 5 in `parallel_principles.md`), the orchestrator updates `initialization.json` with modified, added, or removed tasks from the replanner output.
+
+### Key Objects
+
+- `task` — The swarm metadata
+  - Fields: `name`, `type`, `directory`, `prompt`, `project`, `project_root`, `created`, `total_tasks`, `total_waves`
+- `agents[]` — One entry per task
+  - Fields: `id`, `title`, `wave`, `layer`, `directory`, `depends_on`
+  - Plan data only — no lifecycle fields
+- `waves[]` — One entry per wave
+  - Fields: `id`, `name`, `total`
+  - Structure only — no status or completed counts
+- `chains[]` — Optional, for chain layout mode
+- `history[]` — Previous swarm records
+
+### Write Rules
+
+- **Write-once during planning** — never update after the planning phase unless the circuit breaker triggers automatic replanning
+- **Always atomic:** read → modify in memory → write full file
+- **Never write partial JSON**
+- **No lifecycle fields:** `status`, `started_at`, `completed_at`, `summary`, `assigned_agent`, `completed_tasks`, `failed_tasks`, `overall_status` are all absent — they are derived from progress files by the dashboard
+- `task.project_root` stores the resolved `{project_root}` so the dashboard and commands know which project this swarm serves
+
+---
+
+## logs.json
+
+**Purpose:** The timestamped event log.
+
+**Location:** `{tracker_root}/dashboards/{dashboardId}/logs.json`
+
+Every entry becomes a row in the dashboard log panel.
+
+### Entry Fields
+
+| Field | Description |
+|---|---|
+| `timestamp` | ISO 8601 UTC timestamp |
+| `task_id` | The task this entry relates to |
+| `agent` | The agent name (e.g., "Agent 1") |
+| `level` | Log level (see below) |
+| `message` | Human-readable event description |
+| `task_name` | The task title for display |
+
+### Levels
+
+| Level | Description |
+|---|---|
+| `info` | General events (dispatches, completions) |
+| `warn` | Unexpected but non-fatal events |
+| `error` | Failures |
+| `debug` | Verbose/diagnostic information |
+| `permission` | Triggers amber popup on dashboard alerting user to check terminal |
+| `deviation` | Plan divergence — displayed with yellow badge in log panel |
+
+---
+
+## Master XML
+
+**Purpose:** The authoritative task record containing the full plan and execution history.
+
+**Location:** `{tracker_root}/tasks/{date}/parallel_{name}.xml`
+
+### Contents
+
+- Task descriptions
+- Context provided to each agent
+- Critical details and file lists
+- Dependencies between tasks
+- Status of each task
+- Completion summaries
+- Error details and timing
+- Execution logs
+
+### Who Updates It
+
+- **Every agent reads it** for context
+- **The master updates it** on every completion, failure, and deviation
+- The master writes it initially during planning with the full task decomposition
+
+---
+
+## progress/ Directory
+
+**Purpose:** Worker-owned progress files providing full lifecycle data for each agent.
+
+**Location:** `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`
+
+Each worker writes to its own file exclusively.
+
+### Key Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `task_id` | string | The task identifier (e.g., "2.1") |
+| `status` | string | `"in_progress"`, `"completed"`, or `"failed"` |
+| `started_at` | string | ISO 8601 UTC timestamp of task start |
+| `completed_at` | string/null | ISO 8601 UTC timestamp of task completion |
+| `summary` | string/null | Final summary of what was accomplished |
+| `assigned_agent` | string | Agent name (e.g., "Agent 1") |
+| `stage` | string | Current stage (see Stages below) |
+| `message` | string | Current status message for dashboard display |
+| `milestones[]` | array | Timestamped milestone entries (`at`, `msg`) |
+| `deviations[]` | array | Plan divergences (`at`, `description`) |
+| `logs[]` | array | Detailed log entries (`at`, `level`, `msg`) — feeds popup log box |
+| `shared_context` | object | Optional data for same-wave sibling coordination |
+| `shared_context.exports` | array | Exports created by this worker |
+| `shared_context.interfaces` | array | Interfaces/types defined |
+| `shared_context.patterns` | array | Patterns established |
+| `shared_context.notes` | string | Free-form notes for siblings |
+| `sibling_reads[]` | array | Which sibling progress files were read (enables dashboard sibling lines) |
+
+The progress file contains the **full lifecycle** for each agent. The `status`, `started_at`, `completed_at`, `summary`, and `assigned_agent` fields live exclusively in progress files — the dashboard derives all stats from these files.
+
+### Stages
+
+Workers progress through these stages in order:
+
+| Stage | Description |
+|---|---|
+| `reading_context` | Reading project files, CLAUDE.md, documentation, task XML |
+| `planning` | Assessing readiness, planning approach |
+| `implementing` | Writing code, creating/modifying files |
+| `testing` | Running tests, validating changes |
+| `finalizing` | Final cleanup, preparing summary report |
+| `completed` | Task completed successfully |
+| `failed` | Task failed |
+
+### Write Rules
+
+- **Workers write the full file on every update** (no read-modify-write — sole owner)
+- The server watches the directory via `fs.watch` and broadcasts `agent_progress` SSE events
+- The master clears this directory when initializing a new swarm
+- **Progress files are ephemeral** — they exist only during the active swarm
+
+---
+
+## master_state.json
+
+**Purpose:** The master's state checkpoint for context compaction recovery.
+
+**Location:** `{tracker_root}/dashboards/{dashboardId}/master_state.json`
+
+### Contents
+
+- Completed task IDs and summaries
+- In-progress task IDs
+- Failed tasks with repair IDs
+- Ready-to-dispatch tasks
+- Upstream result summaries
+- Next agent number
+
+### Write/Read Timing
+
+- **Written** after every dispatch event by the master agent
+- **Read** after context compaction to restore orchestration state
+- **Not watched by the server** — purely for master self-recovery
+
+---
+
+## metrics.json
+
+**Purpose:** Swarm performance metrics computed after swarm completion.
+
+**Location:** `{tracker_root}/dashboards/{dashboardId}/metrics.json`
+
+### Contents
+
+- Elapsed time
+- Worker efficiency ratios
+- Task duration distribution
+- Parallelism statistics
+
+### Write Timing
+
+- **Written once** at the end of a swarm by the master agent
+- **Not updated during execution**
+- **Not watched by the server** — used for post-swarm analysis

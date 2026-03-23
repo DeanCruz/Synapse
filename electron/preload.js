@@ -17,6 +17,8 @@ const PUSH_CHANNELS = [
   'worker-complete',
   'worker-error',
   'swarm-state',
+  'terminal-output',
+  'terminal-exit',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -114,6 +116,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   killWorker: (pid) => ipcRenderer.invoke('kill-worker', pid),
   killAllWorkers: () => ipcRenderer.invoke('kill-all-workers'),
   getActiveWorkers: () => ipcRenderer.invoke('get-active-workers'),
+
+  // Terminals
+  spawnTerminal: (opts) => ipcRenderer.invoke('spawn-terminal', opts),
+  writeTerminal: (id, data) => ipcRenderer.invoke('write-terminal', id, data),
+  resizeTerminal: (id, cols, rows) => ipcRenderer.invoke('resize-terminal', id, cols, rows),
+  killTerminal: (id) => ipcRenderer.invoke('kill-terminal', id),
+  killAllTerminals: () => ipcRenderer.invoke('kill-all-terminals'),
+  getActiveTerminals: () => ipcRenderer.invoke('get-active-terminals'),
 
   // Orchestration
   startSwarm: (dashboardId, opts) => ipcRenderer.invoke('start-swarm', dashboardId, opts),

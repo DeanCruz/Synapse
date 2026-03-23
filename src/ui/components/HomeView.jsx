@@ -102,6 +102,7 @@ function HomeSection({ title, empty, children }) {
 
 function statusDotClass(status) {
   if (status === 'in_progress') return 'in-progress';
+  if (status === 'waiting')     return 'waiting';
   if (status === 'completed')   return 'completed';
   if (status === 'error')       return 'error';
   return 'idle';
@@ -109,6 +110,7 @@ function statusDotClass(status) {
 
 function statusLabel(status) {
   if (status === 'in_progress') return 'In Progress';
+  if (status === 'waiting')     return 'Waiting';
   if (status === 'completed')   return 'Completed';
   if (status === 'error')       return 'Errors';
   return 'Idle';

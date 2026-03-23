@@ -284,6 +284,14 @@ export default function ClaudeView({ onClose, hideHeader }) {
   // Keep refs in sync for async operations
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { activeTabRef.current = activeTabId; }, [activeTabId]);
+  useEffect(() => { promptRef.current = prompt; }, [prompt]);
+  // Auto-resize textarea when prompt changes programmatically (tab/dashboard switch)
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 150) + 'px';
+    }
+  }, [prompt]);
 
   // Stash/restore per-dashboard refs when dashboard changes — never lose running workers
   const activeTaskStashRef = useRef({});  // { [dashboardId]: Set of taskIds }
@@ -294,6 +302,9 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const taskDashboardMapRef = useRef({});
   // Global map: taskId → tabId (which tab the task was started on)
   const taskTabMapRef = useRef({});
+  // Per-dashboard:tab input text stash — ensures prompt text switches with context
+  const promptStashRef = useRef({});  // { [dashboardId:tabId]: string }
+  const promptRef = useRef('');       // mirror of prompt for async access in effects
 
   useEffect(() => {
     const dashChanged = prevDashboardRef.current !== dashboardId;
@@ -309,6 +320,11 @@ export default function ClaudeView({ onClose, hideHeader }) {
       convId: convIdRef.current,
       convCreated: convCreatedRef.current,
     };
+
+    // Stash current input text and restore target's input text
+    promptStashRef.current[prevDid + ':' + prevTab] = promptRef.current;
+    const restoredPrompt = promptStashRef.current[dashboardId + ':' + activeTabId] || '';
+    setPrompt(restoredPrompt);
 
     if (dashChanged) {
       // Stash active task refs so workers keep being tracked when we switch back
@@ -1145,6 +1161,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
     const text = prompt.trim();
     if (!text && pendingAttachments.length === 0) return;
     setPrompt('');
+    // Clear stashed input for this tab since it's been sent
+    delete promptStashRef.current[dashboardId + ':' + activeTabId];
 
     // Auto-rename tab if it still has default name
     const currentTab = tabs.find(t => t.id === activeTabId);
@@ -1357,6 +1375,9 @@ export default function ClaudeView({ onClose, hideHeader }) {
 
   function switchToTab(tabId) {
     if (tabId === activeTabId) return;
+    // Stash current tab's input text and restore target tab's
+    promptStashRef.current[dashboardId + ':' + activeTabId] = prompt;
+    setPrompt(promptStashRef.current[dashboardId + ':' + tabId] || '');
     // Flush streaming buffers to current tab before switching
     if (textFlushTimerRef.current) { clearTimeout(textFlushTimerRef.current); textFlushTimerRef.current = null; }
     commitTextBuffer();
@@ -1375,6 +1396,9 @@ export default function ClaudeView({ onClose, hideHeader }) {
   function newTab() {
     // If current tab is empty (only welcome message), don't create another
     if (messages.length <= 1 && messages[0]?.id === 'welcome') return;
+    // Stash current tab's input text, new tab starts clean
+    promptStashRef.current[dashboardId + ':' + activeTabId] = prompt;
+    setPrompt('');
     // Flush streaming buffers before switching
     if (textFlushTimerRef.current) { clearTimeout(textFlushTimerRef.current); textFlushTimerRef.current = null; }
     commitTextBuffer();
@@ -1395,6 +1419,18 @@ export default function ClaudeView({ onClose, hideHeader }) {
       ? messagesRef.current
       : (state.claudeTabStash[stashKey] || null);
     saveTabToDisk(tabId, tabMsgs);
+    // Clean up prompt stash for the closed tab
+    delete promptStashRef.current[stashKey];
+    // If closing the active tab, restore the next tab's prompt
+    if (tabId === activeTabId) {
+      const currentTabs = tabs;
+      const closedIdx = currentTabs.findIndex(t => t.id === tabId);
+      const remaining = currentTabs.filter(t => t.id !== tabId);
+      if (remaining.length > 0) {
+        const nextTab = remaining[Math.min(closedIdx, remaining.length - 1)];
+        setPrompt(promptStashRef.current[dashboardId + ':' + nextTab.id] || '');
+      }
+    }
     dispatch({ type: 'CLAUDE_CLOSE_TAB', tabId });
   }
 
@@ -1509,7 +1545,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
                   onClick={(e) => {
                     e.stopPropagation();
                     closeTab(tab.id);
-                  }
+                  }}
                 >
                   ✕
                 </span>

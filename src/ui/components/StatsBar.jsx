@@ -115,7 +115,7 @@ export default function StatsBar({ onOpenTimeline }) {
         tabIndex={0}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleElapsedClick(); }}
       >
-        <span className="stat-number total">{elapsed}</span>
+        <span className="stat-number total elapsed">{elapsed}</span>
         <span className="stat-label">Elapsed</span>
       </div>
     </div>

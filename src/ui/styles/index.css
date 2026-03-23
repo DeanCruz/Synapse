@@ -257,7 +257,11 @@ body {
   height: 100%;
   background: linear-gradient(135deg, #667eea, #9b7cf0);
   border-radius: 4px;
-  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1), background 0.4s ease;
+}
+
+.progress-fill.progress-complete {
+  background: linear-gradient(135deg, #34d399, #10b981);
 }
 
 /* ============================================================
@@ -324,6 +328,11 @@ body {
 
 .stat-number.total {
   color: var(--text);
+}
+
+.stat-number.elapsed {
+  font-size: 1.15rem;
+  white-space: nowrap;
 }
 
 .stat-label {
@@ -1396,7 +1405,7 @@ body {
 }
 
 .log-panel.expanded {
-  max-height: 350px;
+  max-height: 420px;
 }
 
 /* ----- Log Toggle ----- */
@@ -2344,6 +2353,11 @@ a:hover {
   background: var(--color-in-progress);
   box-shadow: 0 0 6px rgba(155, 124, 240, 0.4);
   animation: pulse-purple 2s ease-in-out infinite;
+}
+
+.dashboard-item-status.waiting {
+  background: var(--color-in-progress);
+  box-shadow: 0 0 4px rgba(155, 124, 240, 0.3);
 }
 
 @keyframes pulse-purple {
@@ -3310,6 +3324,11 @@ a:hover {
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
+.home-card-dot.waiting {
+  background: #9b7cf0;
+  box-shadow: 0 0 4px rgba(155, 124, 240, 0.3);
+}
+
 .home-card-dot.completed {
   background: #34d399;
 }
@@ -3392,6 +3411,11 @@ a:hover {
 }
 
 .home-card-status.in-progress {
+  background: rgba(155, 124, 240, 0.1);
+  color: #9b7cf0;
+}
+
+.home-card-status.waiting {
   background: rgba(155, 124, 240, 0.1);
   color: #9b7cf0;
 }
@@ -3667,6 +3691,10 @@ a:hover {
   background: linear-gradient(90deg, var(--color-completed), #2dd4a0);
 }
 
+[data-theme="light"] .progress-fill.progress-complete {
+  background: linear-gradient(90deg, #10b981, #34d399);
+}
+
 /* --- Ocean Theme --- */
 [data-theme="ocean"] {
   --bg: #0b1628;
@@ -3738,6 +3766,10 @@ a:hover {
 
 [data-theme="ocean"] .progress-fill {
   background: linear-gradient(90deg, var(--color-completed), #22d3a8);
+}
+
+[data-theme="ocean"] .progress-fill.progress-complete {
+  background: linear-gradient(90deg, #10b981, #22d3a8);
 }
 
 /* --- Ember Theme --- */
@@ -3833,6 +3865,10 @@ a:hover {
 
 [data-theme="ember"] .progress-fill {
   background: linear-gradient(90deg, #ea580c, #f59e0b);
+}
+
+[data-theme="ember"] .progress-fill.progress-complete {
+  background: linear-gradient(90deg, #34d399, #10b981);
 }
 
 [data-theme="ember"] .active-badge {
@@ -4032,6 +4068,10 @@ a:hover {
   background: linear-gradient(90deg, #7c3aed, #a855f7);
 }
 
+[data-theme="midnight"] .progress-fill.progress-complete {
+  background: linear-gradient(90deg, #34d399, #10b981);
+}
+
 [data-theme="midnight"] .active-badge {
   background: linear-gradient(135deg, #7c3aed, #a855f7);
 }
@@ -4163,6 +4203,10 @@ a:hover {
 
 [data-theme="custom"] .progress-fill {
   background: linear-gradient(90deg, var(--color-completed), var(--color-in-progress));
+}
+
+[data-theme="custom"] .progress-fill.progress-complete {
+  background: linear-gradient(90deg, var(--color-completed), #10b981);
 }
 
 [data-theme="custom"] .active-badge {
@@ -6284,4 +6328,118 @@ a:hover {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+/* ============================================================
+   Bottom Panel — Tabbed container (Terminal + Logs)
+   ============================================================ */
+
+/* ----- Tab Bar ----- */
+.bottom-panel-tabs {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  padding: 6px 24px;
+  flex-shrink: 0;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.bottom-panel-tab {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 400;
+  background: var(--surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.25s;
+}
+
+.bottom-panel-tab:hover {
+  border-color: var(--border-hover);
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.bottom-panel-tab.active {
+  background: rgba(140,120,220,0.12);
+  color: #e0e0ff;
+  border-color: rgba(160,140,240,0.35);
+}
+
+.bottom-panel-tab.active:hover {
+  color: #fff;
+  border-color: rgba(160,140,240,0.5);
+  background: rgba(140,120,220,0.22);
+}
+
+/* ----- Tab Bodies ----- */
+.bottom-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bottom-panel-body--terminal {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.bottom-panel-body--logs {
+  overflow-y: auto;
+}
+
+/* ----- Terminal Container ----- */
+.terminal-container {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ----- Terminal Fallback ----- */
+.terminal-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #0b0b0f;
+}
+
+.terminal-fallback-message {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 24px;
+}
+
+/* ----- Embedded LogPanel overrides -----
+   When LogPanel is rendered inside BottomPanel, strip its fixed
+   positioning, toggle button, and max-height constraints so it
+   behaves as inline content within the Logs tab. */
+.bottom-panel-body--logs .log-panel {
+  position: static;
+  max-height: none;
+  border-top: none;
+  z-index: auto;
+  background: transparent;
+  transition: none;
+}
+
+.bottom-panel-body--logs .log-panel::before {
+  display: none;
+}
+
+.bottom-panel-body--logs .log-panel .log-toggle {
+  display: none;
+}
+
+.bottom-panel-body--logs .log-panel .log-body {
+  max-height: 310px;
 }
