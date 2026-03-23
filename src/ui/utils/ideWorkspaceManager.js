@@ -95,9 +95,15 @@ export function getIdeDashboardLabel(dashboardId) {
 
 // ── Dashboard creation ───────────────────────────────────────────────────────
 
+// In-flight guard: prevents concurrent createDashboard calls for the same workspace.
+// Without this, multiple useEffect hooks firing simultaneously can each see "no mapping"
+// and each create a separate dashboard, causing a cascade of orphaned dashboards.
+const _inFlight = new Map(); // workspaceId → Promise<string|null>
+
 /**
  * Create a new dashboard and link it to a workspace.
  * Calls window.electronAPI.createDashboard() and stores the mapping.
+ * Concurrent calls for the same workspaceId are deduplicated.
  * @param {string} workspaceId
  * @returns {Promise<string|null>} The new dashboardId, or null on failure
  */
@@ -106,17 +112,31 @@ export async function createWorkspaceDashboard(workspaceId) {
   const existing = getWorkspaceDashboard(workspaceId);
   if (existing) return existing;
 
+  // Deduplicate concurrent calls for the same workspace
+  if (_inFlight.has(workspaceId)) return _inFlight.get(workspaceId);
+
   const api = window.electronAPI;
   if (!api || !api.createDashboard) return null;
 
-  try {
-    const result = await api.createDashboard();
-    if (result && result.id) {
-      setWorkspaceDashboard(workspaceId, result.id);
-      return result.id;
+  const promise = (async () => {
+    try {
+      // Re-check after awaiting — another caller may have completed first
+      const recheck = getWorkspaceDashboard(workspaceId);
+      if (recheck) return recheck;
+
+      const result = await api.createDashboard();
+      if (result && result.id) {
+        setWorkspaceDashboard(workspaceId, result.id);
+        return result.id;
+      }
+    } catch (err) {
+      console.error('Failed to create IDE dashboard for workspace:', workspaceId, err);
+    } finally {
+      _inFlight.delete(workspaceId);
     }
-  } catch (err) {
-    console.error('Failed to create IDE dashboard for workspace:', workspaceId, err);
-  }
-  return null;
+    return null;
+  })();
+
+  _inFlight.set(workspaceId, promise);
+  return promise;
 }

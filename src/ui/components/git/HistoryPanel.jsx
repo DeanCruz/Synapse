@@ -10,10 +10,11 @@ import '../../styles/git-manager.css';
 // ── Constants ────────────────────────────────────────────────────
 const BATCH_SIZE = 50;
 const ROW_HEIGHT = 36;
-const LANE_WIDTH = 14;
+const LANE_WIDTH = 10;
 const NODE_RADIUS = 4;
 const MERGE_NODE_RADIUS = 5;
-const GRAPH_PADDING = 8;
+const GRAPH_PADDING = 4;
+const MAX_DISPLAY_LANES = 8;
 
 const LANE_COLORS = [
   'rgba(155, 124, 240, 0.85)', // purple (primary)
@@ -173,7 +174,8 @@ function computeGraphLayout(commits) {
 function GraphCell({ layoutEntry, maxLanes }) {
   if (!layoutEntry) return null;
   const { lane, isMerge, lines, mergeLines } = layoutEntry;
-  const svgWidth = Math.max(40, maxLanes * LANE_WIDTH + GRAPH_PADDING * 2);
+  const cappedLanes = Math.min(maxLanes, MAX_DISPLAY_LANES);
+  const svgWidth = Math.max(28, cappedLanes * LANE_WIDTH + GRAPH_PADDING * 2);
   const cy = ROW_HEIGHT / 2;
 
   function laneX(l) {

@@ -6,9 +6,9 @@ All IDE components live in `src/ui/components/ide/`. They use React Context (`us
 
 ## IDEView
 
-**File:** `src/ui/components/ide/IDEView.jsx` (167 lines)
+**File:** `src/ui/components/ide/IDEView.jsx` (226 lines)
 
-The root layout component for the Code Explorer. Assembles all IDE sub-components and manages the draggable split panel between the file explorer and editor.
+The root layout component for the Code Explorer. Assembles all IDE sub-components (WorkspaceTabs, FileExplorer, EditorTabs, CodeEditor, BottomPanel, IDEWelcome) and manages the draggable split panel between the file explorer and editor. Also orchestrates workspace-dashboard lifecycle (creation, validation, syncing).
 
 **Props:** None (context only)
 
@@ -27,26 +27,41 @@ The root layout component for the Code Explorer. Assembles all IDE sub-component
 | `activeWsOpenFiles` | `ideOpenFiles[activeWorkspaceId]` | Open files for current workspace |
 | `activeFileId` | `ideActiveFileId[activeWorkspaceId]` | Active file ID in current workspace |
 | `activeFile` | `activeWsOpenFiles.find(f => f.id === activeFileId)` | Full file object for active file |
+| `projectPath` | `getDashboardProject(currentDashboardId)` | Project path for the current dashboard |
+
+**Additional Context Consumed:**
+
+| Context Field | Purpose |
+|---|---|
+| `currentDashboardId` | Dashboard syncing with workspace |
+| `dashboardList` | Validates workspace-dashboard mappings |
+| `currentLogs` | Passed to BottomPanel |
+| `activeLogFilter` | Passed to BottomPanel |
 
 **Effects:**
 
 1. **Load file tree on workspace change** -- When `activeWorkspace` changes, checks if tree is already cached in `ideFileTrees`. If not, calls `electronAPI.ideReadDir()` and dispatches `IDE_SET_FILE_TREE`. Includes cleanup cancellation to prevent stale updates.
 
-2. **Draggable divider** -- Attaches global `mousemove`/`mouseup` listeners during drag. Constrains width between 180px and 500px. Applies `.ide-dragging` class to `document.body` for global `col-resize` cursor.
+2. **Validate workspace-dashboard mappings** -- On app restart, iterates all workspaces and checks if their linked dashboard still exists in `dashboardList`. Stale or missing mappings are removed and recreated via `createWorkspaceDashboard()`. Newly created dashboards get their project path stored via `saveDashboardProject()`.
+
+3. **Sync dashboard to active workspace** -- When `ideActiveWorkspaceId` changes, dispatches `SWITCH_DASHBOARD` to keep the active dashboard in sync with the workspace.
+
+4. **Draggable divider** -- Attaches global `mousemove`/`mouseup` listeners during drag. Constrains width between 180px and 500px. Applies `.ide-dragging` class to `document.body` for global `col-resize` cursor.
 
 **Render Logic:**
 
-- If no workspaces: renders `<IDEWelcome />`
-- If workspaces exist: renders the full IDE layout with `WorkspaceTabs`, `FileExplorer`, divider, `EditorTabs`, and `CodeEditor`
+- If no workspaces: renders `<IDEWelcome />` + `<BottomPanel />` (embedded mode)
+- If workspaces exist: renders the full IDE layout with `WorkspaceTabs`, `FileExplorer`, divider, `EditorTabs`, `CodeEditor`, and `<BottomPanel />`
 - If no file is active: renders an empty state placeholder with a file icon
+- BottomPanel receives `projectDir` as the active workspace path (or dashboard project path as fallback)
 
 ---
 
 ## FileExplorer
 
-**File:** `src/ui/components/ide/FileExplorer.jsx` (364 lines)
+**File:** `src/ui/components/ide/FileExplorer.jsx` (422 lines)
 
-Recursive tree view displaying the workspace's file system. Supports folder expand/collapse, file-type icons, active file highlighting, and tree refresh.
+Lazy-loaded tree view displaying the workspace's file system. Loads only the root level on workspace open and lazily fetches subdirectory contents on expand. Supports folder expand/collapse, file-type icons (as dedicated SVG components), active file highlighting, loading spinners per directory, and tree refresh.
 
 **Props:** None (context only)
 
@@ -55,29 +70,33 @@ Recursive tree view displaying the workspace's file system. Supports folder expa
 | State | Default | Description |
 |---|---|---|
 | `expandedPaths` | `new Set()` | Set of directory paths currently expanded |
-| `loading` | `false` | Whether the tree is being loaded |
+| `loadingPaths` | `new Set()` | Set of directory paths currently loading children |
+| `initialLoading` | `false` | Whether the root-level tree is being loaded |
 
 **Event Handlers:**
 
 | Handler | Description |
 |---|---|
-| `toggleExpand(path)` | Toggles a directory path in the `expandedPaths` Set |
+| `toggleExpand(nodePath, children)` | Toggles a directory in `expandedPaths`; triggers `loadChildren()` when children are `null` |
+| `loadChildren(dirPath)` | Fetches a single directory's contents via `ideListDir` and dispatches `IDE_UPDATE_FILE_TREE_NODE` |
 | `onFileClick(node)` | Dispatches `IDE_OPEN_FILE` with the file's path and name |
-| `handleRefresh()` | Re-fetches the directory tree from disk via IPC |
+| `handleRefresh()` | Clears expanded paths, re-fetches root-level tree via `ideListDir` |
 
 **File Type Icons:**
 
-The `getFileIcon()` function returns colored SVG icons based on file extension:
+Dedicated SVG icon components for each file type:
 
-| Extensions | Icon Color | Description |
-|---|---|---|
-| `.js`, `.jsx` | Yellow (#E8D44D) | JavaScript |
-| `.ts`, `.tsx` | Blue (#3178C6) | TypeScript |
-| `.css`, `.scss`, `.less` | Blue (#1572B6) | Stylesheets |
-| `.json` | Green (#6DB33F) | JSON |
-| `.html` | Orange (#E44D26) | HTML |
-| `.md`, `.mdx` | White (#F5F5F7) | Markdown |
-| Other | Gray (#A1A1A6) | Generic file |
+| Extensions | Component | Icon Style | Description |
+|---|---|---|---|
+| `.js`, `.jsx`, `.mjs`, `.cjs` | `JsIcon` | Yellow badge with "JS" | JavaScript |
+| `.ts`, `.tsx` | `TypeScriptIcon` | Blue badge with "TS" | TypeScript |
+| `.css`, `.scss`, `.less` | `CssIcon` | Blue badge with "CSS" | Stylesheets |
+| `.json` | `JsonIcon` | Yellow-green badge with "{ }" | JSON |
+| `.html`, `.htm` | `HtmlIcon` | Red badge with "HTML" | HTML |
+| `.md`, `.mdx` | `MarkdownIcon` | Purple badge with "MD" | Markdown |
+| Other | `GenericFileIcon` | Document outline | Generic file |
+
+Additional icon components: `FolderIcon`, `FolderOpenIcon`, `ChevronIcon`, `RefreshIcon`, `NewFileIcon`, `NewFolderIcon`, `LoadingSpinner`.
 
 **TreeNode (Internal Component):**
 
@@ -85,24 +104,26 @@ Recursive component rendering a single file or folder node.
 
 | Prop | Type | Description |
 |---|---|---|
-| `node` | `{ name, path, type, children? }` | Tree node data |
+| `node` | `{ name, path, type, children? }` | Tree node data (`children: null` = not yet loaded) |
 | `depth` | `number` | Nesting depth for indent calculation |
 | `expandedPaths` | `Set` | Set of expanded directory paths |
 | `toggleExpand` | `function` | Callback to toggle expansion |
 | `onFileClick` | `function` | Callback when a file is clicked |
 | `activeFilePath` | `string` | Path of the currently active file (for highlighting) |
+| `loadingPaths` | `Set` | Set of directory paths currently loading (shows spinner) |
 
-Indent is calculated as `8 + (depth * 14)` pixels of left padding.
+Indent is controlled via `data-depth` attribute (CSS-driven, capped at depth 10).
 
 **IPC Calls:**
 
-- `electronAPI.ideReadDir(workspace.path, { maxDepth: 3 })` -- Load directory tree
+- `electronAPI.ideListDir(workspace.path)` -- Load root-level directory listing
+- `electronAPI.ideListDir(dirPath)` -- Lazy-load a subdirectory's children on expand
 
 ---
 
 ## CodeEditor
 
-**File:** `src/ui/components/ide/CodeEditor.jsx` (344 lines)
+**File:** `src/ui/components/ide/CodeEditor.jsx` (343 lines)
 
 Monaco Editor wrapper with file loading, syntax highlighting, save functionality, and dirty tracking.
 
@@ -144,17 +165,16 @@ Maps 25+ file extensions to Monaco language IDs:
 
 | Extensions | Language |
 |---|---|
-| `.js`, `.mjs`, `.cjs` | `javascript` |
-| `.jsx` | `javascript` (JSX) |
-| `.ts`, `.mts`, `.cts` | `typescript` |
-| `.tsx` | `typescript` (TSX) |
+| `.js`, `.jsx` | `javascript` |
+| `.ts`, `.tsx` | `typescript` |
 | `.py` | `python` |
 | `.json` | `json` |
+| `.md` | `markdown` |
 | `.html`, `.htm` | `html` |
 | `.css` | `css` |
 | `.scss` | `scss` |
 | `.less` | `less` |
-| `.xml`, `.svg` | `xml` |
+| `.xml` | `xml` |
 | `.yaml`, `.yml` | `yaml` |
 | `.sh`, `.bash`, `.zsh` | `shell` |
 | `.sql` | `sql` |
@@ -163,15 +183,16 @@ Maps 25+ file extensions to Monaco language IDs:
 | `.java` | `java` |
 | `.rb` | `ruby` |
 | `.c`, `.h` | `c` |
-| `.cpp`, `.hpp`, `.cc` | `cpp` |
+| `.cpp`, `.cxx`, `.cc`, `.hpp` | `cpp` |
 | `.swift` | `swift` |
 | `.kt` | `kotlin` |
 | `.php` | `php` |
 | `.r` | `r` |
 | `.lua` | `lua` |
-| `.toml` | `toml` |
-| `Dockerfile` | `dockerfile` |
-| `Makefile` | `makefile` |
+| `.toml`, `.ini` | `ini` |
+| `.dockerfile` | `dockerfile` |
+| `Dockerfile` (filename) | `dockerfile` |
+| `Makefile` (filename) | `makefile` |
 
 **Monaco Configuration:**
 
@@ -208,7 +229,7 @@ Cursor:          Purple (#9B7CF0) with smooth animation
 
 ## EditorTabs
 
-**File:** `src/ui/components/ide/EditorTabs.jsx` (85 lines)
+**File:** `src/ui/components/ide/EditorTabs.jsx` (84 lines)
 
 Horizontal tab bar showing all open files in the current workspace with active highlighting, dirty indicators, and close buttons.
 
@@ -238,9 +259,9 @@ Horizontal tab bar showing all open files in the current workspace with active h
 
 ## WorkspaceTabs
 
-**File:** `src/ui/components/ide/WorkspaceTabs.jsx` (85 lines)
+**File:** `src/ui/components/ide/WorkspaceTabs.jsx` (118 lines)
 
-Horizontal tab bar showing all open workspace folders. Each tab displays the folder name with a folder icon and close button.
+Horizontal tab bar showing all open workspace folders. Each tab displays the folder name with a folder icon and close button. Manages full workspace-dashboard lifecycle: creates dashboards on add, syncs dashboard on switch, and cleans up dashboards on close.
 
 **Props:** None (context only)
 
@@ -251,28 +272,28 @@ Horizontal tab bar showing all open workspace folders. Each tab displays the fol
 | Active indicator | Darker background and full opacity icon |
 | Close button | `x` button, visible on hover or when tab is active |
 | Add button | `+` button at end of tab bar, opens native folder picker |
-| Folder icon | Purple folder SVG icon |
+| Folder icon | Folder outline SVG icon |
 
 **Event Handlers:**
 
 | Handler | Description |
 |---|---|
-| `handleAddWorkspace()` | Opens native folder picker, dispatches `IDE_OPEN_WORKSPACE` |
-| `handleSwitchWorkspace(id)` | Dispatches `IDE_SWITCH_WORKSPACE` |
-| `handleCloseWorkspace(e, id)` | Dispatches `IDE_CLOSE_WORKSPACE` |
+| `handleAddWorkspace()` | Opens native folder picker, dispatches `IDE_OPEN_WORKSPACE` with pre-generated ID, creates a linked dashboard via `createWorkspaceDashboard()`, stores project path via `saveDashboardProject()`, and switches to the new dashboard |
+| `handleSwitchWorkspace(id)` | Dispatches `IDE_SWITCH_WORKSPACE`, then dispatches `SWITCH_DASHBOARD` to keep dashboard in sync with workspace |
+| `handleCloseWorkspace(e, id)` | Removes workspace-dashboard mapping via `removeWorkspaceDashboard()`, switches to another dashboard if the deleted one was active, dispatches `IDE_CLOSE_WORKSPACE`, deletes dashboard from disk via `electronAPI.deleteDashboard()`, and dispatches `REMOVE_DASHBOARD` |
 
 **IPC Calls:**
 
 - `electronAPI.ideSelectFolder()` -- Open native folder picker
-- `electronAPI.ideReadDir(folderPath)` -- Load file tree for new workspace
+- `electronAPI.deleteDashboard(dashboardId)` -- Delete workspace's linked dashboard from disk
 
 ---
 
 ## IDEWelcome
 
-**File:** `src/ui/components/ide/IDEWelcome.jsx` (129 lines)
+**File:** `src/ui/components/ide/IDEWelcome.jsx` (156 lines)
 
-Welcome screen displayed when no workspaces are open. Provides buttons to open an existing folder or create a new one.
+Welcome screen displayed when no workspaces are open. Provides buttons to open an existing folder or create a new one. Both actions create a linked dashboard for the new workspace.
 
 **Props:** None (context only)
 
@@ -280,24 +301,24 @@ Welcome screen displayed when no workspaces are open. Provides buttons to open a
 
 | Button | Behavior |
 |---|---|
-| **Open Folder** | Opens native folder picker, dispatches `IDE_OPEN_WORKSPACE` |
-| **Create New Folder** | Opens native folder picker (select parent), prompts for folder name, calls `electronAPI.ideCreateFolder()`, dispatches `IDE_OPEN_WORKSPACE` |
+| **Open Folder** | Opens native folder picker, dispatches `IDE_OPEN_WORKSPACE` with pre-generated workspace ID, creates a linked dashboard via `createWorkspaceDashboard()`, stores project path via `saveDashboardProject()` |
+| **Create New Folder** | Opens native folder picker (select parent), prompts for folder name, calls `electronAPI.ideCreateFolder()`, dispatches `IDE_OPEN_WORKSPACE` with pre-generated ID, creates a linked dashboard |
 
 **Render Structure:**
 
 ```
 ide-welcome
-  |-- Code bracket icon (64x64px SVG)
+  |-- Code bracket icon (SVG, CodeBracketIcon component)
   |-- "Code Explorer" title
-  |-- "Open a folder to start editing" subtitle
-  |-- [Open Folder] button (primary, purple gradient)
-  |-- [Create New Folder] button (secondary)
+  |-- "Open a project folder to browse files, edit code, and manage your workspace." subtitle
+  |-- [Open Folder] button (primary, with FolderOpenActionIcon)
+  |-- [Create New Folder] button (secondary, with FolderPlusIcon)
 ```
 
 **IPC Calls:**
 
 - `electronAPI.ideSelectFolder()` -- Native folder picker
-- `electronAPI.ideCreateFolder(path, workspacePath)` -- Create directory
+- `electronAPI.ideCreateFolder(path)` -- Create directory
 
 ---
 
@@ -305,7 +326,7 @@ ide-welcome
 
 ### monacoWorkerSetup.js
 
-**File:** `src/ui/utils/monacoWorkerSetup.js` (36 lines)
+**File:** `src/ui/utils/monacoWorkerSetup.js` (35 lines)
 
 Configures Monaco Editor's web workers for language features. Must be imported before any Monaco editor instantiation as a side-effect import.
 
@@ -325,7 +346,7 @@ import '@/utils/monacoWorkerSetup';
 
 ### ideWorkspaceManager.js
 
-**File:** `src/ui/utils/ideWorkspaceManager.js` (123 lines)
+**File:** `src/ui/utils/ideWorkspaceManager.js` (122 lines)
 
 Bridges IDE workspaces to Synapse dashboards via localStorage. Enables shared Claude chat context between the IDE view and a linked dashboard.
 

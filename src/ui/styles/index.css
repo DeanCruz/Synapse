@@ -2303,8 +2303,26 @@ a:hover {
 
 .dashboard-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 8px;
+}
+
+.dashboard-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.dashboard-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.dashboard-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .dashboard-item {
@@ -2407,38 +2425,8 @@ a:hover {
   opacity: 0.3;
 }
 
-/* Unread chat glow — yellow ring around the status dot */
-.dashboard-item-status.has-unread {
-  background: #f59e0b;
-  opacity: 1;
-  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6), 0 0 16px rgba(245, 158, 11, 0.3);
-  animation: pulse-yellow 2s ease-in-out infinite;
-}
+/* (Unread/processing indicators moved to chat action button) */
 
-@keyframes pulse-yellow {
-  0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
-  50% { box-shadow: 0 0 14px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.3); }
-}
-
-/* Chat agent processing — pulsing white glow BEHIND the existing status dot color */
-.dashboard-item-status.chat-processing {
-  animation: pulse-white-glow 2s ease-in-out infinite;
-}
-
-/* Chat processing + unread — pulsing yellow glow BEHIND the existing status dot color */
-.dashboard-item-status.chat-processing.has-unread {
-  animation: pulse-yellow-glow 2s ease-in-out infinite;
-}
-
-@keyframes pulse-white-glow {
-  0%, 100% { box-shadow: 0 0 6px rgba(255, 255, 255, 0.3), 0 0 14px rgba(255, 255, 255, 0.15); }
-  50% { box-shadow: 0 0 10px rgba(255, 255, 255, 0.7), 0 0 22px rgba(255, 255, 255, 0.35); }
-}
-
-@keyframes pulse-yellow-glow {
-  0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.3), 0 0 14px rgba(245, 158, 11, 0.15); }
-  50% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.7), 0 0 22px rgba(245, 158, 11, 0.35); }
-}
 
 /* Dot + badge wrapper */
 .dashboard-item-dot-wrap {
@@ -2453,47 +2441,14 @@ a:hover {
   margin-right: 0;
 }
 
-/* Unread count badge — hidden by default, visible on hover */
-.dashboard-unread-badge {
-  position: absolute;
-  top: -8px;
-  left: 4px;
-  min-width: 14px;
-  height: 14px;
-  padding: 0 3px;
-  border-radius: 7px;
-  background: #f59e0b;
-  color: #000;
-  font-size: 0.65rem;
-  font-weight: 700;
-  font-family: var(--sans);
-  line-height: 14px;
-  text-align: center;
-  pointer-events: none;
-  opacity: 0;
-  transform: scale(0.7);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.dashboard-item.has-unread:hover .dashboard-unread-badge {
-  opacity: 1;
-  transform: scale(1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .dashboard-item-status.has-unread {
-    animation: none;
-  }
-}
 
 /* Per-dashboard action buttons (Project, Claude) */
 .dashboard-item-actions {
   display: flex;
   gap: 2px;
-  margin-left: auto;
+  flex-shrink: 0;
   opacity: 0;
   transition: opacity 0.15s ease;
-  flex-shrink: 0;
 }
 .dashboard-item:hover .dashboard-item-actions,
 .dashboard-item.active .dashboard-item-actions {
@@ -2525,6 +2480,57 @@ a:hover {
   background: rgba(52, 211, 153, 0.1);
 }
 .dashboard-item-action-btn svg { flex-shrink: 0; }
+
+/* Chat action button — relative for badge positioning */
+.chat-action-btn {
+  position: relative;
+}
+
+/* Chat processing — always visible, pulsing purple */
+.chat-action-btn.chat-processing {
+  opacity: 1 !important;
+  color: var(--color-in-progress, #9b7cf0);
+  animation: chat-btn-pulse-purple 2s ease-in-out infinite;
+}
+/* Force parent visible when chat button has state */
+.dashboard-item-actions:has(.chat-processing),
+.dashboard-item-actions:has(.chat-unread) {
+  opacity: 1;
+}
+
+@keyframes chat-btn-pulse-purple {
+  0%, 100% { color: rgba(155, 124, 240, 0.6); }
+  50% { color: rgba(155, 124, 240, 1); }
+}
+
+/* Chat unread — always visible, yellow with badge */
+.chat-action-btn.chat-unread {
+  opacity: 1 !important;
+  color: #f59e0b;
+  animation: none;
+}
+.chat-action-btn.chat-unread:hover {
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+/* Unread count badge on chat button */
+.chat-action-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: #f59e0b;
+  color: #000;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+}
 
 .dashboard-delete-btn:hover {
   color: #ef4444 !important;
@@ -6100,7 +6106,7 @@ a:hover {
 .claude-stop-btn:hover { background: #dc2626; opacity: 1; }
 
 .claude-model-select {
-  padding: 8px 24px 8px 10px;
+  padding: 8px 32px 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);

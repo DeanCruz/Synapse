@@ -561,6 +561,13 @@ function appReducerCore(state, action) {
     case 'IDE_SWITCH_WORKSPACE': {
       return { ...state, ideActiveWorkspaceId: action.workspaceId };
     }
+    case 'IDE_LINK_WORKSPACE_DASHBOARD': {
+      const updatedWorkspaces = state.ideWorkspaces.map(w =>
+        w.id === action.workspaceId ? { ...w, dashboardId: action.dashboardId } : w
+      );
+      saveWorkspaces(updatedWorkspaces);
+      return { ...state, ideWorkspaces: updatedWorkspaces };
+    }
     case 'IDE_SET_FILE_TREE': {
       const newFileTrees = { ...state.ideFileTrees, [action.workspaceId]: action.tree };
       return { ...state, ideFileTrees: newFileTrees };

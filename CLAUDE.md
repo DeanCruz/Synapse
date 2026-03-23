@@ -321,6 +321,7 @@ Synapse/                         <-- {tracker_root}
 | | `!initialize` | Initialize Synapse for a target project |
 | | `!onboard` | Project walkthrough |
 | | `!scaffold` | Generate a CLAUDE.md for a project |
+| | `!create_claude` | Create or update an opinionated CLAUDE.md with standards and guidelines |
 | **Swarm** | `!p_track {prompt}` | **Primary.** Full parallel swarm with live dashboard |
 | | `!p {prompt}` | Lightweight parallel dispatch |
 | | `!master_plan_track` | Multi-stream orchestration across dashboards |

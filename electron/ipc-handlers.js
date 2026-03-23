@@ -723,31 +723,25 @@ function registerIPCHandlers(getMainWindow) {
       parts.push('# Synapse Context\n' + content);
     } catch (e) { /* ignore */ }
 
-    // Read all project CLAUDE.md files (root + one-level-deep child directories)
-    if (projectDir) {
-      const projectContexts = ProjectService.getProjectContext(projectDir);
-      for (const ctx of projectContexts) {
-        const dirName = path.basename(path.dirname(ctx.path));
-        const label = ctx.path === path.join(projectDir, 'CLAUDE.md')
+    // Read project CLAUDE.md files — falls back to additional context dirs if none found
+    const projectContexts = ProjectService.getProjectContextWithFallback(projectDir, ctxDirs);
+    const isFallback = projectDir
+      ? ProjectService.getProjectContext(projectDir).length === 0 && projectContexts.length > 0
+      : false;
+    for (const ctx of projectContexts) {
+      const dirName = path.basename(path.dirname(ctx.path));
+      let label;
+      if (isFallback) {
+        const ctxRoot = path.basename(path.dirname(ctx.path));
+        label = ctx.path.endsWith(path.sep + 'CLAUDE.md') || path.basename(ctx.path) === 'CLAUDE.md'
+          ? 'Project Context (from additional context: ' + ctxRoot + ')'
+          : ctxRoot + ' Context (fallback)';
+      } else {
+        label = ctx.path === path.join(projectDir, 'CLAUDE.md')
           ? 'Project Context'
           : dirName + ' Context';
-        parts.push('\n# ' + label + '\n' + ctx.content);
       }
-    }
-
-    // Read CLAUDE.md from each additional context directory (read-only reference)
-    for (const ctxDir of ctxDirs) {
-      try {
-        const ctxContexts = ProjectService.getProjectContext(ctxDir);
-        for (const ctx of ctxContexts) {
-          const dirName = path.basename(ctxDir);
-          const subDirName = path.basename(path.dirname(ctx.path));
-          const label = ctx.path === path.join(ctxDir, 'CLAUDE.md')
-            ? 'Additional Context: ' + dirName
-            : 'Additional Context: ' + dirName + '/' + subDirName;
-          parts.push('\n# ' + label + ' (read-only)\n' + ctx.content);
-        }
-      } catch (e) { /* gracefully skip dirs that don't exist or have no CLAUDE.md */ }
+      parts.push('\n# ' + label + '\n' + ctx.content);
     }
 
     return parts.join('\n\n');

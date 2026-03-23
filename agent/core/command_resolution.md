@@ -61,6 +61,7 @@ When the user types a command prefixed with `!`, resolve it using the command re
 | `!initialize` | Initialize Synapse for a target project — create `.synapse/`, detect tech stack, optionally scaffold `CLAUDE.md`. |
 | `!onboard` | Project walkthrough — read CLAUDE.md, TOC, key files and present a structured orientation. |
 | `!scaffold` | Generate a `CLAUDE.md` for a project that doesn't have one. |
+| `!create_claude` | Create or update an opinionated `CLAUDE.md` with coding standards, architecture, and styling guidelines. |
 
 ### Swarm Lifecycle
 

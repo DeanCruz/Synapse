@@ -10,8 +10,8 @@ import EditorTabs from './EditorTabs.jsx';
 import CodeEditor from './CodeEditor.jsx';
 import IDEWelcome from './IDEWelcome.jsx';
 import BottomPanel from '../BottomPanel.jsx';
-import { getDashboardProject, saveDashboardProject } from '../../utils/dashboardProjects.js';
-import { getWorkspaceDashboard, createWorkspaceDashboard, removeWorkspaceDashboard } from '../../utils/ideWorkspaceManager.js';
+import { getDashboardProject } from '../../utils/dashboardProjects.js';
+import { getWorkspaceDashboard } from '../../utils/ideWorkspaceManager.js';
 import '../../styles/ide-layout.css';
 
 const MIN_EXPLORER_WIDTH = 180;
@@ -63,31 +63,10 @@ export default function IDEView() {
     return () => { cancelled = true; };
   }, [ideActiveWorkspaceId, ideWorkspaces, ideFileTrees, dispatch]);
 
-  // Validate workspace-dashboard mappings on restart
-  useEffect(() => {
-    if (!dashboardList || dashboardList.length === 0) return; // hasn't loaded yet
-
-    (async () => {
-      for (const ws of ideWorkspaces) {
-        const existingDashboard = getWorkspaceDashboard(ws.id);
-        if (existingDashboard && dashboardList.includes(existingDashboard)) {
-          continue; // mapping is valid
-        }
-        // Stale or missing mapping — recreate
-        if (existingDashboard) {
-          removeWorkspaceDashboard(ws.id);
-        }
-        try {
-          const newDashboardId = await createWorkspaceDashboard(ws.id);
-          if (newDashboardId) {
-            saveDashboardProject(newDashboardId, ws.path);
-          }
-        } catch (err) {
-          console.error('Failed to recreate dashboard for workspace:', ws.id, err);
-        }
-      }
-    })();
-  }, [ideWorkspaces, dashboardList]);
+  // NOTE: Workspace-dashboard creation is handled exclusively by WorkspaceTabs.jsx.
+  // handleAddWorkspace() creates dashboards for new workspaces, and a mount-time
+  // recovery effect recreates dashboards for persisted workspaces after app restart.
+  // Sidebar.jsx only handles display, sorting, and orphan cleanup — never creation.
 
   // Sync currentDashboardId to active workspace's dashboard when workspace changes
   useEffect(() => {

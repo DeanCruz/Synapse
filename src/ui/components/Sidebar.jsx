@@ -9,15 +9,13 @@ import { getDashboardProject, saveDashboardProject } from '../utils/dashboardPro
 import { isIdeDashboard, getWorkspaceForDashboard, getWorkspaceDashboard, getAllWorkspaceDashboards, removeWorkspaceDashboard } from '../utils/ideWorkspaceManager.js';
 import '../styles/ide-sidebar.css';
 
-function StatusDot({ status, hasUnread, chatProcessing }) {
+function StatusDot({ status }) {
   let cls = 'dashboard-item-status idle';
   if (status === 'in_progress') cls = 'dashboard-item-status in-progress';
   else if (status === 'waiting') cls = 'dashboard-item-status waiting';
   else if (status === 'completed') cls = 'dashboard-item-status completed';
   else if (status === 'error') cls = 'dashboard-item-status error';
   else if (status === 'idle') cls = 'dashboard-item-status idle';
-  if (hasUnread) cls += ' has-unread';
-  if (chatProcessing) cls += ' chat-processing';
   return <span className={cls} />;
 }
 
@@ -32,16 +30,15 @@ function getProjectDisplayName(dashboardId) {
  * Resolve display name: custom name > project name > getDashboardLabel fallback.
  */
 function getDisplayName(id, dashboardNames) {
+  // IDE dashboards always show "IDE - {project}" — ignore custom names
+  if (isIdeDashboard(id)) {
+    const projectName = getProjectDisplayName(id);
+    return projectName ? `IDE - ${projectName}` : `IDE - ${getDashboardLabel(id)}`;
+  }
   const customName = dashboardNames?.[id];
-  if (customName) {
-    if (isIdeDashboard(id)) return `IDE - ${customName}`;
-    return customName;
-  }
+  if (customName) return customName;
   const projectName = getProjectDisplayName(id);
-  if (projectName) {
-    if (isIdeDashboard(id)) return `IDE - ${projectName}`;
-    return projectName;
-  }
+  if (projectName) return projectName;
   return getDashboardLabel(id);
 }
 
@@ -89,17 +86,24 @@ export default function Sidebar() {
   // Use dashboardList from server (populated via SSE/IPC), fall back to currentDashboardId
   const allDashboards = dashboardList.length > 0 ? dashboardList : [currentDashboardId];
 
-  // Build set of valid IDE dashboard IDs from currently open workspace tabs (strict 1:1)
-  const validIdeDashboardIds = useMemo(() => {
+  // Build set of valid IDE dashboard IDs and a map from dashboardId → workspace index
+  // for sorting IDE dashboards in workspace creation order (matching tab order).
+  // Uses ws.dashboardId (React state, set by IDE_LINK_WORKSPACE_DASHBOARD) with
+  // localStorage fallback — this ensures the memo recalculates when the link is established.
+  const { validIdeDashboardIds, ideDashboardOrder } = useMemo(() => {
     const set = new Set();
-    (ideWorkspaces || []).forEach(ws => {
-      const dashId = getWorkspaceDashboard(ws.id);
-      if (dashId) set.add(dashId);
+    const orderMap = new Map(); // dashboardId → workspace index
+    (ideWorkspaces || []).forEach((ws, idx) => {
+      const dashId = ws.dashboardId || getWorkspaceDashboard(ws.id);
+      if (dashId) {
+        set.add(dashId);
+        orderMap.set(dashId, idx);
+      }
     });
-    return set;
+    return { validIdeDashboardIds: set, ideDashboardOrder: orderMap };
   }, [ideWorkspaces]);
 
-  // Filter out orphaned IDE dashboards (mapping exists but workspace tab is closed)
+  // Filter out orphaned IDE dashboards, sort IDE dashboards by workspace tab order
   const dashboards = [...allDashboards]
     .filter(id => {
       if (isIdeDashboard(id) && !validIdeDashboardIds.has(id)) return false;
@@ -110,6 +114,12 @@ export default function Sidebar() {
       const bIde = validIdeDashboardIds.has(b);
       if (aIde && !bIde) return -1;
       if (!aIde && bIde) return 1;
+      // Within IDE dashboards, sort by workspace creation order (tab order)
+      if (aIde && bIde) {
+        const aIdx = ideDashboardOrder.get(a) ?? 0;
+        const bIdx = ideDashboardOrder.get(b) ?? 0;
+        return aIdx - bIdx;
+      }
       return 0;
     });
 
@@ -235,6 +245,7 @@ export default function Sidebar() {
   const handleRenameStart = useCallback((e, id) => {
     e.stopPropagation();
     if (collapsed) return;
+    if (isIdeDashboard(id)) return; // IDE dashboards are not renamable
     setEditingId(id);
     setEditingName(getDisplayName(id, dashboardNames));
   }, [collapsed, dashboardNames]);
@@ -261,7 +272,7 @@ export default function Sidebar() {
   // --- Drag-and-drop handlers ---
 
   const handleDragStart = useCallback((e, id) => {
-    if (isIdeDashboard(id) || collapsed) { e.preventDefault(); return; }
+    if (collapsed) { e.preventDefault(); return; }
     setDragId(id);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', id);
@@ -279,14 +290,12 @@ export default function Sidebar() {
 
   const handleDragEnter = useCallback((e, id) => {
     e.preventDefault();
-    if (isIdeDashboard(id)) return;
     dragCounterRef.current++;
     setDragOverId(id);
   }, []);
 
-  const handleDragOver = useCallback((e, id) => {
+  const handleDragOver = useCallback((e) => {
     e.preventDefault();
-    if (isIdeDashboard(id)) return;
     e.dataTransfer.dropEffect = 'move';
   }, []);
 
@@ -305,9 +314,16 @@ export default function Sidebar() {
     const sourceId = dragId;
     setDragId(null);
 
-    if (!sourceId || sourceId === targetId || isIdeDashboard(targetId)) return;
+    if (!sourceId || sourceId === targetId) return;
 
-    const currentOrder = [...dashboards];
+    // Only allow reordering within the same section (IDE↔IDE or non-IDE↔non-IDE)
+    const sourceIsIde = validIdeDashboardIds.has(sourceId);
+    const targetIsIde = validIdeDashboardIds.has(targetId);
+    if (sourceIsIde !== targetIsIde) return;
+
+    // Reorder within the full dashboardList (not the filtered view) to avoid
+    // dropping filtered-out entries which would trigger re-creation effects.
+    const currentOrder = [...allDashboards];
     const sourceIdx = currentOrder.indexOf(sourceId);
     const targetIdx = currentOrder.indexOf(targetId);
     if (sourceIdx < 0 || targetIdx < 0) return;
@@ -321,7 +337,7 @@ export default function Sidebar() {
     if (api) {
       await api.reorderDashboards(currentOrder);
     }
-  }, [dragId, dashboards, dispatch]);
+  }, [dragId, allDashboards, validIdeDashboardIds, dispatch]);
 
   // Determine which sidebar tab is active
   const isIdeActive = activeView === 'ide';
@@ -424,7 +440,8 @@ export default function Sidebar() {
           const isActive = id === currentDashboardId;
           const projectPath = getDashboardProject(id);
           const unreadCount = unreadChatCounts[id] || 0;
-          const isDraggable = !isIdeDashboard(id) && !collapsed;
+          const isChatProcessing = id === currentDashboardId ? claudeIsProcessing : !!claudeProcessingStash[id]?.isProcessing;
+          const isDraggable = !collapsed;
           const itemClasses = [
             'dashboard-item',
             isActive ? 'active' : '',
@@ -446,90 +463,87 @@ export default function Sidebar() {
               onDragStart={(e) => handleDragStart(e, id)}
               onDragEnd={handleDragEnd}
               onDragEnter={(e) => handleDragEnter(e, id)}
-              onDragOver={(e) => handleDragOver(e, id)}
+              onDragOver={(e) => handleDragOver(e)}
               onDragLeave={(e) => handleDragLeave(e, id)}
               onDrop={(e) => handleDrop(e, id)}
             >
               <div className="dashboard-item-dot-wrap">
-                <StatusDot
-                  status={status}
-                  hasUnread={unreadCount > 0}
-                  chatProcessing={id === currentDashboardId ? claudeIsProcessing : !!claudeProcessingStash[id]?.isProcessing}
-                />
-                {unreadCount > 0 && (
-                  <span className="dashboard-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
-                )}
+                <StatusDot status={status} />
               </div>
               <div className="dashboard-item-content">
-                {editingId === id ? (
-                  <input
-                    className="dashboard-item-rename-input"
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onBlur={() => handleRenameCommit(id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') { e.preventDefault(); handleRenameCommit(id); }
-                      if (e.key === 'Escape') handleRenameCancel();
-                    }}
-                    autoFocus
-                    onClick={(e) => e.stopPropagation()}
-                    onDoubleClick={(e) => e.stopPropagation()}
-                  />
-                ) : (
-                  <span
-                    className="dashboard-item-name"
-                    title={projectPath || undefined}
-                    onDoubleClick={(e) => handleRenameStart(e, id)}
-                  >
-                    {getDisplayName(id, dashboardNames)}
-                  </span>
-                )}
+                <div className="dashboard-item-header">
+                  {editingId === id ? (
+                    <input
+                      className="dashboard-item-rename-input"
+                      value={editingName}
+                      onChange={(e) => setEditingName(e.target.value)}
+                      onBlur={() => handleRenameCommit(id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') { e.preventDefault(); handleRenameCommit(id); }
+                        if (e.key === 'Escape') handleRenameCancel();
+                      }}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      onDoubleClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <span
+                      className="dashboard-item-name"
+                      title={projectPath || undefined}
+                      onDoubleClick={(e) => handleRenameStart(e, id)}
+                    >
+                      {getDisplayName(id, dashboardNames)}
+                    </span>
+                  )}
+                  {!collapsed && editingId !== id && (
+                    <span className="dashboard-item-id">#{id}</span>
+                  )}
+                </div>
                 {!collapsed && editingId !== id && (
                   <div className="dashboard-item-meta">
-                    <span className="dashboard-item-id">#{id}</span>
-                    {chatPreviews[id]?.text && (
+                    {chatPreviews[id]?.text ? (
                       <span className={`dashboard-item-preview${chatPreviews[id].isStreaming ? ' streaming' : ''}`}>
                         {chatPreviews[id].text.length > 45
                           ? chatPreviews[id].text.substring(0, 45) + '...'
                           : chatPreviews[id].text}
                       </span>
+                    ) : (
+                      <span className="dashboard-item-preview dashboard-item-status-label">{status}</span>
                     )}
+                    <div className="dashboard-item-actions">
+                      <button
+                        className={[
+                          'dashboard-item-action-btn',
+                          'chat-action-btn',
+                          isChatProcessing ? 'chat-processing' : '',
+                          unreadCount > 0 ? 'chat-unread' : '',
+                        ].filter(Boolean).join(' ')}
+                        title="Agent Chat"
+                        onClick={(e) => handleClaudeClick(e, id)}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                          <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.4"/>
+                          <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
+                          <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
+                          <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
+                        </svg>
+                        {unreadCount > 0 && (
+                          <span className="chat-action-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                        )}
+                      </button>
+                      {dashboards.length > 1 && !isIdeDashboard(id) && (
+                        <button
+                          className="dashboard-item-action-btn dashboard-delete-btn"
+                          title="Delete dashboard"
+                          onClick={(e) => handleDeleteClick(e, id)}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                            <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-              <div className="dashboard-item-actions">
-                <button
-                  className={`dashboard-item-action-btn${projectPath ? ' has-project' : ''}`}
-                  title={projectPath ? `Project: ${projectPath}` : 'Set project directory'}
-                  onClick={(e) => handleProjectClick(e, id)}
-                >
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 4l4-2 4 2 4-2v10l-4 2-4-2-4 2V4z" stroke="currentColor" strokeWidth="1.4"/>
-                    <path d="M6 2v12M10 4v12" stroke="currentColor" strokeWidth="1.4"/>
-                  </svg>
-                </button>
-                <button
-                  className="dashboard-item-action-btn"
-                  title="Agent Chat"
-                  onClick={(e) => handleClaudeClick(e, id)}
-                >
-                  <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                    <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.4"/>
-                    <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
-                    <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
-                    <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
-                  </svg>
-                </button>
-                {dashboards.length > 1 && !isIdeDashboard(id) && (
-                  <button
-                    className="dashboard-item-action-btn dashboard-delete-btn"
-                    title="Delete dashboard"
-                    onClick={(e) => handleDeleteClick(e, id)}
-                  >
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
-                      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-                    </svg>
-                  </button>
                 )}
               </div>
             </div>
