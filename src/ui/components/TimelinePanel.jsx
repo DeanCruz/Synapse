@@ -115,10 +115,10 @@ function TimelineEntry({ event }) {
 
 function HistoryEntry({ histTask }) {
   const color = histTask.overall_status === 'completed'
-    ? '#34d399'
+    ? 'var(--color-completed)'
     : histTask.overall_status === 'failed'
-      ? '#ef4444'
-      : '#6E6E73';
+      ? 'var(--color-failed)'
+      : 'var(--color-pending)';
 
   const meta = histTask.started_at && histTask.completed_at
     ? calcDuration(histTask.started_at, histTask.completed_at)

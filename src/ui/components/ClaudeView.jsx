@@ -210,17 +210,17 @@ function ConversationMessage({ msg, isLatestThinking }) {
   }
   if (msg.type === 'tool_result_standalone') {
     return (
-      <div style={{ background: '#1a1a2e', border: '1px solid #2d6', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', maxWidth: '90%', fontSize: '0.75rem', overflowWrap: 'break-word', wordBreak: 'break-word', minWidth: 0 }}>
-        <span style={{ color: '#34d399' }}>[TOOL_RESULT_STANDALONE]</span>{' '}
-        <span style={{ color: '#ccc' }}>{String(toolResultText(msg.content)).substring(0, 100)}</span>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--color-completed)', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', maxWidth: '90%', fontSize: '0.75rem', overflowWrap: 'break-word', wordBreak: 'break-word', minWidth: 0 }}>
+        <span style={{ color: 'var(--color-completed)' }}>[TOOL_RESULT_STANDALONE]</span>{' '}
+        <span style={{ color: 'var(--text-secondary)' }}>{String(toolResultText(msg.content)).substring(0, 100)}</span>
       </div>
     );
   }
   // DEBUG: catch any unknown message types
   return (
-    <div style={{ background: '#2a1a1a', border: '1px solid #f44', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', fontSize: '0.75rem' }}>
-      <span style={{ color: '#f44' }}>[UNKNOWN type="{msg.type}"]</span>{' '}
-      <span style={{ color: '#888' }}>{JSON.stringify(msg).substring(0, 150)}</span>
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--color-failed)', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', fontSize: '0.75rem' }}>
+      <span style={{ color: 'var(--color-failed)' }}>[UNKNOWN type="{msg.type}"]</span>{' '}
+      <span style={{ color: 'var(--text-tertiary)' }}>{JSON.stringify(msg).substring(0, 150)}</span>
     </div>
   );
 }

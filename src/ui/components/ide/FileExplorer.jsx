@@ -18,17 +18,17 @@ function ChevronIcon() {
 
 function FolderIcon() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M2 4.5A1.5 1.5 0 013.5 3h2.879a1.5 1.5 0 011.06.44l.622.62a1.5 1.5 0 001.06.44H12.5A1.5 1.5 0 0114 6v5.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 11.5v-7z" stroke="#e8a74e" strokeWidth="1.2" fill="rgba(232,167,78,0.15)" />
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="icon-folder">
+      <path d="M2 4.5A1.5 1.5 0 013.5 3h2.879a1.5 1.5 0 011.06.44l.622.62a1.5 1.5 0 001.06.44H12.5A1.5 1.5 0 0114 6v5.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 11.5v-7z" stroke="var(--icon-folder)" strokeWidth="1.2" fill="var(--icon-folder-bg)" />
     </svg>
   );
 }
 
 function FolderOpenIcon() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M2 4.5A1.5 1.5 0 013.5 3h2.879a1.5 1.5 0 011.06.44l.622.62a1.5 1.5 0 001.06.44H12.5A1.5 1.5 0 0114 6v1H4.5a2 2 0 00-1.874 1.298L1.5 11.5V4.5z" stroke="#e8a74e" strokeWidth="1.2" fill="rgba(232,167,78,0.15)" />
-      <path d="M3 8.5A1.5 1.5 0 014.5 7H14l-1.5 5.5a1.5 1.5 0 01-1.45 1H2.5L3 8.5z" stroke="#e8a74e" strokeWidth="1.2" fill="rgba(232,167,78,0.1)" />
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="icon-folder">
+      <path d="M2 4.5A1.5 1.5 0 013.5 3h2.879a1.5 1.5 0 011.06.44l.622.62a1.5 1.5 0 001.06.44H12.5A1.5 1.5 0 0114 6v1H4.5a2 2 0 00-1.874 1.298L1.5 11.5V4.5z" stroke="var(--icon-folder)" strokeWidth="1.2" fill="var(--icon-folder-bg)" />
+      <path d="M3 8.5A1.5 1.5 0 014.5 7H14l-1.5 5.5a1.5 1.5 0 01-1.45 1H2.5L3 8.5z" stroke="var(--icon-folder)" strokeWidth="1.2" fill="var(--icon-folder-bg)" />
     </svg>
   );
 }
@@ -72,7 +72,7 @@ function HtmlIcon() {
 function GenericFileIcon() {
   return (
     <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 2h5.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V13a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.1" fill="rgba(255,255,255,0.04)" />
+      <path d="M4 2h5.586a1 1 0 01.707.293l2.414 2.414a1 1 0 01.293.707V13a1 1 0 01-1 1H4a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.1" fill="var(--icon-generic-bg)" />
       <path d="M9 2v3a1 1 0 001 1h3" stroke="currentColor" strokeWidth="1.1" />
     </svg>
   );
@@ -81,8 +81,8 @@ function GenericFileIcon() {
 function MarkdownIcon() {
   return (
     <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="2" y="2" width="12" height="12" rx="2" fill="rgba(155,124,240,0.12)" stroke="#9b7cf0" strokeWidth="0.8" />
-      <text x="8" y="11.5" textAnchor="middle" fontSize="5" fontWeight="700" fill="#9b7cf0" fontFamily="sans-serif">MD</text>
+      <rect x="2" y="2" width="12" height="12" rx="2" fill="var(--color-accent-bg)" stroke="var(--color-accent)" strokeWidth="0.8" />
+      <text x="8" y="11.5" textAnchor="middle" fontSize="5" fontWeight="700" fill="var(--color-accent)" fontFamily="sans-serif">MD</text>
     </svg>
   );
 }

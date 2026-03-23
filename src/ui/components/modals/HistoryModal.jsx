@@ -5,10 +5,10 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
 
 function getDotColor(item) {
-  if (item.overall_status === 'completed') return '#34d399';
-  if (item.overall_status === 'completed_with_errors') return '#f97316';
-  if (item.failed_tasks > 0) return '#ef4444';
-  return '#34d399';
+  if (item.overall_status === 'completed') return 'var(--color-completed)';
+  if (item.overall_status === 'completed_with_errors') return 'var(--color-blocked)';
+  if (item.failed_tasks > 0) return 'var(--color-failed)';
+  return 'var(--color-completed)';
 }
 
 function formatDuration(seconds) {
@@ -19,9 +19,9 @@ function formatDuration(seconds) {
 }
 
 function getTrendColor(trend) {
-  if (trend === 'improving') return '#34d399';
-  if (trend === 'degrading') return '#ef4444';
-  return '#a78bfa';
+  if (trend === 'improving') return 'var(--color-completed)';
+  if (trend === 'degrading') return 'var(--color-failed)';
+  return 'var(--color-accent)';
 }
 
 function getTrendLabel(trend) {
@@ -37,12 +37,12 @@ function AnalyticsSection({ analytics }) {
         padding: '12px 16px',
         marginBottom: 16,
         borderRadius: 8,
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.06)',
+        backgroundColor: 'var(--color-neutral-bg)',
+        border: '1px solid var(--color-neutral-border)',
         color: 'var(--text-secondary)',
         fontSize: 13,
       }}>
-        Run <code style={{ color: '#a78bfa', backgroundColor: 'rgba(167,139,250,0.1)', padding: '2px 6px', borderRadius: 4 }}>!history --analytics</code> to compute analytics.
+        Run <code style={{ color: 'var(--color-accent)', backgroundColor: 'var(--color-accent-bg)', padding: '2px 6px', borderRadius: 4 }}>!history --analytics</code> to compute analytics.
       </div>
     );
   }
@@ -100,7 +100,7 @@ function HistoryEntry({ item, onClick }) {
           {item.task_type && (
             <span
               className="history-entry-badge"
-              style={{ backgroundColor: 'rgba(102,126,234,0.1)', color: 'rgba(102,126,234,0.8)' }}
+              style={{ backgroundColor: 'var(--color-type-bg)', color: 'var(--color-type)' }}
             >
               {item.task_type}
             </span>
@@ -109,9 +109,9 @@ function HistoryEntry({ item, onClick }) {
             <span
               className="history-entry-badge"
               style={{
-                backgroundColor: 'rgba(255,255,255,0.04)',
+                backgroundColor: 'var(--color-neutral-bg)',
                 color: 'var(--text-secondary)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                border: '1px solid var(--color-neutral-border)',
               }}
             >
               {item.project}
@@ -119,14 +119,14 @@ function HistoryEntry({ item, onClick }) {
           )}
           <span
             className="history-entry-badge"
-            style={{ backgroundColor: 'rgba(155,124,240,0.1)', color: '#9b7cf0' }}
+            style={{ backgroundColor: 'var(--color-accent-bg)', color: 'var(--color-accent)' }}
           >
             {statsText}
           </span>
           {item.duration && (
             <span
               className="history-entry-badge"
-              style={{ backgroundColor: 'rgba(52,211,153,0.08)', color: '#34d399' }}
+              style={{ backgroundColor: 'var(--color-duration-bg)', color: 'var(--color-duration)' }}
             >
               {item.duration}
             </span>

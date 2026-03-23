@@ -139,7 +139,7 @@ function DashboardCard({ dashboard, onClick }) {
               {task.type && (
                 <span
                   className="home-card-badge"
-                  style={{ backgroundColor: 'rgba(102,126,234,0.1)', color: 'rgba(102,126,234,0.8)' }}
+                  style={{ backgroundColor: 'var(--color-type-bg)', color: 'var(--color-type)' }}
                 >
                   {task.type}
                 </span>
@@ -147,14 +147,14 @@ function DashboardCard({ dashboard, onClick }) {
               {task.directory && (
                 <span
                   className="home-card-badge"
-                  style={{ backgroundColor: 'rgba(255,255,255,0.04)', color: 'var(--text-secondary)' }}
+                  style={{ backgroundColor: 'var(--color-neutral-bg)', color: 'var(--text-secondary)' }}
                 >
                   {task.directory}
                 </span>
               )}
               <span
                 className="home-card-badge"
-                style={{ backgroundColor: 'rgba(155,124,240,0.1)', color: '#9b7cf0' }}
+                style={{ backgroundColor: 'var(--color-accent-bg)', color: 'var(--color-accent)' }}
               >
                 {completedCount}/{totalCount} tasks
               </span>
@@ -193,21 +193,21 @@ function ArchiveEntry({ archive, onClick }) {
 
   return (
     <div className="history-entry home-clickable" onClick={() => onClick && onClick(archive)}>
-      <span className="history-entry-dot" style={{ backgroundColor: '#34d399' }} />
+      <span className="history-entry-dot" style={{ backgroundColor: 'var(--color-completed)' }} />
       <div className="history-entry-content">
         <div className="history-entry-name">{taskName}</div>
         <div className="history-entry-meta">
           {archive.task && archive.task.type && (
             <span
               className="history-entry-badge"
-              style={{ backgroundColor: 'rgba(102,126,234,0.1)', color: 'rgba(102,126,234,0.8)' }}
+              style={{ backgroundColor: 'var(--color-type-bg)', color: 'var(--color-type)' }}
             >
               {archive.task.type}
             </span>
           )}
           <span
             className="history-entry-badge"
-            style={{ backgroundColor: 'rgba(155,124,240,0.1)', color: '#9b7cf0' }}
+            style={{ backgroundColor: 'var(--color-accent-bg)', color: 'var(--color-accent)' }}
           >
             {archive.agentCount} agents
           </span>
@@ -220,12 +220,12 @@ function ArchiveEntry({ archive, onClick }) {
 
 function HistoryEntry({ item }) {
   const dotColor = item.overall_status === 'completed'
-    ? '#34d399'
+    ? 'var(--color-completed)'
     : item.overall_status === 'completed_with_errors'
-      ? '#f97316'
+      ? 'var(--color-blocked)'
       : item.failed_tasks > 0
-        ? '#ef4444'
-        : '#34d399';
+        ? 'var(--color-failed)'
+        : 'var(--color-completed)';
 
   const statsText = `${item.completed_tasks || 0}/${item.total_tasks || 0}${item.failed_tasks > 0 ? ` (${item.failed_tasks} failed)` : ''}`;
 
@@ -238,7 +238,7 @@ function HistoryEntry({ item }) {
           {item.task_type && (
             <span
               className="history-entry-badge"
-              style={{ backgroundColor: 'rgba(102,126,234,0.1)', color: 'rgba(102,126,234,0.8)' }}
+              style={{ backgroundColor: 'var(--color-type-bg)', color: 'var(--color-type)' }}
             >
               {item.task_type}
             </span>
@@ -247,9 +247,9 @@ function HistoryEntry({ item }) {
             <span
               className="history-entry-badge"
               style={{
-                backgroundColor: 'rgba(255,255,255,0.04)',
+                backgroundColor: 'var(--color-neutral-bg)',
                 color: 'var(--text-secondary)',
-                border: '1px solid rgba(255,255,255,0.08)',
+                border: '1px solid var(--color-neutral-border)',
               }}
             >
               {item.project}
@@ -257,14 +257,14 @@ function HistoryEntry({ item }) {
           )}
           <span
             className="history-entry-badge"
-            style={{ backgroundColor: 'rgba(155,124,240,0.1)', color: '#9b7cf0' }}
+            style={{ backgroundColor: 'var(--color-accent-bg)', color: 'var(--color-accent)' }}
           >
             {statsText}
           </span>
           {item.duration && (
             <span
               className="history-entry-badge"
-              style={{ backgroundColor: 'rgba(52,211,153,0.08)', color: '#34d399' }}
+              style={{ backgroundColor: 'var(--color-duration-bg)', color: 'var(--color-duration)' }}
             >
               {item.duration}
             </span>

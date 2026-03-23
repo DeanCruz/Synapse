@@ -16,18 +16,27 @@ const MERGE_NODE_RADIUS = 5;
 const GRAPH_PADDING = 4;
 const MAX_DISPLAY_LANES = 8;
 
-const LANE_COLORS = [
-  'rgba(155, 124, 240, 0.85)', // purple (primary)
-  'rgba(52, 211, 153, 0.85)',  // green
-  'rgba(245, 158, 11, 0.85)',  // amber
-  'rgba(59, 130, 246, 0.85)',  // blue
-  'rgba(239, 68, 68, 0.85)',   // red
-  'rgba(6, 182, 212, 0.85)',   // cyan
-  'rgba(236, 72, 153, 0.85)',  // pink
-  'rgba(249, 115, 22, 0.85)',  // orange
-  'rgba(168, 85, 247, 0.85)',  // violet
-  'rgba(20, 184, 166, 0.85)',  // teal
-];
+// Lane colors read from CSS variables with fallbacks.
+// These are stable per-lane colors that work across themes.
+function getLaneColors() {
+  const s = getComputedStyle(document.documentElement);
+  const accent = s.getPropertyValue('--color-in-progress').trim() || '#9b7cf0';
+  const completed = s.getPropertyValue('--color-completed').trim() || '#34d399';
+  // Return a palette that adapts the primary accent + stable secondary colors
+  return [
+    accent.replace(/[^#\w,() ]/g, '') + '',                  // theme accent
+    completed,                                                 // theme completed
+    'rgba(245, 158, 11, 0.85)',  // amber
+    'rgba(59, 130, 246, 0.85)',  // blue
+    'rgba(239, 68, 68, 0.85)',   // red
+    'rgba(6, 182, 212, 0.85)',   // cyan
+    'rgba(236, 72, 153, 0.85)',  // pink
+    'rgba(249, 115, 22, 0.85)',  // orange
+    'rgba(168, 85, 247, 0.85)',  // violet
+    'rgba(20, 184, 166, 0.85)',  // teal
+  ];
+}
+const LANE_COLORS = getLaneColors();
 
 // ── Relative date formatter ──────────────────────────────────────
 function relativeDate(dateStr) {
@@ -247,7 +256,7 @@ function GraphCell({ layoutEntry, maxLanes }) {
         cy={cy}
         r={isMerge ? MERGE_NODE_RADIUS : NODE_RADIUS}
         fill={LANE_COLORS[lane % LANE_COLORS.length]}
-        stroke={isMerge ? 'rgba(255, 255, 255, 0.25)' : 'none'}
+        stroke={isMerge ? 'var(--border-hover)' : 'none'}
         strokeWidth={isMerge ? 1.5 : 0}
       />
     </svg>
@@ -408,8 +417,8 @@ function CommitDetails({ commit, repoPath }) {
       className="git-manager-history-details"
       style={{
         padding: '10px 12px 12px 52px',
-        borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-        background: 'rgba(255, 255, 255, 0.015)',
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--surface)',
       }}
     >
       {/* Full commit message body */}
@@ -830,7 +839,7 @@ function HistoryPanel({ repoPath }) {
           gap: 10,
           padding: '6px 12px',
           borderBottom: '1px solid var(--border)',
-          background: 'rgba(255, 255, 255, 0.015)',
+          background: 'var(--surface)',
           flexWrap: 'wrap',
         }}>
           {/* Branch filter */}

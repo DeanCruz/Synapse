@@ -18,6 +18,30 @@ const THEMES = [
     dataTheme: 'light',
     swatch: { bg: '#f5f5f7', surface: '#e8e8eb', accent: '#9b7cf0', text: '#1d1d1f' },
   },
+  {
+    id: 'ocean',
+    name: 'Ocean',
+    dataTheme: 'ocean',
+    swatch: { bg: '#0b1628', surface: '#142236', accent: '#60a5fa', text: '#e0eaf5' },
+  },
+  {
+    id: 'ember',
+    name: 'Ember',
+    dataTheme: 'ember',
+    swatch: { bg: '#1a100a', surface: '#2a1a0e', accent: '#f59e0b', text: '#f5ede4' },
+  },
+  {
+    id: 'forest',
+    name: 'Forest',
+    dataTheme: 'forest',
+    swatch: { bg: '#0a1a10', surface: '#0e2216', accent: '#34d399', text: '#d4eee0' },
+  },
+  {
+    id: 'midnight',
+    name: 'Midnight',
+    dataTheme: 'midnight',
+    swatch: { bg: '#14081e', surface: '#1c0e2a', accent: '#a855f7', text: '#e8dff5' },
+  },
 ];
 
 const DEFAULT_CUSTOM_COLORS = {
@@ -73,6 +97,29 @@ function applyCustomTheme(colors) {
   root.style.setProperty('--color-purple-end', colors.accent);
   root.style.setProperty('--color-completed', colors.completed);
   root.style.setProperty('--color-failed', colors.error);
+
+  // Terminal colors — derived from custom bg/text/accent
+  root.style.setProperty('--terminal-bg', colors.bg);
+  root.style.setProperty('--terminal-fg', colors.text);
+  root.style.setProperty('--terminal-cursor', colors.accent);
+  root.style.setProperty('--terminal-selection', colorWithAlpha(colors.accent, 0.3));
+
+  // Editor colors — derived from custom bg/text/accent
+  root.style.setProperty('--editor-bg', colors.bg);
+  root.style.setProperty('--editor-fg', colors.text);
+  root.style.setProperty('--editor-cursor', colors.accent);
+  root.style.setProperty('--editor-widget-bg', colors.surface);
+  root.style.setProperty('--editor-selection', colorWithAlpha(colors.accent, 0.2));
+
+  // Semantic colors — derived from accent/completed
+  root.style.setProperty('--color-accent', colors.accent);
+  root.style.setProperty('--color-accent-bg', colorWithAlpha(colors.accent, 0.1));
+  root.style.setProperty('--color-type-bg', colorWithAlpha(colors.accent, 0.1));
+  root.style.setProperty('--color-type', colorWithAlpha(colors.accent, 0.8));
+  root.style.setProperty('--color-duration-bg', colorWithAlpha(colors.completed, 0.08));
+  root.style.setProperty('--color-duration', colors.completed);
+  root.style.setProperty('--color-neutral-bg', colorWithAlpha(colors.surface, 0.06));
+  root.style.setProperty('--color-neutral-border', colorWithAlpha(colors.surface, 0.1));
 }
 
 function clearCustomTheme() {
@@ -80,6 +127,10 @@ function clearCustomTheme() {
     '--bg', '--text', '--surface', '--surface-hover', '--border', '--border-hover',
     '--text-secondary', '--text-tertiary', '--color-in-progress', '--color-purple-start',
     '--color-purple-end', '--color-completed', '--color-failed',
+    '--terminal-bg', '--terminal-fg', '--terminal-cursor', '--terminal-selection',
+    '--editor-bg', '--editor-fg', '--editor-cursor', '--editor-widget-bg', '--editor-selection',
+    '--color-accent', '--color-accent-bg', '--color-type-bg', '--color-type',
+    '--color-duration-bg', '--color-duration', '--color-neutral-bg', '--color-neutral-border',
   ];
   props.forEach(p => document.documentElement.style.removeProperty(p));
 }
@@ -103,6 +154,8 @@ export default function SettingsModal({ onClose, currentTheme, onThemeChange }) 
     setActiveTheme(dataTheme);
     clearCustomTheme();
     document.documentElement.setAttribute('data-theme', dataTheme);
+    // Re-sync JS color constants with new CSS variables
+    requestAnimationFrame(() => initStatusColorsFromCSS());
     if (onThemeChange) onThemeChange(dataTheme);
   }
 

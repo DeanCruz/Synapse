@@ -86,4 +86,29 @@ export function initStatusColorsFromCSS() {
   }
   const surface = styles.getPropertyValue('--surface').trim();
   if (surface) STATUS_BG_COLORS.pending = surface;
+
+  // Sync LEVEL_COLORS from theme
+  const accent = styles.getPropertyValue('--color-accent').trim() || styles.getPropertyValue('--color-in-progress').trim();
+  if (accent) {
+    LEVEL_COLORS.info = accent;
+    LEVEL_BG_COLORS.info = colorWithAlpha(accent, 0.1);
+  }
+  if (STATUS_COLORS.failed) {
+    LEVEL_COLORS.error = STATUS_COLORS.failed;
+    LEVEL_BG_COLORS.error = colorWithAlpha(STATUS_COLORS.failed, 0.1);
+  }
+  const neutralBg = styles.getPropertyValue('--color-neutral-bg').trim();
+  if (neutralBg) LEVEL_BG_COLORS.debug = neutralBg;
+
+  // Sync TIMELINE_COLORS
+  if (accent) {
+    TIMELINE_COLORS.task_start = accent;
+    TIMELINE_COLORS.in_progress = colorWithAlpha(accent, 0.5);
+  }
+  if (STATUS_COLORS.completed) {
+    TIMELINE_COLORS.task_end = STATUS_COLORS.completed;
+    TIMELINE_COLORS.completed = STATUS_COLORS.completed;
+  }
+  if (STATUS_COLORS.failed) TIMELINE_COLORS.failed = STATUS_COLORS.failed;
+  if (STATUS_COLORS.pending) TIMELINE_COLORS.pending = STATUS_COLORS.pending;
 }
