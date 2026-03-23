@@ -1332,6 +1332,29 @@ export default function ClaudeView({ onClose, hideHeader }) {
     }
   }
 
+  // Save a tab's conversation to disk-based history so it survives tab closes and restarts
+  function saveTabToDisk(tabId, tabMessages) {
+    if (!api) return;
+    const msgs = tabMessages || (tabId === activeTabId ? messagesRef.current : null);
+    if (!msgs || msgs.length <= 1) return; // nothing meaningful to save (only welcome)
+    const firstUser = msgs.find(m => m.type === 'user');
+    if (!firstUser) return; // no user messages — nothing to save
+    const name = firstUser.text.substring(0, 50) + (firstUser.text.length > 50 ? '...' : '');
+    const now = new Date().toISOString();
+    const sessionInfo = sessionMapRef.current[dashboardId + ':' + tabId] || {};
+    const cId = (tabId === activeTabId ? convIdRef.current : sessionInfo.convId) || 'conv_' + Date.now() + '_' + tabId;
+    const cCreated = (tabId === activeTabId ? convCreatedRef.current : sessionInfo.convCreated) || now;
+    const sId = (tabId === activeTabId ? sessionIdRef.current : sessionInfo.sessionId) || null;
+    api.saveConversation({
+      id: cId,
+      name,
+      created: cCreated,
+      sessionId: sId,
+      dashboardId,
+      messages: msgs,
+    }).catch(() => {});
+  }
+
   function switchToTab(tabId) {
     if (tabId === activeTabId) return;
     // Flush streaming buffers to current tab before switching
@@ -1339,6 +1362,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
     commitTextBuffer();
     if (thinkingFlushTimerRef.current) { clearTimeout(thinkingFlushTimerRef.current); thinkingFlushTimerRef.current = null; }
     commitThinkingBuffer();
+    // Save current tab's conversation to disk before switching
+    saveTabToDisk(activeTabId);
     // Dispatch tab switch (stashes current messages, loads target)
     dispatch({ type: 'CLAUDE_SWITCH_TAB', tabId });
     // Reset streaming state for new tab context
@@ -1355,10 +1380,22 @@ export default function ClaudeView({ onClose, hideHeader }) {
     commitTextBuffer();
     if (thinkingFlushTimerRef.current) { clearTimeout(thinkingFlushTimerRef.current); thinkingFlushTimerRef.current = null; }
     commitThinkingBuffer();
+    // Save current tab's conversation to disk before creating new tab
+    saveTabToDisk(activeTabId);
     dispatch({ type: 'CLAUDE_NEW_TAB' });
     currentTextIndexRef.current = null;
     currentThinkingIndexRef.current = null;
     streamingBlocksRef.current = {};
+  }
+
+  function closeTab(tabId) {
+    // Save the tab's conversation to disk before closing
+    const stashKey = dashboardId + ':' + tabId;
+    const tabMsgs = tabId === activeTabId
+      ? messagesRef.current
+      : (state.claudeTabStash[stashKey] || null);
+    saveTabToDisk(tabId, tabMsgs);
+    dispatch({ type: 'CLAUDE_CLOSE_TAB', tabId });
   }
 
   async function stopChat() {
@@ -1471,8 +1508,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
                   className="claude-tab-close"
                   onClick={(e) => {
                     e.stopPropagation();
-                    dispatch({ type: 'CLAUDE_CLOSE_TAB', tabId: tab.id });
-                  }}
+                    closeTab(tab.id);
+                  }
                 >
                   ✕
                 </span>

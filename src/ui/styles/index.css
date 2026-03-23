@@ -4749,25 +4749,34 @@ a:hover {
 .claude-float--collapsed .claude-attachment-bar,
 .claude-float--collapsed .claude-float-actions-bar { display: none; }
 
-/* Expanded: full panel — resizable */
+/* Expanded: full panel — resizable via left-edge drag handle */
 .claude-float--expanded {
   bottom: 20px;
   right: 20px;
-  width: 520px;
+  width: 620px;
   height: calc(100vh - 100px);
   max-height: 800px;
   min-width: 360px;
-  min-height: 300px;
-  resize: both;
   overflow: hidden;
-  direction: rtl; /* makes resize handle appear on bottom-left for right-anchored panel */
-}
-.claude-float--expanded > * {
-  direction: ltr;
 }
 .claude-float--expanded .claude-view {
   height: 100%;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+}
+
+/* Left-edge resize handle */
+.claude-float-resize-handle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+  z-index: 10;
+}
+.claude-float-resize-handle:hover,
+.claude-float-resize-handle.dragging {
+  background: rgba(99, 102, 241, 0.25);
 }
 
 /* Maximized: fills the entire content area */
