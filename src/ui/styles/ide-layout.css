@@ -19,7 +19,7 @@
   height: 36px;
   min-height: 36px;
   padding: 0 4px;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
   overflow: hidden;
@@ -115,7 +115,7 @@
 }
 
 .workspace-tab-close:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border);
   color: var(--text);
 }
 
@@ -157,7 +157,7 @@
   flex-shrink: 0;
   height: 100%;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface);
   border-right: 1px solid var(--border);
 }
 

@@ -235,18 +235,24 @@ function MergePreviewDialog({ sourceBranch, currentBranch, commits, onConfirm, o
 
 // ── Branch Graph (SVG commit history with lanes) ────────────────
 
-const GRAPH_COLORS = [
-  '#9b7cf0', // purple (primary)
-  '#4ade80', // green
-  '#f59e0b', // amber
-  '#60a5fa', // blue
-  '#f472b6', // pink
-  '#34d399', // emerald
-  '#fb923c', // orange
-  '#a78bfa', // violet
-  '#38bdf8', // sky
-  '#fbbf24', // yellow
-];
+// Graph colors — first two adapt to theme accent, rest are stable
+function getGraphColors() {
+  const s = getComputedStyle(document.documentElement);
+  const accent = s.getPropertyValue('--color-in-progress').trim() || '#9b7cf0';
+  return [
+    accent,       // theme accent (primary)
+    '#4ade80',    // green
+    '#f59e0b',    // amber
+    '#60a5fa',    // blue
+    '#f472b6',    // pink
+    '#34d399',    // emerald
+    '#fb923c',    // orange
+    '#a78bfa',    // violet
+    '#38bdf8',    // sky
+    '#fbbf24',    // yellow
+  ];
+}
+const GRAPH_COLORS = getGraphColors();
 
 function buildGraphLayout(commits) {
   if (!commits || commits.length === 0) return { rows: [], maxCol: 0 };
@@ -553,7 +559,7 @@ function BranchGraph({ repoPath }) {
                       y={cy - ROW_H / 2}
                       width={totalWidth}
                       height={ROW_H}
-                      fill="rgba(255,255,255,0.03)"
+                      fill="var(--surface)"
                     />
                   )}
 
@@ -563,7 +569,7 @@ function BranchGraph({ repoPath }) {
                     cy={cy}
                     r={row.isMerge ? DOT_R + 1 : DOT_R}
                     fill={row.color}
-                    stroke={row.isMerge ? 'rgba(255,255,255,0.3)' : 'none'}
+                    stroke={row.isMerge ? 'var(--border-hover)' : 'none'}
                     strokeWidth={row.isMerge ? 1 : 0}
                   />
 
@@ -581,14 +587,15 @@ function BranchGraph({ repoPath }) {
                           width={labelW}
                           height={16}
                           rx={3}
-                          fill={label.isHead ? 'rgba(155,124,240,0.15)' : 'rgba(255,255,255,0.06)'}
-                          stroke={label.isHead ? 'rgba(155,124,240,0.3)' : 'rgba(255,255,255,0.1)'}
+                          fill={label.isHead ? 'var(--color-accent-bg)' : 'var(--surface)'}
+                          stroke={label.isHead ? 'var(--color-accent)' : 'var(--border)'}
                           strokeWidth="0.5"
+                          strokeOpacity={label.isHead ? 0.3 : 1}
                         />
                         <text
                           x={lx + 2}
                           y={cy + 3.5}
-                          fill={label.isHead ? '#9b7cf0' : 'var(--text-secondary)'}
+                          fill={label.isHead ? 'var(--color-accent)' : 'var(--text-secondary)'}
                           fontSize="10"
                           fontFamily="'SF Mono','Fira Code',monospace"
                           fontWeight={label.isHead ? '600' : '400'}

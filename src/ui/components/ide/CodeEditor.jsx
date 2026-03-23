@@ -73,33 +73,47 @@ function detectLanguage(filePath) {
   return EXT_TO_LANGUAGE[ext] || 'plaintext';
 }
 
-/* ── Define custom dark theme to match Synapse ──────────────── */
-let themeRegistered = false;
-function ensureTheme() {
-  if (themeRegistered) return;
-  themeRegistered = true;
-  monaco.editor.defineTheme('synapse-dark', {
-    base: 'vs-dark',
+/* ── Define theme from CSS variables to match current Synapse theme ── */
+let _themeVersion = 0;
+function buildSynapseTheme() {
+  const s = getComputedStyle(document.documentElement);
+  const v = (name) => s.getPropertyValue(name).trim();
+
+  const bg = v('--editor-bg') || '#0a0a0c';
+  const fg = v('--editor-fg') || '#F5F5F7';
+  const lineNum = v('--editor-line-number') || '#555555';
+  const lineNumActive = v('--editor-line-number-active') || '#A1A1A6';
+  const selection = v('--editor-selection') || 'rgba(155, 124, 240, 0.2)';
+  const lineHighlight = v('--editor-line-highlight') || 'rgba(255, 255, 255, 0.03)';
+  const cursor = v('--editor-cursor') || '#9B7CF0';
+  const widgetBg = v('--editor-widget-bg') || '#121214';
+  const widgetBorder = v('--editor-widget-border') || 'rgba(255, 255, 255, 0.08)';
+  const base = v('--editor-base') || 'vs-dark';
+
+  const themeName = 'synapse-dynamic-' + (++_themeVersion);
+  monaco.editor.defineTheme(themeName, {
+    base: base === 'vs' ? 'vs' : 'vs-dark',
     inherit: true,
     rules: [],
     colors: {
-      'editor.background': '#0a0a0c',
-      'editor.foreground': '#F5F5F7',
-      'editorLineNumber.foreground': '#555555',
-      'editorLineNumber.activeForeground': '#A1A1A6',
-      'editor.selectionBackground': '#9B7CF033',
-      'editor.lineHighlightBackground': '#ffffff08',
-      'editorCursor.foreground': '#9B7CF0',
-      'editorWidget.background': '#121214',
-      'editorWidget.border': '#ffffff14',
-      'editorSuggestWidget.background': '#121214',
-      'editorSuggestWidget.border': '#ffffff14',
-      'editorSuggestWidget.selectedBackground': '#9B7CF022',
-      'scrollbarSlider.background': '#ffffff12',
-      'scrollbarSlider.hoverBackground': '#ffffff20',
-      'scrollbarSlider.activeBackground': '#ffffff30',
+      'editor.background': bg,
+      'editor.foreground': fg,
+      'editorLineNumber.foreground': lineNum,
+      'editorLineNumber.activeForeground': lineNumActive,
+      'editor.selectionBackground': selection,
+      'editor.lineHighlightBackground': lineHighlight,
+      'editorCursor.foreground': cursor,
+      'editorWidget.background': widgetBg,
+      'editorWidget.border': widgetBorder,
+      'editorSuggestWidget.background': widgetBg,
+      'editorSuggestWidget.border': widgetBorder,
+      'editorSuggestWidget.selectedBackground': selection,
+      'scrollbarSlider.background': base === 'vs' ? '#00000012' : '#ffffff12',
+      'scrollbarSlider.hoverBackground': base === 'vs' ? '#00000020' : '#ffffff20',
+      'scrollbarSlider.activeBackground': base === 'vs' ? '#00000030' : '#ffffff30',
     },
   });
+  return themeName;
 }
 
 export default function CodeEditor({ filePath, workspaceId, workspacePath }) {
@@ -155,12 +169,12 @@ export default function CodeEditor({ filePath, workspaceId, workspacePath }) {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    ensureTheme();
+    const initialTheme = buildSynapseTheme();
 
     const editor = monaco.editor.create(containerRef.current, {
       value: '',
       language: 'plaintext',
-      theme: 'synapse-dark',
+      theme: initialTheme,
       automaticLayout: false,
       minimap: { enabled: true, scale: 1, showSlider: 'mouseover' },
       fontSize: 13,
@@ -202,8 +216,21 @@ export default function CodeEditor({ filePath, workspaceId, workspacePath }) {
     });
     resizeObserver.observe(containerRef.current);
 
+    // Watch for theme changes and rebuild Monaco theme
+    const themeObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.attributeName === 'data-theme' || m.attributeName === 'style') {
+          const newTheme = buildSynapseTheme();
+          monaco.editor.setTheme(newTheme);
+          break;
+        }
+      }
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'style'] });
+
     return () => {
       resizeObserver.disconnect();
+      themeObserver.disconnect();
       if (onChangeDisposableRef.current) {
         onChangeDisposableRef.current.dispose();
         onChangeDisposableRef.current = null;

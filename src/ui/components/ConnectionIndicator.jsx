@@ -7,7 +7,7 @@ import React from 'react';
  * @param {boolean} props.connected - true when SSE connection is live
  */
 export default function ConnectionIndicator({ connected }) {
-  const color = connected ? '#34d399' : '#ef4444';
+  const color = connected ? 'var(--color-completed)' : 'var(--color-failed)';
 
   return (
     <span className="connection-status">

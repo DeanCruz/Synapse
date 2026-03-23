@@ -8,33 +8,38 @@ import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 
-const TERMINAL_THEME = {
-  background: '#0b0b0f',
-  foreground: '#e0e0e0',
-  cursor: '#9b7cf0',
-  cursorAccent: '#0b0b0f',
-  selectionBackground: 'rgba(155, 124, 240, 0.3)',
-  selectionForeground: '#ffffff',
-  black: '#1a1a2e',
-  red: '#ff6b6b',
-  green: '#51cf66',
-  yellow: '#ffd43b',
-  blue: '#748ffc',
-  magenta: '#da77f2',
-  cyan: '#66d9e8',
-  white: '#e0e0e0',
-  brightBlack: '#4a4a6a',
-  brightRed: '#ff8787',
-  brightGreen: '#69db7c',
-  brightYellow: '#ffe066',
-  brightBlue: '#91a7ff',
-  brightMagenta: '#e599f7',
-  brightCyan: '#99e9f2',
-  brightWhite: '#ffffff',
-};
+function getTerminalThemeFromCSS() {
+  const s = getComputedStyle(document.documentElement);
+  const v = (name) => s.getPropertyValue(name).trim();
+  const bg = v('--terminal-bg') || '#0b0b0f';
+  return {
+    background: bg,
+    foreground: v('--terminal-fg') || '#e0e0e0',
+    cursor: v('--terminal-cursor') || '#9b7cf0',
+    cursorAccent: bg,
+    selectionBackground: v('--terminal-selection') || 'rgba(155, 124, 240, 0.3)',
+    selectionForeground: undefined,
+    black: v('--terminal-black') || '#1a1a2e',
+    red: v('--terminal-red') || '#ff6b6b',
+    green: v('--terminal-green') || '#51cf66',
+    yellow: v('--terminal-yellow') || '#ffd43b',
+    blue: v('--terminal-blue') || '#748ffc',
+    magenta: v('--terminal-magenta') || '#da77f2',
+    cyan: v('--terminal-cyan') || '#66d9e8',
+    white: v('--terminal-white') || '#e0e0e0',
+    brightBlack: v('--terminal-bright-black') || '#4a4a6a',
+    brightRed: v('--terminal-bright-red') || '#ff8787',
+    brightGreen: v('--terminal-bright-green') || '#69db7c',
+    brightYellow: v('--terminal-bright-yellow') || '#ffe066',
+    brightBlue: v('--terminal-bright-blue') || '#91a7ff',
+    brightMagenta: v('--terminal-bright-magenta') || '#e599f7',
+    brightCyan: v('--terminal-bright-cyan') || '#99e9f2',
+    brightWhite: v('--terminal-bright-white') || '#ffffff',
+  };
+}
 
 const TERMINAL_OPTIONS = {
-  theme: TERMINAL_THEME,
+  theme: getTerminalThemeFromCSS(),
   fontFamily: "'JetBrains Mono', 'Fira Code', 'SF Mono', monospace",
   fontSize: 13,
   lineHeight: 1.2,
@@ -227,6 +232,25 @@ export default function TerminalView({ projectDir }) {
       try { fitAddonRef.current.fit(); } catch (_) {}
     }
   }, [projectDir]);
+
+  // Watch for theme changes and update terminal colors
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    if (!terminal || isDisposedRef.current) return;
+
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.attributeName === 'data-theme' || m.attributeName === 'style') {
+          if (!isDisposedRef.current && terminalRef.current) {
+            terminalRef.current.options.theme = getTerminalThemeFromCSS();
+          }
+          break;
+        }
+      }
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme', 'style'] });
+    return () => observer.disconnect();
+  }, []);
 
   // Fallback when electronAPI is not available
   if (noElectron) {

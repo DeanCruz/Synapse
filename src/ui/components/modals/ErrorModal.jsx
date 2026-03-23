@@ -12,7 +12,7 @@ export default function ErrorModal({ message, onClose }) {
   return (
     <Modal
       title={
-        <span style={{ color: '#ef4444' }}>Error</span>
+        <span style={{ color: 'var(--color-failed)' }}>Error</span>
       }
       onClose={onClose}
     >

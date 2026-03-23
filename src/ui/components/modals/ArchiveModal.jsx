@@ -15,21 +15,21 @@ function ArchiveEntry({ archive, onClick, onDelete }) {
 
   return (
     <div className="history-entry" onClick={() => onClick && onClick(archive.name)}>
-      <span className="history-entry-dot" style={{ backgroundColor: '#34d399' }} />
+      <span className="history-entry-dot" style={{ backgroundColor: 'var(--color-completed)' }} />
       <div className="history-entry-content">
         <div className="history-entry-name">{taskName}</div>
         <div className="history-entry-meta">
           {archive.task && archive.task.type && (
             <span
               className="history-entry-badge"
-              style={{ backgroundColor: 'rgba(102,126,234,0.1)', color: 'rgba(102,126,234,0.8)' }}
+              style={{ backgroundColor: 'var(--color-type-bg)', color: 'var(--color-type)' }}
             >
               {archive.task.type}
             </span>
           )}
           <span
             className="history-entry-badge"
-            style={{ backgroundColor: 'rgba(155,124,240,0.1)', color: '#9b7cf0' }}
+            style={{ backgroundColor: 'var(--color-accent-bg)', color: 'var(--color-accent)' }}
           >
             {archive.agentCount} agents
           </span>
