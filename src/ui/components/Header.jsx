@@ -51,6 +51,27 @@ export default function Header() {
     dispatch({ type: 'OPEN_MODAL', modal: 'commands' });
   }
 
+  async function handleExport() {
+    const dashboardId = state.currentDashboardId;
+    try {
+      const res = await fetch(`/api/dashboards/${dashboardId}/export`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const name = task?.name ? task.name.replace(/\s+/g, '_') : dashboardId;
+      a.download = `synapse_export_${name}_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
+  }
+
   return (
     <header className="header-bar">
       {/* Left — logo */}
@@ -119,6 +140,20 @@ export default function Header() {
               <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
             </svg>
             <span>History</span>
+          </button>
+
+          <button
+            className="header-action-btn header-export-btn"
+            title="Export swarm data"
+            aria-label="Export swarm data as JSON"
+            onClick={handleExport}
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2v8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <path d="M5 7l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+              <path d="M2.5 11v2a1 1 0 001 1h9a1 1 0 001-1v-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+            <span>Export</span>
           </button>
         </div>
 

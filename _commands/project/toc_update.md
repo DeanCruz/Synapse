@@ -1,10 +1,10 @@
 # `!toc_update`
 
-**Purpose:** Incrementally update `toc.md` by detecting new, deleted, and moved files since the last TOC generation. Dispatches parallel agents only for directories with changes — much faster than a full `!toc_generate`. Use this for routine maintenance after adding features, creating files, or making small structural changes.
+**Purpose:** Incrementally update `toc.md` by detecting new, deleted, moved, and semantically changed files since the last TOC generation. Dispatches parallel agents only for directories with changes — much faster than a full `!toc_generate`. When `fingerprints.json` exists, also detects and reports semantic shifts in modified files: purpose changes, API changes, signature changes, and dependency changes. Use this for routine maintenance after adding features, creating files, or making structural changes.
 
 **Syntax:** `!toc_update`
 
-**Produces:** An updated `{project_root}/.synapse/toc.md` with new files added, deleted files removed, and stale entries corrected.
+**Produces:** An updated `{project_root}/.synapse/toc.md` with new files added, deleted files removed, modified files re-scanned, and stale entries corrected. When semantic fingerprints exist, also updates `fingerprints.json` and `dep_graph.json`, and reports semantic changes prominently.
 
 ---
 
@@ -51,6 +51,21 @@ In Step 3 (Compute the diff), use the renames map to:
 - Remove confirmed renames from the "deleted files" set (they are not truly deleted)
 - Add confirmed renames to a new **renamed files** set
 
+### Step 2c: Detect modified files via semantic fingerprints
+
+If `{project_root}/.synapse/fingerprints.json` exists, use it to identify files that have been modified since the last TOC generation and need semantic re-analysis.
+
+1. Read `{project_root}/.synapse/fingerprints.json`. Extract the `generated_at` date.
+2. Identify files modified since `generated_at` using one of:
+   - `git -C {project_root} diff --name-only --since="{generated_at}"` (preferred — uses git history)
+   - `find {project_root}/src -newer {project_root}/.synapse/fingerprints.json -type f` (fallback — uses filesystem modification times)
+3. Cross-reference the modified file list with `fingerprints.json`:
+   - Only files that **have an existing fingerprint** AND **appear in the modified list** need semantic re-scanning
+   - Files without fingerprints are either new (handled in Step 3) or were never fingerprinted — skip them here
+4. Build a **semantically modified files** set — these files will be dispatched alongside new files in Phase 2, with their old fingerprint data included in the agent prompt for comparison
+
+If `fingerprints.json` does not exist, skip this step entirely. The existing content-hash-based detection in Step 3b still applies independently.
+
 ### Step 3: Compute the diff
 
 Compare the two sets:
@@ -71,7 +86,8 @@ Report the diff to the terminal:
 
 **New files:** {N}
 **Deleted files:** {N}
-**Modified files:** {N}
+**Modified files:** {N} (content hash changed)
+**Semantically modified files:** {N} (fingerprint changed — from Step 2c)
 **Renamed files:** {N}
 **Unchanged:** {N}
 
@@ -88,6 +104,12 @@ Report the diff to the terminal:
 - `src/services/UserService.ts` (hash: `a1b2c3d4` -> `e5f6g7h8`)
 - ...
 
+### Semantically Modified Files (from fingerprints.json)
+- `src/utils/auth.js` (modified since {generated_at})
+- `src/api/users.js` (modified since {generated_at})
+- ...
+(Omit this section if fingerprints.json does not exist or no fingerprinted files were modified.)
+
 ### Renamed Files
 - `src/lib/oldName.ts` -> `src/lib/newName.ts`
 - ...
@@ -96,6 +118,8 @@ Report the diff to the terminal:
 - `src/newModule/` (not in TOC at all)
 - ...
 ```
+
+**Note:** Files detected via content hash (Step 3b) and files detected via fingerprint modification date (Step 2c) may overlap. Deduplicate: if a file appears in both sets, it only needs one scan agent dispatch. The union of both sets forms the complete "modified files" set for Phase 2.
 
 If there are **zero changes** (no new, deleted, modified, or renamed files), report "TOC is up to date" and exit.
 
@@ -152,6 +176,11 @@ For each file, read it and report:
 4. **Related files** — Direct imports/dependencies/consumers (paths relative to project root)
 5. **Exports** — Key exported symbols other files consume
 6. **Hash** — Run `shasum -a 256 {file_path} | cut -c1-8` and report the 8-char hash
+7. **Fingerprint** (if fingerprints.json exists for this project):
+   - Purpose: one of `component`, `service`, `utility`, `config`, `test`, `type-definition`, `route`, `middleware`, `hook`, `model`, `migration`, `script`, `documentation`, `command`, `style`, `entry-point`, `factory`, `context-provider`, or `other (description)`
+   - Key Exports: `name(kind, params)`, ... — top 5-10 most important exports
+   - Key Imports: project-internal import paths only (exclude node_modules)
+   - Complexity: `simple` | `moderate` | `complex`
 
 ## Context
 {Relevant CLAUDE.md excerpt — architecture, conventions, tech stack}
@@ -164,6 +193,11 @@ For each file, read it and report:
 - **Related:** `{path1}`, `{path2}`, ...
 - **Exports:** `Symbol1`, `Symbol2`, ...
 - **Hash:** `{8-char-hash}`
+- **Fingerprint:**
+  - Purpose: {purpose}
+  - Key Exports: {name}({kind}, {params}), ...
+  - Key Imports: `{path1}`, `{path2}`, ...
+  - Complexity: {simple|moderate|complex}
 ```
 
 For modified files (content hash changed), include in the agent prompt:
@@ -179,9 +213,88 @@ For modified files (content hash changed), include in the agent prompt:
 Review the file's current content. If the changes are minor (e.g., bug fixes, formatting), keep the existing summary and tags. If the changes are significant (e.g., new API, rewritten logic, different exports), write new summary, tags, related, and exports. Always compute and report the new content hash.
 ```
 
+For modified files that have existing fingerprints (from Step 2c), also include:
+
+```
+## Previous Semantic Fingerprint
+- **Purpose:** {old purpose from fingerprints.json}
+- **Key Exports:** {old key_exports — name(kind, params) for each}
+- **Key Imports:** {old key_imports paths}
+- **Complexity:** {old complexity}
+
+Produce an updated fingerprint based on the file's current content. Report the new fingerprint even if nothing changed — the master will compare old vs new to detect semantic shifts.
+```
+
 ### Step 6: Process returns
 
 As agents return, collect all new and updated file entries. Validate that summaries are specific and useful (not generic filler).
+
+### Step 6b: Compare semantic fingerprints (modified files only)
+
+**Skip this step if `fingerprints.json` does not exist or no modified files had existing fingerprints.**
+
+For each modified file that had a previous fingerprint (from Step 2c), compare the old fingerprint against the new fingerprint returned by the scan agent. Detect and flag the following semantic changes:
+
+#### Purpose Change Detection
+
+Compare the old `purpose` value against the new `purpose` value. If they differ, flag:
+
+```
+PURPOSE CHANGE: {path} changed from {old_purpose} to {new_purpose}
+```
+
+A purpose change is a significant semantic shift — it means the file's role in the architecture has changed (e.g., a `utility` became a `service`, or a `component` became a `context-provider`). Always report these prominently.
+
+#### API Change Detection
+
+Compare the old `key_exports` array against the new `key_exports` array by export name.
+
+- **Removed exports:** names present in old but absent in new
+- **Added exports:** names present in new but absent in old
+- **Unchanged exports:** names present in both
+
+If more than **50% of export names differ** (by name), flag:
+
+```
+API CHANGE: {path} — {N} of {M} exports changed (removed: {removed_names}, added: {added_names})
+```
+
+Where `N` is the count of changed (removed + added) names and `M` is the total unique export names across both old and new.
+
+#### Signature Change Detection
+
+For exports that exist in both old and new (same name), compare `kind` and `params`:
+
+- If `kind` changed (e.g., `function` to `class`), flag:
+  ```
+  SIGNATURE CHANGE: {path} — {name} changed kind from {old_kind} to {new_kind}
+  ```
+- If `params` changed significantly (difference of 2+), flag:
+  ```
+  SIGNATURE CHANGE: {path} — {name} changed params from {old_params} to {new_params}
+  ```
+
+#### Dependency Change Detection
+
+Compare the old `key_imports` array against the new `key_imports` array:
+
+- **Added imports:** paths in new but not in old
+- **Removed imports:** paths in old but not in new
+
+If any imports were added or removed, flag:
+
+```
+DEPENDENCY CHANGE: {path} — added imports from {added_paths}, removed imports from {removed_paths}
+```
+
+If only imports were added: `DEPENDENCY CHANGE: {path} — added imports from {added_paths}`
+If only imports were removed: `DEPENDENCY CHANGE: {path} — removed imports from {removed_paths}`
+
+#### Collect all semantic changes
+
+Build a list of all detected semantic changes. These will be reported in the diff output and included in the final report.
+
+If no semantic changes are detected for any modified file (all fingerprints are identical), skip the semantic changes section in the report.
 
 ---
 
@@ -223,9 +336,43 @@ For each renamed file:
 
 Set the "Last updated" line to today's date.
 
-### Step 9: Write the file
+### Step 9: Write the TOC file
 
 Write the updated TOC to `{project_root}/.synapse/toc.md`.
+
+### Step 9b: Update fingerprints.json (if it exists)
+
+**Skip this step if `{project_root}/.synapse/fingerprints.json` does not exist.**
+
+Read the current `fingerprints.json`. For each modified file that had a scan agent return with updated fingerprint data:
+
+1. Replace the file's entry in `files` with the new fingerprint (`purpose`, `key_exports`, `key_imports`, `complexity`)
+2. Update `generated_at` to today's date
+
+For new files that also returned fingerprint data, add their entries to `files`.
+
+For deleted files, remove their entries from `files`.
+
+Write the updated `fingerprints.json` back to `{project_root}/.synapse/fingerprints.json`.
+
+### Step 9c: Update dep_graph.json (if it exists)
+
+**Skip this step if `{project_root}/.synapse/dep_graph.json` does not exist.**
+
+Read the current `dep_graph.json`. For each modified file with updated `key_imports`:
+
+1. **Update forward edges (`imports`):** Replace the file's `imports` array with the new `key_imports` from the updated fingerprint.
+2. **Update reverse edges (`imported_by`):** For every file that was in the old `imports` but not in the new, remove the modified file from that target's `imported_by`. For every file in the new `imports` but not in the old, add the modified file to that target's `imported_by`.
+
+For new files with fingerprint data:
+1. Add the file's `imports` from its `key_imports`.
+2. For each import target, add the new file to that target's `imported_by`.
+
+For deleted files:
+1. For each file in the deleted file's `imports`, remove the deleted file from that target's `imported_by`.
+2. Remove the deleted file's entry from the graph entirely.
+
+Update `generated_at` to today's date. Write the updated `dep_graph.json` back to `{project_root}/.synapse/dep_graph.json`.
 
 ### Step 10: Report
 
@@ -235,6 +382,7 @@ Write the updated TOC to `{project_root}/.synapse/toc.md`.
 - **Files added:** {N}
 - **Files removed:** {N}
 - **Files modified:** {N} (content hash changed, re-scanned)
+- **Semantic changes detected:** {N}
 - **Files renamed:** {N} (metadata preserved)
 - **New directories:** {N}
 - **Agents dispatched:** {N}
@@ -251,11 +399,22 @@ Write the updated TOC to `{project_root}/.synapse/toc.md`.
 - `{path}` (hash: `{old}` -> `{new}`)
 - ...
 
+### Modified Files (Semantic Changes)
+- `src/utils/auth.js` — PURPOSE CHANGE: utility -> service
+- `src/api/users.js` — API CHANGE: 3 of 5 exports changed (removed: getUser, listUsers; added: fetchUser, searchUsers, getUserById)
+- `src/api/users.js` — SIGNATURE CHANGE: updateUser changed params from 2 to 3
+- `src/services/db.js` — DEPENDENCY CHANGE: added imports from `src/utils/cache.js`
+- ...
+
+(Omit this section if no semantic changes were detected.)
+
 ### Renamed
 - `{old_path}` -> `{new_path}`
 - ...
 
 The Table of Contents has been updated.
+{If fingerprints.json was updated: "Semantic fingerprints updated for {N} files."}
+{If dep_graph.json was updated: "Dependency graph updated — {N} edges added, {M} edges removed."}
 ```
 
 ---
@@ -271,3 +430,7 @@ The Table of Contents has been updated.
 - **If the diff is large (50+ new files),** consider suggesting `!toc_generate` instead for a cleaner result. Incremental updates work best for small-to-medium changes.
 - **If no changes are detected,** report "TOC is up to date" and exit immediately. Do not dispatch agents or rewrite the file.
 - **Update the date.** Always set "Last updated" to today's date when changes are made.
+- **Fingerprint comparison is additive.** If `fingerprints.json` does not exist, all fingerprint-related steps (2c, 6b, 9b, 9c) are skipped. The command works identically to before. Fingerprint features only activate when `!toc_generate` has previously produced a `fingerprints.json`.
+- **Always include old fingerprints in agent prompts for modified files.** When dispatching scan agents for files that have existing fingerprints, the old fingerprint data must be included so the agent can produce comparable output.
+- **Semantic change flags are informational.** PURPOSE CHANGE, API CHANGE, SIGNATURE CHANGE, and DEPENDENCY CHANGE flags are reported to the user but do not block the update. They exist to surface important architectural shifts that might otherwise go unnoticed.
+- **Update both fingerprints.json and dep_graph.json atomically.** When modifying these files, read the full file, apply all changes in memory, and write the complete file. Never do partial writes or incremental appends.

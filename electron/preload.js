@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   archiveDashboard: (id) => ipcRenderer.invoke('archive-dashboard', id),
   saveDashboardHistory: (id) => ipcRenderer.invoke('save-dashboard-history', id),
   exportDashboard: (id) => ipcRenderer.invoke('export-dashboard', id),
+  getDashboardMetrics: (id) => ipcRenderer.invoke('get-dashboard-metrics', id),
 
   // Overview
   getOverview: () => ipcRenderer.invoke('get-overview'),
@@ -59,6 +60,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // History
   getHistory: () => ipcRenderer.invoke('get-history'),
+  getHistoryAnalytics: () => ipcRenderer.invoke('get-history-analytics'),
 
   // Queue
   getQueue: () => ipcRenderer.invoke('get-queue'),

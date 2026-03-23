@@ -16,6 +16,7 @@ if (window.electronAPI) {
     if (url === '/api/dashboards' && method === 'GET') return api.getDashboards();
     if (url === '/api/overview' && method === 'GET') return api.getOverview();
     if (url === '/api/archives' && method === 'GET') return api.getArchives();
+    if (url === '/api/history/analytics' && method === 'GET') return api.getHistoryAnalytics();
     if (url === '/api/history' && method === 'GET') return api.getHistory();
     if (url === '/api/queue' && method === 'GET') return api.getQueue();
 
@@ -40,6 +41,7 @@ if (window.electronAPI) {
       if (sub === 'archive' && method === 'POST') return api.archiveDashboard(id);
       if (sub === 'save-history' && method === 'POST') return api.saveDashboardHistory(id);
       if (sub === 'export' && method === 'GET') return api.exportDashboard(id);
+      if (sub === 'metrics' && method === 'GET') return api.getDashboardMetrics(id);
     }
 
     if (url === '/api/commands' && method === 'GET') return api.listCommands();

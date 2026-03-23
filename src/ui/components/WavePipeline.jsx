@@ -4,7 +4,7 @@
 import React, { useRef, useEffect } from 'react';
 import { STATUS_COLORS, STATUS_BG_COLORS } from '@/utils/constants.js';
 import AgentCard, { StatusBadge } from './AgentCard.jsx';
-import { drawDependencyLines, setupCardHoverEffects } from '../utils/dependencyLines.js';
+import { drawDependencyLines, drawSiblingLines, setupCardHoverEffects } from '../utils/dependencyLines.js';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 
 // ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ function WaveHeader({ wave }) {
  * @param {string|null} props.activeStatFilter — filter agents by status string, or null for all
  * @param {function} props.onAgentClick — called with agent object when a card is clicked
  */
-export default function WavePipeline({ status, activeStatFilter, onAgentClick }) {
+export default function WavePipeline({ status, activeStatFilter, onAgentClick, progressData }) {
   const containerRef = useRef(null);
   const svgRef = useRef(null);
 
@@ -101,6 +101,7 @@ export default function WavePipeline({ status, activeStatFilter, onAgentClick })
     });
 
     drawDependencyLines(svg, agents, agentMap, cardElements, container);
+    drawSiblingLines(svg, agents, agentMap, cardElements, container, progressData);
     setupCardHoverEffects(container, svg);
 
     // Redraw when container is resized (layout shift moves cards)
@@ -110,10 +111,11 @@ export default function WavePipeline({ status, activeStatFilter, onAgentClick })
         cardEls[el.getAttribute('data-agent-id')] = el;
       });
       drawDependencyLines(svg, agents, agentMap, cardEls, container);
+      drawSiblingLines(svg, agents, agentMap, cardEls, container, progressData);
     });
     ro.observe(container);
     return () => ro.disconnect();
-  }, [status]);
+  }, [status, progressData]);
 
   if (!status) return null;
 

@@ -4,7 +4,7 @@
 
 **Syntax:** `!toc_generate`
 
-**Produces:** A fully rebuilt `{project_root}/.synapse/toc.md`
+**Produces:** A fully rebuilt `{project_root}/.synapse/toc.md`, plus sidecar files `{project_root}/.synapse/fingerprints.json` (semantic fingerprints per file) and `{project_root}/.synapse/dep_graph.json` (file-level dependency graph)
 
 ---
 
@@ -75,6 +75,11 @@ Read every file in this directory (and subdirectories up to 2 levels deep). For 
 4. **Related files** — Other files this file imports from, depends on, or is consumed by. List paths relative to project root. Only include direct, meaningful relationships — not every transitive import.
 5. **Exports** — Key exported symbols (functions, classes, types, constants) that other files consume. Only list the important ones, not every helper.
 6. **Content hash** — Run `shasum -a 256 {file_path} | cut -c1-8` (or equivalent) to get the first 8 characters of the file's SHA-256 hash. Report this value exactly.
+7. **Semantic fingerprint** — For each file, provide all four fingerprint fields:
+   a. **Purpose** — Classify the file as exactly one of: `component`, `service`, `utility`, `config`, `test`, `type-definition`, `route`, `middleware`, `hook`, `model`, `migration`, `script`, `documentation`, `command`, `style`, `entry-point`, `factory`, `context-provider`, or `other(description)`. Use `other(description)` only when none of the named categories fit, replacing `description` with a concise label.
+   b. **Key exports** — Array of the top 5-10 exported symbols with structured metadata: name, kind (`function`, `class`, `type`, `interface`, `constant`, or `enum`), and params (number of parameters for functions/methods, `0` for non-callables). Example: `startServer (function, 1)`, `UserSchema (constant, 0)`.
+   c. **Key imports** — Array of relative paths (from project root) for project-internal imports only. Exclude external/npm packages. Example: `src/utils/logger.js`, `src/config/db.js`.
+   d. **Complexity** — Classify as one of: `simple` (under 100 lines, linear flow), `moderate` (100-300 lines or significant branching/async), `complex` (300+ lines or deeply nested logic).
 
 ## Context
 This directory belongs to the project at `{project_root}`.
@@ -90,6 +95,11 @@ Return a structured list, one entry per file:
 - **Related:** `{path1}`, `{path2}`, ...
 - **Exports:** `{Symbol1}`, `{Symbol2}`, ...
 - **Hash:** `{first 8 chars of SHA-256}`
+- **Fingerprint:**
+  - **Purpose:** {purpose_category}
+  - **Key Exports:** {name} ({kind}, {params}), {name} ({kind}, {params}), ...
+  - **Key Imports:** `{relative_path}`, `{relative_path}`, ...
+  - **Complexity:** {simple|moderate|complex}
 
 Skip files that are purely auto-generated, lock files, or build artifacts.
 ```
@@ -106,11 +116,13 @@ Dispatch all directory-scan agents **in parallel batches** using `!p` dispatch m
 
 ## Phase 3: Streaming Assembly
 
-> **NON-NEGOTIABLE:** The master updates `toc.md` incrementally as agents report back. Do NOT wait for all agents to finish before writing. Each time an agent returns, integrate its results into the TOC immediately. This keeps the file progressively up-to-date and ensures no context is lost if the session is interrupted.
+> **NON-NEGOTIABLE:** The master updates `toc.md` incrementally as agents report back. Do NOT wait for all agents to finish before writing. Each time an agent returns, integrate its results into the TOC immediately. This keeps the file progressively up-to-date and ensures no context is lost if the session is interrupted. Additionally, the master accumulates fingerprint data from every agent return and, once all agents have reported, writes `fingerprints.json` and `dep_graph.json` as sidecar files.
 
-### Step 6: Compile the TOC
+### Step 6: Compile the TOC and accumulate fingerprints
 
-As agents return, the master incrementally assembles `{project_root}/.synapse/toc.md`. The file has two main sections:
+As agents return, the master incrementally assembles `{project_root}/.synapse/toc.md` and accumulates fingerprint data in memory. For each file reported by an agent, extract the **Fingerprint** section (purpose, key exports, key imports, complexity) and store it keyed by relative file path. This fingerprint data is NOT embedded in `toc.md` — it is written to a separate `fingerprints.json` sidecar in Step 7a.
+
+The TOC file has two main sections:
 
 #### Section 1: Project Overview (TOP of file)
 
@@ -172,9 +184,89 @@ List every significant file with its context. Group files by directory. Use this
 - **Group by directory** with a `##` heading per directory
 - **Order directories logically** — source code first, then config, then docs, then commands
 
-### Step 7: Write the file
+### Step 7: Write the TOC file
 
 Ensure `{project_root}/.synapse/` directory exists (create if needed). Write the assembled TOC to `{project_root}/.synapse/toc.md`, replacing the existing file entirely.
+
+### Step 7a: Write fingerprints.json
+
+After all agents have returned (or after the final incremental TOC write), write the accumulated fingerprint data to `{project_root}/.synapse/fingerprints.json`. This file is a sidecar to `toc.md` — it is NOT embedded in the TOC itself.
+
+**Schema:**
+
+```json
+{
+  "generated_at": "ISO 8601 date (same timestamp as toc.md 'Last updated')",
+  "project_root": "{project_root}",
+  "files": {
+    "src/server/index.js": {
+      "purpose": "entry-point",
+      "key_exports": [
+        { "name": "startServer", "kind": "function", "params": 1 },
+        { "name": "DEFAULT_PORT", "kind": "constant", "params": 0 }
+      ],
+      "key_imports": [
+        "src/server/services/WatcherService.js",
+        "src/server/utils/logger.js"
+      ],
+      "complexity": "moderate"
+    }
+  }
+}
+```
+
+**Field definitions:**
+
+| Field | Type | Description |
+|---|---|---|
+| `generated_at` | ISO 8601 string | When the fingerprints were generated |
+| `project_root` | string | Absolute path to the project root |
+| `files` | object | Map of relative file path to fingerprint object |
+| `files.*.purpose` | string | One of the predefined purpose categories (see agent prompt) |
+| `files.*.key_exports` | array | Top 5-10 exports. Each: `{ "name": string, "kind": "function"\|"class"\|"type"\|"interface"\|"constant"\|"enum", "params": number }` |
+| `files.*.key_imports` | array | Relative paths to project-internal imports only (no external packages) |
+| `files.*.complexity` | string | One of: `"simple"`, `"moderate"`, `"complex"` |
+
+**Assembly rules:**
+- Parse each agent's Fingerprint section per file and convert to the JSON structure above
+- If an agent fails to report a fingerprint for a file, omit that file from `fingerprints.json` (do not use placeholders)
+- `key_exports` entries must have all three fields (`name`, `kind`, `params`). If an agent reports an export without `params`, default to `0`.
+- `key_imports` must contain only project-relative paths — strip any leading `./` or `../` and normalize to project-root-relative. Exclude npm/external imports entirely.
+
+### Step 7b: Build and write dep_graph.json
+
+After `fingerprints.json` is assembled, build the file-level dependency graph from the `key_imports` data. Write to `{project_root}/.synapse/dep_graph.json`.
+
+**Schema:**
+
+```json
+{
+  "generated_at": "ISO 8601 date (same as fingerprints.json)",
+  "project_root": "{project_root}",
+  "graph": {
+    "src/server/index.js": {
+      "imports": ["src/server/services/WatcherService.js", "src/server/utils/logger.js"],
+      "imported_by": ["electron/main.js"]
+    },
+    "src/server/services/WatcherService.js": {
+      "imports": ["src/server/utils/logger.js"],
+      "imported_by": ["src/server/index.js"]
+    }
+  }
+}
+```
+
+**Assembly algorithm:**
+
+1. **Forward pass (imports):** For each file in `fingerprints.json`, copy its `key_imports` array directly into `graph[file].imports`.
+
+2. **Reverse pass (imported_by):** Iterate over every file in the graph. For each entry in its `imports` array, add the current file to `graph[imported_file].imported_by`. This builds the reverse dependency mapping.
+
+3. **Ensure completeness:** If a file appears in an `imports` array but has no entry in the graph (i.e., the file was not scanned — perhaps it was excluded or in a skipped directory), create a stub entry: `{ "imports": [], "imported_by": [...] }`.
+
+4. **Sort arrays:** Sort both `imports` and `imported_by` arrays alphabetically for deterministic output.
+
+5. **Write the file** to `{project_root}/.synapse/dep_graph.json`, replacing any existing file entirely.
 
 ### Step 8: Report
 
@@ -185,9 +277,12 @@ Print a summary:
 
 - **Directories scanned:** {N}
 - **Files indexed:** {N}
+- **Files fingerprinted:** {N}
 - **Agents dispatched:** {N}
 
 The Table of Contents has been written to `.synapse/toc.md`.
+Semantic fingerprints have been written to `.synapse/fingerprints.json`.
+Dependency graph has been written to `.synapse/dep_graph.json`.
 ```
 
 ---
@@ -214,4 +309,6 @@ These rules are absolute. Violating any of them is a failure.
 - **Related files enable discovery.** When a service calls an API endpoint, link them. When a type is shared, link the source and all consumers.
 - **The project overview section is mandatory.** It goes at the top and provides the high-level context that individual file entries cannot convey — purpose, tech stack, architecture, and the overall structure.
 - **Content hashes are mandatory.** Every file entry must include a `<!-- hash:{8chars} -->` comment. This enables `!toc_update` to detect content changes without re-reading every file. If an agent fails to report a hash, use `00000000` as a placeholder.
+- **Fingerprints are sidecar data, not inline.** Semantic fingerprints are stored in `fingerprints.json`, NOT in `toc.md`. The TOC remains a human-readable markdown index. Fingerprints and the dependency graph are structured JSON for programmatic consumption.
+- **Dependency graph is derived, not hand-authored.** `dep_graph.json` is built entirely from the `key_imports` data in `fingerprints.json`. The master computes the reverse `imported_by` mapping — agents do not report it.
 - **Update the date.** Set "Last updated" to today's date.

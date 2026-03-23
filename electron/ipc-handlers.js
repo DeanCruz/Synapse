@@ -381,6 +381,14 @@ function registerIPCHandlers(getMainWindow) {
     };
   });
 
+  // GET /api/dashboards/:id/metrics -> get-dashboard-metrics
+  ipcMain.handle('get-dashboard-metrics', async (_event, id) => {
+    const metricsFile = path.join(getDashboardDir(id), 'metrics.json');
+    const data = await readJSONAsync(metricsFile);
+    if (data) return data;
+    return { metrics: null };
+  });
+
   // GET /api/archives -> get-archives
   ipcMain.handle('get-archives', async () => {
     return { archives: listArchives() };
@@ -419,6 +427,14 @@ function registerIPCHandlers(getMainWindow) {
   // GET /api/history -> get-history
   ipcMain.handle('get-history', async () => {
     return { history: listHistory() };
+  });
+
+  // GET /api/history/analytics -> get-history-analytics
+  ipcMain.handle('get-history-analytics', async () => {
+    const analyticsFile = path.join(HISTORY_DIR, 'analytics.json');
+    const data = await readJSONAsync(analyticsFile);
+    if (data) return data;
+    return { analytics: null };
   });
 
   // GET /api/queue -> get-queue

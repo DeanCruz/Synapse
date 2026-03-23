@@ -224,6 +224,20 @@ function handleApiRoute(req, res, url) {
     return true;
   }
 
+  // --- API: Get history analytics ---
+  if (url.pathname === '/api/history/analytics' && req.method === 'GET') {
+    const analyticsFile = path.join(HISTORY_DIR, 'analytics.json');
+    (async () => {
+      const data = await readJSONAsync(analyticsFile);
+      if (data) {
+        sendJSON(res, 200, data);
+      } else {
+        sendJSON(res, 200, { analytics: null });
+      }
+    })();
+    return true;
+  }
+
   // --- API: List archives ---
   if (url.pathname === '/api/archives' && req.method === 'GET') {
     const archives = listArchives();
@@ -411,6 +425,20 @@ function handleApiRoute(req, res, url) {
       fs.writeFileSync(logsFile, JSON.stringify(DEFAULT_LOGS, null, 2));
 
       sendJSON(res, 200, { success: true, archived: !!archiveName, archiveName });
+      return true;
+    }
+
+    // GET /api/dashboards/:id/metrics — read metrics.json for a dashboard
+    if (subpath === 'metrics' && req.method === 'GET') {
+      const metricsFile = path.join(dashboardDir, 'metrics.json');
+      (async () => {
+        const data = await readJSONAsync(metricsFile);
+        if (data) {
+          sendJSON(res, 200, data);
+        } else {
+          sendJSON(res, 200, { metrics: null });
+        }
+      })();
       return true;
     }
 

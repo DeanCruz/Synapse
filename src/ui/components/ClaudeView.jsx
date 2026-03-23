@@ -216,7 +216,7 @@ function ConversationMessage({ msg, isLatestThinking }) {
   }
   if (msg.type === 'tool_result_standalone') {
     return (
-      <div style={{ background: '#1a1a2e', border: '1px solid #2d6', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', maxWidth: '90%', fontSize: '0.75rem' }}>
+      <div style={{ background: '#1a1a2e', border: '1px solid #2d6', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', maxWidth: '90%', fontSize: '0.75rem', overflowWrap: 'break-word', wordBreak: 'break-word', minWidth: 0 }}>
         <span style={{ color: '#34d399' }}>[TOOL_RESULT_STANDALONE]</span>{' '}
         <span style={{ color: '#ccc' }}>{String(toolResultText(msg.content)).substring(0, 100)}</span>
       </div>

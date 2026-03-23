@@ -471,6 +471,118 @@ export function drawDependencyLines(svg, agents, agentMap, cardElements, contain
 }
 
 // ---------------------------------------------------------------------------
+// Sibling Communication Line Drawing (exported)
+// ---------------------------------------------------------------------------
+
+/**
+ * Draw sibling communication lines between agents that read each other's
+ * progress files (via non-empty `sibling_reads` arrays in progress data).
+ * Lines are dashed blue, drawn AFTER dependency lines but with lower opacity.
+ * Reuses the cached BFS pathway grid from drawDependencyLines.
+ *
+ * @param {SVGElement} svg
+ * @param {Array} agents
+ * @param {Object} agentMap — agent ID -> agent object
+ * @param {Object} cardElements — agent ID -> DOM element
+ * @param {HTMLElement} container — the pipeline container element
+ * @param {Object} progressData — task ID -> progress file data (must contain sibling_reads)
+ */
+export function drawSiblingLines(svg, agents, agentMap, cardElements, container, progressData) {
+  if (!progressData) return;
+
+  // Reuse the cached grid — drawDependencyLines must have been called first
+  var grid = _bfsCache.grid;
+  if (!grid) return;
+
+  var svgNS = 'http://www.w3.org/2000/svg';
+
+  for (var i = 0; i < agents.length; i++) {
+    var agent = agents[i];
+    var progress = progressData[agent.id];
+    if (!progress || !progress.sibling_reads || !Array.isArray(progress.sibling_reads) || progress.sibling_reads.length === 0) continue;
+
+    var siblingReads = progress.sibling_reads;
+
+    for (var s = 0; s < siblingReads.length; s++) {
+      var siblingId = siblingReads[s];
+      var fromCard = cardElements[agent.id];
+      var toCard = cardElements[siblingId];
+      if (!fromCard || !toCard) continue;
+
+      // Determine routing direction: use exit/entry based on wave positions
+      var fromAgent = agentMap[agent.id];
+      var toAgent = agentMap[siblingId];
+      var exitKey, entryKey;
+
+      if (fromAgent && toAgent && fromAgent.wave <= toAgent.wave) {
+        exitKey = grid.exits[agent.id];
+        entryKey = grid.entries[siblingId];
+      } else if (fromAgent && toAgent && fromAgent.wave > toAgent.wave) {
+        exitKey = grid.exits[siblingId];
+        entryKey = grid.entries[agent.id];
+      } else {
+        // Same wave or no wave info — try exit from reader to entry of sibling
+        exitKey = grid.exits[agent.id];
+        entryKey = grid.entries[siblingId];
+        // If that fails, try the reverse
+        if (!exitKey || !entryKey) {
+          exitKey = grid.exits[siblingId];
+          entryKey = grid.entries[agent.id];
+        }
+      }
+
+      if (!exitKey || !entryKey) continue;
+
+      // Use cached path if available
+      var pathCacheKey = exitKey + '->' + entryKey;
+      var pathResult = _bfsCache.paths[pathCacheKey];
+      if (pathResult === undefined) {
+        pathResult = bfsPath(grid, exitKey, entryKey);
+        _bfsCache.paths[pathCacheKey] = pathResult;
+      }
+      if (!pathResult || pathResult.length < 2) continue;
+      var path = pathResult;
+
+      // Build polyline points string
+      var points = '';
+      for (var p = 0; p < path.length; p++) {
+        if (p > 0) points += ' ';
+        points += path[p].x + ',' + path[p].y;
+      }
+
+      // SVG group for hover interaction
+      var group = document.createElementNS(svgNS, 'g');
+      group.setAttribute('class', 'sibling-group');
+      group.setAttribute('data-from', agent.id);
+      group.setAttribute('data-to', siblingId);
+
+      // Visible line — dashed blue with lower opacity
+      var visLine = document.createElementNS(svgNS, 'polyline');
+      visLine.setAttribute('points', points);
+      visLine.setAttribute('fill', 'none');
+      visLine.setAttribute('stroke', '#60a5fa');
+      visLine.setAttribute('stroke-width', '1.5');
+      visLine.setAttribute('stroke-dasharray', '4 3');
+      visLine.setAttribute('stroke-opacity', '0.5');
+      visLine.setAttribute('stroke-linejoin', 'round');
+      visLine.setAttribute('stroke-linecap', 'round');
+      visLine.setAttribute('class', 'sibling-line sibling-visible');
+
+      // Hit area (wide transparent stroke for hover)
+      var hitArea = document.createElementNS(svgNS, 'polyline');
+      hitArea.setAttribute('points', points);
+      hitArea.setAttribute('class', 'sibling-hit-area');
+      hitArea.setAttribute('stroke-linejoin', 'round');
+      hitArea.setAttribute('stroke-linecap', 'round');
+
+      group.appendChild(visLine);
+      group.appendChild(hitArea);
+      svg.appendChild(group);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Card Hover Effects (exported)
 // ---------------------------------------------------------------------------
 
@@ -511,6 +623,20 @@ export function setupCardHoverEffects(container, svg) {
       }
     }
 
+    // Sibling communication lines
+    var siblingGroups = svg.querySelectorAll('.sibling-group');
+    for (var g = 0; g < siblingGroups.length; g++) {
+      var from = siblingGroups[g].getAttribute('data-from');
+      var to = siblingGroups[g].getAttribute('data-to');
+
+      if (from === agentId || to === agentId) {
+        siblingGroups[g].classList.add('sibling-highlight');
+        hasRelevant = true;
+      } else {
+        siblingGroups[g].classList.add('sibling-dimmed');
+      }
+    }
+
     if (hasRelevant) {
       svg.classList.add('dep-hover-active');
     }
@@ -523,6 +649,13 @@ export function setupCardHoverEffects(container, svg) {
     for (var g = 0; g < groups.length; g++) {
       groups[g].classList.remove('dep-highlight-needs', 'dep-highlight-blocks', 'dep-dimmed');
     }
+
+    // Clear sibling line hover states
+    var siblingGroups = svg.querySelectorAll('.sibling-group');
+    for (var g = 0; g < siblingGroups.length; g++) {
+      siblingGroups[g].classList.remove('sibling-highlight', 'sibling-dimmed');
+    }
+
     svg.classList.remove('dep-hover-active');
   };
 

@@ -381,6 +381,7 @@ The Synapse directory contains:
 │   └── dashboard1/
 │       ├── initialization.json             ← Static plan data (written once by master)
 │       ├── logs.json                       ← Event log (written by master)
+│       ├── metrics.json                    ← Swarm performance metrics (written once after completion)
 │       └── progress/                       ← Worker progress files (one per agent)
 │           ├── 1.1.json
 │           └── 2.1.json
@@ -707,6 +708,18 @@ Shown when `task === null` in `initialization.json` (or the file doesn't exist).
 | **Permission request** | `"0.0"` | `"Orchestrator"` | `"permission"` | `"{What you need and why}"` — triggers popup |
 | **Eager dispatch** (after each worker completes) | `"0.0"` | `"Orchestrator"` | `"info"` | `"Dependency scan: dispatching {N} newly available tasks — {task IDs}"` |
 
+### metrics.json write point
+
+**File:** `{tracker_root}/dashboards/{dashboardId}/metrics.json`
+
+Swarm performance metrics — written **once** after all tasks complete (during Step 17 finalization). Contains elapsed time, parallelization efficiency ratios, duration distribution, failure rate, peak concurrency, and deviation counts.
+
+| Moment | What to write |
+|---|---|
+| **All tasks complete (after verification if run)** | Compute metrics from all progress files: `elapsed_seconds`, `serial_estimate_seconds`, `parallel_efficiency` (serial/elapsed ratio), `duration_distribution` (min/avg/max/median), `failure_rate`, `max_concurrent`, `deviation_count`, `total_tasks`, `completed_tasks`, `failed_tasks`. Write the full metrics object atomically. |
+
+This file is not watched by the server for live updates — it is a post-hoc analysis artifact for performance comparison across swarms.
+
 ### Eager dispatch write points (after every worker completion)
 
 > **This is the master's most critical runtime loop. See "CRITICAL — Eager Dispatch on Every Worker Completion" at the top of this document for the full procedure.**
@@ -862,6 +875,57 @@ The master writes a state checkpoint after every dispatch event (worker dispatch
 
 ---
 
+## Swarm Metrics
+
+**File path:** `{tracker_root}/dashboards/{dashboardId}/metrics.json`
+
+Swarm performance metrics — written **once** after all tasks complete. Contains elapsed time, efficiency ratios, duration distribution, and parallelism statistics. This file enables historical performance comparison across swarms and helps calibrate future task decomposition.
+
+**Schema:**
+
+```json
+{
+  "swarm_name": "{task-slug}",
+  "computed_at": "{ISO 8601 timestamp}",
+  "elapsed_seconds": 187,
+  "serial_estimate_seconds": 612,
+  "parallel_efficiency": 3.27,
+  "duration_distribution": {
+    "min": 28,
+    "avg": 76.5,
+    "max": 142,
+    "median": 71
+  },
+  "failure_rate": 0.0,
+  "max_concurrent": 5,
+  "deviation_count": 2,
+  "total_tasks": 8,
+  "completed_tasks": 8,
+  "failed_tasks": 0
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `swarm_name` | string | Task slug from `initialization.json` → `task.name` |
+| `computed_at` | ISO 8601 | When the metrics were computed |
+| `elapsed_seconds` | number | Wall-clock time from first worker start to last worker completion |
+| `serial_estimate_seconds` | number | Sum of all individual task durations (sequential estimate) |
+| `parallel_efficiency` | number | `serial_estimate / elapsed` — higher means better parallelism |
+| `duration_distribution` | object | `{ min, avg, max, median }` of task durations in seconds |
+| `failure_rate` | number | `failed_tasks / total_tasks` (0.0 = no failures) |
+| `max_concurrent` | number | Peak number of simultaneously in-progress tasks |
+| `deviation_count` | number | Total deviations across all tasks |
+| `total_tasks` | number | Total number of tasks in the swarm |
+| `completed_tasks` | number | Tasks with `status === "completed"` |
+| `failed_tasks` | number | Tasks with `status === "failed"` |
+
+**When to write:** Once, during Step 17 finalization, after all tasks complete and after verification (if run).
+
+**Note:** This file is NOT watched by the server for live updates. It is a post-hoc analysis artifact. Workers never read or write it.
+
+---
+
 ## Common Mistakes
 
 | Mistake | Effect on dashboard | Fix |
@@ -887,3 +951,22 @@ The master writes a state checkpoint after every dispatch event (worker dispatch
 | Master skipping the dashboard | No task cards, no progress, no visibility | Always write `initialization.json`, use `logs.json`, dispatch workers who write progress files |
 | Not reading command/instruction files | Master forgets steps, skips dashboard, misses protocols | Read `_commands/p_track.md` and `agent/instructions/tracker_master_instructions.md` in full every invocation |
 | Creating a repair task for a failed repair task | Infinite repair loop — each repair fails and spawns another | Check if the failed task ID ends with `r`. If so, escalate to permanent failure — do NOT create another repair task. |
+
+---
+
+## Compaction Recovery
+
+During long-running swarms, context compaction may discard the master's cached upstream results. This causes downstream tasks to receive incomplete `UPSTREAM RESULTS` sections.
+
+**Detection:** Before constructing any downstream worker prompt, verify cached results exist for all completed upstream tasks. If a task has a progress file with `status: "completed"` but the master has no cached result for it, compaction has occurred.
+
+**Recovery:**
+1. Read all progress files in `{tracker_root}/dashboards/{dashboardId}/progress/` where `status === "completed"`.
+2. For each, extract `task_id`, `summary`, `milestones[]`, `deviations[]`, and scan `logs[]` for `"warn"`/`"error"` entries.
+3. Rebuild the upstream result cache from these fields. Note: `FILES CHANGED` data (from the worker's return) is lost after compaction — recover what you can from summaries and milestones.
+4. Log a `"warn"` entry to `logs.json`: `"Context compaction detected — rebuilt upstream cache from {N} progress files. File change data may be incomplete."`
+5. Resume dispatch. If file change data is missing for an upstream result, include this note in the downstream prompt's `UPSTREAM RESULTS`: "Note: File change details unavailable due to context compaction — check milestones for partial file information."
+
+**Limitation:** Progress files do not contain `FILES CHANGED` data (that comes from the worker's return to the master). After compaction, file change data may be incomplete unless the worker's summary or milestones mention specific files.
+
+**Prevention:** Keep terminal output minimal and avoid re-reading large files during dispatch loops to reduce compaction frequency.

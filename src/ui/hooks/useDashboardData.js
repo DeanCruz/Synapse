@@ -102,6 +102,7 @@ export function useDashboardData() {
   const dispatch = useDispatch();
   const listenersRef = useRef([]);
   const progressRef = useRef({});
+  const initRef = useRef({});
 
   // Track current dashboard ID via ref to avoid stale closures in IPC push listeners
   const currentDashboardIdRef = useRef(state.currentDashboardId);
@@ -135,7 +136,10 @@ export function useDashboardData() {
 
     try {
       const init = await api.getDashboardInit(id);
-      if (init) dispatch({ type: 'SET_INIT', data: init });
+      if (init) {
+        initRef.current[id] = init;
+        dispatch({ type: 'SET_INIT', data: init });
+      }
     } catch (_) {}
 
     try {
@@ -185,10 +189,15 @@ export function useDashboardData() {
     addListener('initialization', (data) => {
       if (!data.dashboardId) return;
       const { dashboardId, ...initData } = data;
+      initRef.current[dashboardId] = initData;
       // Use ref (not stale state) to compare against current dashboard
       if (dashboardId === currentDashboardIdRef.current) {
         dispatch({ type: 'SET_INIT', data: initData });
       }
+      // Recompute sidebar status
+      const prog = progressRef.current[dashboardId] || {};
+      const newStatus = deriveDashboardStatus(initData, prog);
+      dispatch({ type: 'SET_DASHBOARD_STATE', id: dashboardId, status: newStatus });
     });
 
     addListener('logs', (data) => {
@@ -208,6 +217,12 @@ export function useDashboardData() {
       if (data.dashboardId === currentDashboardIdRef.current) {
         dispatch({ type: 'SET_PROGRESS', data: dbProgress });
       }
+      // Recompute sidebar status from latest progress
+      const init = initRef.current[data.dashboardId];
+      if (init) {
+        const newStatus = deriveDashboardStatus(init, dbProgress);
+        dispatch({ type: 'SET_DASHBOARD_STATE', id: data.dashboardId, status: newStatus });
+      }
     });
 
     addListener('all_progress', (data) => {
@@ -217,6 +232,12 @@ export function useDashboardData() {
       dispatch({ type: 'SET_DASHBOARD_PROGRESS', dashboardId, progress: progressMap });
       if (dashboardId === currentDashboardIdRef.current) {
         dispatch({ type: 'SET_PROGRESS', data: progressMap });
+      }
+      // Recompute sidebar status
+      const init = initRef.current[dashboardId];
+      if (init) {
+        const newStatus = deriveDashboardStatus(init, progressMap);
+        dispatch({ type: 'SET_DASHBOARD_STATE', id: dashboardId, status: newStatus });
       }
     });
 
@@ -234,6 +255,7 @@ export function useDashboardData() {
 
       // Update per-dashboard caches
       if (initialization) {
+        initRef.current[dashboardId] = initialization;
         if (dashboardId === currentDashboardIdRef.current) {
           dispatch({ type: 'SET_INIT', data: initialization });
         }
@@ -250,6 +272,13 @@ export function useDashboardData() {
         if (dashboardId === currentDashboardIdRef.current) {
           dispatch({ type: 'SET_LOGS', data: logs });
         }
+      }
+      // Recompute sidebar status
+      const curInit = initialization || initRef.current[dashboardId];
+      const curProg = progress || progressRef.current[dashboardId] || {};
+      if (curInit) {
+        const newStatus = deriveDashboardStatus(curInit, curProg);
+        dispatch({ type: 'SET_DASHBOARD_STATE', id: dashboardId, status: newStatus });
       }
     });
 
