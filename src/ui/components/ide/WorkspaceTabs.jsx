@@ -24,6 +24,7 @@ export default function WorkspaceTabs() {
         const dashboardId = await createWorkspaceDashboard(wsId);
         if (dashboardId) {
           saveDashboardProject(dashboardId, folderPath);
+          dispatch({ type: 'SWITCH_DASHBOARD', id: dashboardId });
         }
       } catch (err) {
         console.error('Failed to create workspace dashboard:', err);
@@ -35,7 +36,12 @@ export default function WorkspaceTabs() {
 
   const handleSwitchWorkspace = useCallback((workspaceId) => {
     dispatch({ type: 'IDE_SWITCH_WORKSPACE', workspaceId });
-  }, [dispatch]);
+    // Switch to the workspace's associated dashboard so chat context matches
+    const dashId = getWorkspaceDashboard(workspaceId);
+    if (dashId && dashId !== currentDashboardId) {
+      dispatch({ type: 'SWITCH_DASHBOARD', id: dashId });
+    }
+  }, [dispatch, currentDashboardId]);
 
   const handleCloseWorkspace = useCallback(async (e, workspaceId) => {
     e.stopPropagation();

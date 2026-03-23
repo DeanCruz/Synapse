@@ -12,6 +12,19 @@ const CLAUDE_WELCOME_MSG = { id: 'welcome', type: 'system', text: 'Agent chat is
 const DEFAULT_TAB = { id: 'default', name: 'Chat 1' };
 
 const IDE_WORKSPACES_KEY = 'synapse-ide-workspaces';
+const GIT_REPOS_KEY = 'synapse-git-repos';
+
+// Helper: deep-update a tree node's children by path
+function updateTreeNode(node, targetPath, children) {
+  if (node.path === targetPath) {
+    return { ...node, children };
+  }
+  if (!node.children) return node;
+  return {
+    ...node,
+    children: node.children.map(child => updateTreeNode(child, targetPath, children)),
+  };
+}
 
 function claudeMessagesKey(dashboardId, tabId) {
   const base = CLAUDE_MESSAGES_KEY_PREFIX + (dashboardId || '');
@@ -78,7 +91,23 @@ function saveWorkspaces(workspaces) {
   try { localStorage.setItem(IDE_WORKSPACES_KEY, JSON.stringify(workspaces)); } catch (e) { /* */ }
 }
 
+function loadSavedGitRepos() {
+  try {
+    const raw = localStorage.getItem(GIT_REPOS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) { /* corrupt or unavailable */ }
+  return [];
+}
+
+function saveGitRepos(repos) {
+  try { localStorage.setItem(GIT_REPOS_KEY, JSON.stringify(repos)); } catch (e) { /* */ }
+}
+
 const savedWorkspaces = loadSavedWorkspaces();
+const savedGitRepos = loadSavedGitRepos();
 
 const initialState = {
   currentDashboardId: 'dashboard1',
@@ -99,7 +128,7 @@ const initialState = {
   activeLogFilter: 'all',
   activeStatFilter: null,
   seenPermissionCount: 0,
-  activeView: 'dashboard', // 'dashboard' | 'home' | 'swarmBuilder' | 'claude'
+  activeView: 'dashboard', // 'dashboard' | 'home' | 'swarmBuilder' | 'claude' | 'ide' | 'git'
   activeModal: null, // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor'
   modalDashboardId: null, // which dashboard a modal was opened for
   claudeDashboardId: null, // which dashboard the Claude view is associated with
@@ -130,6 +159,18 @@ const initialState = {
   ideFileTrees: {}, // { [workspaceId]: treeData }
   ideSidebarView: 'explorer', // which sidebar panel is shown in IDE
   ideChatOpen: false, // whether IDE inline chat is open
+  // Git Manager state — open repos, active repo, git data, loading states
+  gitRepos: savedGitRepos, // [{ id, path, name }]
+  gitActiveRepoId: savedGitRepos.length > 0 ? savedGitRepos[0].id : null,
+  gitStatus: null, // { staged: [], unstaged: [], untracked: [] }
+  gitBranches: [], // [{ name, current, tracking, ahead, behind }]
+  gitCurrentBranch: null, // string — name of current branch
+  gitLog: [], // [{ hash, abbrevHash, author, date, message, parents, refs }]
+  gitDiff: null, // string — current diff content
+  gitRemotes: [], // [{ name, fetchUrl, pushUrl }]
+  gitLoading: false, // boolean — global loading indicator
+  gitError: null, // string | null — last error message
+  gitSelectedFile: null, // string | null — currently selected file path for diff view
 };
 
 function appReducerCore(state, action) {
@@ -166,11 +207,14 @@ function appReducerCore(state, action) {
       const newTabStash = { ...state.claudeTabStash, [prevStashKey]: state.claudeMessages };
       // Stash current dashboard's active tab ID
       const newActiveTabMap = { ...state.claudeActiveTabMap, [prevDid]: prevTabId };
-      // Stash processing state
+      // Stash processing state + chat view state
       const procStash = { ...state.claudeProcessingStash, [prevDid]: {
         isProcessing: state.claudeIsProcessing,
         status: state.claudeStatus,
         pendingAttachments: state.claudePendingAttachments,
+        viewMode: state.claudeViewMode,
+        chatOpen: state.activeView === 'claude',
+        ideChatOpen: state.ideChatOpen,
       }};
       // Restore target dashboard's tab state
       const targetTabId = newActiveTabMap[action.id] || 'default';
@@ -178,8 +222,13 @@ function appReducerCore(state, action) {
       const targetMessages = newTabStash[targetStashKey] || loadSavedMessages(action.id, targetTabId) || [CLAUDE_WELCOME_MSG];
       const targetProc = procStash[action.id] || {};
       const targetTabs = state.claudeTabs[action.id] || loadSavedTabs(action.id) || [{ ...DEFAULT_TAB }];
-      // Clear unread count for target dashboard if switching while in claude view
-      const switchUnread = state.activeView === 'claude'
+      // Keep current view and chat mode — user's view context is global, not per-dashboard.
+      // If the user is viewing chat, they stay in chat. If viewing dashboard, they stay there.
+      const targetActiveView = state.activeView;
+      const targetViewMode = state.claudeViewMode;
+      const targetIdeChatOpen = state.ideChatOpen;
+      // Clear unread count for target dashboard if chat will be visible
+      const switchUnread = targetActiveView === 'claude'
         ? (({ [action.id]: _, ...rest }) => rest)(state.unreadChatCounts)
         : state.unreadChatCounts;
       return {
@@ -191,7 +240,7 @@ function appReducerCore(state, action) {
         currentStatus: null,
         activeLogFilter: 'all',
         seenPermissionCount: 0,
-        activeView: state.activeView === 'claude' ? 'claude' : state.activeView === 'ide' ? 'ide' : 'dashboard',
+        activeView: targetActiveView,
         archiveViewActive: false,
         queueViewActive: false,
         // Tab state
@@ -206,6 +255,8 @@ function appReducerCore(state, action) {
         claudeStatus: targetProc.status || 'Ready',
         claudePendingAttachments: targetProc.pendingAttachments || [],
         claudeDashboardId: action.id,
+        claudeViewMode: targetViewMode,
+        ideChatOpen: targetIdeChatOpen,
         unblockedTasks: [],
         unreadChatCounts: switchUnread,
       };
@@ -514,6 +565,12 @@ function appReducerCore(state, action) {
       const newFileTrees = { ...state.ideFileTrees, [action.workspaceId]: action.tree };
       return { ...state, ideFileTrees: newFileTrees };
     }
+    case 'IDE_UPDATE_FILE_TREE_NODE': {
+      const currentTree = state.ideFileTrees[action.workspaceId];
+      if (!currentTree) return state;
+      const updatedTree = updateTreeNode(currentTree, action.nodePath, action.children);
+      return { ...state, ideFileTrees: { ...state.ideFileTrees, [action.workspaceId]: updatedTree } };
+    }
     case 'IDE_OPEN_FILE': {
       const wsId = action.workspaceId;
       const currentFiles = state.ideOpenFiles[wsId] || [];
@@ -576,6 +633,92 @@ function appReducerCore(state, action) {
       return { ...state, ideChatOpen: true, claudeViewMode: 'expanded', claudeEverOpened: true };
     case 'IDE_CLOSE_CHAT':
       return { ...state, ideChatOpen: false };
+    // --- Git Manager state management ---
+    case 'GIT_OPEN_REPO': {
+      const repoId = action.id || String(Date.now());
+      const newRepo = { id: repoId, path: action.path, name: action.name };
+      // Check if this path is already open
+      const existingRepo = state.gitRepos.find(r => r.path === action.path);
+      if (existingRepo) {
+        return { ...state, gitActiveRepoId: existingRepo.id };
+      }
+      const updatedGitRepos = [...state.gitRepos, newRepo];
+      saveGitRepos(updatedGitRepos);
+      return {
+        ...state,
+        gitRepos: updatedGitRepos,
+        gitActiveRepoId: repoId,
+        gitStatus: null,
+        gitBranches: [],
+        gitCurrentBranch: null,
+        gitLog: [],
+        gitDiff: null,
+        gitRemotes: [],
+        gitError: null,
+        gitSelectedFile: null,
+      };
+    }
+    case 'GIT_CLOSE_REPO': {
+      const closingRepoId = action.repoId;
+      const updatedGitRepos = state.gitRepos.filter(r => r.id !== closingRepoId);
+      let newActiveRepoId = state.gitActiveRepoId;
+      if (newActiveRepoId === closingRepoId) {
+        if (updatedGitRepos.length > 0) {
+          const closedIdx = state.gitRepos.findIndex(r => r.id === closingRepoId);
+          const newIdx = Math.min(closedIdx, updatedGitRepos.length - 1);
+          newActiveRepoId = updatedGitRepos[newIdx].id;
+        } else {
+          newActiveRepoId = null;
+        }
+      }
+      saveGitRepos(updatedGitRepos);
+      return {
+        ...state,
+        gitRepos: updatedGitRepos,
+        gitActiveRepoId: newActiveRepoId,
+        gitStatus: newActiveRepoId !== state.gitActiveRepoId ? null : state.gitStatus,
+        gitBranches: newActiveRepoId !== state.gitActiveRepoId ? [] : state.gitBranches,
+        gitCurrentBranch: newActiveRepoId !== state.gitActiveRepoId ? null : state.gitCurrentBranch,
+        gitLog: newActiveRepoId !== state.gitActiveRepoId ? [] : state.gitLog,
+        gitDiff: newActiveRepoId !== state.gitActiveRepoId ? null : state.gitDiff,
+        gitRemotes: newActiveRepoId !== state.gitActiveRepoId ? [] : state.gitRemotes,
+        gitError: null,
+        gitSelectedFile: newActiveRepoId !== state.gitActiveRepoId ? null : state.gitSelectedFile,
+      };
+    }
+    case 'GIT_SWITCH_REPO': {
+      if (action.repoId === state.gitActiveRepoId) return state;
+      return {
+        ...state,
+        gitActiveRepoId: action.repoId,
+        gitStatus: null,
+        gitBranches: [],
+        gitCurrentBranch: null,
+        gitLog: [],
+        gitDiff: null,
+        gitRemotes: [],
+        gitError: null,
+        gitSelectedFile: null,
+      };
+    }
+    case 'GIT_SET_STATUS':
+      return { ...state, gitStatus: action.status };
+    case 'GIT_SET_BRANCHES':
+      return { ...state, gitBranches: action.branches };
+    case 'GIT_SET_CURRENT_BRANCH':
+      return { ...state, gitCurrentBranch: action.branch };
+    case 'GIT_SET_LOG':
+      return { ...state, gitLog: action.log };
+    case 'GIT_SET_DIFF':
+      return { ...state, gitDiff: action.diff };
+    case 'GIT_SET_REMOTES':
+      return { ...state, gitRemotes: action.remotes };
+    case 'GIT_SET_LOADING':
+      return { ...state, gitLoading: action.value };
+    case 'GIT_SET_ERROR':
+      return { ...state, gitError: action.error };
+    case 'GIT_SET_SELECTED_FILE':
+      return { ...state, gitSelectedFile: action.filePath };
     default:
       return state;
   }

@@ -8,10 +8,10 @@ import LogPanel from './LogPanel.jsx';
 import TerminalView from './TerminalView.jsx';
 
 const PANEL_TABS = [
+  { id: 'terminal', label: 'TERMINAL' },
   { id: 'problems', label: 'PROBLEMS' },
   { id: 'output', label: 'OUTPUT' },
   { id: 'debug-console', label: 'DEBUG CONSOLE' },
-  { id: 'terminal', label: 'TERMINAL' },
   { id: 'ports', label: 'PORTS' },
 ];
 

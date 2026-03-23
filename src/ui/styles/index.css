@@ -2203,6 +2203,8 @@ a:hover {
   flex: 1;
   min-width: 0;
   position: relative;
+  height: calc(100vh - 53px);
+  overflow: hidden;
 }
 
 /* ============================================================
@@ -2612,6 +2614,10 @@ a:hover {
 .sidebar-delete-popup-btn.cancel:hover {
   background: var(--surface-hover);
   color: var(--text);
+}
+
+.sidebar-delete-popup-title.agent-active {
+  color: #f6ad55;
 }
 
 .dashboard-item.archived-item {
@@ -4669,6 +4675,91 @@ a:hover {
   align-self: flex-start;
 }
 
+/* ----- Additional Context Section ----- */
+
+.additional-context-description {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.additional-context-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.additional-context-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  gap: 8px;
+  transition: border-color 0.15s;
+}
+
+.additional-context-row:hover {
+  border-color: var(--border-hover);
+}
+
+.additional-context-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.additional-context-name {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.additional-context-path {
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  word-break: break-all;
+  margin-top: 1px;
+}
+
+.additional-context-remove {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+
+.additional-context-remove:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.additional-context-add-btn {
+  border-style: dashed;
+  margin-top: 0;
+}
+
 /* ----- Task Editor Modal ----- */
 
 .task-editor-form { display: flex; flex-direction: column; gap: 8px; }
@@ -5540,6 +5631,15 @@ a:hover {
   background: rgba(239, 68, 68, 0.08);
   border-radius: 6px;
   padding: 8px 12px;
+}
+
+.claude-system-msg.claude-compaction {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-weight: 500;
 }
 
 /* ----- Thinking bubble (extended thinking / processing indicator) ----- */
@@ -6589,6 +6689,7 @@ a:hover {
 /* Embedded mode (IDE): normal flex child */
 .bottom-panel--embedded {
   position: relative;
+  flex-shrink: 0;
 }
 
 /* ----- Resize Handle (top edge) ----- */

@@ -26,6 +26,10 @@ import SettingsModal from './components/modals/SettingsModal.jsx';
 import AgentDetails from './components/modals/AgentDetails.jsx';
 import { getDashboardProject } from './utils/dashboardProjects.js';
 
+// Lazy import for GitManagerView — prevents crashes before the component exists
+let GitManagerView = null;
+try { GitManagerView = require('./components/git/GitManagerView.jsx').default; } catch(e) {}
+
 // ── ClearDashboardSection ────────────────────────────────────────────────────
 function ClearDashboardSection({ visible, onClear, taskName }) {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -287,6 +291,8 @@ export default function App() {
       case 'claude':
         // Claude is now a floating panel — show the dashboard behind it
         return <DashboardContent />;
+      case 'git':
+        return GitManagerView ? <GitManagerView /> : <div>Loading Git Manager...</div>;
       case 'ide':
         return <IDEView />;
       case 'dashboard':
@@ -298,7 +304,7 @@ export default function App() {
   return (
     <>
       <Header />
-      <div className={`dashboard-layout${ideChatActive ? ' ide-chat-active' : ''}`}>
+      <div className="dashboard-layout">
         <Sidebar />
         <div className="dashboard-content">
           {renderMainContent()}
@@ -445,7 +451,7 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMo
             onSetMode={onSetMode}
           />
         )}
-        <ClaudeView hideHeader />
+        <ClaudeView hideHeader viewMode={viewMode} />
       </div>
     </div>
   );

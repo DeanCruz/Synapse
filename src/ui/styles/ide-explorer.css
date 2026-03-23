@@ -333,3 +333,13 @@
   font-size: 0.68rem;
   color: var(--text-secondary);
 }
+
+/* ----- Lazy-load spinner ----- */
+.ide-explorer-spinner {
+  animation: ide-spin 0.8s linear infinite;
+}
+
+@keyframes ide-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

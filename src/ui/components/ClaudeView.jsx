@@ -203,7 +203,7 @@ function ConversationMessage({ msg, isLatestThinking }) {
   }
   if (msg.type === 'system') {
     return (
-      <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '')}>
+      <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '') + (msg.isCompaction ? ' claude-compaction' : '')}>
         {msg.text}
       </div>
     );
@@ -225,7 +225,7 @@ function ConversationMessage({ msg, isLatestThinking }) {
   );
 }
 
-export default function ClaudeView({ onClose, hideHeader }) {
+export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const api = window.electronAPI || null;
   const state = useAppState();
   const dispatch = useDispatch();
@@ -398,6 +398,18 @@ export default function ClaudeView({ onClose, hideHeader }) {
     const timer = setTimeout(scrollToBottom, 100);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll to bottom when chat panel expands from minimized (e.g. sidebar click, expand button)
+  const prevViewModeRef = useRef(viewMode);
+  useEffect(() => {
+    const prev = prevViewModeRef.current;
+    prevViewModeRef.current = viewMode;
+    if (prev === 'minimized' && viewMode && viewMode !== 'minimized') {
+      isAtBottomRef.current = true;
+      setNewMsgCount(0);
+      requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
+    }
+  }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function scrollToNew() {
     scrollToBottom();
@@ -778,7 +790,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
       } catch (e) {
         // Non-JSON output from CLI — strip ANSI and skip progress/spinner lines
         const cleaned = stripAnsi(trimmed).trim();
-        if (cleaned && !isProgressBarLine(cleaned)) {
+        if (cleaned && /auto.?compact|compacting conversation/i.test(cleaned)) {
+          flushText();
+          appendMsg({ type: 'system', text: 'Context is being compacted — earlier messages may be summarized', isCompaction: true });
+        } else if (cleaned && !isProgressBarLine(cleaned)) {
           appendTextContent(cleaned + '\n');
         }
       }
@@ -797,7 +812,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
             text: `Connected — model: ${evt.model || '?'}, ${tools.length} tools available`,
           });
         } else {
-          appendMsg({ type: 'system', text: evt.message || JSON.stringify(evt) });
+          const msg = evt.message || JSON.stringify(evt);
+          const isCompaction = /compact|context.*(truncat|compress|summar)/i.test(msg)
+            || evt.subtype === 'auto_compact' || evt.subtype === 'compact';
+          appendMsg({ type: 'system', text: isCompaction ? 'Context is being compacted — earlier messages may be summarized' : msg, isCompaction });
         }
         break;
       }
@@ -1171,6 +1189,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
       const settings = await api.getSettings();
       const perDashboardPath = getDashboardProject(dashboardId);
       const projectDir = perDashboardPath || settings.activeProjectPath || null;
+      const additionalContextDirs = getDashboardAdditionalContext(dashboardId) || [];
       const provider = settings.agentProvider || 'claude';
       const selectedModel = resolveModel(provider, model || settings.defaultModel);
       const cliPath = provider === 'codex'
@@ -1178,7 +1197,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         : (settings.claudeCliPath || null);
 
       // Only inject system prompt on fresh sessions — resumed sessions already have context
-      const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir, dashboardId);
+      const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir, dashboardId, additionalContextDirs);
 
       // Build conversation history context.
       // For resumed sessions, the CLI already has full history — but we still inject
@@ -1216,6 +1235,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         cliPath,
         dangerouslySkipPermissions: settings.dangerouslySkipPermissions || false,
         projectDir,
+        additionalContextDirs,
       });
     } catch (err) {
       appendMsg({ type: 'system', text: 'Error: ' + (err.message || String(err)), isError: true });

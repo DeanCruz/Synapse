@@ -234,59 +234,8 @@
 }
 
 /* ============================================================
-   IDE Inline Chat — overrides .claude-float for IDE context
+   IDE Chat — floating popup (same as dashboard view)
    ============================================================ */
 
-/* When IDE chat is active, the floating panel becomes an inline flex child */
-.dashboard-layout.ide-chat-active .claude-float {
-  position: relative;
-  flex-shrink: 0;
-  width: 40%;
-  min-width: 360px;
-  max-width: 60%;
-  height: 100%;
-  border-left: 1px solid var(--border);
-  z-index: auto;
-  top: auto;
-  right: auto;
-  bottom: auto;
-  transition: none !important;
-}
-
-/* Expanded mode in IDE context */
-.dashboard-layout.ide-chat-active .claude-float--expanded {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Maximized mode — take full width, hide editor */
-.dashboard-layout.ide-chat-active .claude-float--maximized {
-  position: relative;
-  flex: 1;
-  width: 100%;
-  min-width: 0;
-  max-width: none;
-}
-
-/* Hide dashboard-content (editor area) when chat is maximized in IDE */
-.dashboard-layout.ide-chat-active:has(.claude-float--maximized) .dashboard-content {
-  display: none;
-}
-
-/* Collapsed mode */
-.dashboard-layout.ide-chat-active .claude-float--collapsed {
-  position: relative;
-  width: auto;
-  height: 100%;
-}
-
-/* Hide the minimized pill in IDE mode — chat is controlled by IDE_OPEN/CLOSE_CHAT */
-.dashboard-layout.ide-chat-active .claude-pill {
-  display: none;
-}
-
-/* Resize handle adjustments for inline mode */
-.dashboard-layout.ide-chat-active .claude-float-resize-handle {
-  left: 0;
-}
+/* No IDE-specific overrides — chat uses the same floating popup
+   behavior as the dashboard view (position: fixed, bottom-right). */

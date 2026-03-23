@@ -117,8 +117,10 @@ export default function Sidebar() {
     if (id !== currentDashboardId) {
       dispatch({ type: 'SWITCH_DASHBOARD', id });
     }
-    // Always route to the dashboard page, never the code explorer
-    dispatch({ type: 'SET_VIEW', view: 'dashboard' });
+    // Switch to dashboard view unless already in claude chat (preserve chat state)
+    if (activeView !== 'claude') {
+      dispatch({ type: 'SET_VIEW', view: 'dashboard' });
+    }
   }
 
   function handleProjectClick(e, dashboardId) {
@@ -141,6 +143,7 @@ export default function Sidebar() {
       if (dashboardId !== currentDashboardId) {
         dispatch({ type: 'SWITCH_DASHBOARD', id: dashboardId });
       }
+      dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode: 'maximized' });
       dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId });
     }
   }
@@ -165,15 +168,31 @@ export default function Sidebar() {
 
   const handleDeleteClick = useCallback((e, id) => {
     e.stopPropagation();
-    // Check if dashboard has task data
-    const init = state.allDashboardProgress?.[id];
+    // Check if an agent chat is actively processing on this dashboard
+    const isChatActive = id === currentDashboardId
+      ? claudeIsProcessing
+      : !!claudeProcessingStash[id]?.isProcessing;
+    // Check if dashboard has task/swarm data
     const dashStatus = dashboardStates[id];
-    const hasData = dashStatus && dashStatus !== 'idle';
+    const hasTaskData = dashStatus && dashStatus !== 'idle';
 
-    if (hasData) {
-      // Show confirmation popup — derive task name from init if available
-      setDeleteConfirm({ id, taskName: 'active task data' });
-      // Try to get the actual task name
+    if (isChatActive) {
+      // Agent is running — show active-agent popup
+      setDeleteConfirm({ id, taskName: null, agentActive: true, hasTaskData });
+      // Try to get the actual task name if there's task data
+      if (hasTaskData) {
+        const api = window.electronAPI;
+        if (api) {
+          api.getDashboardInit(id).then(initData => {
+            if (initData && initData.task && initData.task.name) {
+              setDeleteConfirm(prev => prev && prev.id === id ? { ...prev, taskName: initData.task.name } : prev);
+            }
+          }).catch(() => {});
+        }
+      }
+    } else if (hasTaskData) {
+      // No active agent but has task data — existing flow
+      setDeleteConfirm({ id, taskName: 'active task data', agentActive: false, hasTaskData: true });
       const api = window.electronAPI;
       if (api) {
         api.getDashboardInit(id).then(initData => {
@@ -183,11 +202,11 @@ export default function Sidebar() {
         }).catch(() => {});
       }
     } else {
-      // No data — delete directly (but don't allow deleting the last dashboard)
+      // No data, no active agent — delete directly (but don't allow deleting the last dashboard)
       if (dashboards.length <= 1) return;
       performDelete(id);
     }
-  }, [dashboardStates, dashboards.length, state.allDashboardProgress]);
+  }, [dashboardStates, dashboards.length, state.allDashboardProgress, currentDashboardId, claudeIsProcessing, claudeProcessingStash]);
 
   const performDelete = useCallback(async (id, archive = false) => {
     const api = window.electronAPI;
@@ -306,7 +325,8 @@ export default function Sidebar() {
 
   // Determine which sidebar tab is active
   const isIdeActive = activeView === 'ide';
-  const isDashboardActive = !isIdeActive;
+  const isGitActive = activeView === 'git';
+  const isDashboardActive = !isIdeActive && !isGitActive;
 
   return (
     <aside className={`dashboard-sidebar${collapsed ? ' collapsed' : ''}`}>
@@ -317,7 +337,17 @@ export default function Sidebar() {
             className={`sidebar-tab${isIdeActive ? ' active' : ''}`}
             title="Code Explorer"
             aria-label="Code Explorer"
-            onClick={() => dispatch({ type: 'SET_VIEW', view: 'ide' })}
+            onClick={() => {
+              dispatch({ type: 'SET_VIEW', view: 'ide' });
+              // Switch to the active workspace's dashboard so chat context matches
+              const activeWsId = state.ideActiveWorkspaceId;
+              if (activeWsId) {
+                const dashId = getWorkspaceDashboard(activeWsId);
+                if (dashId && dashId !== currentDashboardId) {
+                  dispatch({ type: 'SWITCH_DASHBOARD', id: dashId });
+                }
+              }
+            }}
           >
             <span className="sidebar-tab-icon">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
@@ -364,6 +394,25 @@ export default function Sidebar() {
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
               <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
             </svg>
+          </button>
+        </div>
+        <div className="sidebar-tab-row">
+          <button
+            className={`sidebar-tab${isGitActive ? ' active' : ''}`}
+            title="Git Manager"
+            aria-label="Git Manager"
+            onClick={() => dispatch({ type: 'SET_VIEW', view: 'git' })}
+          >
+            <span className="sidebar-tab-icon">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M6 2v8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M6 14v-1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                <path d="M6 10c2 0 4-1 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
+                <circle cx="6" cy="14" r="1.2" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+                <circle cx="10" cy="5" r="1.2" stroke="currentColor" strokeWidth="1.2" fill="none"/>
+              </svg>
+            </span>
+            <span className="sidebar-tab-label">Git Manager</span>
           </button>
         </div>
       </div>
@@ -508,25 +557,60 @@ export default function Sidebar() {
       {deleteConfirm && (
         <div className="sidebar-delete-overlay" onClick={() => setDeleteConfirm(null)}>
           <div className="sidebar-delete-popup" onClick={e => e.stopPropagation()}>
-            <div className="sidebar-delete-popup-title">Close Dashboard?</div>
-            <p className="sidebar-delete-popup-text">
-              <strong>{getDisplayName(deleteConfirm.id, dashboardNames)}</strong> has data
-              {deleteConfirm.taskName ? ` (${deleteConfirm.taskName})` : ''}.
-            </p>
-            <div className="sidebar-delete-popup-actions">
-              <button
-                className="sidebar-delete-popup-btn archive"
-                onClick={() => performDelete(deleteConfirm.id, true)}
-              >
-                Archive & Close
-              </button>
-              <button
-                className="sidebar-delete-popup-btn cancel"
-                onClick={() => setDeleteConfirm(null)}
-              >
-                Cancel
-              </button>
-            </div>
+            {deleteConfirm.agentActive ? (
+              <>
+                <div className="sidebar-delete-popup-title agent-active">Agent Active</div>
+                <p className="sidebar-delete-popup-text">
+                  <strong>{getDisplayName(deleteConfirm.id, dashboardNames)}</strong> has an agent currently running.
+                  {deleteConfirm.hasTaskData && deleteConfirm.taskName ? ` Task: ${deleteConfirm.taskName}.` : ''}
+                </p>
+                <div className="sidebar-delete-popup-actions">
+                  {deleteConfirm.hasTaskData ? (
+                    <button
+                      className="sidebar-delete-popup-btn archive"
+                      onClick={() => performDelete(deleteConfirm.id, true)}
+                    >
+                      Archive All & Close
+                    </button>
+                  ) : (
+                    <button
+                      className="sidebar-delete-popup-btn archive"
+                      onClick={() => performDelete(deleteConfirm.id, false)}
+                    >
+                      Archive Chat & Close
+                    </button>
+                  )}
+                  <button
+                    className="sidebar-delete-popup-btn cancel"
+                    onClick={() => setDeleteConfirm(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="sidebar-delete-popup-title">Close Dashboard?</div>
+                <p className="sidebar-delete-popup-text">
+                  <strong>{getDisplayName(deleteConfirm.id, dashboardNames)}</strong> has data
+                  {deleteConfirm.taskName ? ` (${deleteConfirm.taskName})` : ''}.
+                </p>
+                <div className="sidebar-delete-popup-actions">
+                  <button
+                    className="sidebar-delete-popup-btn archive"
+                    onClick={() => performDelete(deleteConfirm.id, true)}
+                  >
+                    Archive & Close
+                  </button>
+                  <button
+                    className="sidebar-delete-popup-btn cancel"
+                    onClick={() => setDeleteConfirm(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

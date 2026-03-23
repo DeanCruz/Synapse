@@ -89,6 +89,15 @@ export default function IDEView() {
     })();
   }, [ideWorkspaces, dashboardList]);
 
+  // Sync currentDashboardId to active workspace's dashboard when workspace changes
+  useEffect(() => {
+    if (!ideActiveWorkspaceId) return;
+    const dashId = getWorkspaceDashboard(ideActiveWorkspaceId);
+    if (dashId && dashId !== currentDashboardId) {
+      dispatch({ type: 'SWITCH_DASHBOARD', id: dashId });
+    }
+  }, [ideActiveWorkspaceId, currentDashboardId, dispatch]);
+
   // Draggable divider handlers
   const handleDividerMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -209,7 +218,7 @@ export default function IDEView() {
         logs={currentLogs}
         activeFilter={activeLogFilter}
         onFilterChange={(level) => dispatch({ type: 'SET', key: 'activeLogFilter', value: level })}
-        projectDir={projectPath}
+        projectDir={activeWorkspace?.path || projectPath}
         embedded
       />
     </div>

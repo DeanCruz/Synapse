@@ -1,8 +1,8 @@
-// FileExplorer — Recursive tree view of files and folders
+// FileExplorer — Recursive tree view with lazy-loaded directories
 // Renders from ideFileTrees[workspaceId] in AppContext state.
-// Clicking a file dispatches IDE_OPEN_FILE; clicking a folder toggles expand/collapse.
+// Clicking a file dispatches IDE_OPEN_FILE; clicking a folder loads its children on demand.
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useAppState, useDispatch } from '../../context/AppContext.jsx';
 import '../../styles/ide-explorer.css';
 
@@ -159,16 +159,27 @@ function NewFolderIcon() {
   );
 }
 
+// ── Loading Spinner ──────────────────────────────────────────
+
+function LoadingSpinner() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" className="ide-explorer-spinner">
+      <circle cx="8" cy="8" r="5" stroke="currentColor" strokeWidth="1.5" strokeDasharray="20 12" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // ── TreeNode — recursive renderer ────────────────────────────
 
-function TreeNode({ node, depth, expandedPaths, toggleExpand, onFileClick, activeFilePath }) {
+function TreeNode({ node, depth, expandedPaths, toggleExpand, onFileClick, activeFilePath, loadingPaths }) {
   const isDir = node.type === 'directory';
   const isExpanded = expandedPaths.has(node.path);
+  const isLoading = loadingPaths.has(node.path);
   const isActive = !isDir && node.path === activeFilePath;
 
   const handleClick = useCallback(() => {
     if (isDir) {
-      toggleExpand(node.path);
+      toggleExpand(node.path, node.children);
     } else {
       onFileClick(node);
     }
@@ -186,7 +197,7 @@ function TreeNode({ node, depth, expandedPaths, toggleExpand, onFileClick, activ
       >
         {isDir ? (
           <span className={`ide-explorer-chevron${isExpanded ? ' expanded' : ''}`}>
-            <ChevronIcon />
+            {isLoading ? <LoadingSpinner /> : <ChevronIcon />}
           </span>
         ) : (
           <span className="ide-explorer-chevron-spacer" />
@@ -196,7 +207,7 @@ function TreeNode({ node, depth, expandedPaths, toggleExpand, onFileClick, activ
         </span>
         <span className="ide-explorer-label">{node.name}</span>
       </div>
-      {isDir && isExpanded && node.children && node.children.length > 0 && (
+      {isDir && isExpanded && Array.isArray(node.children) && node.children.length > 0 && (
         node.children.map(child => (
           <TreeNode
             key={child.path}
@@ -206,6 +217,7 @@ function TreeNode({ node, depth, expandedPaths, toggleExpand, onFileClick, activ
             toggleExpand={toggleExpand}
             onFileClick={onFileClick}
             activeFilePath={activeFilePath}
+            loadingPaths={loadingPaths}
           />
         ))
       )}
@@ -230,57 +242,91 @@ export default function FileExplorer() {
   const activeFilePath = activeFile ? activeFile.path : null;
 
   const [expandedPaths, setExpandedPaths] = useState(new Set());
-  const [loading, setLoading] = useState(false);
+  const [loadingPaths, setLoadingPaths] = useState(new Set());
+  const [initialLoading, setInitialLoading] = useState(false);
 
-  // Load file tree when workspace changes (or on initial mount if workspace already active)
+  // Load root level when workspace changes
   useEffect(() => {
     if (!workspaceId || !workspace) return;
-
-    // If tree already loaded, skip
     if (tree) return;
 
     let cancelled = false;
-    async function loadTree() {
-      setLoading(true);
+    async function loadRoot() {
+      setInitialLoading(true);
       try {
         const api = window.electronAPI;
-        if (!api || !api.ideReadDir) return;
+        if (!api || !api.ideListDir) return;
 
-        const result = await api.ideReadDir(workspace.path, { maxDepth: 3 });
+        const result = await api.ideListDir(workspace.path);
         if (cancelled) return;
 
-        if (result && result.success && result.tree) {
-          dispatch({ type: 'IDE_SET_FILE_TREE', workspaceId, tree: result.tree });
-
-          // Auto-expand root level
-          if (result.tree.children) {
-            const rootPaths = new Set([result.tree.path]);
-            setExpandedPaths(rootPaths);
-          }
+        if (result && result.success) {
+          const rootName = workspace.path.split('/').pop() || workspace.name;
+          dispatch({
+            type: 'IDE_SET_FILE_TREE',
+            workspaceId,
+            tree: {
+              name: rootName,
+              path: workspace.path,
+              type: 'directory',
+              children: result.entries,
+            },
+          });
+          setExpandedPaths(new Set([workspace.path]));
         }
       } catch (err) {
-        console.error('FileExplorer: failed to load directory tree', err);
+        console.error('FileExplorer: failed to load root', err);
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setInitialLoading(false);
       }
     }
 
-    loadTree();
+    loadRoot();
     return () => { cancelled = true; };
   }, [workspaceId, workspace, tree, dispatch]);
 
-  // Toggle expand/collapse for a directory path
-  const toggleExpand = useCallback((path) => {
+  // Lazy-load a directory's children
+  const loadChildren = useCallback(async (dirPath) => {
+    const api = window.electronAPI;
+    if (!api || !api.ideListDir) return;
+
+    setLoadingPaths(prev => new Set(prev).add(dirPath));
+    try {
+      const result = await api.ideListDir(dirPath);
+      if (result && result.success) {
+        dispatch({
+          type: 'IDE_UPDATE_FILE_TREE_NODE',
+          workspaceId,
+          nodePath: dirPath,
+          children: result.entries,
+        });
+      }
+    } catch (err) {
+      console.error('FileExplorer: failed to load directory', dirPath, err);
+    } finally {
+      setLoadingPaths(prev => {
+        const next = new Set(prev);
+        next.delete(dirPath);
+        return next;
+      });
+    }
+  }, [workspaceId, dispatch]);
+
+  // Toggle expand/collapse — triggers lazy load when children are null
+  const toggleExpand = useCallback((nodePath, children) => {
     setExpandedPaths(prev => {
       const next = new Set(prev);
-      if (next.has(path)) {
-        next.delete(path);
+      if (next.has(nodePath)) {
+        next.delete(nodePath);
       } else {
-        next.add(path);
+        next.add(nodePath);
+        if (children === null) {
+          loadChildren(nodePath);
+        }
       }
       return next;
     });
-  }, []);
+  }, [loadChildren]);
 
   // Handle file click — dispatch IDE_OPEN_FILE
   const onFileClick = useCallback((node) => {
@@ -292,22 +338,34 @@ export default function FileExplorer() {
     });
   }, [workspaceId, dispatch]);
 
-  // Refresh tree
+  // Refresh tree — clear and reload root level
   const handleRefresh = useCallback(async () => {
     if (!workspace) return;
-    setLoading(true);
+    setInitialLoading(true);
+    setExpandedPaths(new Set());
     try {
       const api = window.electronAPI;
-      if (!api || !api.ideReadDir) return;
+      if (!api || !api.ideListDir) return;
 
-      const result = await api.ideReadDir(workspace.path, { maxDepth: 3 });
-      if (result && result.success && result.tree) {
-        dispatch({ type: 'IDE_SET_FILE_TREE', workspaceId, tree: result.tree });
+      const result = await api.ideListDir(workspace.path);
+      if (result && result.success) {
+        const rootName = workspace.path.split('/').pop() || workspace.name;
+        dispatch({
+          type: 'IDE_SET_FILE_TREE',
+          workspaceId,
+          tree: {
+            name: rootName,
+            path: workspace.path,
+            type: 'directory',
+            children: result.entries,
+          },
+        });
+        setExpandedPaths(new Set([workspace.path]));
       }
     } catch (err) {
       console.error('FileExplorer: failed to refresh directory tree', err);
     } finally {
-      setLoading(false);
+      setInitialLoading(false);
     }
   }, [workspace, workspaceId, dispatch]);
 
@@ -338,7 +396,7 @@ export default function FileExplorer() {
       </div>
 
       <div className="ide-explorer-tree" role="tree">
-        {loading ? (
+        {initialLoading ? (
           <div className="ide-explorer-loading">Loading...</div>
         ) : !tree ? (
           <div className="ide-explorer-empty">No files found</div>
@@ -352,6 +410,7 @@ export default function FileExplorer() {
               toggleExpand={toggleExpand}
               onFileClick={onFileClick}
               activeFilePath={activeFilePath}
+              loadingPaths={loadingPaths}
             />
           ))
         ) : (

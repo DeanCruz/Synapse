@@ -1,9 +1,15 @@
 // ProjectModal — Project configuration: directory picker, recent projects, CLI detection
-// Supports per-dashboard project paths.
+// Supports per-dashboard project paths and additional context directories.
 
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
-import { getDashboardProject, saveDashboardProject } from '../../utils/dashboardProjects.js';
+import {
+  getDashboardProject,
+  saveDashboardProject,
+  getDashboardAdditionalContext,
+  addDashboardAdditionalContext,
+  removeDashboardAdditionalContext,
+} from '../../utils/dashboardProjects.js';
 
 const MODEL_OPTIONS = {
   claude: [
@@ -34,6 +40,13 @@ function resolveModel(provider, savedModel) {
   return options[0].value;
 }
 
+/** Extract the last segment of a path as a short display name */
+function dirBasename(dirPath) {
+  if (!dirPath) return '';
+  const segments = dirPath.replace(/[\\/]+$/, '').split(/[\\/]/);
+  return segments[segments.length - 1] || dirPath;
+}
+
 export default function ProjectModal({ onClose, onProjectSelected, dashboardId }) {
   const api = window.electronAPI || null;
   const targetDashboard = dashboardId || 'dashboard1';
@@ -47,6 +60,7 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
   const [cliFound, setCliFound] = useState(null); // null | true | false
   const [defaultModel, setDefaultModel] = useState('');
   const [skipPermissions, setSkipPermissions] = useState(false);
+  const [additionalDirs, setAdditionalDirs] = useState([]);
 
   useEffect(() => {
     if (!api) return;
@@ -86,6 +100,9 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
         setCliFound(false);
       }
     });
+
+    // Load additional context directories from localStorage
+    setAdditionalDirs(getDashboardAdditionalContext(targetDashboard));
   }, [api, provider, targetDashboard]);
 
   function handleSelectDirectory() {
@@ -103,6 +120,22 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
         if (onProjectSelected) onProjectSelected({ ...project, dashboardId: targetDashboard });
       });
     });
+  }
+
+  function handleAddAdditionalDir() {
+    if (!api) return;
+    api.selectProjectDirectory().then(dirPath => {
+      if (!dirPath) return;
+      // Prevent adding the active project directory as additional context
+      if (currentProject && currentProject.path === dirPath) return;
+      addDashboardAdditionalContext(targetDashboard, dirPath);
+      setAdditionalDirs(getDashboardAdditionalContext(targetDashboard));
+    });
+  }
+
+  function handleRemoveAdditionalDir(dirPath) {
+    removeDashboardAdditionalContext(targetDashboard, dirPath);
+    setAdditionalDirs(getDashboardAdditionalContext(targetDashboard));
   }
 
   function handleRecentClick(recent) {
@@ -175,6 +208,36 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
         </div>
         <button className="project-pick-btn" onClick={handleSelectDirectory}>
           Select Project Directory
+        </button>
+      </div>
+
+      {/* Additional Context */}
+      <div className="settings-section">
+        <div className="settings-section-title">Additional Context</div>
+        <div className="additional-context-description">
+          Add extra directories whose files will be available as context for this dashboard's agents.
+        </div>
+        {additionalDirs.length > 0 && (
+          <div className="additional-context-list">
+            {additionalDirs.map((dir) => (
+              <div key={dir} className="additional-context-row">
+                <div className="additional-context-info">
+                  <span className="additional-context-name">{dirBasename(dir)}</span>
+                  <span className="additional-context-path">{dir}</span>
+                </div>
+                <button
+                  className="additional-context-remove"
+                  onClick={() => handleRemoveAdditionalDir(dir)}
+                  title="Remove directory"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <button className="project-pick-btn additional-context-add-btn" onClick={handleAddAdditionalDir}>
+          + Add Additional Directory
         </button>
       </div>
 
