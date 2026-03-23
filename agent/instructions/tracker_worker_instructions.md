@@ -1,531 +1,114 @@
 # Worker Agent — Progress Reporting Instructions
 
-**Who this is for:** Worker agents dispatched by the master agent during a `!p_track` swarm. This document is your complete reference for how to report your progress to the live dashboard.
+**Who this is for:** Worker agents dispatched by the master agent during a `!p_track` swarm. This document is your quick-start reference and hub for all worker protocols.
 
 **This is NON-NEGOTIABLE.** Every worker agent MUST follow these instructions exactly. Failure to report progress means the dashboard shows no live updates for your task — the user has no visibility into what you're doing.
 
 **Key location distinction:** Your dispatch prompt provides two critical paths:
-- **`{tracker_root}`** — The Synapse repository. This is where you write progress files (`{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`).
+- **`{tracker_root}`** — The Synapse repository. This is where you write progress files.
 - **`{project_root}`** — The target project. This is where you do your actual code work (read source files, modify code, create files).
 
-These are different locations. Do NOT confuse them. Your code work happens in `{project_root}`. Your progress reporting goes to `{tracker_root}`.
+These are **different locations**. Do NOT confuse them. Your code work happens in `{project_root}`. Your progress reporting goes to `{tracker_root}`.
 
----
-
-## Your Progress File
-
-You own exactly one file:
-
+Your progress file path:
 ```
 {tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json
 ```
 
-The `{tracker_root}`, `{dashboardId}`, and `{task_id}` values are provided in your dispatch prompt. Write to this exact path.
+---
 
-You write the **full file** on every update (overwrite, not append). You are the sole writer — no read-modify-write needed, just write the entire JSON object each time.
+## Quick Start Checklist
 
-The dashboard server watches this directory and broadcasts changes to the browser in real-time via SSE. Every write you make becomes visible within ~50ms.
+Follow these steps in order for every task:
+
+1. **Write initial progress file** at the path above with `status: "in_progress"`, `stage: "reading_context"`, `started_at` (live timestamp), and a starting log entry. Include `template_version` from your dispatch prompt header. Write the full JSON file every time — you are the sole owner.
+2. **If you have dependencies:** Read upstream progress files at `{tracker_root}/dashboards/{dashboardId}/progress/{dep_id}.json`. Check `status`, `summary`, `deviations[]` (especially `CRITICAL`), and `logs[]` for errors. Adapt if upstream deviated. Log what you found. --> Read `agent/worker/upstream_deps.md`
+3. **Progress through fixed stages in order:** `reading_context` --> `planning` --> `implementing` --> `testing` --> `finalizing` --> `completed` | `failed`
+4. **Write on every stage transition** — update `stage`, `message`, and add a log entry. Append milestones for significant accomplishments.
+5. **Report deviations IMMEDIATELY** — add to both `deviations[]` (with severity) and `logs[]` (at `level: "deviation"`) the moment any divergence occurs. --> Read `agent/worker/deviations.md`
+6. **Populate `shared_context`** if you create exports, interfaces, or patterns that same-wave siblings could use. --> Read `agent/worker/sibling_comms.md`
+7. **On completion:** Set `status: "completed"`, `stage: "completed"`, `completed_at`, and a descriptive `summary`. For partial completion (80%+ done), use `"completed"` with summary stating what remains blocked. Reserve `"failed"` for zero useful output.
+8. **Return structured summary** to the master. --> Read `agent/worker/return_format.md`
+
+```
+STATUS: completed | failed
+SUMMARY: {specific, quantified one-line description}
+FILES CHANGED: {list with action prefixes: created/modified/deleted}
+EXPORTS: {new public exports — omit if none}
+DIVERGENT ACTIONS: {any deviations from the plan}
+```
+
+**Timestamps:** Always capture live via `date -u +"%Y-%m-%dT%H:%M:%SZ"`. Never guess or hardcode.
+
+**Writes:** Always use the Write tool for progress files — not echo/cat shell commands.
 
 ---
 
-## Progress File Schema
+## Module Index
 
-```json
-{
-  "task_id": "1.1",
-  "status": "in_progress",
-  "started_at": "2026-02-25T14:05:00Z",
-  "completed_at": null,
-  "summary": null,
-  "assigned_agent": "Agent 1",
-  "stage": "implementing",
-  "message": "Creating auth middleware — 2/3 endpoints done",
-  "milestones": [
-    { "at": "2026-02-25T14:05:10Z", "msg": "Read CLAUDE.md and task XML" },
-    { "at": "2026-02-25T14:05:35Z", "msg": "Read existing middleware for patterns" },
-    { "at": "2026-02-25T14:06:01Z", "msg": "Created rate limiter for /api/auth" }
-  ],
-  "deviations": [],
-  "logs": [
-    { "at": "2026-02-25T14:05:00Z", "level": "info", "msg": "Starting task — reading context" },
-    { "at": "2026-02-25T14:05:10Z", "level": "info", "msg": "Read CLAUDE.md — found auth patterns" },
-    { "at": "2026-02-25T14:06:01Z", "level": "info", "msg": "Rate limiter created for /api/auth endpoint" }
-  ],
-  "prompt_size": {
-    "total_chars": 12500,
-    "estimated_tokens": 3571
-  },
-  "template_version": "p_track_v2",
-  "shared_context": {
-    "exports": [],
-    "interfaces": [],
-    "patterns": [],
-    "notes": ""
-  },
-  "sibling_reads": []
-}
-```
+Detailed instructions are organized into focused modules. Read the ones relevant to your task.
 
-### Field Definitions
-
-| Field | Type | Description |
+| Module | File | What It Covers |
 |---|---|---|
-| `task_id` | string | Your task ID (e.g., `"1.1"`, `"2.3"`). Provided in your dispatch prompt. |
-| `status` | string | Current lifecycle status. See **Status Values** below. |
-| `started_at` | ISO 8601 \| null | Timestamp when you began work. Set on your first write. |
-| `completed_at` | ISO 8601 \| null | Timestamp when you finished. Set only on `"completed"` or `"failed"`. |
-| `summary` | string \| null | One-line summary of what you accomplished. Set on completion. |
-| `assigned_agent` | string | Your agent label (e.g., `"Agent 1"`). Provided in your dispatch prompt. |
-| `stage` | string | Current stage. See **Fixed Stages** below. |
-| `message` | string | What you are doing right now — one line, specific and actionable. |
-| `milestones` | array | Significant accomplishments during execution. Append-only. |
-| `deviations` | array | Any divergences from the original plan. Append-only. |
-| `logs` | array | Detailed log entries for the popup log box. Append-only. |
-| `prompt_size` | object \| null | Optional. Size metrics of the dispatch prompt received. Contains `total_chars` (integer) and `estimated_tokens` (integer). |
-| `template_version` | string \| null | The version identifier from TEMPLATE_VERSION field. Set on first write. |
-| `shared_context` | object \| null | Optional. Info this worker makes available to same-wave siblings. Sub-fields: `exports` (array of export names), `interfaces` (array of interface signatures), `patterns` (array of pattern descriptions), `notes` (free-form string). |
-| `sibling_reads` | array | Optional. Array of task ID strings of sibling progress files read. Used by dashboard for sibling communication lines. |
+| **Progress Reporting** | `agent/worker/progress_reporting.md` | Full JSON schema (15 fields), status values, fixed stages, 7 mandatory writes, ambiguity handling, atomic writes, log/milestone/deviation entry formats, partial completion, dashboard rendering, full lifecycle examples |
+| **Return Format** | `agent/worker/return_format.md` | STATUS/SUMMARY/FILES CHANGED/EXPORTS/WARNINGS/ERRORS/DIVERGENT ACTIONS return structure, good vs bad summaries, 4 complete examples |
+| **Deviations** | `agent/worker/deviations.md` | Severity levels (CRITICAL/MODERATE/MINOR), 7 concrete examples with classifications, ambiguity-as-deviation, how the master uses severity for replanning |
+| **Upstream Dependencies** | `agent/worker/upstream_deps.md` | 4-step procedure: read files, extract critical info, adapt approach, log findings. Handling failures and CRITICAL deviations |
+| **Sibling Communication** | `agent/worker/sibling_comms.md` | shared_context sub-fields, sibling_reads tracking, 7 rules, never-write-to-sibling-files invariant, practical example |
 
-### Status Values
+---
 
-| Status | When to set |
+## When to Read What
+
+| Moment | Module to Read |
 |---|---|
-| `"in_progress"` | On your first write (when you start reading context) |
-| `"completed"` | When your task is done successfully |
-| `"failed"` | When your task fails and cannot be recovered |
-
-### Fixed Stages
-
-Progress through these stages in order:
-
-| Stage | Description |
-|---|---|
-| `reading_context` | Reading project files, CLAUDE.md, documentation, task XML |
-| `planning` | Assessing readiness, planning approach |
-| `implementing` | Writing code, creating/modifying files |
-| `testing` | Running tests, validating changes |
-| `finalizing` | Final cleanup, preparing summary report |
-| `completed` | Task completed successfully |
-| `failed` | Task failed |
+| Starting any task | `agent/worker/progress_reporting.md` |
+| Your task has upstream dependencies | `agent/worker/upstream_deps.md` |
+| Something deviates from the plan | `agent/worker/deviations.md` |
+| Same-wave sibling awareness needed | `agent/worker/sibling_comms.md` |
+| Task finishing — preparing return | `agent/worker/return_format.md` |
 
 ---
 
-## When You MUST Write
+## Progress Reporting — Summary
 
-### Mandatory writes (skipping any of these is a failure):
+Your progress file is the full lifecycle record of your task — status, timestamps, stage, message, milestones, deviations, logs, and optional shared context. The dashboard watches this file and broadcasts changes in real-time (~50ms). Write the full JSON on every update. Use the Write tool for atomic writes.
 
-1. **Before starting work** — Write your initial progress file with `status: "in_progress"`, `stage: "reading_context"`, and a log entry saying you're starting.
+**7 mandatory writes** (skipping any is a failure): (1) before starting work, (2) after reading upstream dependencies, (3) on every stage transition, (4) on any deviation, (5) on any error, (6) on completion, (7) on failure.
 
-   Extract the `TEMPLATE_VERSION` value from the top of your dispatch prompt and include it as `template_version` in your progress file on first write (e.g., `"template_version": "p_track_v2"`). This helps the master agent identify which prompt template was used.
-
-   Optionally, measure the size of your dispatch prompt and include it as `prompt_size` in your initial write. This helps the master agent calibrate future prompt budgets.
-
-   To calculate prompt size, count the total characters of your full dispatch prompt (everything the master sent you). Estimate tokens as `Math.ceil(totalChars / 3.5)`. This is approximate — precision is not required.
-
-2. **After initial write, if you have dependencies** — Read all upstream dependency progress files (see **Reading Upstream Results** below). Log what you found. If any upstream task failed or has `CRITICAL` deviations, adapt before proceeding.
-
-3. **On every stage transition** — Update `stage`, `message`, and add a log entry.
-
-4. **On any deviation from the plan** — Add to `deviations[]` AND add a log entry at `level: "deviation"`. Do this IMMEDIATELY when the deviation occurs.
-
-5. **On any error** — Add a log entry at `level: "error"` with details.
-
-6. **On task completion** — Set `status: "completed"`, `stage: "completed"`, `completed_at`, `summary`, and add a final log entry.
-
-7. **On task failure** — Set `status: "failed"`, `stage: "failed"`, `completed_at`, `summary` (with error description), and add a log entry at `level: "error"`.
-
-### Recommended writes (as often as useful):
-
-- **On significant milestones** within a stage — Add to `milestones[]` and `logs[]`.
-- **On unexpected findings** — Add a log entry at `level: "warn"`.
-- **On starting a new sub-operation** — Update `message` and add a log entry.
-- **On populating shared_context** — Recommended when the worker creates exports, interfaces, or patterns that same-wave siblings may find useful. Populate `shared_context` as early as possible so siblings can read it.
+--> Full details: `agent/worker/progress_reporting.md`
 
 ---
 
-## Handling Ambiguity
+## Deviations — Summary
 
-When you encounter something unclear or ambiguous during execution — a vague requirement, a missing detail, or conflicting information — resolve it using this priority order:
+A deviation is anything you did that was not explicitly in your dispatch prompt. Classify with severity: `CRITICAL` (changes interfaces downstream tasks depend on — may trigger replanning), `MODERATE` (different approach, same outcome), or `MINOR` (cosmetic, no functional impact). When in doubt, report it — under-reporting is worse than over-reporting.
 
-1. **Check your dispatch prompt first.** The master agent's prompt is your primary spec. Re-read it carefully — the answer may already be there.
-2. **Check the repo's `CLAUDE.md`.** Conventions and patterns defined there override general assumptions.
-3. **Make the most conservative choice.** When neither the prompt nor `CLAUDE.md` resolves the ambiguity, choose the approach that changes the least, breaks nothing, and follows existing patterns in the codebase.
-4. **Document it as a deviation.** Add an entry to `deviations[]` explaining what was ambiguous, what you chose, and why. Use severity `MODERATE` unless the choice affects downstream tasks (then use `CRITICAL`).
-5. **Add a log entry at level `"warn"`.** Make the ambiguity visible in the dashboard logs.
-
-**Never guess silently.** An undocumented guess looks like a bug when the master reviews your work. A documented conservative choice looks like good judgment.
+--> Full details: `agent/worker/deviations.md`
 
 ---
 
-## How to Write
+## Upstream Dependencies — Summary
 
-### Getting Timestamps
+If your task has dependencies, you MUST read their progress files before implementing. The master's dispatch prompt was written during planning — upstream workers may have deviated, failed, or changed interfaces since then. Progress files are the ground truth. Follow the 4-step procedure: read files, extract critical info, adapt approach, log findings.
 
-Always capture live timestamps:
-
-```bash
-date -u +"%Y-%m-%dT%H:%M:%SZ"
-```
-
-Use the output directly. **Never guess or construct timestamps from memory.**
-
-### Atomic Writes
-
-Write the full file every time. Since you are the sole writer, simply construct the entire JSON object in memory and write it all at once. The Write tool does this naturally — it writes to a temporary file and renames it into place, so the target file is never in a partially-written state.
-
-**Always use the Write tool for progress file updates.** Do not use manual `echo` or `cat` shell commands to write JSON files — those do not guarantee atomic writes and can produce truncated files if interrupted. The Write tool is the correct and safest approach for all progress file updates.
-
-If for any reason you must write a file via shell (e.g., in a script), use the write-then-rename pattern:
-1. Write to `{filePath}.tmp`
-2. Rename `{filePath}.tmp` to `{filePath}` (rename is atomic on POSIX and NTFS)
-
-### Log Entry Format
-
-Each entry in the `logs` array:
-
-```json
-{ "at": "ISO 8601 timestamp", "level": "info", "msg": "What happened" }
-```
-
-**Log levels:**
-
-| Level | When to use | Dashboard display |
-|---|---|---|
-| `info` | Normal progress, milestones, stage transitions | Purple badge |
-| `warn` | Unexpected findings, non-blocking issues | Lime/yellow badge |
-| `error` | Failures, blocking issues | Red badge |
-| `deviation` | Any divergence from the planned approach | Yellow badge |
-
-### Milestone Entry Format
-
-Each entry in the `milestones` array:
-
-```json
-{ "at": "ISO 8601 timestamp", "msg": "What was accomplished" }
-```
-
-### Deviation Entry Format
-
-Each entry in the `deviations` array:
-
-```json
-{ "at": "ISO 8601 timestamp", "severity": "MODERATE", "description": "What changed and why" }
-```
-
-### Deviation Severity Levels
-
-Every deviation **must** include a `severity` field. Classify each deviation into one of these three levels:
-
-| Severity | Meaning | Example |
-|---|---|---|
-| `CRITICAL` | Changes an API, interface, or contract that downstream tasks depend on. May block other agents. | Changed a function signature that other tasks import |
-| `MODERATE` | Different approach or implementation than planned, but produces the same outcome. Does not affect downstream. | Used a different library method to achieve the same result |
-| `MINOR` | Cosmetic or naming differences with no functional impact. | Renamed a variable for clarity, adjusted whitespace |
-
-The master agent uses severity to decide whether to re-plan downstream tasks (`CRITICAL`), note for review (`MODERATE`), or ignore (`MINOR`).
-
-### What Counts as a Deviation — Concrete Examples
-
-A deviation is ANYTHING you did that was not explicitly specified in your dispatch prompt. When in doubt, report it — under-reporting is worse than over-reporting.
-
-**Common deviations workers should catch:**
-
-| What Happened | Severity | Example Deviation Entry |
-|---|---|---|
-| Modified a file not in the FILES list | MODERATE | "Modified src/utils/helpers.ts to add a missing export — not in original file list but required for the new endpoint to compile" |
-| Used a different API/library method than the prompt suggested | MODERATE | "Used `fs.promises.readFile` instead of the suggested `fs.readFileSync` — async version is consistent with the existing codebase pattern" |
-| Added error handling or validation not specified in the task | MINOR | "Added input validation for empty strings on the name field — not specified but prevents a runtime error discovered during implementation" |
-| Changed a function signature (parameters, return type) | CRITICAL | "Changed `createUser(name, email)` to `createUser(userData: CreateUserInput)` — upstream interface was incompatible with the existing validation middleware" |
-| Created a helper function, utility, or file not in the plan | MODERATE | "Created src/utils/sanitize.ts with `sanitizeInput()` helper — extracting shared logic between the two endpoints this task creates" |
-| Skipped a step from the task description | MODERATE | "Skipped adding the migration file — the database schema already has the required column from a previous migration" |
-| Discovered and fixed a pre-existing bug while implementing | MINOR | "Fixed off-by-one error in existing pagination logic — discovered while adding the new endpoint, the bug would have caused the new endpoint to return incorrect page counts" |
-
-**The rule is simple: if someone diffed your changes against the task description, would they find anything not mentioned? If yes, it's a deviation. Report it.**
-
-### Reading Upstream Results — NON-NEGOTIABLE for Dependent Tasks
-
-If your task has upstream dependencies (listed in your dispatch prompt), you **MUST read the progress files of every upstream dependency** before starting implementation. This is not optional — the master's dispatch prompt may contain a summary, but the progress files contain the **ground truth**: what actually happened, what deviated, what failed, and what the upstream worker logged.
-
-#### Step 1: Read upstream progress files
-
-For each dependency task ID listed in your dispatch prompt, read:
-
-```
-{tracker_root}/dashboards/{dashboardId}/progress/{dependency_task_id}.json
-```
-
-For example, if your task depends on `1.1` and `1.3`, read both:
-- `{tracker_root}/dashboards/{dashboardId}/progress/1.1.json`
-- `{tracker_root}/dashboards/{dashboardId}/progress/1.3.json`
-
-**Read these files in parallel** — they have no dependency on each other.
-
-#### Step 2: Extract critical information
-
-From each upstream progress file, extract:
-
-| Field | What to look for |
-|---|---|
-| **`status`** | Did it complete successfully or fail? If `"failed"`, assess whether your task can still proceed. |
-| **`summary`** | What the upstream task accomplished — the definitive one-line result. |
-| **`deviations[]`** | Every plan divergence. Pay special attention to `CRITICAL` severity — these may change your assumptions about interfaces, file locations, or APIs. |
-| **`milestones[]`** | What was actually built, in order. Cross-reference with what your dispatch prompt expects to exist. |
-| **`logs[]`** | The full narrative of what happened. Scan for `"error"` and `"warn"` level entries — these reveal issues that may affect your work. |
-| **`message`** | Final state message — useful for understanding the last thing the upstream worker did. |
-
-#### Step 3: Adapt your approach
-
-- **If an upstream task failed:** Log a `"warn"` entry explaining which dependency failed and how you're proceeding. If the failure means a file or API you need doesn't exist, attempt to work around it or set your own status to `"failed"` with a clear explanation.
-- **If an upstream task has `CRITICAL` deviations:** The upstream worker changed something your dispatch prompt assumed would be a certain way. Adapt your implementation to match what was *actually* built, not what was *planned*. Log every adaptation as a deviation in your own progress file.
-- **If an upstream task has `MODERATE` deviations:** Note them but they likely don't affect your work. Log that you reviewed them.
-- **If an upstream task's logs contain `"error"` entries:** Even if the task completed, errors may indicate partial issues. Review them to ensure nothing impacts your work.
-
-#### Step 4: Log what you learned
-
-After reading upstream progress files, add a log entry summarizing what you found:
-
-```json
-{ "at": "...", "level": "info", "msg": "Read upstream dependencies: 1.1 (completed, no deviations), 1.3 (completed, 1 MODERATE deviation — used alternative API pattern)" }
-```
-
-If any upstream deviation requires you to adapt, log it immediately:
-
-```json
-{ "at": "...", "level": "deviation", "msg": "Adapting to upstream 1.3 deviation: using fetchUsers() instead of planned getUsers() — upstream changed the export name" }
-```
-
-#### Why this matters
-
-The master agent writes dispatch prompts during the **planning phase** — before any work is done. By the time your task runs, upstream workers may have deviated from the plan, encountered errors, used different file names, or changed interfaces. If you only rely on the master's dispatch prompt, you're working from a stale snapshot. Reading the progress files gives you the **actual state of the world** as left by the workers before you.
+--> Full details: `agent/worker/upstream_deps.md`
 
 ---
 
-## Sibling Communication Protocol
+## Sibling Communication — Summary
 
-Same-wave workers execute in parallel and may benefit from lightweight coordination. The `shared_context` and `sibling_reads` fields in the progress file enable **optional, non-blocking** communication between sibling tasks (tasks in the same wave with no dependency relationship).
+Same-wave workers can optionally coordinate via `shared_context` and `sibling_reads` fields. This is supplementary — never block on sibling data. Populate `shared_context` early when you create exports or interfaces peers might use. Record every sibling file read in `sibling_reads[]`. Never write to another worker's file.
 
-### Rules
-
-**a. Workers MAY read sibling progress files for coordination.** Your dispatch prompt includes a `SIBLING TASKS` section listing same-wave task IDs. You may read their progress files at `{tracker_root}/dashboards/{dashboardId}/progress/{sibling_task_id}.json` to check for useful context. This is entirely optional.
-
-**b. Workers MUST NOT depend on sibling data.** Sibling communication is **supplementary, not required**. Your task must be completable without any sibling data. If a sibling's progress file does not exist yet, is empty, or lacks `shared_context`, proceed without it. Never block or retry waiting for sibling data.
-
-**c. Workers SHOULD populate `shared_context` when creating exports, interfaces, or patterns useful to siblings.** If your task creates public functions, types, interfaces, or establishes patterns that a same-wave sibling might benefit from, populate `shared_context` as early as possible — ideally during the `implementing` stage, as soon as the relevant artifacts are created. Sub-fields:
-- `exports` — Array of export names (functions, constants, classes) your task creates
-- `interfaces` — Array of interface/type signatures your task defines
-- `patterns` — Array of brief pattern descriptions (e.g., "error handling uses Result<T, E> pattern")
-- `notes` — Free-form string with any other context siblings might find useful
-
-**d. Workers MUST log sibling reads with info-level log entries.** Every time you read a sibling's progress file, add a log entry documenting what you read and whether you found anything useful:
-```json
-{ "at": "...", "level": "info", "msg": "Read sibling 2.3 progress — found shared_context with UserProfile interface, adapting import" }
-```
-
-**e. Workers MUST record sibling reads in the `sibling_reads` array.** Add the task ID string of every sibling progress file you read, regardless of whether it contained useful data:
-```json
-"sibling_reads": ["2.3", "2.5"]
-```
-
-**f. Sibling reads are only useful for same-wave tasks.** Cross-wave coordination uses the formal upstream dependency mechanism (see **Reading Upstream Results** above). Do not use sibling reads for tasks in different waves — those tasks have explicit dependency relationships and the master includes upstream results in your dispatch prompt.
-
-**g. Workers must NEVER write to another worker's progress file.** Each worker owns exactly one file: its own `{task_id}.json`. Reading sibling files is allowed; writing to them is absolutely forbidden. This invariant ensures no write conflicts and no data corruption.
-
-### Example: Sibling Communication in Practice
-
-Consider a wave with three parallel tasks:
-- **Task 2.1** — Create User model with CRUD operations
-- **Task 2.2** — Create Permission model with role-based access
-- **Task 2.3** — Create API middleware for request validation
-
-Task 2.3 (middleware) is implementing request validation and wants to know if Task 2.1 has defined a `UserProfile` interface it can validate against. Task 2.3 reads Task 2.1's progress file:
-
-```
-{tracker_root}/dashboards/{dashboardId}/progress/2.1.json
-```
-
-Task 2.1's progress file (written during its `implementing` stage) contains:
-
-```json
-{
-  "task_id": "2.1",
-  "status": "in_progress",
-  "stage": "implementing",
-  "shared_context": {
-    "exports": ["createUser", "getUser", "updateUser", "deleteUser"],
-    "interfaces": ["UserProfile { id: string; name: string; email: string; role: Role }"],
-    "patterns": ["All CRUD functions return Promise<Result<T, AppError>>"],
-    "notes": "Role type imported from permissions module — Task 2.2 may define it"
-  }
-}
-```
-
-Task 2.3 finds the `UserProfile` interface in `shared_context.interfaces` and uses it to type its validation middleware. It then updates its own progress file:
-
-```json
-{
-  "task_id": "2.3",
-  "status": "in_progress",
-  "stage": "implementing",
-  "message": "Creating validation middleware — using UserProfile interface from sibling 2.1",
-  "sibling_reads": ["2.1"],
-  "logs": [
-    { "at": "...", "level": "info", "msg": "Read sibling 2.1 progress — found UserProfile interface in shared_context, using for request body validation" }
-  ],
-  "shared_context": {
-    "exports": ["validateRequest", "validateBody", "validateParams"],
-    "interfaces": ["ValidationResult { valid: boolean; errors: string[] }"],
-    "patterns": ["Middleware returns 400 with ValidationResult on failure"],
-    "notes": ""
-  }
-}
-```
-
-**Key points from this example:**
-- Task 2.3 did not *need* sibling data — it could have defined its own type or used `any`. The sibling read made the implementation more consistent.
-- Task 2.3 logged the sibling read and recorded it in `sibling_reads`.
-- Task 2.3 also populated its own `shared_context` so Task 2.1 or 2.2 could benefit if they read it.
-- If Task 2.1's progress file had not existed yet (Task 2.1 hadn't started), Task 2.3 would have proceeded without it.
+--> Full details: `agent/worker/sibling_comms.md`
 
 ---
 
-## Example: Full Progress Lifecycle
+## Return Format — Summary
 
-Here's what a typical task's progress file looks like at each stage:
+Return a structured summary with STATUS, SUMMARY, FILES CHANGED, and optionally EXPORTS and DIVERGENT ACTIONS. Summaries must be specific and quantified: "Created auth middleware with rate limiting — 3 endpoints protected" not "Done". The master uses this to log results and construct upstream context for downstream workers.
 
-### 1. Initial write (before starting work)
-
-```json
-{
-  "task_id": "1.1",
-  "status": "in_progress",
-  "started_at": "2026-02-25T14:05:00Z",
-  "completed_at": null,
-  "summary": null,
-  "assigned_agent": "Agent 1",
-  "stage": "reading_context",
-  "message": "Reading CLAUDE.md and task XML",
-  "milestones": [],
-  "deviations": [],
-  "logs": [
-    { "at": "2026-02-25T14:05:00Z", "level": "info", "msg": "Starting task — reading context files" }
-  ],
-  "shared_context": {
-    "exports": [],
-    "interfaces": [],
-    "patterns": [],
-    "notes": ""
-  },
-  "sibling_reads": []
-}
-```
-
-### 2. During implementation (mid-task)
-
-```json
-{
-  "task_id": "1.1",
-  "status": "in_progress",
-  "started_at": "2026-02-25T14:05:00Z",
-  "completed_at": null,
-  "summary": null,
-  "assigned_agent": "Agent 1",
-  "stage": "implementing",
-  "message": "Creating auth middleware — rate limiter for /api/auth",
-  "milestones": [
-    { "at": "2026-02-25T14:05:10Z", "msg": "Read CLAUDE.md — found auth patterns" },
-    { "at": "2026-02-25T14:05:35Z", "msg": "Read existing middleware for patterns" },
-    { "at": "2026-02-25T14:06:01Z", "msg": "Created rate limiter for /api/auth" }
-  ],
-  "deviations": [],
-  "logs": [
-    { "at": "2026-02-25T14:05:00Z", "level": "info", "msg": "Starting task — reading context files" },
-    { "at": "2026-02-25T14:05:10Z", "level": "info", "msg": "Read CLAUDE.md — JWT auth pattern with rate limiting" },
-    { "at": "2026-02-25T14:05:35Z", "level": "info", "msg": "Existing middleware uses express-rate-limit pattern" },
-    { "at": "2026-02-25T14:06:01Z", "level": "info", "msg": "Created rate limiter — 100 req/15min for /api/auth" }
-  ],
-  "shared_context": {
-    "exports": ["rateLimiter", "authMiddleware"],
-    "interfaces": ["AuthRequest extends Request { user: DecodedToken }"],
-    "patterns": ["Express middleware pattern with next() chaining"],
-    "notes": "Rate limiter configured for 100 req/15min — siblings using auth should import from this module"
-  },
-  "sibling_reads": []
-}
-```
-
-### 3. Final write (task complete)
-
-```json
-{
-  "task_id": "1.1",
-  "status": "completed",
-  "started_at": "2026-02-25T14:05:00Z",
-  "completed_at": "2026-02-25T14:08:30Z",
-  "summary": "Created auth middleware with rate limiting — 3 endpoints protected, tests added",
-  "assigned_agent": "Agent 1",
-  "stage": "completed",
-  "message": "Task complete — auth middleware with rate limiting",
-  "milestones": [
-    { "at": "2026-02-25T14:05:10Z", "msg": "Read CLAUDE.md — found auth patterns" },
-    { "at": "2026-02-25T14:05:35Z", "msg": "Read existing middleware for patterns" },
-    { "at": "2026-02-25T14:06:01Z", "msg": "Created rate limiter for /api/auth" },
-    { "at": "2026-02-25T14:07:15Z", "msg": "Added JWT validation to all protected routes" },
-    { "at": "2026-02-25T14:08:00Z", "msg": "Tests passing — 12/12" }
-  ],
-  "deviations": [],
-  "logs": [
-    { "at": "2026-02-25T14:05:00Z", "level": "info", "msg": "Starting task — reading context files" },
-    { "at": "2026-02-25T14:05:10Z", "level": "info", "msg": "Read CLAUDE.md — JWT auth pattern with rate limiting" },
-    { "at": "2026-02-25T14:05:35Z", "level": "info", "msg": "Existing middleware uses express-rate-limit pattern" },
-    { "at": "2026-02-25T14:06:01Z", "level": "info", "msg": "Created rate limiter — 100 req/15min for /api/auth" },
-    { "at": "2026-02-25T14:07:15Z", "level": "info", "msg": "JWT validation middleware added to 3 protected routes" },
-    { "at": "2026-02-25T14:08:00Z", "level": "info", "msg": "All tests passing — 12/12" },
-    { "at": "2026-02-25T14:08:30Z", "level": "info", "msg": "Task complete — auth middleware with rate limiting for 3 endpoints" }
-  ],
-  "shared_context": {
-    "exports": ["rateLimiter", "authMiddleware", "validateToken"],
-    "interfaces": ["AuthRequest extends Request { user: DecodedToken }"],
-    "patterns": ["Express middleware pattern with next() chaining"],
-    "notes": "Rate limiter configured for 100 req/15min — siblings using auth should import from this module"
-  },
-  "sibling_reads": []
-}
-```
-
----
-
-## Dashboard Rendering
-
-The dashboard uses your progress file to enhance your task card:
-
-- **Stage badge** — Color-coded badge showing your current stage
-- **Elapsed time** — Live timer from `started_at`
-- **Current message** — Your `message` field displayed below the stage
-- **Deviation badge** — Yellow "N deviation(s)" badge if `deviations[]` is non-empty
-- **Popup log box** — When the user clicks your card, a scrollable log box shows all entries from your `logs[]` array in chronological order with colored level badges
-
-### Log Box Detail
-
-The popup log box is the user's deep-dive into your task. Write logs that tell a clear story:
-- What you read and what you learned from it
-- What you decided to do and why
-- What you created/modified
-- Any issues encountered and how you resolved them
-
-Good logs tell a narrative. Bad logs are just "Starting..." / "Done."
-
----
-
-## Partial Completion Protocol
-
-Not every task finishes cleanly. If you complete **80%+ of the task** but hit a blocker on the remaining work, follow this protocol:
-
-1. **Set `status` to `"completed"`** — not `"failed"`. Partial completion with useful output is a success, not a failure.
-2. **Write a clear summary** that states what was accomplished AND what remains blocked. Example: `"Created 3/4 API endpoints — /users/delete blocked by missing soft-delete migration"`.
-3. **Add a deviation entry** describing the blocker, what you tried, and why it could not be resolved.
-4. **Add a log entry** at level `"warn"` documenting the blocker details.
-
-**When to use `"failed"` instead:** Reserve `status: "failed"` for cases where the task produced **zero useful output** — e.g., the target file doesn't exist, a fundamental assumption was wrong, or the environment is broken. If you accomplished meaningful work, use `"completed"` with a clear summary of what's done and what's not.
+--> Full details: `agent/worker/return_format.md`
 
 ---
 
@@ -537,38 +120,7 @@ Not every task finishes cleanly. If you complete **80%+ of the task** but hit a 
 4. **Report deviations immediately** — NON-NEGOTIABLE
 5. **Use live timestamps** — always via `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 6. **Write the full file every time** — no partial updates
-7. **Include logs** — the popup log box renders from your `logs[]` array
-8. **Set status lifecycle fields** — `started_at` on first write, `completed_at` on completion/failure
-9. **Summary must be descriptive** — "Created auth middleware with rate limiting — 3 endpoints" not "Done"
-
----
-
-## Return Format — EXPORTS Field
-
-When your task introduces new public functions, types, interfaces, endpoints, constants, or files that downstream tasks may depend on, include an `EXPORTS:` section in your return format between `FILES CHANGED:` and `DIVERGENT ACTIONS:`.
-
-**What qualifies as an export:**
-- New public functions, methods, or classes
-- New TypeScript/JSDoc types or interfaces
-- New API endpoints or routes
-- New constants or configuration values
-- New files that other tasks will import from
-
-**Format:**
-```
-EXPORTS:
-  - {type: function|type|interface|endpoint|constant|file} {name} — {brief description}
-```
-
-**Examples:**
-```
-EXPORTS:
-  - function validateAuthToken — validates JWT and returns decoded payload
-  - type UserProfile — user profile interface with avatar, bio, settings fields
-  - endpoint POST /api/auth/refresh — refreshes expired access tokens
-```
-
-**Rules:**
-- Omit the EXPORTS section entirely if no new exports were introduced
-- Only include exports that downstream tasks might need — internal helpers don't qualify
-- The master uses EXPORTS to construct the UPSTREAM RESULTS section of downstream worker prompts
+7. **Always use the Write tool** for progress files — not echo/cat shell commands
+8. **Include logs** — the popup log box renders from your `logs[]` array
+9. **Set lifecycle fields** — `started_at` on first write, `completed_at` on completion/failure
+10. **Summary must be descriptive** — specific and quantified, never vague

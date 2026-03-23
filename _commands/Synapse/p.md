@@ -1,6 +1,6 @@
 # `!p {prompt}`
 
-**Purpose:** Lightweight parallel dispatch — deep planning and high-quality worker prompts without any dashboard tracking overhead. The master agent plans, decomposes, and dispatches worker agents with self-contained, context-rich prompts. No XML files, no dashboard writes, no progress files. Pure planning and execution.
+**Purpose:** Lightweight parallel dispatch — deep planning and high-quality worker prompts with minimal dashboard overhead. The master agent plans, decomposes, and dispatches worker agents with self-contained, context-rich prompts. No XML files, no progress files, no live tracking. Dashboard receives a plan snapshot before dispatch and final results after completion.
 
 **Syntax:** `!p {prompt}`
 
@@ -13,10 +13,10 @@
 !p add rate limiting to all HTTP endpoints
 ```
 
-**Produces no files.** All plan data lives in the conversation context. Workers execute and return — no progress tracking, no live dashboard updates.
+**Lightweight dashboard writes.** The master writes `initialization.json` once (plan snapshot) and `logs.json` entries at init + completion. Workers do NOT write progress files — no live tracking. All plan data also lives in the conversation context.
 
 > **When to use `!p` vs `!p_track`:**
-> - `!p` — Fast, context-efficient. Best for focused tasks where you want speed over live visualization. No dashboard updates.
+> - `!p` — Fast, context-efficient. Best for focused tasks where you want speed over live visualization. Lightweight dashboard writes (plan snapshot + final results).
 > - `!p_track` — Full dashboard tracking with live visualization, progress files, event logs, and history. Best for large, long-running swarms where live monitoring matters.
 
 ---
@@ -305,6 +305,58 @@ Return:
 ```
 
 Include verification results in the final report.
+
+---
+
+## Dashboard Updates
+
+`!p` mode writes lightweight dashboard data — enough to show the plan layout and final results, but no live worker tracking.
+
+### Before Dispatching
+
+Write `initialization.json` with a snapshot of the plan:
+
+1. **Resolve the dashboard** — follow the standard dashboard selection priority chain (chat-spawned directive > `--dashboard` flag > auto-select first available slot). See `agent/instructions/dashboard_resolution.md`.
+2. **Archive if needed** — if the selected dashboard has previous swarm data (`task` is not `null`), archive it first before clearing.
+3. **Clear the `progress/` directory** — remove any leftover progress files.
+4. **Write `initialization.json`** with:
+   - `task` object: `name`, `type`, `prompt`, `project`, `project_root`, `created`, `total_tasks`, `total_waves`
+   - `agents[]`: one entry per task with `id`, `title`, `wave`, `depends_on` (and optionally `layer`, `directory`)
+   - `waves[]`: one entry per wave with `id`, `name`, `total`
+   - `history[]`: preserved from previous state
+5. **Write an initialization entry to `logs.json`:**
+   ```json
+   { "timestamp": "...", "task_id": "0.0", "agent": "Orchestrator", "level": "info", "message": "Task initialized: {N} tasks across {W} waves — {brief plan}", "task_name": "{task-slug}" }
+   ```
+
+### During Execution
+
+Log dispatch events to `logs.json`:
+
+- **On dispatch:** `"Dispatching {M} tasks ({task IDs})"`
+- **On worker completion:** `"Completed: {id} {title} — {summary}"`
+- **On worker failure:** `"FAILED: {id} {title} — {error}"` at level `"error"`
+
+Workers in `!p` mode do **NOT** write progress files. They execute and return results via the Task tool only.
+
+### After All Workers Complete
+
+Write a final summary entry to `logs.json`:
+
+```json
+{ "timestamp": "...", "task_id": "0.0", "agent": "Orchestrator", "level": "info", "message": "Swarm complete: {completed}/{total} tasks succeeded", "task_name": "{task-slug}" }
+```
+
+No `master_state.json` or `metrics.json` is written in `!p` mode.
+
+### What Workers Do NOT Do
+
+- Workers do NOT receive `tracker_root`, dashboard ID, or progress file paths in their prompts
+- Workers do NOT read `tracker_worker_instructions.md`
+- Workers do NOT write any dashboard files
+- Workers still return structured results (STATUS, SUMMARY, FILES CHANGED, EXPORTS, etc.) to the master
+
+> See `agent/master/dashboard_protocol.md` for the full protocol comparing `!p` and `!p_track` dashboard interaction modes.
 
 ---
 

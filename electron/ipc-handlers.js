@@ -559,8 +559,10 @@ function registerIPCHandlers(getMainWindow) {
   // --- Worker handlers ---
   const ClaudeCodeService = require('./services/ClaudeCodeService');
   const CodexService = require('./services/CodexService');
+  const TerminalService = require('./services/TerminalService');
   ClaudeCodeService.init(broadcastFn);
   CodexService.init(broadcastFn);
+  TerminalService.init(broadcastFn);
 
   // Build system prompt for in-app agent chat — reads Synapse CLAUDE.md + project CLAUDE.md
   ipcMain.handle('get-chat-system-prompt', async (_event, projectDir, dashboardId) => {
@@ -685,6 +687,37 @@ function registerIPCHandlers(getMainWindow) {
 
   ipcMain.handle('get-active-workers', async () => {
     return ClaudeCodeService.getActiveWorkers().concat(CodexService.getActiveWorkers());
+  });
+
+  // --- Terminal handlers ---
+  ipcMain.handle('spawn-terminal', async (_event, opts) => {
+    try {
+      const result = TerminalService.spawnTerminal(opts);
+      return result;
+    } catch (err) {
+      console.error('[spawn-terminal] ERROR:', err.message);
+      return { error: err.message };
+    }
+  });
+
+  ipcMain.handle('write-terminal', async (_event, id, data) => {
+    return TerminalService.writeTerminal(id, data);
+  });
+
+  ipcMain.handle('resize-terminal', async (_event, id, cols, rows) => {
+    return TerminalService.resizeTerminal(id, cols, rows);
+  });
+
+  ipcMain.handle('kill-terminal', async (_event, id) => {
+    return TerminalService.killTerminal(id);
+  });
+
+  ipcMain.handle('kill-all-terminals', async () => {
+    return TerminalService.killAllTerminals();
+  });
+
+  ipcMain.handle('get-active-terminals', async () => {
+    return TerminalService.getActiveTerminals();
   });
 
   // --- Commands handlers ---

@@ -18,7 +18,7 @@ import WavePipeline from './components/WavePipeline.jsx';
 import ChainPipeline from './components/ChainPipeline.jsx';
 import TimelinePanel from './components/TimelinePanel.jsx';
 import MetricsPanel from './components/MetricsPanel.jsx';
-import LogPanel from './components/LogPanel.jsx';
+import BottomPanel from './components/BottomPanel.jsx';
 import CommandsModal from './components/modals/CommandsModal.jsx';
 import ProjectModal from './components/modals/ProjectModal.jsx';
 import PlanningModal from './components/modals/PlanningModal.jsx';
@@ -168,10 +168,11 @@ function DashboardContent() {
         onClose={() => setTimelineOpen(false)}
       />
 
-      <LogPanel
+      <BottomPanel
         logs={currentLogs}
         activeFilter={activeLogFilter}
         onFilterChange={(level) => dispatch({ type: 'SET', key: 'activeLogFilter', value: level })}
+        projectDir={projectPath}
       />
 
       {selectedAgent && (

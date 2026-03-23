@@ -9,6 +9,7 @@ import { getDashboardProject } from '../utils/dashboardProjects.js';
 function StatusDot({ status }) {
   let cls = 'dashboard-item-status idle';
   if (status === 'in_progress') cls = 'dashboard-item-status in-progress';
+  else if (status === 'waiting') cls = 'dashboard-item-status waiting';
   else if (status === 'completed') cls = 'dashboard-item-status completed';
   else if (status === 'error') cls = 'dashboard-item-status error';
   else if (status === 'idle') cls = 'dashboard-item-status idle';

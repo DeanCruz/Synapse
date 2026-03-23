@@ -116,15 +116,18 @@ export function useDashboardData() {
     if (!hasTask) return 'idle';
     const vals = Object.values(progress);
     if (vals.length === 0) return 'in_progress';
-    let allDone = true, hasFailed = false;
+    let allDone = true, hasFailed = false, hasInProgress = false;
     vals.forEach(p => {
       if (p.status === 'failed') hasFailed = true;
+      if (p.status === 'in_progress') hasInProgress = true;
       if (p.status !== 'completed' && p.status !== 'failed') allDone = false;
     });
     const totalTasks = (init.task && init.task.total_tasks) || 0;
     if (totalTasks > 0 && vals.length < totalTasks) allDone = false;
     if (allDone && hasFailed) return 'error';
     if (allDone) return 'completed';
+    // Tasks exist but none actively running — show static (non-pulsing) indicator
+    if (vals.length > 0 && !hasInProgress) return 'waiting';
     if (vals.length > 0) return 'in_progress';
     return 'idle';
   }, []);
