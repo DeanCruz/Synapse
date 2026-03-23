@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useAppState, useDispatch } from './context/AppContext.jsx';
 import { useDashboardData } from './hooks/useDashboardData.js';
 import { initStatusColorsFromCSS } from '@/utils/constants.js';
+import { useResize } from './hooks/useResize.js';
 
 import Header from './components/Header.jsx';
 import Sidebar from './components/Sidebar.jsx';
@@ -347,6 +348,7 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMo
   const prevMode = React.useRef(viewMode);
   const dragRef = React.useRef(null);
   const handleRef = React.useRef(null);
+  useResize(floatRef, viewMode);
 
   // Clear inline resize styles when leaving expanded mode so they don't
   // bleed into minimized/collapsed/maximized layouts.
@@ -395,6 +397,13 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMo
       className={`claude-float claude-float--${viewMode}`}
       style={!isVisible ? { display: 'none' } : undefined}
     >
+      {viewMode === 'expanded' && (
+        <>
+          <div className="claude-resize-handle claude-resize-left" data-resize-edge="left" />
+          <div className="claude-resize-handle claude-resize-top" data-resize-edge="top" />
+          <div className="claude-resize-handle claude-resize-corner" data-resize-edge="top-left" />
+        </>
+      )}
       {/* Minimized: show pill button */}
       {viewMode === 'minimized' && (
         <button className="claude-pill" onClick={() => onOpen()}>
