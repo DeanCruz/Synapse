@@ -311,7 +311,7 @@ export default function App() {
         </div>
         {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
         <ClaudeFloatingPanel
-          isVisible={true}
+          isVisible={activeView !== 'git'}
           dashboardId={claudeDashboardId}
           viewMode={ideChatActive ? claudeViewMode : (showClaudeFloat ? claudeViewMode : 'minimized')}
           onOpen={() => {

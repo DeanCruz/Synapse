@@ -1,6 +1,6 @@
 # IDE IPC Handlers Reference
 
-The IDE file system operations are handled by 8 IPC handlers registered in `electron/ipc-handlers.js`. All handlers follow the `ide-*` naming convention and are exposed to the renderer via `window.electronAPI` in `electron/preload.js`.
+The IDE file system operations are handled by 9 IPC handlers registered in `electron/ipc-handlers.js`. All handlers follow the `ide-*` naming convention and are exposed to the renderer via `window.electronAPI` in `electron/preload.js`.
 
 ---
 
@@ -18,10 +18,10 @@ The `ideValidatePath(filePath, workspaceRoot)` helper prevents directory travers
 
 ### Binary Detection
 
-The `isBinaryFile(filePath)` helper detects binary files:
+The `isBinaryFile(buffer)` helper detects binary files:
 
-1. Reads the first 8KB of the file
-2. Scans for null bytes (`0x00`)
+1. Takes a file buffer as input
+2. Scans the first 8KB for null bytes (`0x00`)
 3. Returns `true` if any null bytes found
 
 ### Symlink Safety
@@ -57,10 +57,10 @@ Read the contents of a file.
 
 ```javascript
 // Success (text file)
-{ success: true, content: "file contents as UTF-8 string" }
+{ success: true, binary: false, content: "file contents as UTF-8 string", path: "/absolute/path", name: "filename.ext" }
 
 // Success (binary file)
-{ success: true, binary: true }
+{ success: true, binary: true, path: "/absolute/path", name: "filename.ext" }
 
 // Error
 { success: false, error: "Error message" }
@@ -91,7 +91,7 @@ Write content to an existing file.
 **Returns:**
 
 ```javascript
-{ success: true }
+{ success: true, path: "/absolute/path/to/file" }
 // or
 { success: false, error: "Error message" }
 ```
@@ -158,9 +158,61 @@ Read a directory tree recursively.
 **Behavior:**
 1. Uses `fs.lstat()` to avoid following symlinks
 2. Skips entries matching the ignore list
+3. Skips all hidden files/directories (names starting with `.`)
+4. Skips symlinks entirely
+5. Recurses up to `maxDepth` levels
+6. Returns sorted tree with directories before files
+
+---
+
+### `ide-list-dir`
+
+Single-level directory listing for lazy-loaded file explorer. Returns only immediate children (no recursion). Directories are returned with `children: null` to indicate they haven't been loaded yet.
+
+**Renderer API:** `electronAPI.ideListDir(dirPath, options)`
+
+**Parameters:**
+
+| Param | Type | Required | Description |
+|---|---|---|---|
+| `dirPath` | `string` | Yes | Absolute path to the directory |
+| `options` | `object` | No | Configuration options |
+| `options.ignore` | `string[]` | No | Entry names to skip |
+
+**Default Ignore List:** Same as `ide-read-dir`.
+
+**Returns:**
+
+```javascript
+{
+  success: true,
+  entries: [
+    {
+      name: "src",
+      path: "/Users/dean/my-project/src",
+      type: "directory",
+      children: null
+    },
+    {
+      name: "package.json",
+      path: "/Users/dean/my-project/package.json",
+      type: "file"
+    }
+  ]
+}
+```
+
+**Sort Order:**
+- Directories first (case-insensitive alphabetical)
+- Then files (case-insensitive alphabetical)
+
+**Behavior:**
+1. Uses `fs.lstat()` to avoid following symlinks
+2. Filters entries matching the ignore list (does NOT filter all hidden files, unlike `ide-read-dir`)
 3. Skips symlinks entirely
-4. Recurses up to `maxDepth` levels
-5. Returns sorted tree with directories before files
+4. Directories include `children: null` to signal lazy-loadable
+5. Files do not include a `children` property
+6. Returns sorted entries with directories before files
 
 ---
 
@@ -189,7 +241,7 @@ Create a new file, optionally with initial content.
 **Behavior:**
 1. Validates path
 2. Creates parent directories if they don't exist (`fs.mkdir({ recursive: true })`)
-3. Fails if the file already exists (uses `wx` flag)
+3. Checks if the file already exists via `fs.access()` -- fails with "File already exists" if so
 4. Writes initial content as UTF-8
 
 ---
@@ -308,6 +360,7 @@ All IDE methods exposed in `electron/preload.js`:
 ideReadFile:     (filePath, workspaceRoot) => invoke('ide-read-file', ...)
 ideWriteFile:    (filePath, content, workspaceRoot) => invoke('ide-write-file', ...)
 ideReadDir:      (dirPath, options) => invoke('ide-read-dir', ...)
+ideListDir:      (dirPath, options) => invoke('ide-list-dir', ...)
 ideCreateFile:   (filePath, content, workspaceRoot) => invoke('ide-create-file', ...)
 ideCreateFolder: (dirPath, workspaceRoot) => invoke('ide-create-folder', ...)
 ideRename:       (oldPath, newPath, workspaceRoot) => invoke('ide-rename', ...)

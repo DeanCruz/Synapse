@@ -1,7 +1,7 @@
 // WorkspaceTabs — horizontal tab bar showing open workspace folders
 // Each tab shows a folder name with a close button. A "+" button opens new folders.
 
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { useAppState, useDispatch } from '../../context/AppContext.jsx';
 import { createWorkspaceDashboard, getWorkspaceDashboard, removeWorkspaceDashboard } from '../../utils/ideWorkspaceManager.js';
 import { saveDashboardProject } from '../../utils/dashboardProjects.js';
@@ -9,6 +9,42 @@ import { saveDashboardProject } from '../../utils/dashboardProjects.js';
 export default function WorkspaceTabs() {
   const { ideWorkspaces, ideActiveWorkspaceId, currentDashboardId, dashboardList } = useAppState();
   const dispatch = useDispatch();
+
+  // Mount-time recovery: validate persisted workspaces have valid dashboards.
+  // On app restart, workspaces load from localStorage but their dashboards may
+  // not exist on disk anymore. This one-shot effect recreates missing dashboards.
+  const recoveryRanRef = useRef(false);
+
+  useEffect(() => {
+    if (recoveryRanRef.current) return;
+    if (!dashboardList || dashboardList.length === 0) return;
+    if (ideWorkspaces.length === 0) return;
+    recoveryRanRef.current = true;
+
+    (async () => {
+      for (const ws of ideWorkspaces) {
+        const existingDashboard = getWorkspaceDashboard(ws.id);
+        if (existingDashboard && dashboardList.includes(existingDashboard)) {
+          // Ensure React state has the link (may be missing after app restart)
+          if (!ws.dashboardId || ws.dashboardId !== existingDashboard) {
+            dispatch({ type: 'IDE_LINK_WORKSPACE_DASHBOARD', workspaceId: ws.id, dashboardId: existingDashboard });
+          }
+          continue;
+        }
+        // Stale or missing mapping — clean up and recreate
+        if (existingDashboard) removeWorkspaceDashboard(ws.id);
+        try {
+          const newDashboardId = await createWorkspaceDashboard(ws.id);
+          if (newDashboardId) {
+            saveDashboardProject(newDashboardId, ws.path);
+            dispatch({ type: 'IDE_LINK_WORKSPACE_DASHBOARD', workspaceId: ws.id, dashboardId: newDashboardId });
+          }
+        } catch (err) {
+          console.error('Failed to recover workspace dashboard:', ws.id, err);
+        }
+      }
+    })();
+  }, [dashboardList, ideWorkspaces]);
 
   const handleAddWorkspace = useCallback(async () => {
     try {
@@ -24,6 +60,7 @@ export default function WorkspaceTabs() {
         const dashboardId = await createWorkspaceDashboard(wsId);
         if (dashboardId) {
           saveDashboardProject(dashboardId, folderPath);
+          dispatch({ type: 'IDE_LINK_WORKSPACE_DASHBOARD', workspaceId: wsId, dashboardId });
           dispatch({ type: 'SWITCH_DASHBOARD', id: dashboardId });
         }
       } catch (err) {

@@ -52,9 +52,10 @@ For someone new to Synapse, the following order provides a logical progression f
    - [Commands Overview](commands/overview.md)
    - [Configuration Overview](configuration/overview.md)
 
-7. **Advanced Topics** -- Multi-dashboard orchestration, Electron desktop app, project integration.
+7. **Advanced Topics** -- Multi-dashboard orchestration, Electron desktop app, git manager, project integration.
    - [Multi-Dashboard Overview](multi-dashboard/overview.md)
    - [Electron Overview](electron/overview.md)
+   - [Git Manager Overview](git-manager/overview.md)
    - [Project Integration Overview](project-integration/overview.md)
 
 ---
@@ -128,6 +129,16 @@ The Electron desktop application that wraps the dashboard and provides native OS
 | [IPC Reference](electron/ipc-reference.md) | All 12 push channels and 50+ pull request handlers between main and renderer |
 | [Services](electron/services.md) | All 8 Electron services with exported methods and responsibilities |
 | [Configuration](electron/configuration.md) | Settings system, Vite build config, electron-builder packaging, and `app://` protocol |
+
+### Git Manager
+
+The integrated git UI built into the Synapse Electron app for visual repository management.
+
+| Document | Description |
+|---|---|
+| [Overview](git-manager/overview.md) | Architecture, component hierarchy, data flow, state management, IPC integration, and security model |
+| [Components](git-manager/components.md) | All 12 React components with props, state, key functions, and UI element details |
+| [IPC Handlers](git-manager/ipc-handlers.md) | All 28 git-* IPC handlers with channel names, parameters, return values, and security measures |
 
 ### Master Agent
 
@@ -219,6 +230,7 @@ How worker agents report progress, handle deviations, and consume upstream resul
 | **Dashboard** | The React dashboard UI covering component architecture, state management with reducers, custom hooks, the CSS design system, and Waves/Chains layout modes. |
 | **Data Architecture** | The four data file formats that drive Synapse: `initialization.json` (static plan), `logs.json` (event log), worker progress files (live lifecycle), and task files (authoritative record). |
 | **Electron** | The desktop application layer including the main/renderer process model, all IPC channels, the 8 service modules, and build/packaging configuration. |
+| **Git Manager** | The integrated git UI for visual repository management, covering 12 React components, 28 IPC handlers, multi-repo support, staging/unstaging, diffs, commits, branches, history with SVG graph, and remote operations. |
 | **Master Agent** | The orchestrator role and its five responsibilities: context gathering, planning, dispatch, statusing, and reporting -- plus the constraints that prevent it from writing code. |
 | **Multi-Dashboard** | Running up to 5 concurrent swarms across independent dashboard slots, including dashboard selection logic, the overflow queue, and archive/history management. |
 | **Profiles** | The profile modifier system that layers role-specific priorities, output styles, and personas on top of any command or prompt. |

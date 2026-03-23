@@ -269,6 +269,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   // Track all active task IDs (multiple workers can be running)
   const activeTaskIdsRef = useRef(new Set());
   const codexStreamedTaskIdsRef = useRef(new Set());
+  // Map: taskId -> pid (for killing specific workers)
+  const taskPidMapRef = useRef({});
   // Map: tool_use_id -> index in messages array (for appending results)
   const toolCallIndexRef = useRef({});
   // Index of current accumulating assistant text message
@@ -595,6 +597,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           codexStreamedTaskIdsRef.current.delete(data.taskId);
           delete taskDashboardMapRef.current[data.taskId];
           delete taskTabMapRef.current[data.taskId];
+          delete taskPidMapRef.current[data.taskId];
           if (activeTaskIdsRef.current.size === 0) {
             dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
             dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
@@ -624,6 +627,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         }
         delete taskDashboardMapRef.current[data.taskId];
         delete taskTabMapRef.current[data.taskId];
+        delete taskPidMapRef.current[data.taskId];
       }
     });
 
@@ -966,6 +970,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     codexStreamedTaskIdsRef.current.delete(taskId);
     delete taskDashboardMapRef.current[taskId];
     delete taskTabMapRef.current[taskId];
+    delete taskPidMapRef.current[taskId];
     // Only mark as not processing when ALL workers are done
     if (activeTaskIdsRef.current.size === 0) {
       dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
@@ -1224,7 +1229,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         }).catch(() => {});
       }
 
-      await api.spawnWorker({
+      const spawnResult = await api.spawnWorker({
         provider,
         taskId,
         dashboardId,
@@ -1237,6 +1242,9 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         projectDir,
         additionalContextDirs,
       });
+      if (spawnResult && spawnResult.pid) {
+        taskPidMapRef.current[taskId] = spawnResult.pid;
+      }
     } catch (err) {
       appendMsg({ type: 'system', text: 'Error: ' + (err.message || String(err)), isError: true });
       activeTaskIdsRef.current.delete(taskId);
@@ -1541,18 +1549,37 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
 
   async function stopChat() {
     if (!api || activeTaskIdsRef.current.size === 0) return;
-    try {
-      await api.killAllWorkers();
-    } catch (e) {
-      // ignore — workers may already be dead
+    // Only kill workers belonging to the current tab
+    const currentTab = activeTabRef.current;
+    const tasksToKill = [];
+    for (const taskId of activeTaskIdsRef.current) {
+      const taskTab = taskTabMapRef.current[taskId];
+      if (!taskTab || taskTab === currentTab) {
+        tasksToKill.push(taskId);
+      }
     }
-    // Clean up local state
-    activeTaskIdsRef.current.clear();
-    codexStreamedTaskIdsRef.current.clear();
+    if (tasksToKill.length === 0) return;
+    for (const taskId of tasksToKill) {
+      const pid = taskPidMapRef.current[taskId];
+      if (pid) {
+        try {
+          await api.killWorker(pid);
+        } catch (e) {
+          // ignore — worker may already be dead
+        }
+        delete taskPidMapRef.current[taskId];
+      }
+      activeTaskIdsRef.current.delete(taskId);
+      codexStreamedTaskIdsRef.current.delete(taskId);
+      delete taskTabMapRef.current[taskId];
+      delete taskDashboardMapRef.current[taskId];
+    }
     currentTextIndexRef.current = null;
-    dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+    if (activeTaskIdsRef.current.size === 0) {
+      dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+      setProcessingTabId(null);
+    }
     dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Stopped' });
-    setProcessingTabId(null);
     appendMsg({ type: 'system', text: 'Agent stopped by user.' });
   }
 

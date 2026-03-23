@@ -10,10 +10,16 @@ export default function Header() {
   const dispatch = useDispatch();
   const isElectron = useIsElectron();
 
-  const { currentStatus, connected } = state;
+  const { currentStatus, connected, claudeIsProcessing, claudeProcessingStash, currentDashboardId, dashboardList } = state;
   const task = currentStatus?.active_task ?? null;
-  const agents = currentStatus?.agents ?? [];
-  const activeCount = agents.filter(a => a.status === 'in_progress').length;
+
+  // Count how many chats are actively processing across all dashboards
+  const activeCount = dashboardList.reduce((count, id) => {
+    const isProcessing = id === currentDashboardId
+      ? claudeIsProcessing
+      : !!claudeProcessingStash[id]?.isProcessing;
+    return count + (isProcessing ? 1 : 0);
+  }, 0);
 
   const [archiveOpen, setArchiveOpen] = useState(false);
   const archiveRef = useRef(null);

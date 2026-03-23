@@ -1113,8 +1113,8 @@
 .git-manager-history-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
+  gap: 6px;
+  padding: 6px 8px 6px 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   cursor: pointer;
   transition: background 0.15s;
@@ -1131,12 +1131,10 @@
 
 /* Graph column — space for branch graph lines */
 .git-manager-history-graph {
-  width: 40px;
-  min-width: 40px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
 }
 
@@ -1172,10 +1170,10 @@
 
 /* Commit hash */
 .git-manager-history-hash {
-  width: 65px;
-  min-width: 65px;
+  width: 52px;
+  min-width: 52px;
   font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--color-in-progress);
   opacity: 0.7;
   flex-shrink: 0;
@@ -1233,10 +1231,10 @@
 
 /* Author */
 .git-manager-history-author {
-  width: 100px;
-  min-width: 100px;
+  width: 80px;
+  min-width: 80px;
   font-family: var(--sans);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   color: var(--text-tertiary);
   white-space: nowrap;
   overflow: hidden;
@@ -1246,10 +1244,10 @@
 
 /* Date */
 .git-manager-history-date {
-  width: 80px;
-  min-width: 80px;
+  width: 60px;
+  min-width: 60px;
   font-family: var(--sans);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   color: var(--text-tertiary);
   text-align: right;
   flex-shrink: 0;

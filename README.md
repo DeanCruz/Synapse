@@ -29,7 +29,7 @@ Synapse decomposes complex tasks into independent units, dispatches multiple age
 | Context exhaustion on large tasks | Context distributed across workers |
 | No visibility into progress | Live dashboard with dependency graph |
 | Manual retry on failure | Circuit breaker with automatic replanning |
-| Terminal-only interaction | Native desktop GUI with built-in chat |
+| Terminal-only interaction | Native desktop GUI with built-in chat, code editor, and git UI |
 
 </div>
 
@@ -243,6 +243,36 @@ Live terminal output per worker process. See exactly what each agent is doing as
 ### Multi-Dashboard
 
 Up to 5 simultaneous swarms. Synapse auto-selects the first available slot and never overwrites an in-progress swarm. Switch between them from the sidebar.
+
+### Git Manager
+
+Full-featured git UI built into the app — no terminal required. Open any repository (or multiple at once via tabs), stage and unstage files, view unified diffs, compose commits with subject-line guidelines, manage branches with a visual SVG graph, browse commit history with infinite scroll and filters, and push/pull/fetch with ahead-behind badges. Protected branch warnings and tiered confirmation dialogs keep destructive operations safe. A **Quick Actions** bar provides one-click workflows like "Save My Work" and "Update from Remote" for users who don't want to think in git commands.
+
+Key capabilities:
+- **Multi-repo tabs** — Open several repositories side by side, each with independent state
+- **Staging & diffs** — File-level staging controls with a unified diff viewer showing line-by-line changes
+- **Branch management** — Create, switch, merge, and delete branches with an SVG branch graph
+- **Commit history** — Searchable log with author/date/branch filters and infinite scroll
+- **Remote operations** — Push, pull, and fetch with automatic upstream tracking and protected branch warnings
+- **Quick Actions** — One-click operations ("Save My Work", "Discard All Changes") with appropriate safety dialogs
+- **Auto-refresh** — Working tree status polls every 3 seconds so changes from external editors appear automatically
+
+> Deep dive: `documentation/git-manager/`
+
+### Code Explorer
+
+Built-in code editor powered by Monaco (the same engine as VS Code). Open any folder as a workspace, browse its file tree, and edit files with syntax highlighting for 25+ languages, bracket matching, minimap, multi-cursor, and all the editing features you'd expect from a modern editor. Each workspace automatically links to its own Synapse dashboard, so Claude chat context stays associated with the project you're working on.
+
+Key capabilities:
+- **Monaco Editor** — VS Code-grade editing with IntelliSense, syntax highlighting, minimap, and multi-cursor
+- **Workspace tabs** — Open multiple project folders simultaneously, each with its own file tree and open files
+- **Lazy-loaded file tree** — Directories load children on demand, keeping large projects snappy
+- **Workspace-dashboard bridge** — Each workspace auto-links to a Synapse dashboard for persistent Claude chat context
+- **Dirty file tracking** — Unsaved changes are indicated on editor tabs with a visual marker
+- **Draggable split panel** — Resize the file explorer and editor panes to your preference
+- **Bottom panel** — VS Code-style panel with Terminal, Output, Problems, Debug Console, and Ports tabs
+
+> Deep dive: `documentation/ide/`
 
 ---
 
@@ -510,6 +540,8 @@ React Renderer (Vite)
 │   ├── ChainPipeline.jsx    ← Chain layout dashboard
 │   ├── Header.jsx           ← Navigation + controls
 │   ├── Sidebar.jsx          ← Dashboard selector
+│   ├── git/                 ← Git Manager (12 components)
+│   ├── ide/                 ← Code Explorer (6 components)
 │   └── ...
 ├── context/                 ← App state (React Context)
 ├── hooks/                   ← Data fetching, electron API
