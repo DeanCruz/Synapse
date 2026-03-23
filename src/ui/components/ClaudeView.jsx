@@ -189,18 +189,12 @@ function ConversationMessage({ msg, isLatestThinking }) {
     );
   }
   if (msg.type === 'assistant') {
-    // DEBUG: log raw text content to console for diagnosis
-    console.log('[ClaudeView][RENDER] assistant msg text (' + (msg.text?.length || 0) + ' chars):', JSON.stringify(msg.text?.substring(0, 300)));
-    // DEBUG: also log char codes of first 50 chars
-    if (msg.text) {
-      const codes = Array.from(msg.text.substring(0, 50)).map(c => c.charCodeAt(0));
-      console.log('[ClaudeView][RENDER] char codes:', codes);
-    }
     return (
       <div className="claude-message claude-assistant">
-        <pre className="claude-message-text" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', fontSize: '0.75rem' }}>
-          {msg.text || '(empty)'}
-        </pre>
+        <div
+          className="claude-message-text"
+          dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }}
+        />
       </div>
     );
   }
