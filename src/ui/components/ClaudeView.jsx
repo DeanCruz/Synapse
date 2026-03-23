@@ -242,6 +242,9 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const status = state.claudeStatus;
   const dashboardId = state.currentDashboardId;
   const pendingAttachments = state.claudePendingAttachments;
+  const tabs = state.claudeTabs[dashboardId] || [{ id: 'default', name: 'Chat 1' }];
+  const activeTabId = state.claudeActiveTabId;
+  const [processingTabId, setProcessingTabId] = useState(null);
 
   const [prompt, setPrompt] = useState('');
   const [provider, setProvider] = useState('claude');
@@ -254,13 +257,15 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Session / conversation persistence (per-dashboard)
+  // Session / conversation persistence (per-dashboard:tab)
   const sessionIdRef = useRef(null);    // CLI session_id for --resume
   const convIdRef = useRef(null);       // saved conversation id
   const convCreatedRef = useRef(null);  // ISO string of conversation creation
   const messagesRef = useRef(messages); // mirror of messages for async saves
-  const sessionMapRef = useRef({});     // { [dashboardId]: { sessionId, convId, convCreated } }
+  const sessionMapRef = useRef({});     // { [dashboardId:tabId]: { sessionId, convId, convCreated } }
   const prevDashboardRef = useRef(dashboardId);
+  const prevTabRef = useRef(activeTabId);
+  const activeTabRef = useRef(activeTabId);
 
   const conversationRef = useRef(null);
   // Track all active task IDs (multiple workers can be running)
@@ -276,8 +281,9 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const handleChunkRef = useRef(null);
   const finishRef = useRef(null);
 
-  // Keep messagesRef in sync for async saves
+  // Keep refs in sync for async operations
   useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => { activeTabRef.current = activeTabId; }, [activeTabId]);
 
   // Stash/restore per-dashboard refs when dashboard changes — never lose running workers
   const activeTaskStashRef = useRef({});  // { [dashboardId]: Set of taskIds }
@@ -286,35 +292,48 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const toolIndexStashRef = useRef({});   // { [dashboardId]: toolCallIndexMap }
   // Global map: taskId → dashboardId (persists across switches so we can route output)
   const taskDashboardMapRef = useRef({});
+  // Global map: taskId → tabId (which tab the task was started on)
+  const taskTabMapRef = useRef({});
 
   useEffect(() => {
-    if (prevDashboardRef.current !== dashboardId) {
-      const prev = prevDashboardRef.current;
-      // Stash current dashboard's session info
-      sessionMapRef.current[prev] = {
-        sessionId: sessionIdRef.current,
-        convId: convIdRef.current,
-        convCreated: convCreatedRef.current,
-      };
-      // Stash active task refs so workers keep being tracked when we switch back
-      activeTaskStashRef.current[prev] = new Set(activeTaskIdsRef.current);
-      codexStashRef.current[prev] = new Set(codexStreamedTaskIdsRef.current);
-      textIndexStashRef.current[prev] = currentTextIndexRef.current;
-      toolIndexStashRef.current[prev] = { ...toolCallIndexRef.current };
+    const dashChanged = prevDashboardRef.current !== dashboardId;
+    const tabChanged = prevTabRef.current !== activeTabId;
+    if (!dashChanged && !tabChanged) return;
 
-      // Restore target dashboard's session info
-      const restored = sessionMapRef.current[dashboardId] || {};
-      sessionIdRef.current = restored.sessionId || null;
-      convIdRef.current = restored.convId || null;
-      convCreatedRef.current = restored.convCreated || null;
+    const prevDid = prevDashboardRef.current;
+    const prevTab = prevTabRef.current;
+
+    // Stash current session info (refs still hold old tab's values)
+    sessionMapRef.current[prevDid + ':' + prevTab] = {
+      sessionId: sessionIdRef.current,
+      convId: convIdRef.current,
+      convCreated: convCreatedRef.current,
+    };
+
+    if (dashChanged) {
+      // Stash active task refs so workers keep being tracked when we switch back
+      activeTaskStashRef.current[prevDid] = new Set(activeTaskIdsRef.current);
+      codexStashRef.current[prevDid] = new Set(codexStreamedTaskIdsRef.current);
+      textIndexStashRef.current[prevDid] = currentTextIndexRef.current;
+      toolIndexStashRef.current[prevDid] = { ...toolCallIndexRef.current };
       // Restore target dashboard's active task refs
       activeTaskIdsRef.current = activeTaskStashRef.current[dashboardId] || new Set();
       codexStreamedTaskIdsRef.current = codexStashRef.current[dashboardId] || new Set();
       currentTextIndexRef.current = textIndexStashRef.current[dashboardId] ?? null;
       toolCallIndexRef.current = toolIndexStashRef.current[dashboardId] || {};
-      prevDashboardRef.current = dashboardId;
+    } else {
+      // Tab switch only — streaming state is flushed/reset by switchToTab() before dispatch
     }
-  }, [dashboardId]);
+
+    // Restore target session info
+    const restored = sessionMapRef.current[dashboardId + ':' + activeTabId] || {};
+    sessionIdRef.current = restored.sessionId || null;
+    convIdRef.current = restored.convId || null;
+    convCreatedRef.current = restored.convCreated || null;
+
+    prevDashboardRef.current = dashboardId;
+    prevTabRef.current = activeTabId;
+  }, [dashboardId, activeTabId]);
 
   // Auto-scroll on new messages or dashboard switch
   // Uses messages.length + last message text length to detect both new messages and content updates
@@ -326,7 +345,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
   useEffect(() => {
     // Double-rAF ensures the DOM has been painted before we measure scrollHeight
     requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
-  }, [scrollTrigger, dashboardId]);
+  }, [scrollTrigger, dashboardId, activeTabId]);
 
   // Scroll to bottom on initial mount and whenever the conversation ref attaches
   useEffect(() => {
@@ -380,12 +399,57 @@ export default function ClaudeView({ onClose, hideHeader }) {
       return taskDashboardMapRef.current[taskId] || null;
     }
 
+    // Helper: route output to a specific tab's stash on the current dashboard
+    function routeToTabStash(data, targetTab) {
+      const chunk = data.chunk;
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const evt = JSON.parse(trimmed);
+          if (evt.type === 'assistant') {
+            const content = evt.message?.content || evt.content || [];
+            for (const block of content) {
+              if (block.type === 'text') {
+                const cleaned = stripAnsi(block.text);
+                if (cleaned && cleaned.trim()) {
+                  dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'assistant', text: cleaned } });
+                }
+              } else if (block.type === 'tool_use' || block.type === 'server_tool_use') {
+                dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
+              } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
+                dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'thinking', text: block.thinking || '' } });
+              }
+            }
+          } else if (evt.type === 'system') {
+            if (evt.subtype === 'init') {
+              dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'system', text: `Connected — model: ${evt.model || '?'}, ${(evt.tools || []).length} tools available` } });
+            }
+          } else if (evt.type === 'result') {
+            if (evt.session_id) {
+              const targetKey = prevDashboardRef.current + ':' + targetTab;
+              const storedSession = sessionMapRef.current[targetKey] || {};
+              sessionMapRef.current[targetKey] = { ...storedSession, sessionId: evt.session_id };
+            }
+          }
+        } catch (e) { /* non-JSON — skip */ }
+      }
+    }
+
     const workerListener = api.on('worker-output', (data) => {
       if (!isKnownTask(data.taskId)) return;
 
       if (isCurrentDashboardTask(data.taskId)) {
-        // Active dashboard — process normally
-        if (handleChunkRef.current) handleChunkRef.current(data);
+        // Active dashboard — check if task's tab matches active tab
+        const taskTab = taskTabMapRef.current[data.taskId];
+        if (!taskTab || taskTab === activeTabRef.current) {
+          // Same tab — process with full streaming
+          if (handleChunkRef.current) handleChunkRef.current(data);
+        } else {
+          // Different tab on same dashboard — route to tab stash
+          routeToTabStash(data, taskTab);
+        }
       } else {
         // Non-active dashboard — buffer chunks into stashed messages
         const targetDash = getStashedDashboard(data.taskId);
@@ -422,9 +486,11 @@ export default function ClaudeView({ onClose, hideHeader }) {
               }
             } else if (evt.type === 'result') {
               if (evt.session_id) {
-                // Stash the session ID for this dashboard
-                const storedSession = sessionMapRef.current[targetDash] || {};
-                sessionMapRef.current[targetDash] = { ...storedSession, sessionId: evt.session_id };
+                // Stash the session ID for this dashboard:tab
+                const targetTab = taskTabMapRef.current[data.taskId] || 'default';
+                const targetKey = targetDash + ':' + targetTab;
+                const storedSession = sessionMapRef.current[targetKey] || {};
+                sessionMapRef.current[targetKey] = { ...storedSession, sessionId: evt.session_id };
               }
             }
           } catch (e) {
@@ -438,17 +504,43 @@ export default function ClaudeView({ onClose, hideHeader }) {
       if (!isKnownTask(data.taskId)) return;
 
       if (isCurrentDashboardTask(data.taskId)) {
-        // Active dashboard — process normally
-        if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
-          appendMsg({ type: 'assistant', text: data.lastMessage });
+        const taskTab = taskTabMapRef.current[data.taskId];
+        const isActiveTab = !taskTab || taskTab === activeTabRef.current;
+
+        if (isActiveTab) {
+          // Active tab — process normally with streaming finish
+          if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
+            appendMsg({ type: 'assistant', text: data.lastMessage });
+          }
+          if (data.errorOutput) {
+            dispatch({
+              type: 'CLAUDE_APPEND_MSG',
+              msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true }
+            });
+          }
+          if (finishRef.current) finishRef.current(data.taskId);
+        } else {
+          // Different tab on same dashboard — route to tab stash
+          if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
+            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: taskTab, msg: { type: 'assistant', text: data.lastMessage } });
+          }
+          if (data.errorOutput) {
+            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: taskTab, msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true } });
+          }
+          // Lightweight cleanup (skip auto-save — messages persisted in stash)
+          activeTaskIdsRef.current.delete(data.taskId);
+          codexStreamedTaskIdsRef.current.delete(data.taskId);
+          delete taskDashboardMapRef.current[data.taskId];
+          delete taskTabMapRef.current[data.taskId];
+          if (activeTaskIdsRef.current.size === 0) {
+            dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+            dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+            setProcessingTabId(null);
+          }
+          if (api && prevDashboardRef.current) {
+            api.logChatEvent(prevDashboardRef.current, { level: 'info', message: 'Claude chat response completed', task_id: data.taskId }).catch(() => {});
+          }
         }
-        if (data.errorOutput) {
-          dispatch({
-            type: 'CLAUDE_APPEND_MSG',
-            msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true }
-          });
-        }
-        if (finishRef.current) finishRef.current(data.taskId);
       } else {
         // Non-active dashboard — update stashed state
         const targetDash = getStashedDashboard(data.taskId);
@@ -468,6 +560,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
           }
         }
         delete taskDashboardMapRef.current[data.taskId];
+        delete taskTabMapRef.current[data.taskId];
       }
     });
 
@@ -678,6 +771,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
           dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
         } else if (block.type === 'text') {
           streamingBlocksRef.current[idx] = { type: 'text', text: '' };
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Responding...' });
         }
         break;
       }
@@ -728,6 +822,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         flushText();
         flushThinking();
         streamingBlocksRef.current = {};
+        dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
         break;
 
       case 'user': {
@@ -746,6 +841,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         flushThinking();
         streamingBlocksRef.current = {};
         if (evt.session_id) sessionIdRef.current = evt.session_id;
+        dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
         break;
       }
 
@@ -784,10 +880,12 @@ export default function ClaudeView({ onClose, hideHeader }) {
     activeTaskIdsRef.current.delete(taskId);
     codexStreamedTaskIdsRef.current.delete(taskId);
     delete taskDashboardMapRef.current[taskId];
+    delete taskTabMapRef.current[taskId];
     // Only mark as not processing when ALL workers are done
     if (activeTaskIdsRef.current.size === 0) {
       dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
       dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+      setProcessingTabId(null);
     }
     currentTextIndexRef.current = null;
     flushText();
@@ -977,8 +1075,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
     const taskId = '_claude_' + Date.now();
     activeTaskIdsRef.current.add(taskId);
     codexStreamedTaskIdsRef.current.delete(taskId);
-    // Register in global map so output can be routed even after dashboard switch
+    // Register in global maps so output can be routed even after dashboard/tab switch
     taskDashboardMapRef.current[taskId] = dashboardId;
+    taskTabMapRef.current[taskId] = activeTabId;
+    setProcessingTabId(activeTabId);
 
     try {
       const settings = await api.getSettings();
@@ -1036,6 +1136,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
       if (activeTaskIdsRef.current.size === 0) {
         dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
         dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+        setProcessingTabId(null);
       }
     }
   }
@@ -1044,6 +1145,13 @@ export default function ClaudeView({ onClose, hideHeader }) {
     const text = prompt.trim();
     if (!text && pendingAttachments.length === 0) return;
     setPrompt('');
+
+    // Auto-rename tab if it still has default name
+    const currentTab = tabs.find(t => t.id === activeTabId);
+    if (text && currentTab && currentTab.name.startsWith('Chat ')) {
+      const preview = text.substring(0, 25) + (text.length > 25 ? '...' : '');
+      dispatch({ type: 'CLAUDE_RENAME_TAB', tabId: activeTabId, name: preview });
+    }
 
     let finalPrompt = text;
     const attachmentsSnapshot = [...pendingAttachments];
@@ -1219,9 +1327,38 @@ export default function ClaudeView({ onClose, hideHeader }) {
       sessionIdRef.current = null;
       convIdRef.current = null;
       convCreatedRef.current = null;
-      // Clear stashed session for this dashboard too
-      delete sessionMapRef.current[dashboardId];
+      // Clear stashed session for this dashboard:tab too
+      delete sessionMapRef.current[dashboardId + ':' + activeTabId];
     }
+  }
+
+  function switchToTab(tabId) {
+    if (tabId === activeTabId) return;
+    // Flush streaming buffers to current tab before switching
+    if (textFlushTimerRef.current) { clearTimeout(textFlushTimerRef.current); textFlushTimerRef.current = null; }
+    commitTextBuffer();
+    if (thinkingFlushTimerRef.current) { clearTimeout(thinkingFlushTimerRef.current); thinkingFlushTimerRef.current = null; }
+    commitThinkingBuffer();
+    // Dispatch tab switch (stashes current messages, loads target)
+    dispatch({ type: 'CLAUDE_SWITCH_TAB', tabId });
+    // Reset streaming state for new tab context
+    currentTextIndexRef.current = null;
+    currentThinkingIndexRef.current = null;
+    streamingBlocksRef.current = {};
+  }
+
+  function newTab() {
+    // If current tab is empty (only welcome message), don't create another
+    if (messages.length <= 1 && messages[0]?.id === 'welcome') return;
+    // Flush streaming buffers before switching
+    if (textFlushTimerRef.current) { clearTimeout(textFlushTimerRef.current); textFlushTimerRef.current = null; }
+    commitTextBuffer();
+    if (thinkingFlushTimerRef.current) { clearTimeout(thinkingFlushTimerRef.current); thinkingFlushTimerRef.current = null; }
+    commitThinkingBuffer();
+    dispatch({ type: 'CLAUDE_NEW_TAB' });
+    currentTextIndexRef.current = null;
+    currentThinkingIndexRef.current = null;
+    streamingBlocksRef.current = {};
   }
 
   async function stopChat() {
@@ -1237,6 +1374,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
     currentTextIndexRef.current = null;
     dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
     dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Stopped' });
+    setProcessingTabId(null);
     appendMsg({ type: 'system', text: 'Agent stopped by user.' });
   }
 
@@ -1288,9 +1426,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
           </button>
           <button
             className="claude-clear-btn"
-            onClick={clearChat}
-            disabled={isProcessing}
-            title="Start a new conversation"
+            onClick={newTab}
+            title="Start a new conversation tab"
           >
             New
           </button>
@@ -1310,12 +1447,38 @@ export default function ClaudeView({ onClose, hideHeader }) {
           </button>
           <button
             className="claude-clear-btn"
-            onClick={clearChat}
-            disabled={isProcessing}
-            title="Start a new conversation"
+            onClick={newTab}
+            title="Start a new conversation tab"
           >
             New
           </button>
+        </div>
+      )}
+
+      {tabs.length > 1 && (
+        <div className="claude-tab-bar">
+          {tabs.map(tab => (
+            <button
+              key={tab.id}
+              className={'claude-tab' + (tab.id === activeTabId ? ' active' : '') + (tab.id === processingTabId ? ' processing' : '')}
+              onClick={() => switchToTab(tab.id)}
+              title={tab.name}
+            >
+              {tab.id === processingTabId && <span className="claude-tab-dot" />}
+              <span className="claude-tab-name">{tab.name}</span>
+              {tabs.length > 1 && tab.id !== processingTabId && (
+                <span
+                  className="claude-tab-close"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    dispatch({ type: 'CLAUDE_CLOSE_TAB', tabId: tab.id });
+                  }}
+                >
+                  ✕
+                </span>
+              )}
+            </button>
+          ))}
         </div>
       )}
 
@@ -1363,8 +1526,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
               />
             ));
           })()}
-          {/* Show animated dots when processing and last message isn't already a thinking block */}
-          {isProcessing && messages.length > 0 && messages[messages.length - 1]?.type !== 'thinking' && (
+          {/* Show animated dots when processing on THIS tab and last message isn't already a thinking block */}
+          {isProcessing && processingTabId === activeTabId && messages.length > 0 && messages[messages.length - 1]?.type !== 'thinking' && (
             <ProcessingIndicator />
           )}
         </div>

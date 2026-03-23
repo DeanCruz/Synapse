@@ -4767,6 +4767,76 @@ a:hover {
 }
 .claude-view-close:hover { color: var(--text); }
 
+/* ----- Chat Tab Bar ----- */
+.claude-tab-bar {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px;
+  background: var(--bg, #0a0a0c);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.claude-tab-bar::-webkit-scrollbar { height: 0; }
+
+.claude-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.claude-tab:hover:not(:disabled) {
+  color: var(--text-secondary);
+  background: var(--surface);
+}
+.claude-tab.active {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+}
+.claude-tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.claude-tab-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.claude-tab-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-in-progress, #3b82f6);
+  flex-shrink: 0;
+  animation: claude-tab-pulse 1.5s ease-in-out infinite;
+}
+@keyframes claude-tab-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.claude-tab-close {
+  font-size: 0.6rem;
+  opacity: 0;
+  padding: 1px 3px;
+  border-radius: 3px;
+  transition: opacity 0.15s, background 0.15s;
+}
+.claude-tab:hover .claude-tab-close { opacity: 0.6; }
+.claude-tab-close:hover {
+  opacity: 1 !important;
+  background: rgba(255,255,255,0.1);
+}
+
 .claude-view-body {
   display: flex;
   flex: 1;

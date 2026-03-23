@@ -7,19 +7,42 @@ const AppContext = createContext(null);
 const DispatchContext = createContext(null);
 
 const CLAUDE_MESSAGES_KEY_PREFIX = 'synapse-claude-messages-';
+const CLAUDE_TABS_KEY_PREFIX = 'synapse-claude-tabs-';
 const CLAUDE_WELCOME_MSG = { id: 'welcome', type: 'system', text: 'Agent chat is ready. Type a message below to start.' };
+const DEFAULT_TAB = { id: 'default', name: 'Chat 1' };
 
-function claudeMessagesKey(dashboardId) {
-  return CLAUDE_MESSAGES_KEY_PREFIX + (dashboardId || 'dashboard1');
+function claudeMessagesKey(dashboardId, tabId) {
+  const base = CLAUDE_MESSAGES_KEY_PREFIX + (dashboardId || 'dashboard1');
+  if (tabId && tabId !== 'default') return base + '-' + tabId;
+  return base;
 }
 
-function loadSavedMessages(dashboardId) {
+function claudeTabsKey(dashboardId) {
+  return CLAUDE_TABS_KEY_PREFIX + (dashboardId || 'dashboard1');
+}
+
+function loadSavedTabs(dashboardId) {
   try {
-    const key = claudeMessagesKey(dashboardId);
+    const raw = localStorage.getItem(claudeTabsKey(dashboardId));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) { /* corrupt or unavailable */ }
+  return null;
+}
+
+function saveTabs(dashboardId, tabs) {
+  try { localStorage.setItem(claudeTabsKey(dashboardId), JSON.stringify(tabs)); } catch (e) { /* */ }
+}
+
+function loadSavedMessages(dashboardId, tabId) {
+  try {
+    const key = claudeMessagesKey(dashboardId, tabId);
     const raw = localStorage.getItem(key);
     if (!raw) {
-      // Migration: move old global key to dashboard1
-      if (!dashboardId || dashboardId === 'dashboard1') {
+      // Migration: move old global key to dashboard1 default tab
+      if ((!tabId || tabId === 'default') && (!dashboardId || dashboardId === 'dashboard1')) {
         const oldRaw = localStorage.getItem('synapse-claude-messages');
         if (oldRaw) {
           const parsed = JSON.parse(oldRaw);
@@ -64,8 +87,11 @@ const initialState = {
   connected: false,
   // Persistent Claude chat state (per-dashboard)
   claudeMessages: loadSavedMessages('dashboard1') || [CLAUDE_WELCOME_MSG],
-  claudeChatStash: {}, // { [dashboardId]: messages } — in-memory cache for fast dashboard switching
+  claudeTabStash: {}, // { [dashboardId:tabId]: messages } — in-memory cache for tab/dashboard switching
   claudeProcessingStash: {}, // { [dashboardId]: { isProcessing, status, pendingAttachments } }
+  claudeTabs: {}, // { [dashboardId]: [{ id, name }] } — tabs per dashboard
+  claudeActiveTabId: 'default', // active tab ID for current dashboard
+  claudeActiveTabMap: {}, // { [dashboardId]: tabId } — stashed active tab for non-current dashboards
   claudeIsProcessing: false,
   claudeStatus: 'Ready',
   claudeActiveTaskId: null,
@@ -102,16 +128,25 @@ function appReducerCore(state, action) {
       return { ...state, allDashboardLogs: newLogs };
     }
     case 'SWITCH_DASHBOARD': {
-      // Stash current dashboard's chat messages AND processing state
-      const stash = { ...state.claudeChatStash, [state.currentDashboardId]: state.claudeMessages };
-      const procStash = { ...state.claudeProcessingStash, [state.currentDashboardId]: {
+      const prevDid = state.currentDashboardId;
+      const prevTabId = state.claudeActiveTabId;
+      // Stash current tab's messages
+      const prevStashKey = prevDid + ':' + prevTabId;
+      const newTabStash = { ...state.claudeTabStash, [prevStashKey]: state.claudeMessages };
+      // Stash current dashboard's active tab ID
+      const newActiveTabMap = { ...state.claudeActiveTabMap, [prevDid]: prevTabId };
+      // Stash processing state
+      const procStash = { ...state.claudeProcessingStash, [prevDid]: {
         isProcessing: state.claudeIsProcessing,
         status: state.claudeStatus,
         pendingAttachments: state.claudePendingAttachments,
       }};
-      // Restore target dashboard's chat messages and processing state
-      const targetMessages = stash[action.id] || loadSavedMessages(action.id) || [CLAUDE_WELCOME_MSG];
+      // Restore target dashboard's tab state
+      const targetTabId = newActiveTabMap[action.id] || 'default';
+      const targetStashKey = action.id + ':' + targetTabId;
+      const targetMessages = newTabStash[targetStashKey] || loadSavedMessages(action.id, targetTabId) || [CLAUDE_WELCOME_MSG];
       const targetProc = procStash[action.id] || {};
+      const targetTabs = state.claudeTabs[action.id] || loadSavedTabs(action.id) || [{ ...DEFAULT_TAB }];
       return {
         ...state,
         currentDashboardId: action.id,
@@ -124,8 +159,12 @@ function appReducerCore(state, action) {
         activeView: state.activeView === 'claude' ? 'claude' : 'dashboard',
         archiveViewActive: false,
         queueViewActive: false,
-        // Swap chat state — preserve processing state per dashboard
-        claudeChatStash: stash,
+        // Tab state
+        claudeTabStash: newTabStash,
+        claudeActiveTabMap: newActiveTabMap,
+        claudeActiveTabId: targetTabId,
+        claudeTabs: { ...state.claudeTabs, [action.id]: targetTabs },
+        // Swap chat state
         claudeProcessingStash: procStash,
         claudeMessages: targetMessages,
         claudeIsProcessing: targetProc.isProcessing || false,
@@ -155,7 +194,7 @@ function appReducerCore(state, action) {
       // Functional update: action.updater(prevMessages) => newMessages
       return { ...state, claudeMessages: action.updater(state.claudeMessages) };
     case 'CLAUDE_CLEAR_MESSAGES':
-      try { localStorage.removeItem(claudeMessagesKey(state.currentDashboardId)); } catch (e) { /* unavailable */ }
+      try { localStorage.removeItem(claudeMessagesKey(state.currentDashboardId, state.claudeActiveTabId)); } catch (e) { /* unavailable */ }
       return { ...state, claudeMessages: [CLAUDE_WELCOME_MSG], claudePendingAttachments: [] };
     case 'CLAUDE_SET_VIEW_MODE':
       return { ...state, claudeViewMode: action.mode };
@@ -173,22 +212,109 @@ function appReducerCore(state, action) {
       return { ...state, claudePendingAttachments: state.claudePendingAttachments.filter(a => a.id !== action.id) };
     case 'CLAUDE_CLEAR_ATTACHMENTS':
       return { ...state, claudePendingAttachments: [] };
+    // --- Tab management ---
+    case 'CLAUDE_NEW_TAB': {
+      const did = state.currentDashboardId;
+      const currentTabs = state.claudeTabs[did] || [{ ...DEFAULT_TAB }];
+      const newTabId = 'tab-' + Date.now();
+      const newTabName = 'Chat ' + (currentTabs.length + 1);
+      const updatedTabs = [...currentTabs, { id: newTabId, name: newTabName }];
+      const stashKey = did + ':' + state.claudeActiveTabId;
+      const newTabStash = { ...state.claudeTabStash, [stashKey]: state.claudeMessages };
+      try { localStorage.setItem(claudeMessagesKey(did, state.claudeActiveTabId), JSON.stringify(state.claudeMessages)); } catch (e) { /* */ }
+      saveTabs(did, updatedTabs);
+      return {
+        ...state,
+        claudeTabs: { ...state.claudeTabs, [did]: updatedTabs },
+        claudeActiveTabId: newTabId,
+        claudeTabStash: newTabStash,
+        claudeMessages: [CLAUDE_WELCOME_MSG],
+        claudePendingAttachments: [],
+      };
+    }
+    case 'CLAUDE_SWITCH_TAB': {
+      const did = state.currentDashboardId;
+      const targetTabId = action.tabId;
+      if (targetTabId === state.claudeActiveTabId) return state;
+      const stashKey = did + ':' + state.claudeActiveTabId;
+      const newTabStash = { ...state.claudeTabStash, [stashKey]: state.claudeMessages };
+      try { localStorage.setItem(claudeMessagesKey(did, state.claudeActiveTabId), JSON.stringify(state.claudeMessages)); } catch (e) { /* */ }
+      const targetStashKey = did + ':' + targetTabId;
+      const targetMessages = newTabStash[targetStashKey] || loadSavedMessages(did, targetTabId) || [CLAUDE_WELCOME_MSG];
+      return {
+        ...state,
+        claudeActiveTabId: targetTabId,
+        claudeTabStash: newTabStash,
+        claudeMessages: targetMessages,
+      };
+    }
+    case 'CLAUDE_CLOSE_TAB': {
+      const did = state.currentDashboardId;
+      const currentTabs = state.claudeTabs[did] || [{ ...DEFAULT_TAB }];
+      if (currentTabs.length <= 1) return state;
+      const closingTabId = action.tabId;
+      const updatedTabs = currentTabs.filter(t => t.id !== closingTabId);
+      const stashKey = did + ':' + closingTabId;
+      const newTabStash = { ...state.claudeTabStash };
+      delete newTabStash[stashKey];
+      try { localStorage.removeItem(claudeMessagesKey(did, closingTabId)); } catch (e) { /* */ }
+      saveTabs(did, updatedTabs);
+      if (closingTabId === state.claudeActiveTabId) {
+        const closedIdx = currentTabs.findIndex(t => t.id === closingTabId);
+        const newActive = updatedTabs[Math.min(closedIdx, updatedTabs.length - 1)];
+        const targetStashKey = did + ':' + newActive.id;
+        const targetMessages = newTabStash[targetStashKey] || loadSavedMessages(did, newActive.id) || [CLAUDE_WELCOME_MSG];
+        return {
+          ...state,
+          claudeTabs: { ...state.claudeTabs, [did]: updatedTabs },
+          claudeActiveTabId: newActive.id,
+          claudeTabStash: newTabStash,
+          claudeMessages: targetMessages,
+        };
+      }
+      return {
+        ...state,
+        claudeTabs: { ...state.claudeTabs, [did]: updatedTabs },
+        claudeTabStash: newTabStash,
+      };
+    }
+    case 'CLAUDE_RENAME_TAB': {
+      const did = state.currentDashboardId;
+      const currentTabs = state.claudeTabs[did] || [{ ...DEFAULT_TAB }];
+      const updatedTabs = currentTabs.map(t => t.id === action.tabId ? { ...t, name: action.name } : t);
+      saveTabs(did, updatedTabs);
+      return { ...state, claudeTabs: { ...state.claudeTabs, [did]: updatedTabs } };
+    }
+    // --- Stashed tab updates (for non-active tabs on same dashboard with running workers) ---
+    case 'CLAUDE_TAB_STASH_APPEND_MSG': {
+      const did = state.currentDashboardId;
+      const stashKey = did + ':' + action.tabId;
+      const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
+      const updatedMsgs = [...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }];
+      const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
+      try { localStorage.setItem(claudeMessagesKey(did, action.tabId), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
+      return { ...state, claudeTabStash: newTabStash };
+    }
     // --- Stashed dashboard updates (for non-active dashboards with running workers) ---
     case 'CLAUDE_STASH_APPEND_MSG': {
       const did = action.dashboardId;
-      const stashedMsgs = state.claudeChatStash[did] || loadSavedMessages(did) || [CLAUDE_WELCOME_MSG];
+      const activeTab = state.claudeActiveTabMap[did] || 'default';
+      const stashKey = did + ':' + activeTab;
+      const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, activeTab) || [CLAUDE_WELCOME_MSG];
       const updatedMsgs = [...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }];
-      const newStash = { ...state.claudeChatStash, [did]: updatedMsgs };
-      try { localStorage.setItem(claudeMessagesKey(did), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
-      return { ...state, claudeChatStash: newStash };
+      const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
+      try { localStorage.setItem(claudeMessagesKey(did, activeTab), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
+      return { ...state, claudeTabStash: newTabStash };
     }
     case 'CLAUDE_STASH_UPDATE_MESSAGES': {
       const did = action.dashboardId;
-      const stashedMsgs = state.claudeChatStash[did] || loadSavedMessages(did) || [CLAUDE_WELCOME_MSG];
+      const activeTab = state.claudeActiveTabMap[did] || 'default';
+      const stashKey = did + ':' + activeTab;
+      const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, activeTab) || [CLAUDE_WELCOME_MSG];
       const updatedMsgs = action.updater(stashedMsgs);
-      const newStash = { ...state.claudeChatStash, [did]: updatedMsgs };
-      try { localStorage.setItem(claudeMessagesKey(did), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
-      return { ...state, claudeChatStash: newStash };
+      const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
+      try { localStorage.setItem(claudeMessagesKey(did, activeTab), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
+      return { ...state, claudeTabStash: newTabStash };
     }
     case 'REMOVE_DASHBOARD': {
       // Clean up state when a dashboard is deleted
@@ -199,17 +325,29 @@ function appReducerCore(state, action) {
       delete newAllProgress[rid];
       const newAllLogs = { ...state.allDashboardLogs };
       delete newAllLogs[rid];
-      const newChatStash = { ...state.claudeChatStash };
-      delete newChatStash[rid];
+      // Clean up tab-related data
+      const tabsForDash = state.claudeTabs[rid] || [];
+      const newTabStash = { ...state.claudeTabStash };
+      tabsForDash.forEach(tab => {
+        delete newTabStash[rid + ':' + tab.id];
+        try { localStorage.removeItem(claudeMessagesKey(rid, tab.id)); } catch (e) { /* */ }
+      });
+      try { localStorage.removeItem(CLAUDE_MESSAGES_KEY_PREFIX + rid); } catch (e) { /* */ }
+      const newTabs = { ...state.claudeTabs };
+      delete newTabs[rid];
+      const newActiveTabMap = { ...state.claudeActiveTabMap };
+      delete newActiveTabMap[rid];
+      try { localStorage.removeItem(claudeTabsKey(rid)); } catch (e) { /* */ }
       const newProcStash2 = { ...state.claudeProcessingStash };
       delete newProcStash2[rid];
-      try { localStorage.removeItem(CLAUDE_MESSAGES_KEY_PREFIX + rid); } catch (e) { /* */ }
       return {
         ...state,
         dashboardStates: newDashStates,
         allDashboardProgress: newAllProgress,
         allDashboardLogs: newAllLogs,
-        claudeChatStash: newChatStash,
+        claudeTabStash: newTabStash,
+        claudeTabs: newTabs,
+        claudeActiveTabMap: newActiveTabMap,
         claudeProcessingStash: newProcStash2,
       };
     }
@@ -232,12 +370,12 @@ const CLAUDE_PERSIST_ACTIONS = new Set(['CLAUDE_SET_MESSAGES', 'CLAUDE_APPEND_MS
 
 // Debounced localStorage persistence — avoids serializing on every streaming delta
 let persistTimer = null;
-function schedulePersist(dashboardId, messages) {
+function schedulePersist(dashboardId, tabId, messages) {
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
     persistTimer = null;
     try {
-      localStorage.setItem(claudeMessagesKey(dashboardId), JSON.stringify(messages));
+      localStorage.setItem(claudeMessagesKey(dashboardId, tabId), JSON.stringify(messages));
     } catch (e) { /* quota exceeded or private browsing */ }
   }, 500);
 }
@@ -245,7 +383,7 @@ function schedulePersist(dashboardId, messages) {
 function appReducer(state, action) {
   const newState = appReducerCore(state, action);
   if (CLAUDE_PERSIST_ACTIONS.has(action.type)) {
-    schedulePersist(newState.currentDashboardId, newState.claudeMessages);
+    schedulePersist(newState.currentDashboardId, newState.claudeActiveTabId, newState.claudeMessages);
   }
   return newState;
 }
