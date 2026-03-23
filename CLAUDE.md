@@ -157,6 +157,7 @@ Execute directly
 | Profiles | `documentation/profiles/` |
 | Configuration & theming | `documentation/configuration/` |
 | Master agent protocols | `documentation/master-agent/` |
+| Reports & analysis | `documentation/reports/` |
 
 ---
 
@@ -324,7 +325,7 @@ Synapse/                         <-- {tracker_root}
 
 All detailed instructions live in modular files. The hub files serve as entry points with module indexes.
 
-**Hubs** (`agent/instructions/`): `tracker_master_instructions.md` (master hub), `tracker_worker_instructions.md` (worker hub), `dashboard_resolution.md`, `failed_task.md`, `common_pitfalls.md`, `tracker_multi_plan_instructions.md`
+**Hubs** (`agent/instructions/`): `tracker_master_instructions.md` (master hub), `tracker_worker_instructions.md` (worker hub), `tracker_worker_instructions_lite.md` (LITE worker template, consumed by master), `dashboard_resolution.md`, `failed_task.md`, `common_pitfalls.md`, `tracker_multi_plan_instructions.md`
 
 **Core** (`agent/core/`): `path_convention.md`, `command_resolution.md`, `parallel_principles.md`, `data_architecture.md`, `dashboard_features.md`, `profile_system.md`, `project_discovery.md`
 
@@ -334,7 +335,7 @@ All detailed instructions live in modular files. The hub files serve as entry po
 
 **Phase Files** (`agent/_commands/`): `p_track_planning.md`, `p_track_execution.md`, `p_track_completion.md`
 
-**Documentation** (`documentation/`): Deep-dive reference by topic — `architecture/`, `commands/`, `configuration/`, `dashboard/`, `data-architecture/`, `electron/`, `master-agent/`, `multi-dashboard/`, `profiles/`, `project-integration/`, `server/`, `swarm-lifecycle/`, `worker-protocol/`
+**Documentation** (`documentation/`): Deep-dive reference by topic — `architecture/`, `commands/`, `configuration/`, `dashboard/`, `data-architecture/`, `electron/`, `master-agent/`, `multi-dashboard/`, `profiles/`, `project-integration/`, `reports/`, `server/`, `swarm-lifecycle/`, `worker-protocol/`
 
 ---
 

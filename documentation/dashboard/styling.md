@@ -355,6 +355,71 @@ The design system uses a consistent "glass surface" pattern across cards, panels
 - Fill: `linear-gradient(135deg, #667eea, #9b7cf0)` (purple gradient)
 - Fill transition: `width 0.5s cubic-bezier(0.16, 1, 0.3, 1)`
 
+### Conversation / Chat Styles
+
+The ClaudeView conversation area uses a flex column layout with the following key classes:
+
+```css
+.claude-conversation {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+```
+
+**Message bubbles:**
+
+| Class | Purpose |
+|---|---|
+| `.claude-message` | Base message container |
+| `.claude-user` | User messages — right-aligned, purple gradient background |
+| `.claude-assistant` | Assistant messages — dark surface background |
+| `.claude-system-msg` | System messages — centered, muted text |
+| `.claude-error` | Error variant of system messages — red-tinted |
+
+**Tool call blocks:**
+
+| Class | Purpose |
+|---|---|
+| `.claude-tool-call` | Collapsible tool call container — glass surface, 8px radius |
+| `.claude-tool-call.expanded` | Expanded state — shows body content |
+| `.claude-tool-call.has-result` | Has a result — green left border accent |
+| `.claude-tool-header` | Clickable header row with tool name and expand icon |
+| `.claude-tool-input` | Preformatted tool input — `max-height: 200px`, scrollable |
+| `.claude-tool-result` | Preformatted tool result — `max-height: 300px`, scrollable |
+
+**Standalone tool results:**
+
+The `tool_result_standalone` message type uses inline styles in `ClaudeView.jsx` (not CSS classes) for overflow-safe rendering:
+
+```javascript
+{
+  background: '#1a1a2e',
+  border: '1px solid #2d6',
+  borderRadius: 6,
+  padding: '6px 10px',
+  alignSelf: 'flex-start',
+  maxWidth: '90%',
+  fontSize: '0.75rem',
+  overflowWrap: 'break-word',  // Prevents long paths from overflowing
+  wordBreak: 'break-word',     // Secondary break strategy
+  minWidth: 0                  // Allows flex child to shrink below content size
+}
+```
+
+In `WorkerTerminal.jsx`, the same message type uses the `.claude-tool-result-standalone` CSS class instead, which applies equivalent overflow protection via CSS properties.
+
+**Thinking bubbles:**
+
+| Class | Purpose |
+|---|---|
+| `.claude-thinking-bubble` | Extended thinking container — dark surface with border |
+| `.claude-thinking-header` | Header with "Thinking..." label and animated dots |
+| `.claude-thinking-content` | Expandable content area — `pre-wrap`, scrollable |
+
 ---
 
 ## Animations

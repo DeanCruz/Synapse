@@ -368,6 +368,21 @@ Full in-app agent chat interface. Handles streaming worker output, tool call ren
 - Per-dashboard chat history persisted in localStorage
 - Follow-up messages while agent is still running
 
+**Message types rendered:**
+
+| Type | Renderer | Description |
+|---|---|---|
+| `user` | `.claude-message.claude-user` | User messages (right-aligned) |
+| `assistant` | `.claude-message.claude-assistant` | Assistant messages with `pre-wrap` and `break-all` |
+| `tool_call` | `ToolCallBlock` sub-component | Collapsible tool call with name, input, and result sections |
+| `tool_result_standalone` | Inline-styled `<div>` | Standalone tool results — uses `overflowWrap: 'break-word'`, `wordBreak: 'break-word'`, and `minWidth: 0` to prevent long paths from overflowing |
+| `system` | `.claude-system-msg` | System messages, optionally styled as errors |
+| `thinking` | `ThinkingBubble` sub-component | Extended thinking blocks with expand/collapse |
+
+**Sub-components:**
+- `ToolCallBlock` — Collapsible panel showing tool name, input preview, and result. Uses `.claude-tool-call` CSS class with `.expanded` and `.has-result` modifiers.
+- `ThinkingBubble` — Expandable thinking block with animated dots indicator. Uses `.claude-thinking-bubble` CSS class.
+
 ### EmptyState (`src/ui/components/EmptyState.jsx`)
 
 Simple placeholder shown when no active task is loaded.

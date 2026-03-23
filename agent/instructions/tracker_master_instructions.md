@@ -33,6 +33,7 @@
 | **Failure Recovery** | `agent/master/failure_recovery.md` | When a worker fails — repair tasks, double failure handling, circuit breaker, and worker return validation |
 | **Worker Prompts** | `agent/master/worker_prompts.md` | When constructing worker dispatch prompts — template, convention map, budget guidelines, and completeness checklist |
 | **Compaction Recovery** | `agent/master/compaction_recovery.md` | After context compaction — state checkpoint schema, recovery procedure, cache awareness, and swarm metrics |
+| **Dashboard Protocol** | `agent/master/dashboard_protocol.md` | When understanding `!p` vs `!p_track` dashboard interaction — write timelines, mode comparison, and decision flowchart |
 
 ---
 

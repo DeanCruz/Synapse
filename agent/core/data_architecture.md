@@ -133,7 +133,7 @@ Each worker writes to its own file exclusively.
 | `stage` | string | Current stage (see Stages below) |
 | `message` | string | Current status message for dashboard display |
 | `milestones[]` | array | Timestamped milestone entries (`at`, `msg`) |
-| `deviations[]` | array | Plan divergences (`at`, `description`) |
+| `deviations[]` | array | Plan divergences (`at`, `severity`, `description`). Severity is one of `CRITICAL`, `MODERATE`, `MINOR` — see `agent/worker/deviations.md` for classification guide |
 | `logs[]` | array | Detailed log entries (`at`, `level`, `msg`) — feeds popup log box |
 | `shared_context` | object | Optional data for same-wave sibling coordination |
 | `shared_context.exports` | array | Exports created by this worker |
