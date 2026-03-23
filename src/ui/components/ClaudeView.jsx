@@ -632,10 +632,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     });
 
     return () => {
-      if (api) {
-        api.off('worker-output', workerListener);
-        api.off('worker-complete', completeListener);
-      }
+      if (workerListener) workerListener();
+      if (completeListener) completeListener();
       if (previewFlushTimerRef.current) clearTimeout(previewFlushTimerRef.current);
     };
   }, [api, dispatch]);

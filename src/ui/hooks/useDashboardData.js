@@ -304,7 +304,7 @@ export function useDashboardData() {
     dispatch({ type: 'SET', key: 'connected', value: true });
 
     return () => {
-      listenersRef.current.forEach(({ channel, handle }) => api.off(channel, handle));
+      listenersRef.current.forEach(({ handle }) => { if (handle) handle(); });
       listenersRef.current = [];
     };
   }, []); // Connect once on mount
@@ -337,8 +337,8 @@ export function useDashboardData() {
 
     return () => {
       clearInterval(interval);
-      api.off('heartbeat', heartbeatHandler);
-      api.off('agent_progress', progressHandler);
+      if (heartbeatHandler) heartbeatHandler();
+      if (progressHandler) progressHandler();
     };
   }, [fetchDashboardData]);
 
