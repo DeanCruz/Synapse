@@ -35,6 +35,17 @@ Using Grep, Glob, and `{project_root}/.synapse/toc.md`:
 3. For any shared types or API contracts affected, trace all consumers within the project
 4. Check for config files, environment variables, or deployment scripts that may need updating
 
+#### 2A. Consult the Dependency Graph
+
+If `{project_root}/.synapse/dep_graph.json` exists, use it to enhance blast radius analysis. The dep graph maps file-level import relationships — which files import from which other files.
+
+For each file identified in step 2.1 above:
+- Look up its **importers** in the dep graph — these are files that `import from` the affected file and may break if its exports change
+- Look up its **imports** — these are files the affected file depends on; changes there may cascade into this file
+- Trace transitive importers (files that import from files that import from the affected file) to capture the full blast radius
+
+The dep graph provides a more complete picture than manual import tracing, especially in large codebases where transitive dependencies are hard to follow manually. Include dep graph findings in the "Cross-Layer Impact" section of the analysis output.
+
 ### Step 3: Produce the Analysis
 
 ```

@@ -16,6 +16,7 @@ import ClaudeView from './components/ClaudeView.jsx';
 import WavePipeline from './components/WavePipeline.jsx';
 import ChainPipeline from './components/ChainPipeline.jsx';
 import TimelinePanel from './components/TimelinePanel.jsx';
+import MetricsPanel from './components/MetricsPanel.jsx';
 import LogPanel from './components/LogPanel.jsx';
 import CommandsModal from './components/modals/CommandsModal.jsx';
 import ProjectModal from './components/modals/ProjectModal.jsx';
@@ -81,6 +82,17 @@ function ProgressSection({ onOpenTimeline }) {
   );
 }
 
+// ── ReplanningBanner — shown when circuit breaker fires ──────────────────────
+function ReplanningBanner({ visible }) {
+  if (!visible) return null;
+  return (
+    <div className="replanning-banner">
+      <span className="replanning-dot" />
+      <span>Circuit breaker triggered — replanning in progress</span>
+    </div>
+  );
+}
+
 // ── DashboardContent — main pipeline area ────────────────────────────────────
 function DashboardContent() {
   const state = useAppState();
@@ -131,30 +143,17 @@ function DashboardContent() {
           </svg>
           <span>{projectName || 'Project'}</span>
         </button>
-        <button
-          className="dashboard-action-bar-btn"
-          title="Agent Chat"
-          onClick={() => {
-            dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId });
-          }}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.3"/>
-            <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
-            <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
-            <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
-          </svg>
-          <span>Agent</span>
-        </button>
       </div>
 
       <ProgressSection onOpenTimeline={() => setTimelineOpen(true)} />
+      <ReplanningBanner visible={task?.overall_status === 'replanning'} />
+      <MetricsPanel dashboardId={dashboardId} />
 
       {hasTask ? (
         <>
           {taskType === 'Chains'
             ? <ChainPipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} />
-            : <WavePipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} />
+            : <WavePipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} progressData={currentProgress} />
           }
           <ClearDashboardSection visible={showClear} onClear={handleClear} taskName={task?.name} />
         </>
@@ -262,7 +261,6 @@ export default function App() {
   const claudeViewMode = state.claudeViewMode;
   const claudeDashboardId = state.claudeDashboardId || currentDashboardId;
   const showClaudeFloat = activeView === 'claude';
-  const claudeEverOpened = state.claudeEverOpened;
 
   function renderMainContent() {
     switch (activeView) {
@@ -323,23 +321,27 @@ export default function App() {
       )}
 
       {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
-      {(showClaudeFloat || claudeEverOpened) && (
-        <ClaudeFloatingPanel
-          isVisible={showClaudeFloat}
-          dashboardId={claudeDashboardId}
-          viewMode={claudeViewMode}
-          onClose={() => dispatch({ type: 'SET_VIEW', view: 'dashboard' })}
-          onSetMode={(mode) => dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode })}
-        />
-      )}
+      <ClaudeFloatingPanel
+        isVisible={true}
+        dashboardId={claudeDashboardId}
+        viewMode={showClaudeFloat ? claudeViewMode : 'minimized'}
+        onOpen={() => {
+          dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode: 'expanded' });
+          dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId: claudeDashboardId || currentDashboardId });
+        }}
+        onSetMode={(mode) => {
+          dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode });
+          if (mode === 'minimized') dispatch({ type: 'SET_VIEW', view: 'dashboard' });
+        }}
+      />
     </>
   );
 }
 
 // ── ClaudeFloatingPanel — wraps ClaudeView in a floating container ──────────
-// Always mounted once opened so IPC listeners stay alive during background runs.
-// isVisible=false hides via CSS (display:none) without unmounting.
-function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onClose, onSetMode }) {
+// Always mounted so IPC listeners stay alive during background runs.
+// Shows as a minimized pill when chat is not actively open.
+function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMode }) {
   const floatRef = React.useRef(null);
   const prevMode = React.useRef(viewMode);
 
@@ -361,7 +363,7 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onClose, onSetM
     >
       {/* Minimized: show pill button */}
       {viewMode === 'minimized' && (
-        <button className="claude-pill" onClick={() => onSetMode('expanded')}>
+        <button className="claude-pill" onClick={() => onOpen()}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.4"/>
             <circle cx="5.5" cy="7" r="0.8" fill="currentColor"/>
@@ -377,18 +379,17 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onClose, onSetM
           <ClaudeFloatingHeader
             dashboardId={dashboardId}
             viewMode={viewMode}
-            onClose={onClose}
             onSetMode={onSetMode}
           />
         )}
-        <ClaudeView onClose={onClose} hideHeader />
+        <ClaudeView hideHeader />
       </div>
     </div>
   );
 }
 
 // ── Floating header with window controls ────────────────────────────────────
-function ClaudeFloatingHeader({ dashboardId, viewMode, onClose, onSetMode }) {
+function ClaudeFloatingHeader({ dashboardId, viewMode, onSetMode }) {
   const state = useAppState();
   const projectPath = getDashboardProject(dashboardId);
   const projectName = projectPath ? projectPath.replace(/\/+$/, '').split('/').pop() : null;
@@ -428,9 +429,6 @@ function ClaudeFloatingHeader({ dashboardId, viewMode, onClose, onSetMode }) {
               <rect x="1" y="1" width="10" height="10" rx="1" stroke="currentColor" strokeWidth="1.2"/>
             </svg>
           )}
-        </button>
-        <button className="claude-view-ctrl-btn claude-view-close-btn" title="Close" onClick={(e) => { e.stopPropagation(); onClose(); }}>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
         </button>
       </div>
     </div>

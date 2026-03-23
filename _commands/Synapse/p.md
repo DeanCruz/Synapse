@@ -126,6 +126,7 @@ Use `subagent_type: "general-purpose"` for each worker.
 
 ```
 You are executing task {id}: {title}
+TEMPLATE_VERSION: p_v2
 
 ## What To Do
 {Detailed description — not just a title, but exactly what to implement, change, or create.
@@ -160,6 +161,12 @@ show the pattern with actual code.}
 - What files it changed
 - Any new interfaces, types, or exports the upstream task created
 This gives the worker full awareness of the state of the codebase.}
+
+## Sibling Tasks (optional)
+{Include when same-wave tasks touch related areas. Omit if no relevant siblings.
+- {sibling_id}: {sibling_title} — modifies {sibling_files}
+
+Do NOT modify any files listed here. Report as a deviation if you need to.}
 
 ## Critical Details
 {Gotchas, edge cases, things that are easy to get wrong. Be specific:
@@ -196,6 +203,7 @@ ERRORS: {if failed, what went wrong}
 - [ ] Success criteria are concrete and verifiable
 - [ ] Critical details cover every gotcha you identified in Step 3
 - [ ] If this task has dependencies, the upstream results are included
+- [ ] (Optional) If same-wave siblings touch related file areas, sibling tasks section is included
 
 ### Step 9: Process completions
 

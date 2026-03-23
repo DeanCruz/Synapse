@@ -224,6 +224,20 @@ function handleApiRoute(req, res, url) {
     return true;
   }
 
+  // --- API: Get history analytics ---
+  if (url.pathname === '/api/history/analytics' && req.method === 'GET') {
+    const analyticsFile = path.join(HISTORY_DIR, 'analytics.json');
+    (async () => {
+      const data = await readJSONAsync(analyticsFile);
+      if (data) {
+        sendJSON(res, 200, data);
+      } else {
+        sendJSON(res, 200, { analytics: null });
+      }
+    })();
+    return true;
+  }
+
   // --- API: List archives ---
   if (url.pathname === '/api/archives' && req.method === 'GET') {
     const archives = listArchives();
@@ -373,20 +387,35 @@ function handleApiRoute(req, res, url) {
       return true;
     }
 
-    // POST /api/dashboards/:id/clear — save history summary then clear
+    // POST /api/dashboards/:id/clear — archive, save history summary, then clear
     if (subpath === 'clear' && req.method === 'POST') {
-      // Build and save history summary before clearing
       const init = readDashboardInit(id);
+      let archiveName = null;
+
+      // Archive and save history ONLY if dashboard has an active task
       if (init && init.task && init.task.name) {
+        // 1. Archive the dashboard directory
+        const taskName = init.task.name;
+        const today = new Date().toISOString().slice(0, 10);
+        archiveName = `${today}_${taskName}`;
+        const archiveDir = path.join(ARCHIVE_DIR, archiveName);
+        try {
+          copyDirSync(dashboardDir, archiveDir);
+        } catch (err) {
+          sendJSON(res, 500, { error: 'Failed to archive before clear: ' + err.message });
+          return true;
+        }
+
+        // 2. Save history summary
         const summary = buildHistorySummary(id);
         if (!fs.existsSync(HISTORY_DIR)) {
           fs.mkdirSync(HISTORY_DIR, { recursive: true });
         }
-        const today = new Date().toISOString().slice(0, 10);
         const historyFile = path.join(HISTORY_DIR, `${today}_${summary.task_name}.json`);
         fs.writeFileSync(historyFile, JSON.stringify(summary, null, 2));
       }
 
+      // 3. Clear the dashboard
       ensureDashboard(id);
       clearDashboardProgress(id);
 
@@ -395,7 +424,21 @@ function handleApiRoute(req, res, url) {
       fs.writeFileSync(initFile, JSON.stringify(DEFAULT_INITIALIZATION, null, 2));
       fs.writeFileSync(logsFile, JSON.stringify(DEFAULT_LOGS, null, 2));
 
-      sendJSON(res, 200, { success: true });
+      sendJSON(res, 200, { success: true, archived: !!archiveName, archiveName });
+      return true;
+    }
+
+    // GET /api/dashboards/:id/metrics — read metrics.json for a dashboard
+    if (subpath === 'metrics' && req.method === 'GET') {
+      const metricsFile = path.join(dashboardDir, 'metrics.json');
+      (async () => {
+        const data = await readJSONAsync(metricsFile);
+        if (data) {
+          sendJSON(res, 200, data);
+        } else {
+          sendJSON(res, 200, { metrics: null });
+        }
+      })();
       return true;
     }
 

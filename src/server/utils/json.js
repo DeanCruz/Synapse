@@ -90,12 +90,15 @@ function isValidInitialization(data) {
   return true;
 }
 
-function isValidProgress(data) {
+function isValidProgress(data, expectedTaskId) {
   if (!data || typeof data !== 'object') return false;
 
   // Required string fields
   if (typeof data.task_id !== 'string' || data.task_id.length === 0) return false;
   if (typeof data.status !== 'string') return false;
+
+  // Optional task_id match validation (backward compatible — only checks if expectedTaskId is provided)
+  if (expectedTaskId !== undefined && data.task_id !== expectedTaskId) return false;
 
   // Status must be one of the valid values
   const VALID_STATUSES = ['in_progress', 'completed', 'failed'];

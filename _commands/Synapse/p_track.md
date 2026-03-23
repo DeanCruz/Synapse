@@ -91,9 +91,55 @@ Think through the full scope before touching any files:
 - What could go wrong? What edge cases exist?
 - What are the critical details an agent would need to know to avoid mistakes?
 
+#### 4A. Consult the Dependency Graph
+
+If `{project_root}/.synapse/dep_graph.json` exists, read it for file-level dependency information. The dep graph maps import relationships between files — which files import from which other files.
+
+Use the dep graph to identify **coupling between files**: files that import from each other should generally be modified by the same task or in sequential tasks to avoid conflicts. If two planned tasks would modify tightly coupled files concurrently, flag this during decomposition (Step 6) and either merge the tasks or add an explicit dependency between them.
+
+The dep graph is particularly valuable for:
+- Detecting hidden coupling that task-level analysis may miss
+- Identifying all consumers of a file that will be modified (blast radius)
+- Validating that task boundaries align with module boundaries
+
+If no dep graph exists, skip this step — the master proceeds with manual analysis from Step 5.
+
 ### Step 5: Read all relevant context files
 
 Read **every file** needed to fully understand the task scope — source code, types, existing implementations, documentation. **Parallelize all reads.** Do not proceed until you have full context.
+
+#### 5A. Build a Convention Map
+
+After reading `{project_root}/CLAUDE.md`, categorize its conventions into a **convention_map** — a mental or written index that groups rules by domain. This map is used in Step 14 to filter conventions per-worker, ensuring each agent receives only the rules relevant to its specific task.
+
+**Convention map categories:**
+
+| Category | What it covers | Example rules |
+|---|---|---|
+| `naming` | File names, function names, variable names, type names | "Components use PascalCase", "Utils use camelCase" |
+| `file_structure` | Directory layout, file placement, module organization | "Services go in src/services/", "One component per file" |
+| `imports` | Import ordering, path aliases, barrel exports | "Use @/ aliases", "Group imports: external → internal → relative" |
+| `frontend_styling` | CSS approach, component patterns, UI conventions | "Use Tailwind utility classes", "No inline styles" |
+| `backend_api` | Endpoint patterns, middleware, response formats | "REST endpoints return { data, error }", "Use async/await" |
+| `error_handling` | Try/catch patterns, error types, logging | "All errors extend AppError", "Log with structured JSON" |
+| `testing` | Test framework, patterns, coverage expectations | "Use Vitest", "Test files colocated with source" |
+| `types` | Type definitions, generics, strict mode rules | "No `any` types", "Prefer interfaces over type aliases" |
+
+**Example convention_map.json structure:**
+```json
+{
+  "naming": ["Components use PascalCase", "Hooks prefixed with use"],
+  "file_structure": ["One component per file in src/components/"],
+  "imports": ["Use @/ path aliases", "External imports first"],
+  "frontend_styling": ["Tailwind utility classes only"],
+  "backend_api": [],
+  "error_handling": ["All errors extend AppError"],
+  "testing": ["Vitest with React Testing Library"],
+  "types": ["Strict mode, no any"]
+}
+```
+
+The master does not need to write this to a file — it is a planning artifact held in working memory. The categories are used during prompt construction (Step 14) to select which conventions to inject into each worker's prompt.
 
 ### Step 6: Decompose into tasks
 
@@ -105,6 +151,15 @@ Group tasks into **logical waves** by dependency level:
 - **Wave 1** — All tasks with zero dependencies
 - **Wave 2** — Tasks that depend only on Wave 1 tasks
 - **Wave N** — Tasks that depend on Wave N-1 tasks
+
+#### Dep Graph Coupling Check
+
+If the dep graph was consulted in Step 4A, cross-reference it against the task decomposition: if two tasks modify files that have import dependencies between them (file A imports from file B, and task X modifies A while task Y modifies B), add an explicit task dependency or merge them. The dep graph reveals hidden coupling that task-level analysis may miss — a change to an exported interface in one file can break all its importers.
+
+**Action items:**
+- For each pair of concurrent tasks, check whether their target files have import relationships in the dep graph
+- If coupling is found: either merge the tasks into one, or add a dependency so the upstream file is modified first
+- Log any coupling-driven merges or dependency additions in the plan rationale document
 
 #### Decomposition Cost-Benefit Check
 
@@ -134,6 +189,53 @@ Before proceeding to visualization and dispatch, verify that each task's prompt 
 2. **Split the task.** If the context is genuinely needed and cannot be summarized, the task is too large — decompose it further.
 3. **Prioritize critical details.** Success criteria and critical gotchas should never be cut for space. Cut reference code and conventions first.
 4. **Use READ file lists.** Instead of inlining a 200-line file, add it to the READ list and tell the worker what to look for: "READ: src/auth/middleware.ts — focus on the `validateToken` function signature and error handling pattern."
+
+### Step 6C: Token Budget Estimate
+
+After constructing each worker's dispatch prompt, the master should estimate the token budget of the prompt by breaking it into sections:
+
+| Section | Description | Typical range |
+|---|---|---|
+| Task description | What the worker must do | 200-500 tokens |
+| File context | Code snippets the worker needs to see | 500-2000 tokens |
+| Conventions | Extracted CLAUDE.md sections | 300-800 tokens |
+| Upstream results | Summaries from completed dependency tasks | 200-600 tokens |
+| Critical details | Edge cases, gotchas, constraints | 200-400 tokens |
+| Instructions | Worker protocol, progress file path, return format | 400-600 tokens |
+
+**Budget limit: 8000 tokens (~32KB of text).** If a worker prompt exceeds this estimate:
+
+1. **Split the task** — If the prompt is large because the task touches too many files, decompose it into smaller tasks.
+2. **Summarize conventions** — Instead of quoting full CLAUDE.md sections, extract only the 3-5 most relevant rules as bullet points.
+3. **Trim reference code** — Include only the specific functions/types the worker needs, not entire files. Use line ranges.
+4. **Condense upstream results** — One-line summaries per completed task, not full progress file contents.
+
+> **Prompt bloat is the #1 cause of worker context exhaustion.** A worker that receives a 15,000-token prompt has already consumed 15% of its context window before writing a single line of code. Keep prompts lean — every token should earn its place.
+
+### Step 6D: Convention Relevance Checklist
+
+Before extracting CLAUDE.md content for a worker prompt, use the **convention_map** built in Step 5A to select only the categories relevant to THIS specific task:
+
+| Category | Include when... | Skip when... |
+|---|---|---|
+| `naming` | Task creates new files, functions, variables, or types | Task only modifies existing code |
+| `file_structure` | Task creates new files or moves files | Task modifies existing files in-place |
+| `imports` | Task adds new imports or creates new modules | Task doesn't touch imports |
+| `testing` | Task involves writing or modifying tests | Task has no test component |
+| `error_handling` | Task involves error paths, try/catch, or validation | Task is purely additive/cosmetic |
+| `backend_api` | Task creates or modifies API endpoints | Task doesn't touch APIs |
+| `frontend_styling` | Task involves UI/CSS/component styling | Task is backend-only |
+| `types` | Task creates or modifies type definitions | Task doesn't touch types |
+
+**Rules:**
+1. Cross-reference each task's files and description against the convention_map categories from Step 5A
+2. Only extract CLAUDE.md sections that match checked categories above
+3. If the project CLAUDE.md exceeds 500 lines, ALWAYS summarize rather than quote — extract the 5-10 most relevant rules as bullet points
+4. Cap convention content at ~200 lines in the worker prompt
+5. If no categories apply (rare), include a 3-line summary of the project's tech stack and primary patterns
+
+This filtering should be applied per-worker, not globally — different tasks need different convention subsets.
+
 
 ### Step 7: Determine parallelization type
 
@@ -312,6 +414,18 @@ Use this explicit algorithm to validate the dependency graph before proceeding:
 2. **Compute critical path length** — For each task, calculate `depth = max(depth of dependencies) + 1`. The task with the highest depth defines the minimum number of waves. The chain passing through it is the critical path.
 3. **Identify bottleneck tasks** — Any task that appears in the `depends_on` of 3+ other tasks is a bottleneck. Its failure cascades widely. Flag it in the plan document and ensure its prompt is thorough.
 4. **Verify no orphans** — Every task ID referenced in `depends_on` must exist. Every task must be reachable from a root task (no disconnected subgraphs unless intentional).
+
+#### Dep Graph Validation
+
+If `{project_root}/.synapse/dep_graph.json` was consulted in Step 4A, run a final validation pass on the task plan using the dep graph:
+
+1. **Circular dependency check** — Verify that no circular dependencies exist between tasks. The topological sort above catches direct cycles; this step catches indirect cycles introduced by the dep graph coupling check in Step 6.
+2. **Coupled file sequencing** — For every pair of tasks that modify files with import dependencies (per `dep_graph.json`), verify they are properly sequenced — either in the same task or connected by an explicit dependency. Flag any concurrent tasks that modify coupled files.
+3. **Scope validation** — Flag any tasks that modify files not mentioned in the original prompt's scope. Files discovered via the dep graph's transitive import chains may extend the blast radius beyond what the user expects.
+
+Use `!deps validate` (if available) as the validation tool for automated checks. If the command is not available, perform the validation manually by cross-referencing the dep graph against the task plan.
+
+If validation reveals issues, fix them before proceeding to Step 11. Do not write `initialization.json` with an invalid dependency graph.
 
 ---
 
@@ -521,6 +635,8 @@ The dashboard is now live with the full plan — all tasks visible as pending ca
 
 ## Phase 2: Execution — Dependency-Driven Dispatch
 
+> **WAVES ARE VISUAL ONLY.** Dispatch is driven exclusively by individual task dependencies (`depends_on` arrays), not by wave boundaries. A task in wave 5 with all dependencies satisfied is dispatchable immediately — even if waves 2, 3, and 4 still have running tasks. If you removed the `wave` field from every agent, the dispatch logic should not change at all.
+
 ### Step 12: Begin execution
 
 The dashboard is already populated with the full plan from Step 11. All tasks are visible as pending. Now begin dispatching agents.
@@ -570,6 +686,7 @@ Every dispatched agent receives a **self-contained prompt** with all context nee
 
 ```
 You are a worker agent in the "{task-slug}" swarm, executing task {id}.
+TEMPLATE_VERSION: p_track_v2
 
 ═══════════════════════════════════
 TASK {id}: {title}
@@ -585,9 +702,13 @@ PROJECT ROOT: {project_root}
 TRACKER ROOT: {tracker_root}
 
 CONVENTIONS:
-{Relevant sections extracted from {project_root}/CLAUDE.md by the master.
-Include naming conventions, file structure rules, import patterns, testing requirements.
-Quote directly from the CLAUDE.md — do not paraphrase. Omit section if no CLAUDE.md exists.}
+{Filtered from the convention_map (Step 5A) — include ONLY categories relevant to this
+specific task per the Step 6D checklist. For example, a backend API task gets `backend_api`,
+`error_handling`, `naming`, and `types` — but NOT `frontend_styling` or `testing` (unless
+the task includes tests).
+Quote directly from the CLAUDE.md for included categories — do not paraphrase.
+For large CLAUDE.md files (500+ lines), summarize each category as 2-3 bullet points.
+Omit section entirely if no CLAUDE.md exists.}
 
 REFERENCE CODE:
 {Working examples from the codebase that the worker should follow as patterns.
@@ -603,6 +724,19 @@ For each completed dependency:
   - New interfaces/exports: {any new types, functions, or APIs the upstream task introduced}
   - Deviations: {any deviations from the plan that affect this task}
 Omit this entire section for Wave 1 tasks with no dependencies.}
+
+SIBLING TASKS:
+{Optional — include when same-wave tasks modify related areas of the codebase.
+Lists tasks running concurrently with this worker so it can avoid file conflicts.
+For each sibling in the same wave:
+  - {sibling_id}: {sibling_title} — modifies {sibling_files}
+
+You do NOT depend on these tasks and they do NOT depend on you.
+Do NOT modify any files listed under sibling tasks.
+If you discover you need to modify a sibling's file, report it as a deviation.
+
+Omit this entire section if the task has no same-wave siblings, or if sibling file
+lists do not overlap with this task's area of the codebase.}
 
 CRITICAL:
 {critical details from XML <critical> — omit section if empty}
@@ -679,6 +813,8 @@ YOUR PROGRESS FILE: {tracker_root}/dashboards/{dashboardId}/progress/{id}.json
 YOUR TASK ID: {id}
 YOUR AGENT LABEL: Agent {N}
 
+Include the TEMPLATE_VERSION value from the top of this prompt as `template_version` in your progress file on every write.
+
 You own this file exclusively. Write the FULL file on every update.
 The dashboard watches it and displays your progress in real-time.
 
@@ -734,8 +870,10 @@ Before dispatching each agent, verify the prompt contains all of these. A missin
 |---|---|
 | **File paths** | Every file to read/modify/create is listed with its full relative path |
 | **CLAUDE.md conventions** | Relevant sections quoted directly (not paraphrased) from the target repo's CLAUDE.md |
+| **Conventions filtered by relevance** | Only convention categories relevant to this specific task are included (per Step 6D checklist and convention_map from Step 5A) — no full CLAUDE.md dumps |
 | **Reference code** | If the worker must follow an existing pattern, a working example is included |
 | **Upstream results** | For downstream tasks: summary, files changed, new exports, and deviations from each dependency |
+| **Sibling tasks** | (Optional) For same-wave tasks with related file areas: sibling IDs, titles, and file lists included so the worker can avoid conflicts |
 | **Success criteria** | The worker can unambiguously determine when the task is done |
 | **Critical details** | Edge cases, gotchas, and non-obvious constraints are explicitly stated |
 | **Instruction mode** | FULL or LITE is selected based on task complexity (see Instruction Mode Selection) |
@@ -769,6 +907,22 @@ Default to FULL when uncertain. LITE is an optimization for simple tasks — nev
 #### A. Parse the agent's return
 
 Extract `STATUS`, `SUMMARY`, `FILES CHANGED`, `EXPORTS`, `DIVERGENT ACTIONS`, `WARNINGS`, and `ERRORS` from the agent's response.
+
+#### A-2. Worker Return Validation
+
+After parsing the agent's return text, the master must validate these required sections before treating it as a successful completion:
+
+| Section | Required? | Validation |
+|---|---|---|
+| STATUS | Yes | Must be present. Must be one of: `COMPLETED`, `FAILED`, `PARTIAL`. If missing, treat the return as a failure — log `"error"` level: `"Worker returned without STATUS section — treating as failure."` |
+| SUMMARY | Yes | Must be present and non-generic. If empty or matches generic patterns (`"Done"`, `"Completed"`, `"Finished"`, `"Task complete"`), log `"warn"` level: `"Worker returned generic summary — quality check needed."` Still count as completed, but flag for review. |
+| FILES CHANGED | Conditional | If the task was expected to modify files (i.e., the task description mentions creating, modifying, or editing files), this section should list specific file paths. If empty or missing for a file-modifying task, log `"warn"` level: `"Worker reported no files changed for a task expected to modify files."` |
+| DIVERGENT ACTIONS | Optional | If present, parse each deviation and log at `"deviation"` level in logs.json. |
+
+**Processing rules:**
+- If STATUS is `FAILED`, follow the existing failure recovery procedure (repair task creation or circuit breaker).
+- If STATUS is `PARTIAL`, treat as completed but log a `"warn"` entry and include the incomplete items in the final report.
+- If STATUS is missing entirely, treat as a failure — create a repair task per the standard procedure.
 
 #### B. Update the master XML
 
@@ -898,6 +1052,60 @@ After a failure, decide scope of recovery:
 - **If the failure blocks <50% of remaining tasks** → **retry the individual task.** Fix the prompt (using the taxonomy above), re-dispatch, and continue the swarm.
 - **If the same task fails twice** → escalate to the user regardless of blast radius.
 
+#### Circuit Breaker Check
+
+After every failure event, before proceeding to the eager dispatch scan, the master must evaluate three circuit breaker thresholds:
+
+**Threshold A — Wave-level cascade:** 3+ tasks have failed within the same wave. Count all progress files with `status: "failed"` grouped by the wave ID from `initialization.json` agents[].
+
+**Threshold B — Downstream blockage:** A single failed task blocks 3+ downstream tasks. Scan agents[] for any task whose `depends_on` contains the failed task's ID (or the repair task ID that replaced it) and count how many are transitively blocked.
+
+**Threshold C — Majority blockage:** A single failure blocks more than half of all remaining non-completed tasks.
+
+If ANY threshold is hit, the circuit breaker fires. The master must:
+1. Log a `"warn"` level entry to `logs.json`: `"Circuit breaker triggered — threshold {A|B|C} hit. Entering replanning mode."`
+2. Set a replanning flag (internal master state) that blocks all new dispatches
+3. Proceed to the replanning procedure documented in `{tracker_root}/agent/instructions/tracker_master_instructions.md` — "Circuit Breaker — Automatic Replanning" section
+
+**Example — Threshold B triggered:**
+Task 2.1 fails. The master scans agents[] and finds that tasks 3.1, 3.2, 3.3, and 4.1 all have `depends_on` chains that include 2.1 (directly or transitively). That's 4 blocked tasks — exceeding the threshold of 3. The circuit breaker fires. The master pauses dispatches, enters the replanning procedure, analyzes root cause, and produces a revision plan.
+
+---
+
+### Compaction Recovery
+
+During long-running swarms, context compaction may discard the master's cached upstream results. When this happens, downstream tasks receive incomplete `UPSTREAM RESULTS` sections — the #1 cause of downstream worker confusion.
+
+**Detection:** Before constructing any downstream worker prompt (Step 15.E), verify that cached results exist for all completed upstream tasks. If the master's working memory contains no cached result for a task that has a progress file with `status: "completed"`, compaction has occurred.
+
+**Recovery procedure:**
+
+1. List all files in `{tracker_root}/dashboards/{dashboardId}/progress/`. Read every progress file where `status === "completed"`.
+
+2. For each completed progress file, extract:
+   - `task_id`, `summary` — what the task accomplished
+   - `milestones[]` — what was built, in order (look for file creation/modification milestones)
+   - `deviations[]` — any plan divergences that affect downstream work
+   - `logs[]` — scan for `"warn"` and `"error"` entries that may indicate partial issues
+
+3. Rebuild the upstream result cache: for each completed task, reconstruct the cache entry with `task_id`, `summary`, and `deviations`. Note: progress files do not contain `FILES CHANGED` data (that comes from the worker's return). After compaction, file change data is lost unless the summary or milestones mention specific files. Include what can be recovered and note the gap.
+
+4. Log a `"warn"` entry to `{tracker_root}/dashboards/{dashboardId}/logs.json`:
+   ```json
+   {
+     "timestamp": "{ISO 8601}",
+     "task_id": "0.0",
+     "agent": "Orchestrator",
+     "level": "warn",
+     "message": "Context compaction detected — rebuilt upstream cache from {N} progress files. File change data may be incomplete.",
+     "task_name": "{task-slug}"
+   }
+   ```
+
+5. Resume normal dispatch with the rebuilt cache. Downstream prompts will include recovered summaries and deviations. If file change data is missing, include a note in the `UPSTREAM RESULTS` section: "Note: File change details unavailable due to context compaction — check milestones for partial file information."
+
+**Prevention:** To reduce compaction impact, keep terminal output minimal (Step 16) and avoid re-reading large files unnecessarily during dispatch loops.
+
 ---
 
 ### Step 16: Terminal output during execution
@@ -994,6 +1202,67 @@ Log the verification result to `dashboards/{dashboardId}/logs.json`:
 }
 ```
 
+#### C-2. Compute Swarm Metrics
+
+After all tasks complete (and after verification, if run), compute swarm performance metrics and write them to `{tracker_root}/dashboards/{dashboardId}/metrics.json`. These metrics enable historical performance comparison and parallelization efficiency tracking.
+
+**Computation procedure:**
+
+1. Read all progress files in `{tracker_root}/dashboards/{dashboardId}/progress/`.
+2. For each completed task, compute its duration: `completed_at - started_at` (in seconds).
+3. Compute the following metrics:
+
+| Metric | How to compute |
+|---|---|
+| `elapsed_seconds` | Latest `completed_at` across all workers minus earliest `started_at` across all workers |
+| `serial_estimate_seconds` | Sum of all individual task durations (what it would take if tasks ran sequentially) |
+| `parallel_efficiency` | `serial_estimate_seconds / elapsed_seconds` (higher = better parallelism; 1.0 = no benefit; >1.0 = parallel speedup) |
+| `duration_distribution` | `{ min, avg, max, median }` of individual task durations in seconds |
+| `failure_rate` | `failed_tasks / total_tasks` (0.0 = no failures) |
+| `max_concurrent` | Peak number of simultaneously in-progress tasks (compute from overlapping `started_at`/`completed_at` windows) |
+| `deviation_count` | Total deviations across all tasks (sum of all `deviations[]` array lengths) |
+| `total_tasks` | Total number of tasks in the swarm |
+| `completed_tasks` | Count of tasks with `status === "completed"` |
+| `failed_tasks` | Count of tasks with `status === "failed"` |
+
+4. Write the metrics file:
+
+```json
+{
+  "swarm_name": "{task-slug}",
+  "computed_at": "{ISO 8601 timestamp}",
+  "elapsed_seconds": 187,
+  "serial_estimate_seconds": 612,
+  "parallel_efficiency": 3.27,
+  "duration_distribution": {
+    "min": 28,
+    "avg": 76.5,
+    "max": 142,
+    "median": 71
+  },
+  "failure_rate": 0.0,
+  "max_concurrent": 5,
+  "deviation_count": 2,
+  "total_tasks": 8,
+  "completed_tasks": 8,
+  "failed_tasks": 0
+}
+```
+
+5. Log the metrics summary to `dashboards/{dashboardId}/logs.json`:
+```json
+{
+  "timestamp": "{ISO 8601}",
+  "task_id": "0.0",
+  "agent": "Orchestrator",
+  "level": "info",
+  "message": "Metrics: {elapsed_seconds}s elapsed, {parallel_efficiency}x efficiency, {max_concurrent} max concurrent, {failure_rate} failure rate",
+  "task_name": "{task-slug}"
+}
+```
+
+> **Note:** `metrics.json` is written once after swarm completion. It is not watched by the server for live updates — it is a post-hoc analysis artifact. The dashboard may optionally read it for a metrics summary panel in future versions.
+
 #### D. Read logs and deliver final report
 
 **Read `{tracker_root}/dashboards/{dashboardId}/logs.json` in full.** Analyze all entries for the current task. Then deliver:
@@ -1045,6 +1314,53 @@ Focus on: unexpected findings, key decisions, performance notes.}
 - **Dashboard:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
 - **Logs:** `{tracker_root}/dashboards/{dashboardId}/logs.json`
 ```
+
+---
+
+### Master State Checkpoint
+
+After every dispatch event (worker dispatched, worker completed, worker failed), the master should write a state checkpoint to:
+
+```
+{tracker_root}/dashboards/{dashboardId}/master_state.json
+```
+
+The checkpoint contains:
+
+```json
+{
+  "last_updated": "2026-03-21T15:30:00Z",
+  "completed": [
+    { "id": "1.1", "summary": "Created auth middleware — 3 endpoints protected" },
+    { "id": "1.2", "summary": "Set up database schema — 4 tables created" }
+  ],
+  "in_progress": ["2.1", "2.3"],
+  "failed": [
+    { "id": "2.2", "summary": "Failed: missing dependency express-rate-limit", "repair_id": "2.4r" }
+  ],
+  "ready_to_dispatch": ["3.1"],
+  "upstream_results": {
+    "1.1": "Created auth middleware with rate limiting for /api/auth, /api/users, /api/admin. Exports: authMiddleware, rateLimiter.",
+    "1.2": "Created User, Session, Permission, AuditLog tables. Migration file: 001_initial_schema.sql."
+  },
+  "next_agent_number": 5,
+  "permanently_failed": []
+}
+```
+
+**Write rules:**
+- Write the full file on every update (atomic, like progress files)
+- This is the master's own state file — workers never read or write it
+- `upstream_results` stores one-line summaries per completed task, used for injecting into downstream worker prompts
+- `next_agent_number` tracks the agent numbering counter so re-dispatch after compaction uses the right numbers
+- Keep summaries short (one line each) — this file should stay under 2000 tokens
+
+**Recovery procedure:** If the master experiences context compaction (detected by losing track of which tasks are dispatched), it should:
+1. Read `dashboards/{dashboardId}/master_state.json`
+2. Read `dashboards/{dashboardId}/initialization.json` (for the full plan)
+3. Read all files in `dashboards/{dashboardId}/progress/` (for ground truth)
+4. Cross-reference checkpoint against progress files (progress files are authoritative if they conflict)
+5. Resume the eager dispatch loop
 
 ---
 

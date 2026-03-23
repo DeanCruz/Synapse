@@ -188,6 +188,21 @@ function nextDashboardId() {
   return `dashboard${next}`;
 }
 
+
+/**
+ * Get the complete state of a dashboard: initialization, progress, and logs.
+ * Convenience wrapper consolidating the individual read functions.
+ *
+ * @param {string} id - Dashboard ID
+ * @returns {{ initialization: object|null, progress: object, logs: object|null }}
+ */
+function getFullDashboardState(id) {
+  return {
+    initialization: readDashboardInit(id),
+    progress: readDashboardProgress(id),
+    logs: readDashboardLogs(id),
+  };
+}
 module.exports = {
   getDashboardDir,
   ensureDashboard,
@@ -202,4 +217,5 @@ module.exports = {
   copyDirSync,
   deleteDashboard,
   nextDashboardId,
+  getFullDashboardState,
 };

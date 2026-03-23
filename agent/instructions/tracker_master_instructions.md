@@ -77,6 +77,16 @@ When a worker returns with `status: "failed"`, the master does NOT treat the fai
 
 **The master's failure recovery procedure is:**
 
+
+### Step 0 — Check for Double Failure
+
+If the failed task's ID ends with `r` (it is a repair task), do NOT create another repair task. Instead:
+
+1. Log an `"error"` level entry to `logs.json`: `"Double failure: repair task {id} failed. Original task permanently blocked."`
+2. Log a `"permission"` level entry to trigger the dashboard popup: `"Repair task {id} failed — manual intervention required."`
+3. **Skip Steps 1-6** — do NOT create a repair task for a failed repair task
+4. Proceed to Step 7 (eager dispatch scan) as normal — other unblocked tasks continue
+
 **Step 1 — Log the failure.** Write an `"error"` level entry to `logs.json` with the failed task's summary/error.
 
 **Step 2 — Create a repair task in `initialization.json`.** The master adds a new agent entry to the `agents[]` array in `initialization.json`. This is the **one exception** to the "initialization.json is write-once" rule — repair tasks are appended to `agents[]` and `total_tasks` / the relevant `waves[].total` are incremented.
@@ -204,6 +214,91 @@ The master agent's job is to keep the pipeline **maximally saturated**. Every id
 
 ---
 
+
+## Circuit Breaker — Automatic Replanning
+
+When the circuit breaker fires (see threshold detection in `p_track.md`), the master performs inline replanning:
+
+### Step 1 — Pause Dispatches
+No new workers are dispatched until replanning completes. Set an internal replanning flag.
+
+### Step 2 — Gather Failure Context
+Read ALL progress files from `{tracker_root}/dashboards/{dashboardId}/progress/`. Build three lists:
+- **Completed tasks:** ID and one-line summary
+- **Failed tasks:** ID, summary, stage at failure, error from `logs[]`, `deviations[]`
+- **Pending/blocked tasks:** ID, `depends_on` list, which deps are failed vs completed
+
+### Step 3 — Analyze Root Cause
+Examine the failed tasks and determine:
+- Are the failures related? (Same file, same pattern, same dependency?)
+- Is there a shared root cause? (Missing prerequisite, wrong assumption in the plan, environmental issue?)
+- Which parts of the dependency graph are salvageable?
+
+### Step 4 — Produce a Revision Plan
+Create a structured revision with four categories:
+
+| Category | Description |
+|---|---|
+| `modified` | Existing pending tasks whose descriptions or `depends_on` need updating (e.g., rewiring around a permanently failed chain) |
+| `added` | New repair/replacement tasks with IDs suffixed with `r` (e.g., `"2.1r"`, `"3.2r"`). Each has: id, title (prefixed "REPAIR:"), wave, depends_on, full task description |
+| `removed` | Pending tasks that are no longer viable (their entire dependency chain is broken). Removed from `agents[]` and their IDs cleaned from all other tasks' `depends_on` arrays |
+| `retry` | Failed tasks to re-dispatch as-is (transient failures like timeouts). Their progress files are deleted so workers start fresh |
+
+### Step 5 — Apply the Revision to initialization.json
+This is the documented exception to the write-once rule:
+1. Read `initialization.json`
+2. For `modified` tasks: update the matching `agents[]` entry's title, `depends_on`, or other fields
+3. For `added` tasks: append new entries to `agents[]`, increment `task.total_tasks` and the relevant `waves[].total`
+4. For `removed` tasks: remove from `agents[]`, decrement `task.total_tasks` and `waves[].total`, scan all remaining agents' `depends_on` arrays and remove references to removed task IDs
+5. For `retry` tasks: delete their progress files from `dashboards/{dashboardId}/progress/`
+6. Write the updated `initialization.json`
+
+### Step 6 — Log the Replanning Outcome
+Write an `"info"` level entry to `logs.json`:
+`"Replanning complete — modified: {N}, added: {N}, removed: {N}, retry: {N}. Resuming dispatch."`
+
+### Step 7 — Resume Dispatch
+Clear the replanning flag and resume the normal eager dispatch scan.
+
+### Example: Shared Utility Failure
+
+Three tasks in wave 2 (2.1, 2.2, 2.3) all fail because they depend on a shared utility that task 1.3 was supposed to create but created incorrectly. The replanner:
+1. Identifies the shared root cause: task 1.3's output is broken
+2. Adds a repair task `1.4r` with title "REPAIR: Fix shared utility from 1.3" and full context about what went wrong
+3. Modifies tasks 2.1, 2.2, 2.3: updates their `depends_on` to include `1.4r`
+4. Sets all three as `retry` (their progress files are deleted)
+5. Applies the revision: agents[] gains 1.4r, tasks 2.1-2.3 gain the new dependency
+6. Resumes dispatch: 1.4r is immediately dispatchable (no deps), and once it completes, 2.1-2.3 become dispatchable
+
+**Note:** During replanning, bulk operations replace individual repair task creation. The standard repair task procedure (Steps 1-6 in the failure section above) is for single failures; the circuit breaker handles cascading failures.
+
+---
+
+## Worker Return Validation
+
+When a worker agent returns, the master must validate the return text **before** processing it as a completion and before the eager dispatch scan. This validation catches malformed returns early and prevents silent data loss.
+
+### Validation Table
+
+| Section | Required? | Validation |
+|---|---|---|
+| `STATUS` | Yes | Must be one of: `COMPLETED`, `FAILED`, `PARTIAL`. If missing, treat the return as a failure — log `"error"` level: `"Worker returned without STATUS section — treating as failure."` Create a repair task per the standard failure recovery procedure. |
+| `SUMMARY` | Yes | Must be present and non-generic. If empty or matches generic patterns (`"Done"`, `"Completed"`, `"Finished"`, `"Task complete"`), log `"warn"` level: `"Worker returned generic summary — quality check needed."` Still count as completed, but flag for review in the final report. |
+| `FILES CHANGED` | Conditional | If the task description mentions creating, modifying, or editing files, this section should list specific file paths. If empty or missing for a file-modifying task, log `"warn"` level: `"Worker reported no files changed for a task expected to modify files."` |
+| `DIVERGENT ACTIONS` | Optional | If present, parse each deviation and log at `"deviation"` level in `logs.json`. This is already part of the standard completion processing but restated for completeness. |
+
+### Processing Order
+
+1. Parse the return text for STATUS, SUMMARY, FILES CHANGED, DIVERGENT ACTIONS sections
+2. Validate STATUS — if missing, treat as failure (create repair task, skip remaining validation)
+3. Validate SUMMARY — log warning if generic
+4. Validate FILES CHANGED — log warning if expected but missing
+5. Process DIVERGENT ACTIONS — log deviations
+6. If STATUS is `PARTIAL`, treat as completed but log `"warn"` and include incomplete items in final report
+7. Proceed to eager dispatch scan
+
+---
+
 ## Automatic Dependency Tracking — Server-Side Alerts
 
 The Synapse server now automatically monitors task completions and proactively identifies which downstream tasks become dispatchable. This supplements the master agent's manual eager dispatch scan with server-side intelligence.
@@ -286,6 +381,7 @@ The Synapse directory contains:
 │   └── dashboard1/
 │       ├── initialization.json             ← Static plan data (written once by master)
 │       ├── logs.json                       ← Event log (written by master)
+│       ├── metrics.json                    ← Swarm performance metrics (written once after completion)
 │       └── progress/                       ← Worker progress files (one per agent)
 │           ├── 1.1.json
 │           └── 2.1.json
@@ -601,7 +697,7 @@ Shown when `task === null` in `initialization.json` (or the file doesn't exist).
 | Moment | `task_id` | `agent` | `level` | Message pattern |
 |---|---|---|---|---|
 | Task initialized | `"0.0"` | `"Orchestrator"` | `"info"` | `"Task initialized: {N} tasks across {W} waves — {brief plan}"` |
-| Wave dispatched | `"0.0"` | `"Orchestrator"` | `"info"` | `"Dispatching Wave {N}: {M} agents — {wave name}"` |
+| Tasks dispatched | `"0.0"` | `"Orchestrator"` | `"info"` | `"Dispatching {M} tasks ({task IDs}) — dependencies satisfied (Wave {N}: {wave name})"` |
 | Agent starts | `"{wave}.{idx}"` | `"Agent N"` | `"info"` | `"Starting: {task title}"` |
 | Agent completes | `"{wave}.{idx}"` | `"Agent N"` | `"info"` | `"Completed: {task title} — {result detail}"` |
 | Agent warns | `"{wave}.{idx}"` | `"Agent N"` | `"warn"` | `"WARN: {what was unexpected}"` |
@@ -611,6 +707,18 @@ Shown when `task === null` in `initialization.json` (or the file doesn't exist).
 | All complete | `"0.0"` | `"Orchestrator"` | `"info"` | `"Swarm complete: {completed}/{total} tasks succeeded in {duration}"` |
 | **Permission request** | `"0.0"` | `"Orchestrator"` | `"permission"` | `"{What you need and why}"` — triggers popup |
 | **Eager dispatch** (after each worker completes) | `"0.0"` | `"Orchestrator"` | `"info"` | `"Dependency scan: dispatching {N} newly available tasks — {task IDs}"` |
+
+### metrics.json write point
+
+**File:** `{tracker_root}/dashboards/{dashboardId}/metrics.json`
+
+Swarm performance metrics — written **once** after all tasks complete (during Step 17 finalization). Contains elapsed time, parallelization efficiency ratios, duration distribution, failure rate, peak concurrency, and deviation counts.
+
+| Moment | What to write |
+|---|---|
+| **All tasks complete (after verification if run)** | Compute metrics from all progress files: `elapsed_seconds`, `serial_estimate_seconds`, `parallel_efficiency` (serial/elapsed ratio), `duration_distribution` (min/avg/max/median), `failure_rate`, `max_concurrent`, `deviation_count`, `total_tasks`, `completed_tasks`, `failed_tasks`. Write the full metrics object atomically. |
+
+This file is not watched by the server for live updates — it is a post-hoc analysis artifact for performance comparison across swarms.
 
 ### Eager dispatch write points (after every worker completion)
 
@@ -721,6 +829,100 @@ The progress file now contains the **full lifecycle** for each agent — status,
 | `milestones` | array | Appended on milestones | `[{ "at": "<ISO>", "msg": "<text>" }]`. Shown in agent details popup. |
 | `deviations` | array | Appended on deviations | `[{ "at": "<ISO>", "description": "<text>" }]`. Drives yellow deviation badge. |
 | `logs` | array | Appended throughout | `[{ "at": "<ISO>", "level": "info", "msg": "<text>" }]`. Feeds the popup log box in agent details modal. |
+| `prompt_size` | object \| null | Optional | Worker-reported size of the dispatch prompt. Contains `total_chars` and `estimated_tokens`. |
+
+---
+
+## Master State Checkpoint
+
+The master writes a state checkpoint after every dispatch event (worker dispatched, completed, or failed) to enable recovery after context compaction.
+
+**File path:** `{tracker_root}/dashboards/{dashboardId}/master_state.json`
+
+**Schema:**
+
+```json
+{
+  "last_updated": "2026-03-21T15:30:00Z",
+  "completed": [
+    { "id": "1.1", "summary": "Created auth middleware — 3 endpoints protected" }
+  ],
+  "in_progress": ["2.1", "2.3"],
+  "failed": [
+    { "id": "2.2", "summary": "Failed: missing dependency", "repair_id": "2.4r" }
+  ],
+  "ready_to_dispatch": ["3.1"],
+  "upstream_results": {
+    "1.1": "Created auth middleware with rate limiting. Exports: authMiddleware, rateLimiter."
+  },
+  "next_agent_number": 5,
+  "permanently_failed": []
+}
+```
+
+**When to write:** After every dispatch, completion, or failure event. Write the full file atomically (like progress files).
+
+**When to read:** On context compaction recovery — when the master loses track of which tasks are dispatched or completed.
+
+**Recovery procedure:**
+1. Read `master_state.json` for the cached state
+2. Read `initialization.json` for the full plan
+3. Read all progress files for ground truth
+4. Cross-reference: progress files are authoritative if they conflict with the checkpoint
+5. Resume the eager dispatch loop
+
+**Note:** This file is NOT watched by the server and NOT broadcast via SSE. It is purely for master self-recovery. Workers never read or write it.
+
+---
+
+## Swarm Metrics
+
+**File path:** `{tracker_root}/dashboards/{dashboardId}/metrics.json`
+
+Swarm performance metrics — written **once** after all tasks complete. Contains elapsed time, efficiency ratios, duration distribution, and parallelism statistics. This file enables historical performance comparison across swarms and helps calibrate future task decomposition.
+
+**Schema:**
+
+```json
+{
+  "swarm_name": "{task-slug}",
+  "computed_at": "{ISO 8601 timestamp}",
+  "elapsed_seconds": 187,
+  "serial_estimate_seconds": 612,
+  "parallel_efficiency": 3.27,
+  "duration_distribution": {
+    "min": 28,
+    "avg": 76.5,
+    "max": 142,
+    "median": 71
+  },
+  "failure_rate": 0.0,
+  "max_concurrent": 5,
+  "deviation_count": 2,
+  "total_tasks": 8,
+  "completed_tasks": 8,
+  "failed_tasks": 0
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `swarm_name` | string | Task slug from `initialization.json` → `task.name` |
+| `computed_at` | ISO 8601 | When the metrics were computed |
+| `elapsed_seconds` | number | Wall-clock time from first worker start to last worker completion |
+| `serial_estimate_seconds` | number | Sum of all individual task durations (sequential estimate) |
+| `parallel_efficiency` | number | `serial_estimate / elapsed` — higher means better parallelism |
+| `duration_distribution` | object | `{ min, avg, max, median }` of task durations in seconds |
+| `failure_rate` | number | `failed_tasks / total_tasks` (0.0 = no failures) |
+| `max_concurrent` | number | Peak number of simultaneously in-progress tasks |
+| `deviation_count` | number | Total deviations across all tasks |
+| `total_tasks` | number | Total number of tasks in the swarm |
+| `completed_tasks` | number | Tasks with `status === "completed"` |
+| `failed_tasks` | number | Tasks with `status === "failed"` |
+
+**When to write:** Once, during Step 17 finalization, after all tasks complete and after verification (if run).
+
+**Note:** This file is NOT watched by the server for live updates. It is a post-hoc analysis artifact. Workers never read or write it.
 
 ---
 
@@ -748,3 +950,23 @@ The progress file now contains the **full lifecycle** for each agent — status,
 | **Master implementing instead of dispatching** | **Entire swarm system bypassed. Dashboard empty. User blind. The worst possible failure.** | **NEVER write application code as master. Dispatch ALL work to worker agents. Read `p_track.md` and this file every time.** |
 | Master skipping the dashboard | No task cards, no progress, no visibility | Always write `initialization.json`, use `logs.json`, dispatch workers who write progress files |
 | Not reading command/instruction files | Master forgets steps, skips dashboard, misses protocols | Read `_commands/p_track.md` and `agent/instructions/tracker_master_instructions.md` in full every invocation |
+| Creating a repair task for a failed repair task | Infinite repair loop — each repair fails and spawns another | Check if the failed task ID ends with `r`. If so, escalate to permanent failure — do NOT create another repair task. |
+
+---
+
+## Compaction Recovery
+
+During long-running swarms, context compaction may discard the master's cached upstream results. This causes downstream tasks to receive incomplete `UPSTREAM RESULTS` sections.
+
+**Detection:** Before constructing any downstream worker prompt, verify cached results exist for all completed upstream tasks. If a task has a progress file with `status: "completed"` but the master has no cached result for it, compaction has occurred.
+
+**Recovery:**
+1. Read all progress files in `{tracker_root}/dashboards/{dashboardId}/progress/` where `status === "completed"`.
+2. For each, extract `task_id`, `summary`, `milestones[]`, `deviations[]`, and scan `logs[]` for `"warn"`/`"error"` entries.
+3. Rebuild the upstream result cache from these fields. Note: `FILES CHANGED` data (from the worker's return) is lost after compaction — recover what you can from summaries and milestones.
+4. Log a `"warn"` entry to `logs.json`: `"Context compaction detected — rebuilt upstream cache from {N} progress files. File change data may be incomplete."`
+5. Resume dispatch. If file change data is missing for an upstream result, include this note in the downstream prompt's `UPSTREAM RESULTS`: "Note: File change details unavailable due to context compaction — check milestones for partial file information."
+
+**Limitation:** Progress files do not contain `FILES CHANGED` data (that comes from the worker's return to the master). After compaction, file change data may be incomplete unless the worker's summary or milestones mention specific files.
+
+**Prevention:** Keep terminal output minimal and avoid re-reading large files during dispatch loops to reduce compaction frequency.

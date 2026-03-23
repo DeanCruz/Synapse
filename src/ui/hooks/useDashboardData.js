@@ -7,7 +7,7 @@ import { useAppState, useDispatch } from '../context/AppContext.jsx';
 /**
  * Merge static plan data (init) with dynamic progress data into a renderable status.
  */
-export function mergeState(init, progress) {
+export function mergeState(init, progress, logs) {
   if (!init || !init.task) {
     return { active_task: null, agents: [], waves: [], chains: [], history: [] };
   }
@@ -58,6 +58,25 @@ export function mergeState(init, progress) {
     task.overall_status = task.overall_status || 'pending';
   }
 
+  // Check for replanning state from circuit breaker
+  if (task.overall_status === 'in_progress' && logs && logs.entries) {
+    const hasCircuitBreaker = logs.entries.some(e =>
+      e.level === 'warn' && e.message && e.message.includes('Circuit breaker triggered')
+    );
+    if (hasCircuitBreaker) {
+      // Check if replanning has completed (look for "Replanning complete" info entry AFTER the circuit breaker entry)
+      const cbIndex = logs.entries.findLastIndex(e =>
+        e.level === 'warn' && e.message && e.message.includes('Circuit breaker triggered')
+      );
+      const resumedAfter = logs.entries.slice(cbIndex + 1).some(e =>
+        e.level === 'info' && e.message && e.message.includes('Replanning complete')
+      );
+      if (!resumedAfter) {
+        task.overall_status = 'replanning';
+      }
+    }
+  }
+
   const waves = (init.waves || []).map(waveDef => {
     const waveAgents = agents.filter(a => a.wave === waveDef.id);
     const waveCompleted = waveAgents.filter(a => a.status === 'completed').length;
@@ -83,6 +102,7 @@ export function useDashboardData() {
   const dispatch = useDispatch();
   const listenersRef = useRef([]);
   const progressRef = useRef({});
+  const initRef = useRef({});
 
   // Track current dashboard ID via ref to avoid stale closures in IPC push listeners
   const currentDashboardIdRef = useRef(state.currentDashboardId);
@@ -116,7 +136,10 @@ export function useDashboardData() {
 
     try {
       const init = await api.getDashboardInit(id);
-      if (init) dispatch({ type: 'SET_INIT', data: init });
+      if (init) {
+        initRef.current[id] = init;
+        dispatch({ type: 'SET_INIT', data: init });
+      }
     } catch (_) {}
 
     try {
@@ -166,10 +189,15 @@ export function useDashboardData() {
     addListener('initialization', (data) => {
       if (!data.dashboardId) return;
       const { dashboardId, ...initData } = data;
+      initRef.current[dashboardId] = initData;
       // Use ref (not stale state) to compare against current dashboard
       if (dashboardId === currentDashboardIdRef.current) {
         dispatch({ type: 'SET_INIT', data: initData });
       }
+      // Recompute sidebar status
+      const prog = progressRef.current[dashboardId] || {};
+      const newStatus = deriveDashboardStatus(initData, prog);
+      dispatch({ type: 'SET_DASHBOARD_STATE', id: dashboardId, status: newStatus });
     });
 
     addListener('logs', (data) => {
@@ -189,6 +217,12 @@ export function useDashboardData() {
       if (data.dashboardId === currentDashboardIdRef.current) {
         dispatch({ type: 'SET_PROGRESS', data: dbProgress });
       }
+      // Recompute sidebar status from latest progress
+      const init = initRef.current[data.dashboardId];
+      if (init) {
+        const newStatus = deriveDashboardStatus(init, dbProgress);
+        dispatch({ type: 'SET_DASHBOARD_STATE', id: data.dashboardId, status: newStatus });
+      }
     });
 
     addListener('all_progress', (data) => {
@@ -198,6 +232,12 @@ export function useDashboardData() {
       dispatch({ type: 'SET_DASHBOARD_PROGRESS', dashboardId, progress: progressMap });
       if (dashboardId === currentDashboardIdRef.current) {
         dispatch({ type: 'SET_PROGRESS', data: progressMap });
+      }
+      // Recompute sidebar status
+      const init = initRef.current[dashboardId];
+      if (init) {
+        const newStatus = deriveDashboardStatus(init, progressMap);
+        dispatch({ type: 'SET_DASHBOARD_STATE', id: dashboardId, status: newStatus });
       }
     });
 
@@ -215,6 +255,7 @@ export function useDashboardData() {
 
       // Update per-dashboard caches
       if (initialization) {
+        initRef.current[dashboardId] = initialization;
         if (dashboardId === currentDashboardIdRef.current) {
           dispatch({ type: 'SET_INIT', data: initialization });
         }
@@ -231,6 +272,13 @@ export function useDashboardData() {
         if (dashboardId === currentDashboardIdRef.current) {
           dispatch({ type: 'SET_LOGS', data: logs });
         }
+      }
+      // Recompute sidebar status
+      const curInit = initialization || initRef.current[dashboardId];
+      const curProg = progress || progressRef.current[dashboardId] || {};
+      if (curInit) {
+        const newStatus = deriveDashboardStatus(curInit, curProg);
+        dispatch({ type: 'SET_DASHBOARD_STATE', id: dashboardId, status: newStatus });
       }
     });
 
@@ -288,8 +336,8 @@ export function useDashboardData() {
 
   // Re-merge when init or progress changes
   useEffect(() => {
-    const { currentInit, currentProgress } = state;
-    const merged = mergeState(currentInit, currentProgress);
+    const { currentInit, currentProgress, currentLogs } = state;
+    const merged = mergeState(currentInit, currentProgress, currentLogs);
     dispatch({ type: 'SET_STATUS', data: merged });
-  }, [state.currentInit, state.currentProgress]);
+  }, [state.currentInit, state.currentProgress, state.currentLogs]);
 }

@@ -153,6 +153,21 @@ If during diagnosis you determine that the fix requires a **major deviation** �
 
 ---
 
+## Double-Failure Escalation
+
+If a repair task (identified by an ID ending in `r`, e.g., `2.4r`) itself fails, it MUST NOT trigger creation of another repair task. Instead:
+
+1. The worker writes its progress file with `status: "failed"` as normal.
+2. The master, upon receiving the failed return, checks if the task ID ends with `r`.
+3. If it does, this is a double failure. The master:
+   a. Marks the original failed task (the one the repair was for) as `permanently_failed` in a log entry at `"error"` level: `"Double failure: repair task {repair_id} failed for original task {original_id}. Task permanently failed."`
+   b. Does NOT create another repair task
+   c. Logs a `"permission"` entry to trigger the dashboard popup: `"Repair task {repair_id} failed — original task {original_id} is permanently blocked. Manual intervention required."`
+   d. Continues dispatching other unblocked tasks (the swarm does not stop)
+   e. In the final report, lists permanently failed tasks separately with both the original and repair failure summaries
+
+---
+
 ## Cleanup Responsibilities
 
 Before you start your own implementation, handle any mess left by the previous worker:
@@ -186,3 +201,4 @@ Your progress file follows the same schema as any worker, with these additions:
 5. **Include failure context in your summary** — what failed, why, and how you fixed it.
 6. **Follow all standard worker instructions** — `tracker_worker_instructions.md` still applies in full.
 7. **You are critical path** — downstream tasks are blocked on you. Be thorough but efficient.
+8. **If you are a repair task and you fail, the system will NOT create another repair** — the task escalates to permanent failure for manual review.
