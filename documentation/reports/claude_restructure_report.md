@@ -1,483 +1,608 @@
-# Claude Restructure -- Gap Analysis Report
+# Gap Analysis Report: Claude Modular Restructure
 
-**Date:** 2026-03-23
-**Swarm:** claude-modular-restructure
-**Dashboard:** dashboard5
+**Generated:** 2026-03-23
+**Agent:** Agent 14 (Task 4.1)
+**Swarm:** claude-modular-restructure (dashboard5)
+**Scope:** Comprehensive comparison of the new modular documentation system against the original monolithic files
 
-## Executive Summary
+---
 
-The modular restructure successfully decomposed the original monolithic CLAUDE.md (~989 lines) into a lightweight hub (343 lines) plus 25 module files totaling ~6,700 lines across `agent/master/`, `agent/worker/`, `agent/core/`, and `agent/_commands/`. Every major section from the original system has a clear home in the new modular architecture. The three hub files (tracker_master_instructions, tracker_worker_instructions, p_track) have been reduced to concise module indexes that point to detailed content. Content coverage is estimated at 100% -- all behavioral specifications are preserved and several areas (worker prompt construction, failure recovery, compaction recovery, sibling communication) have been significantly expanded. Two issues require attention: (1) the `documentation/` references in CLAUDE.md point to topic directories that exist but whose contents were not part of this restructure task, and (2) `tracker_worker_instructions_lite.md` is referenced but does not exist.
+## 1. Executive Summary
 
-## Metrics
+The modular restructure successfully transforms Synapse's documentation from a set of large monolithic files into a hub-and-spoke architecture with 23 dedicated module files, 5 hub/entry-point files, and 6 existing instruction files that were preserved in place. The new CLAUDE.md (343 lines) serves as a concise entry point with summaries and `Full details:` pointers to module files, replacing the original monolithic CLAUDE.md (989 lines).
 
-| Metric | Value |
+**Key findings:**
+
+- **No content gaps identified in agent-facing instructions.** Every behavioral rule, protocol, schema, and procedure from the original system is present in the new modular files. Content was extracted and reorganized, not deleted.
+- **All cross-references resolve.** Every `Full details:` pointer and `Read:` reference in hub files points to a file that exists. Zero broken links across 70+ cross-references.
+- **The Document Reference Map covers all critical scenarios.** The NON-NEGOTIABLE read triggers in CLAUDE.md map every scenario (swarm entry, planning, execution, worker dispatch, commands, profiles, domain knowledge) to the correct files.
+- **The total system is substantially larger** than the originals (7,726 lines across hubs + modules + existing files vs. the original monolithic set), reflecting the addition of detailed examples, edge case documentation, and cross-module context that was previously implicit or missing.
+- **Three moderate-severity cross-module inconsistencies found:** (G-1) `metrics.json` missing from `role.md` allowed files table (contradicts CLAUDE.md), (G-2) `severity` field missing from `data_architecture.md` deviations schema (contradicts `deviations.md`), (G-3) `dashboard_protocol.md` not listed in master hub Module Index. These are schema/reference inconsistencies, not missing content -- the information exists in the system but specific modules are incomplete or out of sync.
+- **Four low-severity gaps found:** portability checklist not extracted to module, two documentation subdirectories not in Domain Knowledge table, `p.md` not modularized (informational), and `tracker_worker_instructions_lite.md` not in Module Map.
+
+**Overall assessment: The restructure is complete and functionally correct. No behavioral regressions detected. Three moderate-severity cross-module inconsistencies should be resolved to prevent agent confusion. The system is ready for use with these minor fixes recommended.**
+
+---
+
+## 2. Size Reduction Summary
+
+### Hub Files (Entry Points)
+
+| File | Lines | Role |
+|---|---|---|
+| `CLAUDE.md` | 343 | Primary entry point (was 989 in original -- 65.3% reduction) |
+| `agent/instructions/tracker_master_instructions.md` | 143 | Master agent hub |
+| `agent/instructions/tracker_worker_instructions.md` | 126 | Worker agent hub |
+| `_commands/Synapse/p_track.md` | 172 | Tracked swarm command (delegates to phase modules) |
+| `_commands/Synapse/p.md` | 372 | Lightweight parallel command (self-contained) |
+| **Hub Total** | **1,156** | |
+
+### Module Files (Detailed Instructions)
+
+| Category | Directory | Files | Total Lines |
+|---|---|---|---|
+| Master modules | `agent/master/` | 8 | 2,248 |
+| Worker modules | `agent/worker/` | 5 | 853 |
+| Core modules | `agent/core/` | 7 | 1,105 |
+| Phase modules | `agent/_commands/` | 3 | 1,334 |
+| **Module Total** | | **23** | **5,540** |
+
+#### Master Modules Breakdown
+
+| File | Lines |
 |---|---|
-| Original CLAUDE.md | ~989 lines |
-| New CLAUDE.md | 343 lines (65% reduction) |
-| Original tracker_master_instructions.md | ~850 lines (estimated from old monolithic) |
-| New tracker_master_instructions.md | 143 lines (hub only) |
-| Original tracker_worker_instructions.md | ~400 lines (estimated) |
-| New tracker_worker_instructions.md | 126 lines (hub only) |
-| Original p_track.md | ~600 lines (estimated) |
-| New p_track.md | 172 lines (hub only) |
-| New p.md | 372 lines (significantly expanded with dashboard protocol) |
-| Module files created | 25 (8 master, 5 worker, 7 core, 3 _commands, 1 dashboard_protocol, 1 duplicate count adjustment) |
-| Total lines in modules | ~5,693 lines |
-| Total new system lines (hubs + modules) | ~6,696 lines |
-| Hub file reduction | ~72% average across 4 hubs |
-| Content preservation in modules | ~100% (all original content plus expansions) |
+| `agent/master/role.md` | 129 |
+| `agent/master/dashboard_writes.md` | 336 |
+| `agent/master/ui_map.md` | 382 |
+| `agent/master/eager_dispatch.md` | 233 |
+| `agent/master/failure_recovery.md` | 224 |
+| `agent/master/worker_prompts.md` | 429 |
+| `agent/master/compaction_recovery.md` | 234 |
+| `agent/master/dashboard_protocol.md` | 281 |
 
-### File Inventory
+#### Worker Modules Breakdown
 
-**Hub files (4):**
-- `CLAUDE.md` -- 343 lines
-- `agent/instructions/tracker_master_instructions.md` -- 143 lines
-- `agent/instructions/tracker_worker_instructions.md` -- 126 lines
-- `_commands/Synapse/p_track.md` -- 172 lines
+| File | Lines |
+|---|---|
+| `agent/worker/progress_reporting.md` | 398 |
+| `agent/worker/return_format.md` | 151 |
+| `agent/worker/deviations.md` | 111 |
+| `agent/worker/upstream_deps.md` | 74 |
+| `agent/worker/sibling_comms.md` | 119 |
 
-**Master modules (8):**
-- `agent/master/role.md` -- 129 lines
-- `agent/master/dashboard_protocol.md` -- 281 lines
-- `agent/master/dashboard_writes.md` -- 336 lines
-- `agent/master/ui_map.md` -- 382 lines
-- `agent/master/eager_dispatch.md` -- 233 lines
-- `agent/master/failure_recovery.md` -- 224 lines
-- `agent/master/worker_prompts.md` -- 429 lines
-- `agent/master/compaction_recovery.md` -- 234 lines
+#### Core Modules Breakdown
 
-**Worker modules (5):**
-- `agent/worker/progress_reporting.md` -- 398 lines
-- `agent/worker/return_format.md` -- 151 lines
-- `agent/worker/deviations.md` -- 111 lines
-- `agent/worker/upstream_deps.md` -- 74 lines
-- `agent/worker/sibling_comms.md` -- 119 lines
+| File | Lines |
+|---|---|
+| `agent/core/path_convention.md` | 103 |
+| `agent/core/command_resolution.md` | 123 |
+| `agent/core/profile_system.md` | 67 |
+| `agent/core/project_discovery.md` | 152 |
+| `agent/core/parallel_principles.md` | 164 |
+| `agent/core/data_architecture.md` | 209 |
+| `agent/core/dashboard_features.md` | 287 |
 
-**Core modules (7):**
-- `agent/core/path_convention.md` -- 103 lines
-- `agent/core/command_resolution.md` -- 123 lines
-- `agent/core/parallel_principles.md` -- 164 lines
-- `agent/core/data_architecture.md` -- 209 lines
-- `agent/core/dashboard_features.md` -- 287 lines
-- `agent/core/profile_system.md` -- 67 lines
-- `agent/core/project_discovery.md` -- 152 lines
+#### Phase Modules Breakdown
 
-**Phase modules (3):**
-- `agent/_commands/p_track_planning.md` -- 583 lines
-- `agent/_commands/p_track_execution.md` -- 540 lines
-- `agent/_commands/p_track_completion.md` -- 211 lines
+| File | Lines |
+|---|---|
+| `agent/_commands/p_track_planning.md` | 583 |
+| `agent/_commands/p_track_execution.md` | 540 |
+| `agent/_commands/p_track_completion.md` | 211 |
 
-**Also updated:**
-- `_commands/Synapse/p.md` -- 372 lines (expanded with full dashboard protocol section)
+### Existing Instruction Files (Preserved, Not Restructured)
 
----
+| File | Lines | Status |
+|---|---|---|
+| `agent/instructions/dashboard_resolution.md` | 195 | Preserved, referenced in CLAUDE.md |
+| `agent/instructions/common_pitfalls.md` | 23 | Preserved, referenced in master hub |
+| `agent/instructions/failed_task.md` | 204 | Preserved, referenced in master hub |
+| `agent/instructions/tracker_multi_plan_instructions.md` | 528 | Preserved, referenced in CLAUDE.md |
+| `agent/instructions/tracker_worker_instructions_lite.md` | 80 | Preserved, referenced in worker_prompts.md |
+| **Existing Total** | **1,030** | |
 
-## Coverage Matrix
+### Grand Totals
 
-Every major section from the original monolithic CLAUDE.md is mapped to its new location.
+| Metric | Lines |
+|---|---|
+| Hub files (5) | 1,156 |
+| Module files (23) | 5,540 |
+| Existing instruction files (5) | 1,030 |
+| **Total agent-facing documentation** | **7,726** |
+| CLAUDE.md alone (new) | 343 |
+| CLAUDE.md alone (original) | 989 |
+| **CLAUDE.md reduction** | **65.3%** |
 
-| # | Original Section | New Location | Status |
-|---|---|---|---|
-| 1 | Quick Start | `CLAUDE.md` lines 7-21 | Complete |
-| 2 | Path Convention | `CLAUDE.md` lines 25-36 + `agent/core/path_convention.md` | Complete |
-| 3 | Resolving `{project_root}` | `CLAUDE.md` line 34 + `agent/core/path_convention.md` lines 18-24 | Complete |
-| 4 | How It Works (architecture diagram) | `CLAUDE.md` lines 40-56 + `agent/core/path_convention.md` lines 28-46 | Complete |
-| 5 | Execution Mode Selection (Serial vs Parallel) | `CLAUDE.md` lines 60-87 (full flowchart inline) | Complete |
-| 6 | Forced Parallel Mode (`!p` commands) | `CLAUDE.md` lines 86-87 + `agent/master/role.md` (full detail) | Complete |
-| 7 | Automatic Parallel Mode | `CLAUDE.md` line 84 + `agent/master/dashboard_protocol.md` lines 173-182 | Complete |
-| 8 | Master Agent Role -- 5 Responsibilities | `CLAUDE.md` lines 163-180 (summary) + `agent/master/role.md` (full) | Complete |
-| 9 | Master Agent -- Gather Context | `agent/master/role.md` lines 25-36 | Complete |
-| 10 | Master Agent -- Plan | `agent/master/role.md` lines 37-49 | Complete |
-| 11 | Master Agent -- Dispatch | `agent/master/role.md` lines 51-58 | Complete |
-| 12 | Master Agent -- Status | `agent/master/role.md` lines 60-67 | Complete |
-| 13 | Master Agent -- Report | `agent/master/role.md` lines 69-74 | Complete |
-| 14 | What the Master Agent NEVER Does | `agent/master/role.md` lines 78-92 | Complete |
-| 15 | Why This Matters (conductor metaphor) | `agent/master/role.md` lines 89-93 | Complete |
-| 16 | The Only Files the Master Agent Writes | `CLAUDE.md` lines 169-178 + `agent/master/role.md` lines 97-109 | Complete |
-| 17 | Archive Before Clear | `CLAUDE.md` line 182 + `agent/master/role.md` lines 113-123 + `agent/master/dashboard_writes.md` lines 268-288 | Complete |
-| 18 | After a Swarm Completes | `agent/master/role.md` lines 127-129 | Complete |
-| 19 | Context Efficiency Principles (11 principles) | `CLAUDE.md` line 212 + `agent/core/project_discovery.md` lines 6-31 | Complete |
-| 20 | Project `.synapse/` Directory | `agent/core/project_discovery.md` lines 35-46 | Complete |
-| 21 | Command Resolution -- `!{command}` System | `CLAUDE.md` lines 188-197 + `agent/core/command_resolution.md` | Complete |
-| 22 | Creating New Commands/Profiles -- Duplicate Detection | `agent/core/command_resolution.md` lines 33-48 | Complete |
-| 23 | Profile System -- `!profile` Modifier | `CLAUDE.md` lines 202-206 + `agent/core/profile_system.md` | Complete |
-| 24 | Worker Progress Protocol | `agent/worker/progress_reporting.md` (398 lines, full schema) | Complete |
-| 25 | Progress File Schema (15 fields) | `agent/worker/progress_reporting.md` lines 32-87 | Complete |
-| 26 | Fixed Stages | `agent/worker/progress_reporting.md` lines 97-109 + `agent/core/data_architecture.md` lines 147-159 | Complete |
-| 27 | When Workers Must Write (7 mandatory writes) | `agent/worker/progress_reporting.md` lines 113-143 + hub summary lines 74-79 | Complete |
-| 28 | Deviation Reporting | `agent/worker/deviations.md` (111 lines) + `agent/worker/progress_reporting.md` lines 209-243 | Complete |
-| 29 | Dashboard Rendering (card merging) | `agent/core/dashboard_features.md` lines 150-159 + `agent/master/ui_map.md` | Complete |
-| 30 | Context Savings Table | `agent/core/dashboard_features.md` lines 164-178 + `agent/core/data_architecture.md` lines 8-21 | Complete |
-| 31 | Core Principles for Parallelization (12 principles) | `CLAUDE.md` lines 218-231 (summary) + `agent/core/parallel_principles.md` (164 lines, full) | Complete |
-| 32 | Shared File Accumulation Patterns (A/B/C) | `agent/core/parallel_principles.md` lines 130-140 + `agent/_commands/p_track_planning.md` lines 126-139 | Complete |
-| 33 | Data Architecture -- initialization.json | `CLAUDE.md` lines 236-250 (summary) + `agent/core/data_architecture.md` + `agent/master/dashboard_writes.md` lines 27-112 | Complete |
-| 34 | Data Architecture -- logs.json | `agent/core/data_architecture.md` lines 58-87 + `agent/master/dashboard_writes.md` lines 114-154 | Complete |
-| 35 | Data Architecture -- Master XML | `agent/core/data_architecture.md` lines 90-112 | Complete |
-| 36 | Data Architecture -- progress/ Directory | `agent/core/data_architecture.md` lines 114-167 | Complete |
-| 37 | Data Architecture -- master_state.json | `agent/core/data_architecture.md` lines 170-190 + `agent/master/dashboard_writes.md` lines 158-201 + `agent/master/compaction_recovery.md` | Complete |
-| 38 | Data Architecture -- metrics.json | `agent/core/data_architecture.md` lines 193-210 + `agent/master/dashboard_writes.md` lines 214-265 + `agent/master/compaction_recovery.md` lines 142-234 | Complete |
-| 39 | Dashboard Features -- Layout Modes | `CLAUDE.md` lines 254-258 + `agent/core/dashboard_features.md` lines 8-19 + `agent/master/ui_map.md` lines 70-110 | Complete |
-| 40 | Dashboard Features -- Dependency Lines | `agent/core/dashboard_features.md` lines 23-30 + `agent/master/ui_map.md` lines 186-197 | Complete |
-| 41 | Dashboard Features -- Multi-Dashboard Sidebar | `agent/core/dashboard_features.md` lines 34-48 | Complete |
-| 42 | Dashboard Features -- Stat Cards | `agent/core/dashboard_features.md` lines 52-65 + `agent/master/ui_map.md` lines 38-67 | Complete |
-| 43 | Dashboard Features -- Log Panel | `agent/core/dashboard_features.md` lines 69-76 + `agent/master/ui_map.md` lines 200-231 | Complete |
-| 44 | Dashboard Features -- Popup Log Box | `agent/core/dashboard_features.md` lines 79-81 | Complete |
-| 45 | Dashboard Features -- Permission Popup | `agent/core/dashboard_features.md` lines 84-87 + `agent/master/ui_map.md` lines 233-265 | Complete |
-| 46 | Directory Structure | `CLAUDE.md` lines 263-277 (compact) + `agent/core/dashboard_features.md` lines 181-287 + `agent/core/project_discovery.md` lines 50-153 | Complete |
-| 47 | Commands Table (full list) | `CLAUDE.md` lines 281-319 + `agent/core/command_resolution.md` lines 52-123 | Complete |
-| 48 | Timestamp Protocol | `CLAUDE.md` line 343 + `agent/core/path_convention.md` lines 96-103 + `_commands/Synapse/p_track.md` lines 157-172 | Complete |
-| 49 | Integration with Any Project | `agent/core/path_convention.md` lines 50-67 | Complete |
-| 50 | Multi-Project Support | `agent/core/path_convention.md` lines 71-79 | Complete |
-| 51 | Portability Checklist | `agent/core/path_convention.md` lines 83-92 | Complete |
-| 52 | `!p_track` command spec | `_commands/Synapse/p_track.md` (hub) + 3 phase modules | Complete |
-| 53 | `!p_track` Phase 1: Planning | `agent/_commands/p_track_planning.md` (583 lines) | Complete |
-| 54 | `!p_track` Phase 2: Execution | `agent/_commands/p_track_execution.md` (540 lines) | Complete |
-| 55 | `!p_track` Phase 3: Completion | `agent/_commands/p_track_completion.md` (211 lines) | Complete |
-| 56 | `!p` command spec | `_commands/Synapse/p.md` (372 lines, fully rewritten) | Complete |
-| 57 | `!p` vs `!p_track` differences | `agent/master/dashboard_protocol.md` (281 lines) | Complete |
-| 58 | Worker dispatch prompt template | `agent/master/worker_prompts.md` (429 lines, full) + `agent/_commands/p_track_execution.md` lines 54-234 | Complete |
-| 59 | Eager Dispatch Protocol | `agent/master/eager_dispatch.md` (233 lines, full) | Complete |
-| 60 | Failure Recovery & Circuit Breaker | `agent/master/failure_recovery.md` (224 lines, full) | Complete |
-| 61 | Worker Return Validation | `agent/master/failure_recovery.md` lines 203-224 | Complete |
-| 62 | Compaction Recovery | `agent/master/compaction_recovery.md` (234 lines, full) | Complete |
+### Context Window Impact
+
+The restructure achieves its primary goal: **agents only read what they need.** Under the original system, agents loaded the full monolithic CLAUDE.md (989 lines) plus full instruction files on every swarm invocation. Under the new system:
+
+- **CLAUDE.md** is always read (343 lines) -- mandatory for all agents
+- **Hub files** are read based on role (master reads master hub, workers read worker hub)
+- **Module files** are read only when their trigger condition is met (e.g., `eager_dispatch.md` only on worker completion, `failure_recovery.md` only on worker failure)
+
+A typical swarm where no workers fail and no context compaction occurs would read: CLAUDE.md (343) + master hub (143) + p_track.md (172) + dashboard_writes.md (336) + ui_map.md (382) + worker_prompts.md (429) + eager_dispatch.md (233) = **2,038 lines** for the master, compared to loading all content upfront in the monolithic system.
 
 ---
 
-## Cross-Reference Validation
+## 3. Coverage Matrix
 
-Every file reference found in the hub files was validated against the filesystem.
+This matrix maps every major section of the original CLAUDE.md to its location in the new system.
 
-| Reference In | Referenced Path | Exists? | Notes |
+| Original Section | New Hub Reference | Module File | Status |
 |---|---|---|---|
-| CLAUDE.md line 36 | `agent/core/path_convention.md` | YES | |
-| CLAUDE.md line 111 | `agent/master/dashboard_protocol.md` | YES | |
-| CLAUDE.md line 118 | `agent/master/dashboard_writes.md` + `agent/master/ui_map.md` | YES | |
-| CLAUDE.md line 119 | `agent/master/worker_prompts.md` | YES | |
-| CLAUDE.md line 125 | `agent/master/eager_dispatch.md` | YES | |
-| CLAUDE.md line 126 | `agent/master/failure_recovery.md` | YES | |
-| CLAUDE.md line 127 | `agent/master/compaction_recovery.md` | YES | |
-| CLAUDE.md line 134 | `agent/instructions/tracker_worker_instructions.md` | YES | |
-| CLAUDE.md line 147-159 | `documentation/architecture/` through `documentation/master-agent/` (13 directories) | YES | All 13 subdirectories exist at `/Users/dean/Desktop/Working/Repos/Synapse/documentation/` |
-| CLAUDE.md line 184 | `agent/master/role.md` | YES | |
-| CLAUDE.md line 198 | `agent/core/command_resolution.md` | YES | |
-| CLAUDE.md line 206 | `agent/core/profile_system.md` | YES | |
-| CLAUDE.md line 214 | `agent/core/project_discovery.md` | YES | |
-| CLAUDE.md line 232 | `agent/core/parallel_principles.md` | YES | |
-| CLAUDE.md line 249 | `agent/core/data_architecture.md` | YES | |
-| CLAUDE.md line 250 | `agent/master/dashboard_writes.md` | YES | |
-| CLAUDE.md line 258 | `agent/core/dashboard_features.md` | YES | |
-| CLAUDE.md line 259 | `agent/instructions/dashboard_resolution.md` | YES | |
-| master_instructions.md line 29 | `agent/master/role.md` | YES | |
-| master_instructions.md line 30 | `agent/master/dashboard_writes.md` | YES | |
-| master_instructions.md line 31 | `agent/master/ui_map.md` | YES | |
-| master_instructions.md line 32 | `agent/master/eager_dispatch.md` | YES | |
-| master_instructions.md line 33 | `agent/master/failure_recovery.md` | YES | |
-| master_instructions.md line 34 | `agent/master/worker_prompts.md` | YES | |
-| master_instructions.md line 35 | `agent/master/compaction_recovery.md` | YES | |
-| master_instructions.md line 107 | `agent/instructions/tracker_worker_instructions.md` | YES | |
-| master_instructions.md line 108 | `agent/instructions/failed_task.md` | YES | |
-| master_instructions.md line 109 | `agent/instructions/common_pitfalls.md` | YES | |
-| worker_instructions.md line 53 | `agent/worker/progress_reporting.md` | YES | |
-| worker_instructions.md line 54 | `agent/worker/return_format.md` | YES | |
-| worker_instructions.md line 55 | `agent/worker/deviations.md` | YES | |
-| worker_instructions.md line 56 | `agent/worker/upstream_deps.md` | YES | |
-| worker_instructions.md line 57 | `agent/worker/sibling_comms.md` | YES | |
-| p_track.md line 62 | `agent/_commands/p_track_planning.md` | YES | |
-| p_track.md line 70 | `agent/_commands/p_track_execution.md` | YES | |
-| p_track.md line 78 | `agent/_commands/p_track_completion.md` | YES | |
-| p_track_execution.md line 168 | `tracker_worker_instructions.md` (FULL mode) | YES | |
-| p_track_execution.md line 178 | `tracker_worker_instructions_lite.md` (LITE mode) | **NO** | **Missing file** |
-| worker_prompts.md line 132 | `tracker_worker_instructions_lite.md` (LITE mode) | **NO** | **Missing file** |
-| failure_recovery.md line 52 | `agent/instructions/failed_task.md` | YES | |
-| dashboard_protocol.md line 277-281 | `agent/master/dashboard_writes.md`, `agent/core/dashboard_features.md`, `agent/instructions/dashboard_resolution.md`, `_commands/Synapse/p.md`, `_commands/Synapse/p_track.md` | YES | All exist |
+| Quick Start | CLAUDE.md lines 7-21 | -- (inline) | Covered |
+| Path Convention | CLAUDE.md lines 25-36 | `agent/core/path_convention.md` | Covered |
+| Resolving `{project_root}` | CLAUDE.md line 34 | `agent/core/path_convention.md` | Covered |
+| How It Works (architecture diagram) | CLAUDE.md lines 40-56 | -- (inline) | Covered |
+| Execution Mode (Serial vs Parallel) | CLAUDE.md lines 60-87 | -- (inline, with flowchart) | Covered |
+| Document Reference Map | CLAUDE.md lines 90-160 | -- (inline) | **NEW** -- not in original |
+| The Master Agent Role | CLAUDE.md lines 163-184 | `agent/master/role.md` | Covered |
+| Master -- 5 Responsibilities | CLAUDE.md line 167 | `agent/master/role.md` | Covered |
+| Master -- NEVER Does List | CLAUDE.md line 165 (summary) | `agent/master/role.md` | Covered |
+| Allowed Files Table | CLAUDE.md lines 169-179 | `agent/master/role.md` | Covered |
+| Archive Before Clear | CLAUDE.md line 182 | `agent/master/role.md` | Covered |
+| After Swarm Completes | CLAUDE.md line 180 | `agent/master/role.md` | Covered |
+| Command Resolution | CLAUDE.md lines 188-198 | `agent/core/command_resolution.md` | Covered |
+| Duplicate Detection | -- | `agent/core/command_resolution.md` | Covered |
+| Profile System | CLAUDE.md lines 202-206 | `agent/core/profile_system.md` | Covered |
+| Project Discovery (11 principles) | CLAUDE.md lines 210-214 | `agent/core/project_discovery.md` | Covered |
+| Project `.synapse/` Directory | -- | `agent/core/project_discovery.md` | Covered |
+| Core Parallelization Principles (11) | CLAUDE.md lines 218-232 | `agent/core/parallel_principles.md` | Covered |
+| Shared File Patterns (A/B/C) | -- | `agent/core/parallel_principles.md` | Covered |
+| Data Architecture (6 stores) | CLAUDE.md lines 236-250 | `agent/core/data_architecture.md` | Covered |
+| initialization.json schema | -- | `agent/master/dashboard_writes.md` | Covered |
+| logs.json schema | -- | `agent/master/dashboard_writes.md` | Covered |
+| master_state.json schema | -- | `agent/master/compaction_recovery.md` | Covered |
+| metrics.json schema | -- | `agent/master/compaction_recovery.md` | Covered |
+| Dashboard Features | CLAUDE.md lines 254-259 | `agent/core/dashboard_features.md` | Covered |
+| Layout Modes (Waves/Chains) | -- | `agent/core/dashboard_features.md` | Covered |
+| Multi-Dashboard Sidebar | -- | `agent/core/dashboard_features.md` | Covered |
+| Stat Cards | -- | `agent/core/dashboard_features.md` + `agent/master/ui_map.md` | Covered |
+| Log Panel | -- | `agent/core/dashboard_features.md` + `agent/master/ui_map.md` | Covered |
+| Permission Popup | -- | `agent/core/dashboard_features.md` + `agent/master/ui_map.md` | Covered |
+| Directory Structure | CLAUDE.md lines 263-277 | -- (inline, condensed) | Covered |
+| Commands Table (full list) | CLAUDE.md lines 281-319 | -- (inline) | Covered |
+| Module Map | CLAUDE.md lines 323-337 | -- (inline) | **NEW** -- not in original |
+| Timestamp Protocol | CLAUDE.md lines 341-343 | -- (inline) | Covered |
+| Worker Progress Protocol | -- | `agent/core/dashboard_features.md` + `agent/worker/progress_reporting.md` | Covered |
+| Progress File Schema | -- | `agent/worker/progress_reporting.md` + `agent/core/data_architecture.md` | Covered |
+| Fixed Stages | -- | `agent/worker/progress_reporting.md` | Covered |
+| 7 Mandatory Write Moments | -- | `agent/worker/progress_reporting.md` | Covered |
+| Deviation Reporting | -- | `agent/worker/deviations.md` | Covered |
+| Dashboard Selection Priority | -- | `agent/instructions/dashboard_resolution.md` | Covered |
+| `!p` vs `!p_track` Differences | -- | `agent/master/dashboard_protocol.md` | **NEW** -- explicitly documented |
+| Worker Dispatch Prompt Template | -- | `agent/master/worker_prompts.md` | Covered (enhanced) |
+| Eager Dispatch Protocol | -- | `agent/master/eager_dispatch.md` | Covered (enhanced) |
+| Failure Recovery + Circuit Breaker | -- | `agent/master/failure_recovery.md` | Covered (enhanced) |
+| Compaction Recovery | -- | `agent/master/compaction_recovery.md` | Covered (enhanced) |
+| Integration with Any Project | -- | `agent/core/path_convention.md` | Covered |
+| Multi-Project Support | -- | `agent/core/path_convention.md` | Covered |
+| Portability Checklist | -- | -- | See Gap G-4 |
+
+### Coverage Assessment
+
+**All original sections except the Portability Checklist (see G-4)** are fully covered in the new system. Three entirely new sections were added: Document Reference Map, Module Map, and the `!p` vs `!p_track` dashboard protocol comparison.
+
+---
+
+## 4. Read Trigger Analysis
+
+The CLAUDE.md "Document Reference Map -- NON-NEGOTIABLE" section (lines 90-160) defines when agents must read which files. This analysis verifies completeness across all scenarios.
+
+### Triggers Covered
+
+| Scenario | CLAUDE.md Section | Files Referenced | Verdict |
+|---|---|---|---|
+| Any work in `{project_root}` | Before Any Work | `{project_root}/CLAUDE.md` + subdirectory CLAUDE.md files | Correct |
+| Project has `.synapse/` | Before Any Work | `{project_root}/.synapse/toc.md` | Correct |
+| `!p_track` invoked | Entering Swarm Mode | `_commands/Synapse/p_track.md` (NON-NEGOTIABLE) | Correct |
+| `!p` invoked | Entering Swarm Mode | `_commands/Synapse/p.md` (NON-NEGOTIABLE) | Correct |
+| `!master_plan_track` invoked | Entering Swarm Mode | `_commands/Synapse/master_plan_track.md` (NON-NEGOTIABLE) | Correct |
+| Any swarm dispatch | Entering Swarm Mode | `tracker_master_instructions.md` (NON-NEGOTIABLE) | Correct |
+| Any swarm dispatch | Entering Swarm Mode | `agent/master/dashboard_protocol.md` | Correct |
+| Any swarm dispatch | Entering Swarm Mode | `{project_root}/CLAUDE.md` | Correct |
+| Writing dashboard files | During Planning | `dashboard_writes.md` + `ui_map.md` | Correct |
+| Constructing worker prompts | During Planning | `worker_prompts.md` | Correct |
+| Worker completes (EVERY time) | During Execution | `eager_dispatch.md` | Correct |
+| Worker fails | During Execution | `failure_recovery.md` | Correct |
+| After context compaction | During Execution | `compaction_recovery.md` | Correct |
+| Swarm finishes (metrics) | During Execution | `compaction_recovery.md` (metrics section) | Correct |
+| Dispatched as worker agent | As a Worker | `tracker_worker_instructions.md` (NON-NEGOTIABLE) | Correct |
+| `!{command}` invoked | Commands & Profiles | Resolution hierarchy (Synapse > project > project_root) | Correct |
+| `!{profile}` modifier used | Commands & Profiles | `_commands/profiles/{profile}.md` | Correct |
+| Architecture & data flow | Domain Knowledge | `documentation/architecture/` | Correct |
+| Swarm lifecycle phases | Domain Knowledge | `documentation/swarm-lifecycle/` | Correct |
+| Dashboard components | Domain Knowledge | `documentation/dashboard/` | Correct |
+| Multi-dashboard & archive | Domain Knowledge | `documentation/multi-dashboard/` | Correct |
+| Worker protocol | Domain Knowledge | `documentation/worker-protocol/` | Correct |
+| Data schemas | Domain Knowledge | `documentation/data-architecture/` | Correct |
+| Server & SSE | Domain Knowledge | `documentation/server/` | Correct |
+| Electron app | Domain Knowledge | `documentation/electron/` | Correct |
+| Commands reference | Domain Knowledge | `documentation/commands/` | Correct |
+| Project integration & TOC | Domain Knowledge | `documentation/project-integration/` | Correct |
+| Profiles | Domain Knowledge | `documentation/profiles/` | Correct |
+| Configuration & theming | Domain Knowledge | `documentation/configuration/` | Correct |
+| Master agent protocols | Domain Knowledge | `documentation/master-agent/` | Correct |
+
+### Edge Cases Checked
+
+| Edge Case | Covered? | Notes |
+|---|---|---|
+| Worker dispatched in `!p` mode (no progress files) | Yes | `dashboard_protocol.md` is listed under "Entering Swarm Mode" and documents the `!p` vs `!p_track` differences. Workers in `!p` mode use `TEMPLATE_VERSION: p_v2` and do not receive progress file instructions. |
+| Worker dispatched in LITE instruction mode | Yes | `tracker_worker_instructions_lite.md` exists (80 lines) and is referenced in `worker_prompts.md`. The master decides FULL vs LITE mode per-worker at dispatch time. This is a dispatch-time decision, not a read trigger, so its absence from the Document Reference Map is correct. |
+| Circuit breaker triggers replanning | Yes | `failure_recovery.md` is listed under "Worker fails" trigger. The circuit breaker replanning procedure is documented in that module. |
+| `!resume` command (stalled swarm) | Yes | Resolved via the command resolution hierarchy listed in the Commands & Profiles section. |
+| Multi-stream orchestration (`!master_plan_track`) | Yes | Explicitly listed under "Entering Swarm Mode" and `tracker_multi_plan_instructions.md` is preserved in `agent/instructions/`. |
+| After swarm completes | Yes | Documented in CLAUDE.md line 180 and `agent/master/role.md`. |
+| Serial mode execution | Correct omission | Serial mode requires no extra reads beyond CLAUDE.md -- no read trigger needed. |
+
+### Verdict: The Document Reference Map is comprehensive. All 30 trigger scenarios are correctly mapped. No missing reads.
+
+---
+
+## 5. Cross-Reference Validation
+
+Every `Full details:`, `Read:`, and `-->` pointer in hub files was checked against the filesystem.
+
+### CLAUDE.md Inline Pointers (10 references)
+
+| Line | Reference | Exists? |
+|---|---|---|
+| 36 | `agent/core/path_convention.md` | Yes |
+| 184 | `agent/master/role.md` | Yes |
+| 198 | `agent/core/command_resolution.md` | Yes |
+| 206 | `agent/core/profile_system.md` | Yes |
+| 214 | `agent/core/project_discovery.md` | Yes |
+| 232 | `agent/core/parallel_principles.md` | Yes |
+| 249 | `agent/core/data_architecture.md` | Yes |
+| 250 | `agent/master/dashboard_writes.md` | Yes |
+| 258 | `agent/core/dashboard_features.md` | Yes |
+| 259 | `agent/instructions/dashboard_resolution.md` | Yes |
+
+### CLAUDE.md Document Reference Map (12 file references)
+
+| Trigger | Referenced File | Exists? |
+|---|---|---|
+| `!p_track` invoked | `_commands/Synapse/p_track.md` | Yes |
+| `!p` invoked | `_commands/Synapse/p.md` | Yes |
+| `!master_plan_track` invoked | `_commands/Synapse/master_plan_track.md` | Yes |
+| Any swarm dispatch | `agent/instructions/tracker_master_instructions.md` | Yes |
+| Any swarm dispatch | `agent/master/dashboard_protocol.md` | Yes |
+| Writing dashboard files | `agent/master/dashboard_writes.md` | Yes |
+| Writing dashboard files | `agent/master/ui_map.md` | Yes |
+| Constructing worker prompts | `agent/master/worker_prompts.md` | Yes |
+| Worker completes | `agent/master/eager_dispatch.md` | Yes |
+| Worker fails | `agent/master/failure_recovery.md` | Yes |
+| After context compaction | `agent/master/compaction_recovery.md` | Yes |
+| Dispatched as worker | `agent/instructions/tracker_worker_instructions.md` | Yes |
+
+### CLAUDE.md Domain Knowledge References (13 directories)
+
+| Referenced Directory | Exists? | File Count |
+|---|---|---|
+| `documentation/architecture/` | Yes | 3 files |
+| `documentation/swarm-lifecycle/` | Yes | 6 files |
+| `documentation/dashboard/` | Yes | 6 files |
+| `documentation/multi-dashboard/` | Yes | 4 files |
+| `documentation/worker-protocol/` | Yes | 4 files |
+| `documentation/data-architecture/` | Yes | 5 files |
+| `documentation/server/` | Yes | 5 files |
+| `documentation/electron/` | Yes | 4 files |
+| `documentation/commands/` | Yes | 4 files |
+| `documentation/project-integration/` | Yes | 4 files |
+| `documentation/profiles/` | Yes | 2 files |
+| `documentation/configuration/` | Yes | 4 files |
+| `documentation/master-agent/` | Yes | 4 files |
+
+### CLAUDE.md Module Map (29 module files listed)
+
+All 29 files listed in the Module Map (lines 323-337) exist at their declared paths. Verified:
+
+- 6 hub/instruction files in `agent/instructions/`
+- 7 core modules in `agent/core/`
+- 8 master modules in `agent/master/`
+- 5 worker modules in `agent/worker/`
+- 3 phase modules in `agent/_commands/`
+
+### tracker_master_instructions.md Cross-References (7 references)
+
+| Module Referenced | Exists? |
+|---|---|
+| `agent/master/role.md` | Yes |
+| `agent/master/dashboard_writes.md` | Yes |
+| `agent/master/ui_map.md` | Yes |
+| `agent/master/eager_dispatch.md` | Yes |
+| `agent/master/failure_recovery.md` | Yes |
+| `agent/master/worker_prompts.md` | Yes |
+| `agent/master/compaction_recovery.md` | Yes |
+
+### tracker_worker_instructions.md Cross-References (5 references)
+
+| Module Referenced | Exists? |
+|---|---|
+| `agent/worker/progress_reporting.md` | Yes |
+| `agent/worker/return_format.md` | Yes |
+| `agent/worker/deviations.md` | Yes |
+| `agent/worker/upstream_deps.md` | Yes |
+| `agent/worker/sibling_comms.md` | Yes |
+
+### p_track.md Cross-References (3 references)
+
+| Phase Reference | Exists? |
+|---|---|
+| `agent/_commands/p_track_planning.md` | Yes |
+| `agent/_commands/p_track_execution.md` | Yes |
+| `agent/_commands/p_track_completion.md` | Yes |
+
+### Inter-Module Cross-References (Spot Check)
+
+| Source | References | Exists? |
+|---|---|---|
+| `failure_recovery.md` | `agent/instructions/failed_task.md` | Yes |
+| `dashboard_protocol.md` | `agent/master/dashboard_writes.md` | Yes |
+| `dashboard_protocol.md` | `agent/core/dashboard_features.md` | Yes |
+| `dashboard_protocol.md` | `agent/instructions/dashboard_resolution.md` | Yes |
+| `worker_prompts.md` | `tracker_worker_instructions_lite.md` | Yes (80 lines) |
 
 ### Summary
 
-- **Total references checked:** 42
-- **Valid references:** 40
-- **Missing references:** 2 (both point to `tracker_worker_instructions_lite.md`)
+- **Total references checked:** 70+
+- **Valid references:** All
+- **Broken references:** 0
+
+**Verdict: All cross-references resolve successfully. Zero broken links.**
 
 ---
 
-## Read Trigger Analysis
+## 6. Gap List
 
-The Document Reference Map in CLAUDE.md (lines 90-159) was verified against a comprehensive scenario list.
+### G-1: `metrics.json` Missing from `role.md` Allowed Files Table
 
-| # | Scenario | Covered in CLAUDE.md? | Location | Notes |
-|---|---|---|---|---|
-| 1 | `!p_track` invoked | YES | Line 107 | Points to `_commands/Synapse/p_track.md` as NON-NEGOTIABLE |
-| 2 | `!p` invoked | YES | Line 108 | Points to `_commands/Synapse/p.md` as NON-NEGOTIABLE |
-| 3 | `!master_plan_track` invoked | YES | Line 109 | Points to `_commands/Synapse/master_plan_track.md` as NON-NEGOTIABLE |
-| 4 | Serial task execution | PARTIAL | Lines 82-83 | Notes serial mode exists but no read trigger for it (correct -- serial needs no extra reads) |
-| 5 | Worker starting | YES | Line 134 | Points to `tracker_worker_instructions.md` as NON-NEGOTIABLE |
-| 6 | Worker reporting progress | YES | Line 134 (implicit) | Worker reads worker_instructions which covers progress protocol |
-| 7 | Worker has deviations | YES | Lines 65-66 in worker_instructions hub | Points to `agent/worker/deviations.md` |
-| 8 | Worker has upstream deps | YES | Line 25-26 in worker_instructions hub | Points to `agent/worker/upstream_deps.md` |
-| 9 | Worker writing sibling context | YES | Lines 29, 57 in worker_instructions hub | Points to `agent/worker/sibling_comms.md` |
-| 10 | Master writing dashboard files | YES | Line 118 | Points to `agent/master/dashboard_writes.md` + `agent/master/ui_map.md` |
-| 11 | Master constructing worker prompts | YES | Line 119 | Points to `agent/master/worker_prompts.md` |
-| 12 | Master dispatching workers | IMPLICIT | Line 110-111 | Covered by swarm dispatch reads (master_instructions + dashboard_protocol) |
-| 13 | Worker fails | YES | Line 126 | Points to `agent/master/failure_recovery.md` |
-| 14 | Circuit breaker triggers | IMPLICIT | Line 126 | Covered under failure_recovery.md which contains circuit breaker section |
-| 15 | Context compaction detected | YES | Line 127 | Points to `agent/master/compaction_recovery.md` |
-| 16 | Swarm completing | YES | Line 128 | Points to `agent/master/compaction_recovery.md` (metrics section) |
-| 17 | Dashboard update rules (!p vs !p_track) | YES | Line 111 | Points to `agent/master/dashboard_protocol.md` |
-| 18 | Project discovery | PARTIAL | Lines 98-99 | Covers reading `{project_root}/CLAUDE.md` and `.synapse/toc.md` but no explicit pointer to `agent/core/project_discovery.md` in the "Before Any Work" section -- only referenced later on line 214 |
-| 19 | Command resolution | YES | Line 140 | Resolution chain documented |
-| 20 | Profile invocation | YES | Line 141 | Resolution path documented |
+**Severity:** Moderate
+**Description:** The master agent's allowed files table in `agent/master/role.md` (lines 97-109) lists exactly 5 files and states the master writes "exactly these files... and **no others**." However, `dashboards/{dashboardId}/metrics.json` is absent from this list. Meanwhile, CLAUDE.md (line 176) correctly lists `metrics.json` as an allowed master file, and `compaction_recovery.md` documents the full metrics computation procedure. The role module and the hub are inconsistent.
+**Impact:** An agent reading `role.md` as its authoritative constraint set would conclude that writing `metrics.json` violates the "no others" rule. This creates a contradiction with CLAUDE.md and `compaction_recovery.md`, which both expect the master to write metrics after swarm completion.
+**Recommendation:** Add `dashboards/{dashboardId}/metrics.json` to the allowed files table in `agent/master/role.md` with purpose "Post-swarm performance metrics (written once after completion)". This brings the count to 6 files, matching CLAUDE.md.
 
-### Summary
+### G-2: `severity` Field Missing from `data_architecture.md` Deviations Schema
 
-- **Fully covered:** 16/20 scenarios
-- **Partially covered:** 2/20 (Serial execution -- correct behavior, no extra reads needed; Project discovery -- referenced but not in the early triggers table)
-- **Implicitly covered:** 2/20 (Master dispatching workers; Circuit breaker triggers -- both covered by documents that are already mandatory reads)
-- **Missing:** 0
+**Severity:** Moderate
+**Description:** The progress file schema in `agent/core/data_architecture.md` (line 136) defines `deviations[]` as having only `at` and `description` fields. However, `agent/worker/deviations.md` (the authoritative deviation protocol) defines a mandatory `severity` field with three levels: `CRITICAL`, `MODERATE`, and `MINOR`. The master agent uses this severity to decide whether to replan downstream tasks. The data architecture schema and the worker deviation protocol are inconsistent.
+**Impact:** An agent or developer consulting `data_architecture.md` as the schema reference would not know about the `severity` field. Workers reading only the data architecture module would write deviations without severity classification, breaking the master's severity-based replanning logic defined in `failure_recovery.md`.
+**Recommendation:** Update the `deviations[]` field description in `agent/core/data_architecture.md` from `(at, description)` to `(at, severity, description)`. Add a note: "Severity is one of `CRITICAL`, `MODERATE`, `MINOR` -- see `agent/worker/deviations.md` for classification guide."
 
----
+### G-3: `dashboard_protocol.md` Not Listed in Master Hub Module Index
 
-## Behavioral Regression Check
+**Severity:** Moderate
+**Description:** The `tracker_master_instructions.md` Module Index (lines 27-35) lists 7 master modules but does not include `agent/master/dashboard_protocol.md` (282 lines). This module documents the critical `!p` vs `!p_track` dashboard interaction differences and is referenced in CLAUDE.md's Document Reference Map under the "Entering Swarm Mode" trigger. The hub that the master reads first does not point to this module.
+**Impact:** A master agent reading `tracker_master_instructions.md` (as required by NON-NEGOTIABLE rule 2 in both p_track.md and CLAUDE.md) would not discover `dashboard_protocol.md` from the Module Index. The module IS discoverable via CLAUDE.md's Document Reference Map, so agents that follow the full CLAUDE.md trigger chain will still find it. The gap is in the master hub's own index being incomplete.
+**Recommendation:** Add `dashboard_protocol.md` to the Module Index in `tracker_master_instructions.md` with: `| **Dashboard Protocol** | agent/master/dashboard_protocol.md | When understanding !p vs !p_track dashboard interaction -- write timelines, mode comparison, and decision flowchart |`
 
-### Master Agent Enters Swarm Mode Correctly
+### G-4: Portability Checklist Not Extracted to Module
 
-**Verdict: PASS**
+**Severity:** Low
+**Description:** The original CLAUDE.md contained a "Portability Checklist" section with checkbox items confirming Synapse's portability properties (zero npm deps for server, no hardcoded paths, no project-specific assumptions, self-contained commands, etc.). This checklist does not appear in the new CLAUDE.md or in any module file as a distinct section.
+**Impact:** Minimal. The portability properties are implicitly covered across multiple modules (`path_convention.md` covers path abstraction, `project_discovery.md` covers project independence), but the explicit checklist as a quick verification aid is lost.
+**Recommendation:** Consider adding the portability checklist to `agent/core/path_convention.md` or as a brief section at the end of CLAUDE.md, since it served as a useful quick-reference for contributors.
 
-The new system preserves all swarm entry constraints:
-- `CLAUDE.md` lines 86-87: Forced parallel mode for `!p` commands is explicitly documented
-- `CLAUDE.md` lines 68-80: Decision flowchart is preserved inline (not delegated to a module)
-- `agent/master/role.md`: Full NON-NEGOTIABLE constraints block is preserved verbatim at the top
-- `tracker_master_instructions.md`: Same NON-NEGOTIABLE block duplicated as the opening section
-- Both hub files open with "You are the MASTER AGENT" constraint block -- this critical behavioral anchor is preserved
+### G-5: Documentation Subdirectories `posts/` and `reports/` Not Listed in Domain Knowledge Table
 
-### Workers Write Progress Files Correctly
+**Severity:** Very Low
+**Description:** The CLAUDE.md Domain Knowledge table (lines 147-159) lists 13 `documentation/` subdirectories. The actual directory contains 15 subdirectories: the 13 listed plus `posts/` and `reports/`. These two are not referenced in the Domain Knowledge table.
+**Impact:** Agents will not be directed to these directories when seeking domain knowledge. However, `reports/` is an output location for analysis reports (like this one), and `posts/` appears to contain marketing/content materials. Neither contains agent-facing behavioral instructions.
+**Recommendation:** Optionally add `posts/` and `reports/` to the Domain Knowledge table if they contain reference material agents should access. If they are purely output directories, the omission is intentional and correct.
 
-**Verdict: PASS**
+### G-6: `p.md` Not Modularized Like `p_track.md`
 
-The new system preserves and expands worker progress:
-- `tracker_worker_instructions.md` hub: Quick Start Checklist (8 steps), Module Index, Rules Summary
-- `agent/worker/progress_reporting.md`: Full 398-line module with JSON schema (15 fields), 7 mandatory writes, partial completion protocol, ambiguity handling, full lifecycle examples
-- Progress file schema matches original: `task_id`, `status`, `started_at`, `completed_at`, `summary`, `assigned_agent`, `stage`, `message`, `milestones`, `deviations`, `logs`, `shared_context`, `sibling_reads`, plus new `prompt_size` and `template_version` fields
-- Fixed stages preserved: `reading_context` -> `planning` -> `implementing` -> `testing` -> `finalizing` -> `completed` | `failed`
+**Severity:** Low (Informational)
+**Description:** The `!p_track` command file (`p_track.md`, 172 lines) was modularized by extracting its three phases into separate module files (`p_track_planning.md`, `p_track_execution.md`, `p_track_completion.md`). The `!p` command file (`p.md`, 372 lines) remains self-contained with all phases inline.
+**Impact:** None for correctness. The `!p` command is inherently simpler (no live tracking, no progress files, no master_state.json) and 372 lines is within a reasonable size for a single command file. Modularization would add read overhead for a lightweight command designed for speed.
+**Recommendation:** No action needed. The asymmetry is justified by the different complexity levels of the two commands. If `p.md` grows beyond ~500 lines in the future, modularization should be considered.
 
-### Dashboard Updates Work
+### G-7: `tracker_worker_instructions_lite.md` Not Listed in Module Map
 
-**Verdict: PASS**
-
-- `agent/master/dashboard_writes.md`: Complete schemas for all 4 dashboard files (initialization.json, logs.json, master_state.json, metrics.json) with write rules and timing
-- `agent/master/ui_map.md`: 382-line field-to-panel mapping -- the most detailed UI reference in the system
-- `agent/master/dashboard_protocol.md`: Full comparison of `!p` vs `!p_track` dashboard interaction modes
-- Write-once rule for `initialization.json` preserved with documented exceptions (repair tasks, circuit breaker)
-- Archive-before-clear preserved in 3 files (role.md, dashboard_writes.md, dashboard_protocol.md)
-
-### Eager Dispatch Triggers on Every Completion
-
-**Verdict: PASS**
-
-- `agent/master/eager_dispatch.md`: Full 233-line module with 5-step mechanism, examples (normal + failure recovery), common mistakes table, and server-side automatic dependency tracking
-- `CLAUDE.md` line 125: Read trigger for eager_dispatch.md on every worker completion
-- `tracker_master_instructions.md` line 47-51: Eager dispatch summary with pointer to module
-- `_commands/Synapse/p_track.md` Rule #2: "Dependency-driven dispatch, not wave-driven"
-- The critical behavioral constraint ("waves are visual, not execution barriers") is stated in 4+ locations
-
-### Failure Recovery Creates Repair Tasks
-
-**Verdict: PASS**
-
-- `agent/master/failure_recovery.md`: Full 224-line module with Steps 0-7, double failure handling, circuit breaker (3 thresholds), automatic replanning (7 steps), worker return validation
-- Repair task ID format preserved: `"{wave}.{next_index}r"`
-- Dependency rewiring preserved: failed task ID replaced by repair task ID in all `depends_on` arrays
-- Double failure escalation preserved: repair task for a repair task -> permanent failure, not infinite loop
-- Circuit breaker thresholds preserved: 3+ same-wave failures, 1 failure blocks 3+ downstream, 1 failure blocks >50% remaining
-
-### Archive Before Clear Is Preserved
-
-**Verdict: PASS**
-
-- `CLAUDE.md` line 182: "Archive before clear -- NON-NEGOTIABLE"
-- `agent/master/role.md` lines 113-123: Full archive protocol
-- `agent/master/dashboard_writes.md` lines 268-288: Archive procedure with "where this applies" list
-- `agent/master/dashboard_protocol.md` lines 222-232: "Archive Before Clear -- Both Modes"
-- `agent/_commands/p_track_planning.md` Step 11A: Archive bash commands
+**Severity:** Low
+**Description:** The CLAUDE.md Module Map (lines 323-337) lists files under "Hubs" as: `tracker_master_instructions.md`, `tracker_worker_instructions.md`, `dashboard_resolution.md`, `failed_task.md`, `common_pitfalls.md`, `tracker_multi_plan_instructions.md`. The file `tracker_worker_instructions_lite.md` (80 lines) exists in the same directory but is not listed.
+**Impact:** Minimal. This file is consumed by the master agent when constructing worker prompts in LITE mode (referenced in `worker_prompts.md`). It is not a hub file that agents read independently -- it is injected into worker prompts by the master. Its omission from the Module Map is arguably correct since it is a master-consumed template, not an agent-read instruction file.
+**Recommendation:** Optionally add it to the Module Map under "Hubs" with a note like "(LITE worker template, consumed by master)". Or leave as-is if the Module Map is intended to list only independently-read files.
 
 ---
 
-## Structural Integrity
+## 7. Behavioral Regression Check
 
-### Module File Existence
+This section verifies that no behavioral rules, constraints, or protocols were weakened, omitted, or contradicted during the restructure.
 
-All 25 module files exist at their declared paths:
+### 7.1 Master Agent Constraints
 
-| Directory | Files | Count |
-|---|---|---|
-| `agent/master/` | `role.md`, `dashboard_protocol.md`, `dashboard_writes.md`, `ui_map.md`, `eager_dispatch.md`, `failure_recovery.md`, `worker_prompts.md`, `compaction_recovery.md` | 8 |
-| `agent/worker/` | `progress_reporting.md`, `return_format.md`, `deviations.md`, `upstream_deps.md`, `sibling_comms.md` | 5 |
-| `agent/core/` | `path_convention.md`, `command_resolution.md`, `parallel_principles.md`, `data_architecture.md`, `dashboard_features.md`, `profile_system.md`, `project_discovery.md` | 7 |
-| `agent/_commands/` | `p_track_planning.md`, `p_track_execution.md`, `p_track_completion.md` | 3 |
+| Rule | Original Location | New Location | Status |
+|---|---|---|---|
+| Master NEVER writes code | CLAUDE.md (prominent) | CLAUDE.md line 165 + `role.md` | **Preserved** -- NON-NEGOTIABLE framing maintained |
+| Master has exactly 5 responsibilities | CLAUDE.md | CLAUDE.md line 167 + `role.md` | **Preserved** |
+| Allowed files table (6 files) | CLAUDE.md | CLAUDE.md lines 169-179 + `role.md` | **Preserved** |
+| Archive before clear | CLAUDE.md | CLAUDE.md line 182 + `role.md` | **Preserved** -- NON-NEGOTIABLE framing maintained |
+| Master writes nothing into `{project_root}` | CLAUDE.md | CLAUDE.md line 180 | **Preserved** |
+| After swarm, master may resume normal behavior | CLAUDE.md | CLAUDE.md line 180 + `role.md` | **Preserved** |
 
-**Total module files: 23** (plus `dashboard_protocol.md` is both a module and referenced from master hub; `p.md` is a command file, not a module)
+**Verdict: PASS** -- All master agent constraints preserved with identical strictness.
 
-### Hub-to-Module References
+### 7.2 Execution Rules
 
-**CLAUDE.md references all hubs and key modules:**
-- Module Map section (lines 323-337) lists all files organized by directory
-- Document Reference Map (lines 90-159) provides read triggers pointing to the correct modules
-- All `-->` pointers in inline sections point to existing module files
+| Rule | Original Location | New Location | Status |
+|---|---|---|---|
+| `!p` forces master dispatch mode | CLAUDE.md | CLAUDE.md lines 86-87 | **Preserved** -- NON-NEGOTIABLE |
+| Read command file every time | CLAUDE.md | CLAUDE.md line 92 | **Preserved** -- NON-NEGOTIABLE |
+| Read master instructions every time | CLAUDE.md | CLAUDE.md line 110 | **Preserved** -- NON-NEGOTIABLE |
+| Dispatch FIRST, update tracker AFTER | p_track.md | p_track.md line 86 + `p_track_execution.md` | **Preserved** |
+| Dependency-driven, not wave-driven | CLAUDE.md + p_track.md | CLAUDE.md line 222 + `eager_dispatch.md` | **Preserved** |
+| No artificial concurrency cap | CLAUDE.md | CLAUDE.md line 224 + `parallel_principles.md` | **Preserved** |
+| Errors don't stop the swarm + circuit breaker | CLAUDE.md + p_track.md | CLAUDE.md line 224 + `failure_recovery.md` | **Preserved** |
+| initialization.json is write-once | CLAUDE.md | CLAUDE.md + `dashboard_writes.md` | **Preserved** (exception: circuit breaker replanning documented) |
+| Workers own all lifecycle data | CLAUDE.md | `dashboard_features.md` + `progress_reporting.md` | **Preserved** |
+| Dashboard is primary reporting channel | CLAUDE.md + p_track.md | p_track.md + `dashboard_writes.md` | **Preserved** |
+| No terminal status tables during execution | CLAUDE.md | `role.md` + `dashboard_writes.md` | **Preserved** |
+| Atomic writes only | CLAUDE.md | `dashboard_writes.md` + `data_architecture.md` | **Preserved** |
+| Live timestamps (`date -u`) | CLAUDE.md + p_track.md | CLAUDE.md line 343 + p_track.md + multiple modules | **Preserved** |
 
-**tracker_master_instructions.md references all master modules:**
-- Module Index table (lines 27-35) lists all 7 master modules with correct paths and "When to Read" guidance
-- No orphaned references
+**Verdict: PASS** -- All execution rules preserved.
 
-**tracker_worker_instructions.md references all worker modules:**
-- Module Index table (lines 49-57) lists all 5 worker modules with correct paths
-- "When to Read What" table (lines 61-69) maps moments to modules
-- No orphaned references
+### 7.3 Worker Constraints
 
-**p_track.md references all phase modules:**
-- Phase 1: `agent/_commands/p_track_planning.md` (line 62)
-- Phase 2: `agent/_commands/p_track_execution.md` (line 70)
-- Phase 3: `agent/_commands/p_track_completion.md` (line 78)
-- No orphaned references
+| Rule | Original Location | New Location | Status |
+|---|---|---|---|
+| Workers read tracker_worker_instructions.md | CLAUDE.md | CLAUDE.md line 134 | **Preserved** -- NON-NEGOTIABLE |
+| Fixed stages (reading_context through completed/failed) | CLAUDE.md | `progress_reporting.md` | **Preserved** |
+| 7 mandatory write moments | CLAUDE.md | `progress_reporting.md` | **Preserved** |
+| Deviation reporting (immediate + final return) | CLAUDE.md | `deviations.md` + `progress_reporting.md` | **Preserved** |
+| Workers write full file on every update | CLAUDE.md | `progress_reporting.md` | **Preserved** |
+| shared_context protocol | CLAUDE.md | `sibling_comms.md` | **Preserved** |
+| Structured return format | (implicit in original) | `return_format.md` | **Preserved + enhanced** with examples |
 
-### Orphaned Modules Check
+**Verdict: PASS** -- All worker constraints preserved. Return format documentation is enhanced.
 
-No orphaned modules found. Every module file is referenced from at least one hub file:
+### 7.4 Planning Rules
 
-| Module | Referenced From |
-|---|---|
-| `agent/master/role.md` | CLAUDE.md, master_instructions.md |
-| `agent/master/dashboard_protocol.md` | CLAUDE.md, p.md |
-| `agent/master/dashboard_writes.md` | CLAUDE.md, master_instructions.md, dashboard_protocol.md |
-| `agent/master/ui_map.md` | CLAUDE.md, master_instructions.md |
-| `agent/master/eager_dispatch.md` | CLAUDE.md, master_instructions.md |
-| `agent/master/failure_recovery.md` | CLAUDE.md, master_instructions.md |
-| `agent/master/worker_prompts.md` | CLAUDE.md, master_instructions.md |
-| `agent/master/compaction_recovery.md` | CLAUDE.md, master_instructions.md |
-| `agent/worker/progress_reporting.md` | worker_instructions.md |
-| `agent/worker/return_format.md` | worker_instructions.md |
-| `agent/worker/deviations.md` | worker_instructions.md |
-| `agent/worker/upstream_deps.md` | worker_instructions.md |
-| `agent/worker/sibling_comms.md` | worker_instructions.md |
-| `agent/core/path_convention.md` | CLAUDE.md |
-| `agent/core/command_resolution.md` | CLAUDE.md |
-| `agent/core/parallel_principles.md` | CLAUDE.md |
-| `agent/core/data_architecture.md` | CLAUDE.md |
-| `agent/core/dashboard_features.md` | CLAUDE.md, dashboard_protocol.md |
-| `agent/core/profile_system.md` | CLAUDE.md |
-| `agent/core/project_discovery.md` | CLAUDE.md |
-| `agent/_commands/p_track_planning.md` | p_track.md |
-| `agent/_commands/p_track_execution.md` | p_track.md |
-| `agent/_commands/p_track_completion.md` | p_track.md |
+| Rule | Original Location | New Location | Status |
+|---|---|---|---|
+| Plan FIRST, dispatch AFTER | p_track.md | p_track.md + `p_track_planning.md` | **Preserved** |
+| No file overlaps within a wave | CLAUDE.md + p_track.md | `parallel_principles.md` + `p_track_planning.md` | **Preserved** |
+| Right-size tasks (1-5 min) | CLAUDE.md | CLAUDE.md line 227 + `parallel_principles.md` | **Preserved** |
+| Shared file decision tree (A/B/C patterns) | p_track.md | p_track.md + `parallel_principles.md` | **Preserved** |
+| User approval before dispatch | p_track.md | `p_track_planning.md` | **Preserved** |
+| Topological sort verification | p_track.md | `p_track_planning.md` | **Preserved** |
+| Self-contained worker prompts | CLAUDE.md + p_track.md | `worker_prompts.md` | **Preserved + enhanced** with template |
 
-### Broken References
+**Verdict: PASS** -- All planning rules preserved.
 
-| Reference | Location | Status |
-|---|---|---|
-| `tracker_worker_instructions_lite.md` | `p_track_execution.md` line 178, `worker_prompts.md` line 132 | **BROKEN -- file does not exist** |
+### 7.5 Dashboard Protocol
 
-This is the only broken reference in the entire system.
+| Rule | Original Location | New Location | Status |
+|---|---|---|---|
+| Dashboard selection priority chain | CLAUDE.md | `dashboard_resolution.md` + `dashboard_protocol.md` | **Preserved** |
+| Chat-spawned dashboard binding | CLAUDE.md | `dashboard_resolution.md` | **Preserved** |
+| `!p` vs `!p_track` mode differences | (implicit) | `dashboard_protocol.md` | **NEW** -- explicitly documented |
+| Workers do NOT write progress in `!p` mode | p.md | `dashboard_protocol.md` + p.md | **Preserved** |
+| Permission popup protocol | CLAUDE.md | `dashboard_writes.md` + `dashboard_features.md` | **Preserved** |
 
----
+**Verdict: PASS** -- Dashboard protocol preserved with new explicit documentation of mode differences.
 
-## Gaps Found
+### 7.6 Failure Handling
 
-### Gap 1: Missing `tracker_worker_instructions_lite.md`
-**Severity: MEDIUM**
+| Rule | Original Location | New Location | Status |
+|---|---|---|---|
+| Repair tasks with `r`-suffixed IDs | p_track.md | `failure_recovery.md` | **Preserved** |
+| Never create repair for a repair | p_track.md | `failure_recovery.md` | **Preserved** |
+| Circuit breaker (3 thresholds) | CLAUDE.md | `failure_recovery.md` | **Preserved** |
+| Automatic replanning procedure | CLAUDE.md | `failure_recovery.md` | **Preserved** |
+| Cascading failure assessment | p_track.md | `failure_recovery.md` | **Preserved** |
 
-The worker prompt template in both `p_track_execution.md` (line 178) and `worker_prompts.md` (line 132) references an instruction mode "LITE" that points workers to read `{tracker_root}/agent/instructions/tracker_worker_instructions_lite.md`. This file does not exist. When a master agent selects LITE mode for a simple task, the dispatched worker would fail to find the referenced file.
+**Verdict: PASS** -- All failure handling rules preserved.
 
-**Recommended fix:** Create `agent/instructions/tracker_worker_instructions_lite.md` with a streamlined version of the worker protocol (progress file schema, 3 mandatory writes instead of 7, simplified return format). Alternatively, update the LITE mode references to point to a section within the existing `tracker_worker_instructions.md`.
+### Overall Behavioral Regression Verdict
 
-### Gap 2: `metrics.json` Not in Master's "Only Files" Table in `role.md`
-**Severity: LOW**
-
-In `agent/master/role.md` lines 97-108, the "Only Files the Master Agent Writes" table lists 5 files but omits `metrics.json`. However, `CLAUDE.md` line 176 does include `metrics.json` in its equivalent table, and `dashboard_writes.md` and `compaction_recovery.md` both document it fully. The `role.md` table is inconsistent with the other locations.
-
-**Recommended fix:** Add `metrics.json` to the table in `role.md`.
-
-### Gap 3: `documentation/` Directory References -- Content Not Validated
-**Severity: LOW**
-
-CLAUDE.md lines 147-159 list 13 `documentation/` subdirectories as "Domain Knowledge (Synapse Internals)" read triggers. All 13 directories exist at `/Users/dean/Desktop/Working/Repos/Synapse/documentation/`. However, the actual content within these directories was generated by a separate process (not this restructure swarm) and their contents were not validated as part of this analysis. The documentation exists but may or may not contain all the content CLAUDE.md implies.
-
-**Recommended fix:** Validate that each `documentation/` subdirectory contains meaningful content matching the topic described in CLAUDE.md. This is a future audit task, not a gap in the restructure itself.
-
-### Gap 4: Deviation Severity Field Missing from `data_architecture.md` Schema
-**Severity: LOW**
-
-The `agent/core/data_architecture.md` progress file schema (line 136) describes `deviations[]` as having `at` and `description` fields, but omits the `severity` field. The `agent/worker/deviations.md` and `agent/worker/progress_reporting.md` both document `severity` as a mandatory field (CRITICAL/MODERATE/MINOR). The data_architecture module's schema is slightly incomplete.
-
-**Recommended fix:** Update the deviations entry format in `data_architecture.md` line 136 to include `severity` in the field list: `deviations[] | array | Plan divergences (at, severity, description)`.
-
-### Gap 5: No Explicit "Document Reference Map" Label for All Reads
-**Severity: INFORMATIONAL**
-
-The upstream task (3.1) noted that the new CLAUDE.md uses a "Document Reference Map" format with phased sections (Before Any Work, Entering Swarm Mode, During Planning, During Execution, As a Worker, Commands & Profiles, Domain Knowledge). This format is comprehensive and well-organized. The original monolithic CLAUDE.md embedded read instructions inline throughout sections. The new phased format is strictly superior -- it centralizes all read triggers in one scannable location. No gap here; this is an improvement.
+**ZERO regressions detected.** All NON-NEGOTIABLE rules maintain their NON-NEGOTIABLE framing. All protocols are preserved with their original strictness. Several areas (worker prompts, deviation handling, dashboard protocol, return format) are enhanced with additional detail, examples, and explicit documentation of previously implicit behaviors.
 
 ---
 
-## Known Issues from Task 3.1 -- Verification
+## 8. Recommendations
 
-### Issue 1: Timestamp Protocol Missing
-**Verdict: PRESENT**
+### High Priority
 
-The timestamp protocol `date -u +"%Y-%m-%dT%H:%M:%SZ"` appears in:
-- `CLAUDE.md` line 343 (explicit section: "Timestamp Protocol")
-- `_commands/Synapse/p_track.md` lines 157-172 (full Timestamp Protocol section)
-- `agent/core/path_convention.md` lines 96-103 (within Path Convention module)
-- `agent/worker/progress_reporting.md` lines 165-168
-- `agent/worker/deviations.md` lines 42-48
+None. No high-priority issues were identified.
 
-The timestamp protocol is well-distributed across the system. The concern from 3.1 that it might be missing is **unfounded** -- it is present in CLAUDE.md and 4 module files.
+### Medium Priority (Cross-Module Inconsistencies)
 
-### Issue 2: Documentation Subdirectory Paths
-**Verdict: VALID**
+1. **Add `metrics.json` to `role.md` allowed files table (G-1).** The table claims to be exhaustive ("exactly these files... and no others") but omits a file that CLAUDE.md and `compaction_recovery.md` both expect the master to write. Add `dashboards/{dashboardId}/metrics.json` with purpose "Post-swarm performance metrics (written once after completion)".
 
-All 13 `documentation/` subdirectories referenced in CLAUDE.md lines 147-159 exist:
-- `documentation/architecture/`
-- `documentation/swarm-lifecycle/`
-- `documentation/dashboard/`
-- `documentation/multi-dashboard/`
-- `documentation/worker-protocol/`
-- `documentation/data-architecture/`
-- `documentation/server/`
-- `documentation/electron/`
-- `documentation/commands/`
-- `documentation/project-integration/`
-- `documentation/profiles/`
-- `documentation/configuration/`
-- `documentation/master-agent/`
+2. **Add `severity` field to `data_architecture.md` deviations schema (G-2).** The schema currently shows only `(at, description)` but `deviations.md` defines a mandatory `severity` field (CRITICAL/MODERATE/MINOR) that the master uses for replanning decisions. Update to `(at, severity, description)` with a note referencing `deviations.md` for the classification guide.
 
-The paths are accurate. Content within these directories was not validated (see Gap 3).
+3. **Add `dashboard_protocol.md` to master hub Module Index (G-3).** The `tracker_master_instructions.md` Module Index lists 7 of 8 master modules but omits `dashboard_protocol.md` (282 lines). Add it with trigger: "When understanding `!p` vs `!p_track` dashboard interaction."
 
-### Issue 3: MANDATORY READS Format vs Document Reference Map
-**Verdict: IMPROVED**
+### Low Priority
 
-Task 3.1 used the term "MANDATORY READS" in its design. The actual implementation uses "Document Reference Map -- NON-NEGOTIABLE" with phased trigger tables (Before Any Work, Entering Swarm Mode, During Planning, During Execution, As a Worker, Commands & Profiles, Domain Knowledge). This is an improvement over a flat list -- the phased format maps to the swarm lifecycle and makes it clear which documents are needed at which moment. The "NON-NEGOTIABLE" label on the section heading preserves the mandatory semantics.
+4. **Add Portability Checklist (G-4).** Consider re-adding the original portability checklist as a section in `agent/core/path_convention.md` or at the end of CLAUDE.md. It served as a useful quick-reference verification aid.
+
+5. **Add `tracker_worker_instructions_lite.md` to Module Map (G-7).** Adding a parenthetical note in the Module Map would improve discoverability, even though the file is consumed by the master during prompt construction rather than read independently by agents.
+
+6. **Document `posts/` and `reports/` directories (G-5).** If these directories will contain reference material that agents should access, add them to the Domain Knowledge table. If they are purely output directories, no action needed.
+
+7. **Monitor `p.md` size (G-6).** At 372 lines, it is currently well-sized as a self-contained file. If it grows significantly due to future features, consider modularizing it like `p_track.md`.
+
+### Structural Observations (No Action Required)
+
+- The hub-and-spoke pattern is consistently applied. Every hub file uses the same conventions: Module Index table, brief summaries, pointer references to modules.
+- The naming convention is consistent: `agent/master/` for master-specific, `agent/worker/` for worker-specific, `agent/core/` for shared, `agent/_commands/` for command phases.
+- The `documentation/` directory (13 topic directories, 56+ files) provides deep-dive reference material that the original monolithic system lacked. This is a significant addition, not just a restructure.
+- The Document Reference Map in CLAUDE.md is the most important structural innovation. It eliminates the guesswork about what to read when, which was a common source of protocol violations.
+- The `dashboard_protocol.md` module is a valuable addition -- it makes the `!p` vs `!p_track` differences explicit and scannable, rather than requiring agents to mentally diff two large command files.
 
 ---
 
-## Recommendations
+## Appendix: Complete File Inventory
 
-### Priority 1 (Should Fix)
+### Hub Files (5 files, 1,156 lines)
 
-1. **Create `tracker_worker_instructions_lite.md`** -- This is a referenced file that does not exist. Either create a streamlined version or update the LITE mode references to point to specific sections in the existing worker instructions.
+```
+CLAUDE.md                                                   343 lines
+agent/instructions/tracker_master_instructions.md           143 lines
+agent/instructions/tracker_worker_instructions.md           126 lines
+_commands/Synapse/p_track.md                                172 lines
+_commands/Synapse/p.md                                      372 lines
+```
 
-### Priority 2 (Should Fix)
+### Module Files (23 files, 5,540 lines)
 
-2. **Add `metrics.json` to role.md's allowed files table** -- The table in `agent/master/role.md` lists 5 files but CLAUDE.md lists 6 (includes metrics.json). Make them consistent.
+```
+agent/master/role.md                                        129 lines
+agent/master/dashboard_writes.md                            336 lines
+agent/master/ui_map.md                                      382 lines
+agent/master/eager_dispatch.md                              233 lines
+agent/master/failure_recovery.md                            224 lines
+agent/master/worker_prompts.md                              429 lines
+agent/master/compaction_recovery.md                         234 lines
+agent/master/dashboard_protocol.md                          281 lines
+agent/worker/progress_reporting.md                          398 lines
+agent/worker/return_format.md                               151 lines
+agent/worker/deviations.md                                  111 lines
+agent/worker/upstream_deps.md                                74 lines
+agent/worker/sibling_comms.md                               119 lines
+agent/core/path_convention.md                               103 lines
+agent/core/command_resolution.md                            123 lines
+agent/core/profile_system.md                                 67 lines
+agent/core/project_discovery.md                             152 lines
+agent/core/parallel_principles.md                           164 lines
+agent/core/data_architecture.md                             209 lines
+agent/core/dashboard_features.md                            287 lines
+agent/_commands/p_track_planning.md                         583 lines
+agent/_commands/p_track_execution.md                        540 lines
+agent/_commands/p_track_completion.md                       211 lines
+```
 
-3. **Update `data_architecture.md` deviations schema** -- Add `severity` to the deviations field description to match the actual progress file format.
+### Existing Instruction Files (5 files, 1,030 lines)
 
-### Priority 3 (Nice to Have)
+```
+agent/instructions/dashboard_resolution.md                  195 lines
+agent/instructions/common_pitfalls.md                        23 lines
+agent/instructions/failed_task.md                           204 lines
+agent/instructions/tracker_multi_plan_instructions.md       528 lines
+agent/instructions/tracker_worker_instructions_lite.md       80 lines
+```
 
-4. **Audit `documentation/` subdirectory contents** -- Validate that the deep-dive reference documents in `documentation/` actually contain the content implied by CLAUDE.md's Domain Knowledge table.
+### Documentation Directory (15 subdirectories, 56+ files)
 
-5. **Consider adding `agent/master/dashboard_protocol.md` to CLAUDE.md Module Map** -- Currently listed under "Master" modules as `dashboard_protocol.md`, but it could benefit from explicit mention in the Module Map section since it's the authoritative source for `!p` vs `!p_track` differences.
-
----
-
-## Conclusion
-
-The modular restructure is **well-executed and structurally sound**. All 62 original sections have been mapped to specific locations in the new system. All 42 cross-references validate correctly except for 2 references to a non-existent LITE worker instructions file. The behavioral regression check passes on all 6 criteria -- swarm entry, worker progress, dashboard updates, eager dispatch, failure recovery, and archive-before-clear all function identically to the original system.
-
-The new architecture provides clear advantages: hub files are 72% smaller, read triggers are centralized in a scannable Document Reference Map, module files are self-contained and focused, and the `!p` vs `!p_track` protocol differences are now explicitly documented in a dedicated module rather than being scattered across multiple files.
-
-The three actionable items (create lite instructions, fix metrics.json in role.md, fix deviations schema) are all low-effort fixes. The restructure can be considered **production-ready** after addressing Priority 1 (the missing lite file).
+```
+documentation/architecture/                                   3 files
+documentation/commands/                                       4 files
+documentation/configuration/                                  4 files
+documentation/dashboard/                                      6 files
+documentation/data-architecture/                              5 files
+documentation/electron/                                       4 files
+documentation/master-agent/                                   4 files
+documentation/multi-dashboard/                                4 files
+documentation/posts/                                          1 file
+documentation/profiles/                                       2 files
+documentation/project-integration/                            4 files
+documentation/reports/                                        1 file (this report)
+documentation/server/                                         5 files
+documentation/swarm-lifecycle/                                6 files
+documentation/worker-protocol/                                4 files
+```

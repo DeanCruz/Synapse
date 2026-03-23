@@ -7,7 +7,7 @@ export default function EmptyState() {
     <section className="empty-state">
       <div className="empty-state-content">
         <p className="empty-state-title">No active agents</p>
-        <p className="empty-state-subtitle">Waiting for !p to dispatch agents...</p>
+        <p className="empty-state-subtitle">Waiting for !p_track to dispatch agents...</p>
       </div>
     </section>
   );
