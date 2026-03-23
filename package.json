@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "start": "vite build && unset ELECTRON_RUN_AS_NODE && electron .",
-    "dev": "vite build --watch",
+    "dev": "concurrently -k \"vite\" \"electron .\"",
     "dist": "vite build && electron-builder --mac",
     "postinstall": "electron-rebuild -f -w node-pty"
   },
@@ -39,6 +39,7 @@
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
     "electron": "^41.0.3",
     "electron-builder": "^26.8.1",
     "vite": "^8.0.0"

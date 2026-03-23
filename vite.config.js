@@ -24,6 +24,10 @@ export default defineConfig({
       'monaco-editor/esm/vs/language/typescript/ts.worker',
     ],
   },
+  server: {
+    port: 5174,
+    strictPort: true,
+  },
   worker: {
     format: 'es',
   },

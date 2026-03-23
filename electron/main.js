@@ -60,8 +60,9 @@ function createWindow() {
     console.log(prefix, msg);
   });
 
-  // Load the React app from the Vite build output
-  mainWindow.loadURL('app://synapse/dist/index.html');
+  // Dev: load from Vite dev server (full HMR)
+  // Prod: load from built dist/ via app:// protocol
+  mainWindow.loadURL(app.isPackaged ? 'app://synapse/dist/index.html' : 'http://localhost:5174');
 
   mainWindow.on('closed', () => {
     mainWindow = null;
