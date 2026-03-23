@@ -291,4 +291,4 @@ The master writes to `logs.json`. Workers write to their `progress/{id}.json` `l
 - [Data Architecture Overview](./overview.md) -- High-level data model and ownership
 - [initialization.json Schema](./initialization-json.md) -- Static plan data
 - [Progress Files Schema](./progress-files.md) -- Worker progress lifecycle including worker logs
-- [XML Task Files](./xml-task-files.md) -- Authoritative task record
+- [Task Files](./xml-task-files.md) -- Authoritative task record

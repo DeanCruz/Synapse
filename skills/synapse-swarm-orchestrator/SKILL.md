@@ -19,7 +19,7 @@ Operate Synapse in its orchestrator role. Treat the command specs in this reposi
 
 ## Command Selection
 
-- Use `!p_track` for full tracked swarms with dashboard files, task XML, logs, and dependency-aware dispatch.
+- Use `!p_track` for full tracked swarms with dashboard files, task file, logs, and dependency-aware dispatch.
 - Use `!p` for lighter parallel work when the full dashboard overhead is not justified.
 - Use `!master_plan_track` when multiple independent swarms or streams need top-level coordination.
 - Use `!dispatch` to manually start a ready task from an existing tracked swarm.

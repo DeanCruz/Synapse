@@ -28,10 +28,10 @@ The master agent is the central intelligence of a swarm. It runs within a Claude
 | **Gather Context** | Reads project files, CLAUDE.md, TOC, and source code to build a complete understanding of the task |
 | **Plan** | Decomposes tasks into atomic units, maps dependencies, writes self-contained agent prompts |
 | **Dispatch** | Spawns worker agents via the Task tool, sends all independent tasks in parallel |
-| **Status** | Logs events to `logs.json`, updates the XML task record |
+| **Status** | Logs events to `logs.json`, updates the task record |
 | **Report** | Compiles final summary when all agents complete or fail |
 
-The master agent writes only to Synapse's own files (`initialization.json`, `logs.json`, XML task files, plan rationale). It never writes code, edits application files, or runs application commands.
+The master agent writes only to Synapse's own files (`initialization.json`, `logs.json`, task files, plan rationale). It never writes code, edits application files, or runs application commands.
 
 ### 2. Worker Agents
 

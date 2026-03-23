@@ -130,7 +130,7 @@ Synapse/                            ← {tracker_root}
 ├── Archive/                        ← Full archived dashboard snapshots
 ├── tasks/                          ← Generated per swarm
 │   └── {MM_DD_YY}/
-│       ├── parallel_{name}.xml
+│       ├── parallel_{name}.json
 │       └── parallel_plan_{name}.md
 ├── src/
 │   ├── server/index.js             ← Node.js SSE server (zero deps)

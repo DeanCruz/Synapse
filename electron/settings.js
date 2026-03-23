@@ -28,6 +28,9 @@ const DEFAULTS = {
   theme: 'original',
   customColors: null,
 
+  // Dashboard metadata (sidebar order + custom display names)
+  dashboardMeta: { order: [], names: {} },
+
   // Project
   recentProjects: [],
   activeProjectPath: null,

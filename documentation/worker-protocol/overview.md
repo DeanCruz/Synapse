@@ -47,7 +47,7 @@ reading_context  ->  planning  ->  implementing  ->  testing  ->  finalizing  ->
 
 | Stage | Description |
 |---|---|
-| `reading_context` | Reading project files, CLAUDE.md, documentation, task XML, upstream progress files |
+| `reading_context` | Reading project files, CLAUDE.md, documentation, task file, upstream progress files |
 | `planning` | Assessing readiness, planning the implementation approach |
 | `implementing` | Writing code, creating/modifying files in `{project_root}` |
 | `testing` | Running tests, validating that changes work correctly |

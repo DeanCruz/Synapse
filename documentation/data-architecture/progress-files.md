@@ -119,7 +119,7 @@ Workers progress through these stages in order:
 
 | Stage | Description | Dashboard Badge Color |
 |---|---|---|
-| `reading_context` | Reading project files, CLAUDE.md, documentation, task XML, upstream progress files | -- |
+| `reading_context` | Reading project files, CLAUDE.md, documentation, task file, upstream progress files | -- |
 | `planning` | Assessing readiness, planning approach, analyzing upstream deviations | -- |
 | `implementing` | Writing code, creating/modifying files | -- |
 | `testing` | Running tests, validating changes | -- |
@@ -331,7 +331,7 @@ When a progress file changes to `status: "completed"`, the server runs a depende
   "summary": null,
   "assigned_agent": "Agent 1",
   "stage": "reading_context",
-  "message": "Reading CLAUDE.md and task XML",
+  "message": "Reading CLAUDE.md and task file",
   "milestones": [],
   "deviations": [],
   "logs": [
@@ -476,4 +476,4 @@ Stale progress files from a previous swarm will cause incorrect stat derivation 
 - [Data Architecture Overview](./overview.md) -- High-level data model and ownership
 - [initialization.json Schema](./initialization-json.md) -- Static plan data (the other half of the merge)
 - [logs.json Schema](./logs-json.md) -- Event log format
-- [XML Task Files](./xml-task-files.md) -- Authoritative task record
+- [Task Files](./xml-task-files.md) -- Authoritative task record

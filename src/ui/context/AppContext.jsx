@@ -14,13 +14,13 @@ const DEFAULT_TAB = { id: 'default', name: 'Chat 1' };
 const IDE_WORKSPACES_KEY = 'synapse-ide-workspaces';
 
 function claudeMessagesKey(dashboardId, tabId) {
-  const base = CLAUDE_MESSAGES_KEY_PREFIX + (dashboardId || 'dashboard1');
+  const base = CLAUDE_MESSAGES_KEY_PREFIX + (dashboardId || '');
   if (tabId && tabId !== 'default') return base + '-' + tabId;
   return base;
 }
 
 function claudeTabsKey(dashboardId) {
-  return CLAUDE_TABS_KEY_PREFIX + (dashboardId || 'dashboard1');
+  return CLAUDE_TABS_KEY_PREFIX + (dashboardId || '');
 }
 
 function loadSavedTabs(dashboardId) {
@@ -88,6 +88,8 @@ const initialState = {
   currentStatus: null,
   dashboardList: [],
   dashboardStates: {},
+  dashboardNames: {},
+  chatPreviews: {},
   homeViewActive: false,
   archiveViewActive: false,
   queueViewActive: false,
@@ -115,6 +117,8 @@ const initialState = {
   claudeStatus: 'Ready',
   claudeActiveTaskId: null,
   claudePendingAttachments: [],
+  // Unread chat message counts per dashboard (for sidebar glow)
+  unreadChatCounts: {},
   // Per-dashboard caches for sidebar state derivation
   allDashboardProgress: {},
   allDashboardLogs: {},
@@ -125,6 +129,7 @@ const initialState = {
   ideActiveFileId: {}, // { [workspaceId]: string }
   ideFileTrees: {}, // { [workspaceId]: treeData }
   ideSidebarView: 'explorer', // which sidebar panel is shown in IDE
+  ideChatOpen: false, // whether IDE inline chat is open
 };
 
 function appReducerCore(state, action) {
@@ -173,6 +178,10 @@ function appReducerCore(state, action) {
       const targetMessages = newTabStash[targetStashKey] || loadSavedMessages(action.id, targetTabId) || [CLAUDE_WELCOME_MSG];
       const targetProc = procStash[action.id] || {};
       const targetTabs = state.claudeTabs[action.id] || loadSavedTabs(action.id) || [{ ...DEFAULT_TAB }];
+      // Clear unread count for target dashboard if switching while in claude view
+      const switchUnread = state.activeView === 'claude'
+        ? (({ [action.id]: _, ...rest }) => rest)(state.unreadChatCounts)
+        : state.unreadChatCounts;
       return {
         ...state,
         currentDashboardId: action.id,
@@ -182,7 +191,7 @@ function appReducerCore(state, action) {
         currentStatus: null,
         activeLogFilter: 'all',
         seenPermissionCount: 0,
-        activeView: state.activeView === 'claude' ? 'claude' : 'dashboard',
+        activeView: state.activeView === 'claude' ? 'claude' : state.activeView === 'ide' ? 'ide' : 'dashboard',
         archiveViewActive: false,
         queueViewActive: false,
         // Tab state
@@ -198,24 +207,38 @@ function appReducerCore(state, action) {
         claudePendingAttachments: targetProc.pendingAttachments || [],
         claudeDashboardId: action.id,
         unblockedTasks: [],
+        unreadChatCounts: switchUnread,
       };
     }
-    case 'SET_VIEW':
+    case 'SET_VIEW': {
+      const targetClaudeDash = action.dashboardId || state.claudeDashboardId || state.currentDashboardId;
+      // Clear unread count when opening claude view for a dashboard
+      const clearedUnread = action.view === 'claude'
+        ? (({ [targetClaudeDash]: _, ...rest }) => rest)(state.unreadChatCounts)
+        : state.unreadChatCounts;
       return {
         ...state,
         activeView: action.view,
-        claudeDashboardId: action.dashboardId || state.claudeDashboardId || state.currentDashboardId,
-        // Once opened, keep mounted forever for background persistence
+        claudeDashboardId: targetClaudeDash,
         claudeEverOpened: state.claudeEverOpened || action.view === 'claude',
+        unreadChatCounts: clearedUnread,
       };
+    }
     case 'OPEN_MODAL':
       return { ...state, activeModal: action.modal, modalDashboardId: action.dashboardId || state.currentDashboardId };
     case 'CLOSE_MODAL':
       return { ...state, activeModal: null };
     case 'CLAUDE_SET_MESSAGES':
       return { ...state, claudeMessages: action.messages };
-    case 'CLAUDE_APPEND_MSG':
-      return { ...state, claudeMessages: [...state.claudeMessages, { id: Date.now() + Math.random(), ...action.msg }] };
+    case 'CLAUDE_APPEND_MSG': {
+      const newMessages = [...state.claudeMessages, { id: Date.now() + Math.random(), ...action.msg }];
+      // Track unread if user isn't viewing this dashboard's chat
+      const shouldTrackUnread = action.msg.type === 'assistant' && state.activeView !== 'claude';
+      const updatedUnread = shouldTrackUnread
+        ? { ...state.unreadChatCounts, [state.currentDashboardId]: (state.unreadChatCounts[state.currentDashboardId] || 0) + 1 }
+        : state.unreadChatCounts;
+      return { ...state, claudeMessages: newMessages, unreadChatCounts: updatedUnread };
+    }
     case 'CLAUDE_UPDATE_MESSAGES':
       // Functional update: action.updater(prevMessages) => newMessages
       return { ...state, claudeMessages: action.updater(state.claudeMessages) };
@@ -330,7 +353,11 @@ function appReducerCore(state, action) {
       const updatedMsgs = [...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }];
       const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, activeTab), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
-      return { ...state, claudeTabStash: newTabStash };
+      // Track unread assistant messages for non-active dashboards
+      const unreadChatCounts = action.msg.type === 'assistant'
+        ? { ...state.unreadChatCounts, [did]: (state.unreadChatCounts[did] || 0) + 1 }
+        : state.unreadChatCounts;
+      return { ...state, claudeTabStash: newTabStash, unreadChatCounts };
     }
     case 'CLAUDE_STASH_UPDATE_MESSAGES': {
       const did = action.dashboardId;
@@ -366,15 +393,21 @@ function appReducerCore(state, action) {
       try { localStorage.removeItem(claudeTabsKey(rid)); } catch (e) { /* */ }
       const newProcStash2 = { ...state.claudeProcessingStash };
       delete newProcStash2[rid];
+      const newDashNames = { ...state.dashboardNames };
+      delete newDashNames[rid];
+      const newUnread = { ...state.unreadChatCounts };
+      delete newUnread[rid];
       return {
         ...state,
         dashboardStates: newDashStates,
+        dashboardNames: newDashNames,
         allDashboardProgress: newAllProgress,
         allDashboardLogs: newAllLogs,
         claudeTabStash: newTabStash,
         claudeTabs: newTabs,
         claudeActiveTabMap: newActiveTabMap,
         claudeProcessingStash: newProcStash2,
+        unreadChatCounts: newUnread,
       };
     }
     case 'CLAUDE_STASH_SET_PROCESSING': {
@@ -383,13 +416,50 @@ function appReducerCore(state, action) {
       const newProcStash = { ...state.claudeProcessingStash, [did]: { ...existing, isProcessing: action.value, status: action.status || existing.status || 'Ready' } };
       return { ...state, claudeProcessingStash: newProcStash };
     }
+    case 'SET_CHAT_PREVIEW': {
+      return {
+        ...state,
+        chatPreviews: {
+          ...state.chatPreviews,
+          [action.dashboardId]: { text: action.text, isStreaming: action.isStreaming || false },
+        },
+      };
+    }
+    case 'CLEAR_CHAT_PREVIEW': {
+      const { [action.dashboardId]: _, ...rest } = state.chatPreviews;
+      return { ...state, chatPreviews: rest };
+    }
+    case 'SET_DASHBOARDS_LIST': {
+      const dashboardList = action.value;
+      const dashboardNames = action.names
+        ? { ...state.dashboardNames, ...action.names }
+        : state.dashboardNames;
+      // If current dashboard doesn't exist in the list, switch to first available
+      if (dashboardList.length > 0 && !dashboardList.includes(state.currentDashboardId)) {
+        return { ...state, dashboardList, dashboardNames, currentDashboardId: dashboardList[0] };
+      }
+      return { ...state, dashboardList, dashboardNames };
+    }
+    case 'SET_DASHBOARD_NAMES':
+      return { ...state, dashboardNames: action.names || {} };
+    case 'REORDER_DASHBOARDS':
+      return { ...state, dashboardList: action.orderedIds };
+    case 'RENAME_DASHBOARD': {
+      const newNames = { ...state.dashboardNames };
+      if (action.name) {
+        newNames[action.id] = action.name;
+      } else {
+        delete newNames[action.id];
+      }
+      return { ...state, dashboardNames: newNames };
+    }
     case 'SET_UNBLOCKED_TASKS':
       return { ...state, unblockedTasks: action.tasks || [] };
     case 'CLEAR_UNBLOCKED_TASKS':
       return { ...state, unblockedTasks: [] };
     // --- IDE state management ---
     case 'IDE_OPEN_WORKSPACE': {
-      const wsId = String(Date.now());
+      const wsId = action.id || String(Date.now());
       const newWorkspace = { id: wsId, path: action.path, name: action.name };
       // Check if this path is already open
       const existing = state.ideWorkspaces.find(w => w.path === action.path);
@@ -434,6 +504,7 @@ function appReducerCore(state, action) {
         ideOpenFiles: newOpenFiles,
         ideActiveFileId: newActiveFileId,
         ideFileTrees: newFileTrees,
+        ideChatOpen: state.ideActiveWorkspaceId === closingWsId ? false : state.ideChatOpen,
       };
     }
     case 'IDE_SWITCH_WORKSPACE': {
@@ -501,6 +572,10 @@ function appReducerCore(state, action) {
       const newOpenFiles = { ...state.ideOpenFiles, [wsId]: updatedFiles };
       return { ...state, ideOpenFiles: newOpenFiles };
     }
+    case 'IDE_OPEN_CHAT':
+      return { ...state, ideChatOpen: true, claudeViewMode: 'expanded', claudeEverOpened: true };
+    case 'IDE_CLOSE_CHAT':
+      return { ...state, ideChatOpen: false };
     default:
       return state;
   }

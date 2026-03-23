@@ -31,8 +31,8 @@
   <rect width="1024" height="1024" rx="230" fill="#06111b"/>
   <rect x="56" y="56" width="912" height="912" rx="206" fill="url(#bgGlow)"/>
 
-  <!-- Grey edges (connecting grey and green nodes) -->
-  <g stroke="#e8eaed" stroke-linecap="round" filter="url(#greyEdgeGlow1024)">
+  <!-- Purple edges (connecting purple and green nodes) -->
+  <g stroke="#9b7cf0" stroke-linecap="round" filter="url(#greyEdgeGlow1024)">
     <line x1="128" y1="128" x2="240" y2="272" stroke-width="22" stroke-opacity="0.3"/>
     <line x1="128" y1="128" x2="512" y2="128" stroke-width="20" stroke-opacity="0.25"/>
     <line x1="896" y1="128" x2="784" y2="272" stroke-width="22" stroke-opacity="0.3"/>
@@ -84,21 +84,21 @@
   <line class="se1" style="animation-delay:.56s" x1="240" y1="752" x2="512" y2="896" stroke="#22c55e" stroke-width="28" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow1024)"/>
   <line class="se1" style="animation-delay:.56s" x1="784" y1="752" x2="512" y2="896" stroke="#22c55e" stroke-width="28" stroke-linecap="round" stroke-opacity="0.7" filter="url(#edgeGreenGlow1024)"/>
 
-  <!-- Grey nodes -->
-  <circle cx="128" cy="128" r="36" fill="#e8ecf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="128" cy="128" r="18" fill="#eff1f3"/><circle cx="128" cy="128" r="8" fill="#f8f9fa"/>
+  <!-- Purple nodes -->
+  <circle cx="128" cy="128" r="36" fill="#9b7cf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="128" cy="128" r="18" fill="#9b7cf0"/><circle cx="128" cy="128" r="8" fill="#b794f6"/>
 
-  <circle cx="896" cy="128" r="36" fill="#e8ecf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="896" cy="128" r="18" fill="#eff1f3"/><circle cx="896" cy="128" r="8" fill="#f8f9fa"/>
+  <circle cx="896" cy="128" r="36" fill="#9b7cf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="896" cy="128" r="18" fill="#9b7cf0"/><circle cx="896" cy="128" r="8" fill="#b794f6"/>
 
-  <circle cx="400" cy="320" r="42" fill="#e8ecf0" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
-  <circle cx="400" cy="320" r="22" fill="#f2f4f5"/><circle cx="400" cy="320" r="11" fill="#f8f9fa"/>
+  <circle cx="400" cy="320" r="42" fill="#9b7cf0" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
+  <circle cx="400" cy="320" r="22" fill="#9b7cf0"/><circle cx="400" cy="320" r="11" fill="#b794f6"/>
 
-  <circle cx="624" cy="320" r="42" fill="#e8ecf0" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
-  <circle cx="624" cy="320" r="22" fill="#f2f4f5"/><circle cx="624" cy="320" r="11" fill="#f8f9fa"/>
+  <circle cx="624" cy="320" r="42" fill="#9b7cf0" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
+  <circle cx="624" cy="320" r="22" fill="#9b7cf0"/><circle cx="624" cy="320" r="11" fill="#b794f6"/>
 
-  <circle cx="112" cy="512" r="36" fill="#e8ecf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="112" cy="512" r="18" fill="#eff1f3"/><circle cx="112" cy="512" r="8" fill="#f8f9fa"/>
+  <circle cx="112" cy="512" r="36" fill="#9b7cf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="112" cy="512" r="18" fill="#9b7cf0"/><circle cx="112" cy="512" r="8" fill="#b794f6"/>
 
   <!-- Center hub (green, glowing) -->
   <g class="sn1" style="animation-delay:.34s" filter="url(#greenGlow1024)">
@@ -107,20 +107,20 @@
     <circle cx="512" cy="512" r="28" fill="#86efac"/>
   </g>
 
-  <circle cx="912" cy="512" r="36" fill="#e8ecf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="912" cy="512" r="18" fill="#eff1f3"/><circle cx="912" cy="512" r="8" fill="#f8f9fa"/>
+  <circle cx="912" cy="512" r="36" fill="#9b7cf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="912" cy="512" r="18" fill="#9b7cf0"/><circle cx="912" cy="512" r="8" fill="#b794f6"/>
 
-  <circle cx="400" cy="704" r="42" fill="#e8ecf0" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
-  <circle cx="400" cy="704" r="22" fill="#f2f4f5"/><circle cx="400" cy="704" r="11" fill="#f8f9fa"/>
+  <circle cx="400" cy="704" r="42" fill="#9b7cf0" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
+  <circle cx="400" cy="704" r="22" fill="#9b7cf0"/><circle cx="400" cy="704" r="11" fill="#b794f6"/>
 
-  <circle cx="624" cy="704" r="42" fill="#e8ecf0" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
-  <circle cx="624" cy="704" r="22" fill="#f2f4f5"/><circle cx="624" cy="704" r="11" fill="#f8f9fa"/>
+  <circle cx="624" cy="704" r="42" fill="#9b7cf0" fill-opacity="0.45" filter="url(#greyGlow1024)"/>
+  <circle cx="624" cy="704" r="22" fill="#9b7cf0"/><circle cx="624" cy="704" r="11" fill="#b794f6"/>
 
-  <circle cx="128" cy="896" r="36" fill="#e8ecf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="128" cy="896" r="18" fill="#eff1f3"/><circle cx="128" cy="896" r="8" fill="#f8f9fa"/>
+  <circle cx="128" cy="896" r="36" fill="#9b7cf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="128" cy="896" r="18" fill="#9b7cf0"/><circle cx="128" cy="896" r="8" fill="#b794f6"/>
 
-  <circle cx="896" cy="896" r="36" fill="#e8ecf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
-  <circle cx="896" cy="896" r="18" fill="#eff1f3"/><circle cx="896" cy="896" r="8" fill="#f8f9fa"/>
+  <circle cx="896" cy="896" r="36" fill="#9b7cf0" fill-opacity="0.4" filter="url(#greyGlow1024)"/>
+  <circle cx="896" cy="896" r="18" fill="#9b7cf0"/><circle cx="896" cy="896" r="8" fill="#b794f6"/>
 
   <!-- Green S nodes -->
   <g class="sn1" style="animation-delay:.05s" filter="url(#greenGlow1024)">

@@ -33,19 +33,27 @@ In Wave mode, dependency lines are drawn between cards using BFS pathfinding thr
 
 ## Multi-Dashboard Sidebar
 
-The dashboard supports up to 5 simultaneous swarms via a sidebar that lists all dashboard instances (`dashboard1` through `dashboard5`). Each dashboard directory is an independent swarm with its own `initialization.json`, `logs.json`, and `progress/` directory. Different dashboards can serve different projects — the `task.project_root` field identifies which project each swarm belongs to.
+The dashboard supports unlimited concurrent swarms via a sidebar that lists all dashboard instances by their unique ID (e.g., `a3f7k2`). Each dashboard directory is an independent swarm with its own `initialization.json`, `logs.json`, and `progress/` directory. Different dashboards can serve different projects — the `task.project_root` field identifies which project each swarm belongs to.
 
 ### Dashboard Selection Priority Chain
 
 1. **Chat-spawned directive** — When an agent is spawned from the Synapse chat view, its system prompt contains a `DASHBOARD ID:` directive binding it to that chat's dashboard. This is always authoritative and the agent uses it unconditionally.
-2. **Explicit flag** — `--dashboard dashboardN` can force a specific slot if no pre-assigned dashboard exists.
-3. **Auto-selection fallback** — The master scans dashboards 1-5 for the first available slot. The agent will never overwrite an in-progress swarm.
+2. **Explicit flag** — `--dashboard {id}` can force a specific slot if no pre-assigned dashboard exists.
+3. **Auto-selection fallback** — The master scans all dashboards (excluding `ide`) for the first available slot. The agent will never overwrite an in-progress swarm.
 
 All commands (`!status`, `!logs`, `!inspect`, etc.) auto-detect the active dashboard when no dashboard is specified. See `agent/instructions/dashboard_resolution.md` for the full selection and detection protocol.
 
 ### Every Agent Knows Its Dashboard
 
 Chat-spawned agents receive their dashboard ID via the system prompt. The master includes `{dashboardId}` in every worker dispatch prompt. Workers write progress files to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — they never auto-detect.
+
+### Dashboard IDs
+
+Dashboard IDs are 6-character hex strings (e.g., `a3f7k2`) generated when a new dashboard is created. Legacy `dashboardN` IDs (e.g., `dashboard1`) are still supported for backward compatibility. The sidebar displays each dashboard by its ID.
+
+### Reserved Dashboard: `ide`
+
+The `ide` dashboard is permanently reserved for the IDE agent. It always exists, is never claimed by swarms, and is excluded from auto-selection. Swarm commands will never use the `ide` dashboard unless explicitly overridden by the user.
 
 ---
 
@@ -105,7 +113,7 @@ Dashboard merges init + progress → renders live status, stage, logs
        |
 Worker completes → writes final progress file with status "completed"
        |
-Master processes return → updates logs.json + XML only (NOT initialization.json)
+Master processes return → updates logs.json + task file only (NOT initialization.json)
 ```
 
 Workers do their code work in `{project_root}` but write progress files to `{tracker_root}`. These are different locations.
@@ -116,7 +124,7 @@ Workers progress through these stages in order:
 
 | Stage | Description |
 |---|---|
-| `reading_context` | Reading project files, CLAUDE.md, documentation, task XML |
+| `reading_context` | Reading project files, CLAUDE.md, documentation, task file |
 | `planning` | Assessing readiness, planning approach |
 | `implementing` | Writing code, creating/modifying files |
 | `testing` | Running tests, validating changes |
@@ -172,7 +180,7 @@ This architecture dramatically reduces master agent context consumption compared
 | Master outputs full terminal status table on every event | Master outputs one-line confirmations only |
 | No visibility into worker progress during execution | Live stage + milestone + log updates on dashboard |
 | Deviations only visible after completion | Deviations visible immediately |
-| Single swarm at a time | Up to 5 concurrent swarms across dashboards with auto-selection |
+| Single swarm at a time | Unlimited concurrent swarms across dashboards with auto-selection |
 | Cascading failures require manual intervention | Circuit breaker triggers automatic replanning via CLI |
 | No sibling awareness between workers | shared_context + sibling_reads enable optional cross-worker data sharing |
 
@@ -251,19 +259,19 @@ Synapse/                            <- {tracker_root}
 │       ├── tracker_worker_instructions.md
 │       ├── failed_task.md
 │       └── common_pitfalls.md
-├── dashboards/                     <- Multi-dashboard support (up to 5)
-│   ├── dashboard1/
+├── dashboards/                     <- Multi-dashboard support (unlimited)
+│   ├── {id}/
 │   │   ├── initialization.json
 │   │   ├── logs.json
 │   │   ├── master_state.json          <- Master state checkpoint (context recovery)
 │   │   └── progress/
-│   └── dashboard2/ ... dashboard5/
+│   └── ide/                        <- Reserved for IDE agent
 ├── queue/                          <- Overflow queue slots
 ├── history/                        <- History summary JSON files
 ├── Archive/                        <- Full archived dashboard snapshots
 ├── tasks/                          <- Generated per swarm
 │   └── {MM_DD_YY}/
-│       ├── parallel_{name}.xml
+│       ├── parallel_{name}.json
 │       └── parallel_plan_{name}.md
 ├── src/
 │   ├── server/index.js             <- Node.js SSE server (zero deps)

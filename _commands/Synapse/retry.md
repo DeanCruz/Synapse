@@ -35,7 +35,7 @@
    ```
    The new worker will create a fresh one.
 
-8. **Read the master XML** at `{tracker_root}/tasks/{date}/parallel_{task_name}.xml`. Extract the full task context for `{task_id}`.
+8. **Read the master task file** at `{tracker_root}/tasks/{date}/parallel_{task_name}.json`. Extract the full task context for `{task_id}`.
 
 9. **Analyze the failure root cause.** Before blindly re-dispatching:
    - Read the previous progress file's `logs[]` array (saved in step 6) to understand WHERE the worker failed.

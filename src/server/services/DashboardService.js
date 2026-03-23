@@ -1,6 +1,7 @@
 const fs = require('fs');
 const fsPromises = require('fs').promises;
 const path = require('path');
+const crypto = require('crypto');
 const { DASHBOARDS_DIR, DEFAULT_INITIALIZATION, DEFAULT_LOGS } = require('../utils/constants');
 const { readJSON, readJSONAsync, writeAtomic } = require('../utils/json');
 
@@ -137,11 +138,7 @@ function listDashboards() {
       .filter(e => e.isDirectory() &&
         fs.existsSync(path.join(DASHBOARDS_DIR, e.name, 'initialization.json')))
       .map(e => e.name)
-      .sort((a, b) => {
-        const numA = parseInt(a.replace('dashboard', ''), 10) || 0;
-        const numB = parseInt(b.replace('dashboard', ''), 10) || 0;
-        return numA - numB;
-      });
+      .sort((a, b) => a.localeCompare(b));
   } catch {
     return [];
   }
@@ -175,19 +172,32 @@ function deleteDashboard(id) {
 }
 
 /**
- * Find the next available dashboard ID (dashboard1, dashboard2, ...).
- * Scans existing dashboards and returns the lowest unused number.
+ * Generate a new unique dashboard ID as a 6-character hex string.
+ * Uses crypto.randomBytes for collision-resistant ID generation.
+ * Loops until the generated ID is not already in use.
  */
 function nextDashboardId() {
-  const existing = listDashboards();
-  const nums = existing
-    .map(id => parseInt(id.replace('dashboard', ''), 10))
-    .filter(n => !isNaN(n));
-  let next = 1;
-  while (nums.includes(next)) next++;
-  return `dashboard${next}`;
+  const existing = new Set(listDashboards());
+  let id;
+  do {
+    id = crypto.randomBytes(3).toString('hex');
+  } while (existing.has(id));
+  return id;
 }
 
+/**
+ * Get the creation time (birthtime) of a dashboard directory.
+ * Used for initial ordering of dashboards not yet in the persisted order array.
+ * Returns epoch ms, or Infinity if unreadable.
+ */
+function getDashboardCreationTime(id) {
+  try {
+    const stat = fs.statSync(getDashboardDir(id));
+    return stat.birthtimeMs || stat.ctimeMs || Infinity;
+  } catch {
+    return Infinity;
+  }
+}
 
 /**
  * Get the complete state of a dashboard: initialization, progress, and logs.
@@ -218,4 +228,5 @@ module.exports = {
   deleteDashboard,
   nextDashboardId,
   getFullDashboardState,
+  getDashboardCreationTime,
 };

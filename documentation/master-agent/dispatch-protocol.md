@@ -136,7 +136,7 @@ When a worker returns, the master stores its results in working memory:
 - New interfaces, types, exports, or APIs introduced (from the EXPORTS section).
 - Any deviations or warnings.
 
-This cache feeds downstream prompts. After context compaction, reconstruct the cache from prior conversation output or by re-reading the XML summaries.
+This cache feeds downstream prompts. After context compaction, reconstruct the cache from prior conversation output or by re-reading the task file summaries.
 
 ### Upstream Result Summary Format
 
@@ -353,7 +353,7 @@ The complete execution loop:
 1. Dispatch all initially ready tasks (Wave 1 + any others with no deps)
 2. Wait for a worker to return
 3. Parse the return (STATUS, SUMMARY, FILES CHANGED, EXPORTS, DEVIATIONS)
-4. Update master XML with completion data
+4. Update master task file with completion data
 5. Append completion entry to logs.json
 6. Cache the result for downstream injection
 7. If failure: create repair task, rewire deps, dispatch repair worker
@@ -374,4 +374,4 @@ The pipeline must flow continuously. Every idle moment where an available task s
 
 - [Master Agent Overview](./overview.md) -- Role definition, constraints, and responsibilities.
 - [Planning Protocol](./planning.md) -- Task decomposition, dependency mapping, wave grouping, and prompt writing.
-- [Statusing Protocol](./statusing.md) -- Dashboard updates, logs.json, XML updates, and terminal output rules.
+- [Statusing Protocol](./statusing.md) -- Dashboard updates, logs.json, task file updates, and terminal output rules.

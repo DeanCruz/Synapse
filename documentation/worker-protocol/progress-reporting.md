@@ -17,7 +17,7 @@ Dashboard merges initialization.json + progress files  ->  renders live status
       |
 Worker completes  ->  writes final progress file with status "completed"
       |
-Master processes return  ->  updates logs.json + XML only (NOT initialization.json)
+Master processes return  ->  updates logs.json + task file only (NOT initialization.json)
 ```
 
 The dashboard server watches the `progress/` directory via `fs.watch` and broadcasts changes to the browser within approximately 50ms. Every progress file write becomes visible on the dashboard almost immediately.
@@ -53,7 +53,7 @@ All three values are provided in the worker's dispatch prompt.
   "stage": "implementing",
   "message": "Creating auth middleware — 2/3 endpoints done",
   "milestones": [
-    { "at": "2026-02-25T14:05:10Z", "msg": "Read CLAUDE.md and task XML" },
+    { "at": "2026-02-25T14:05:10Z", "msg": "Read CLAUDE.md and task file" },
     { "at": "2026-02-25T14:05:35Z", "msg": "Read existing middleware for patterns" },
     { "at": "2026-02-25T14:06:01Z", "msg": "Created rate limiter for /api/auth" }
   ],
@@ -106,7 +106,7 @@ Workers progress through these stages in order. Every stage transition requires 
 
 | Stage | Description | Typical Activities |
 |---|---|---|
-| `reading_context` | Reading project files, CLAUDE.md, documentation, task XML | Reading dispatch prompt, CLAUDE.md, source files, upstream progress files |
+| `reading_context` | Reading project files, CLAUDE.md, documentation, task file | Reading dispatch prompt, CLAUDE.md, source files, upstream progress files |
 | `planning` | Assessing readiness, planning approach | Verifying all required files exist, planning implementation steps, identifying potential issues |
 | `implementing` | Writing code, creating/modifying files | Creating new files, editing existing files, writing functions, components, tests |
 | `testing` | Running tests, validating changes | Running unit tests, integration tests, type checking, build validation |
@@ -323,7 +323,7 @@ The dashboard uses the progress file to render the worker's task card in real-ti
   "summary": null,
   "assigned_agent": "Agent 1",
   "stage": "reading_context",
-  "message": "Reading CLAUDE.md and task XML",
+  "message": "Reading CLAUDE.md and task file",
   "milestones": [],
   "deviations": [],
   "logs": [

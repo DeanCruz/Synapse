@@ -21,7 +21,10 @@ const {
   copyDirSync,
   deleteDashboard,
   nextDashboardId,
+  getDashboardCreationTime,
 } = require('../src/server/services/DashboardService');
+
+const settings = require('./settings');
 
 const {
   watchDashboard,
@@ -86,6 +89,11 @@ const fsPromises = fs.promises;
  */
 function createBroadcastFn(getMainWindow) {
   return function broadcast(eventName, data) {
+    // Intercept dashboard list events to apply persisted ordering + names
+    if ((eventName === 'dashboards_changed' || eventName === 'dashboards_list') && data && data.dashboards) {
+      data = { ...data, dashboards: getOrderedDashboards(), names: getDashboardNames() };
+    }
+
     const win = getMainWindow();
     if (win && !win.isDestroyed()) {
       win.webContents.send(eventName, data);
@@ -166,6 +174,57 @@ function ensureDirectories() {
 }
 
 // ---------------------------------------------------------------------------
+// Dashboard ordering — reconciles filesystem truth with persisted order
+// ---------------------------------------------------------------------------
+
+/**
+ * Get dashboards in persisted order, appending newly-discovered ones by creation time.
+ * IDE is always pinned at index 0.
+ *
+ * @returns {string[]} ordered dashboard IDs
+ */
+function getOrderedDashboards() {
+  const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+  const existingIds = new Set(listDashboards());
+
+  // Filter persisted order to only existing dashboards
+  const validOrder = (meta.order || []).filter(id => existingIds.has(id));
+  const orderedSet = new Set(validOrder);
+
+  // Find new dashboards not yet in order, sort by creation time (oldest first, newest last)
+  const newIds = [...existingIds].filter(id => !orderedSet.has(id));
+  newIds.sort((a, b) => {
+    if (a === 'ide') return -1;
+    if (b === 'ide') return 1;
+    return getDashboardCreationTime(a) - getDashboardCreationTime(b);
+  });
+
+  // Merge: persisted order + new dashboards appended at end
+  let result = [...validOrder, ...newIds];
+
+  // Ensure 'ide' is always first
+  result = result.filter(id => id !== 'ide');
+  if (existingIds.has('ide')) {
+    result.unshift('ide');
+  }
+
+  // Persist the reconciled order
+  meta.order = result;
+  settings.set('dashboardMeta', meta);
+
+  return result;
+}
+
+/**
+ * Get the custom display names from dashboard metadata.
+ * @returns {Object} { [dashboardId]: displayName }
+ */
+function getDashboardNames() {
+  const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+  return meta.names || {};
+}
+
+// ---------------------------------------------------------------------------
 // IPC Handler registration
 // ---------------------------------------------------------------------------
 
@@ -185,7 +244,7 @@ function registerIPCHandlers(getMainWindow) {
 
   // GET /api/dashboards -> get-dashboards
   ipcMain.handle('get-dashboards', async () => {
-    return { dashboards: listDashboards() };
+    return { dashboards: getOrderedDashboards(), names: getDashboardNames() };
   });
 
   // POST /api/dashboards -> create-dashboard
@@ -193,6 +252,12 @@ function registerIPCHandlers(getMainWindow) {
     const id = nextDashboardId();
     ensureDashboard(id);
     watchDashboard(id, broadcastFn);
+    // Append to persisted order
+    const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+    if (!meta.order.includes(id)) {
+      meta.order.push(id);
+    }
+    settings.set('dashboardMeta', meta);
     broadcastFn('dashboards_changed', { dashboards: listDashboards() });
     return { success: true, id };
   });
@@ -202,8 +267,50 @@ function registerIPCHandlers(getMainWindow) {
     unwatchDashboard(id);
     const deleted = deleteDashboard(id);
     if (!deleted) return { success: false, error: 'Dashboard not found' };
+    // Clean up metadata
+    const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+    meta.order = (meta.order || []).filter(oid => oid !== id);
+    delete meta.names[id];
+    settings.set('dashboardMeta', meta);
     broadcastFn('dashboards_changed', { dashboards: listDashboards() });
     return { success: true };
+  });
+
+  // PUT /api/dashboards/reorder -> reorder-dashboards
+  ipcMain.handle('reorder-dashboards', async (_event, orderedIds) => {
+    const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+    const existingIds = new Set(listDashboards());
+    // Validate: only accept IDs that actually exist
+    let newOrder = orderedIds.filter(id => existingIds.has(id));
+    // Ensure ide stays first
+    newOrder = newOrder.filter(id => id !== 'ide');
+    if (existingIds.has('ide')) newOrder.unshift('ide');
+    // Append any existing dashboards missing from the reorder request
+    for (const id of existingIds) {
+      if (!newOrder.includes(id)) newOrder.push(id);
+    }
+    meta.order = newOrder;
+    settings.set('dashboardMeta', meta);
+    broadcastFn('dashboards_changed', { dashboards: newOrder });
+    return { success: true };
+  });
+
+  // PUT /api/dashboards/:id/rename -> rename-dashboard
+  ipcMain.handle('rename-dashboard', async (_event, id, displayName) => {
+    const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+    if (displayName && displayName.trim()) {
+      meta.names[id] = displayName.trim();
+    } else {
+      delete meta.names[id];
+    }
+    settings.set('dashboardMeta', meta);
+    broadcastFn('dashboards_changed', { dashboards: getOrderedDashboards(), names: meta.names });
+    return { success: true };
+  });
+
+  // GET /api/dashboards/meta -> get-dashboard-meta
+  ipcMain.handle('get-dashboard-meta', async () => {
+    return settings.get('dashboardMeta') || { order: [], names: {} };
   });
 
   // GET /api/dashboards/statuses -> get-dashboard-statuses
@@ -565,17 +672,32 @@ function registerIPCHandlers(getMainWindow) {
   TerminalService.init(broadcastFn);
 
   // Build system prompt for in-app agent chat — reads Synapse CLAUDE.md + project CLAUDE.md
-  ipcMain.handle('get-chat-system-prompt', async (_event, projectDir, dashboardId) => {
+  ipcMain.handle('get-chat-system-prompt', async (_event, projectDir, dashboardId, additionalContextDirs) => {
     const parts = [];
     const synapseRoot = path.resolve(__dirname, '..');
+    const ctxDirs = Array.isArray(additionalContextDirs) ? additionalContextDirs : [];
 
     // Path reference block — agent must always know both directories AND its dashboard
-    parts.push(
+    let dirRef =
       '# Directory References\n\n' +
       'TRACKER ROOT (Synapse): ' + synapseRoot + '\n' +
       'PROJECT ROOT (target project): ' + (projectDir || synapseRoot) + '\n' +
-      'DASHBOARD ID: ' + (dashboardId || 'dashboard1') + '\n\n' +
-      'You are the agent for **' + (dashboardId || 'dashboard1') + '**. This is your PRE-ASSIGNED dashboard — ' +
+      'DASHBOARD ID: ' + (dashboardId || 'dashboard1') + '\n';
+
+    // Include additional context directories in the reference block
+    if (ctxDirs.length > 0) {
+      dirRef += '\nADDITIONAL CONTEXT (read-only):\n';
+      for (const dir of ctxDirs) {
+        dirRef += '  - ' + dir + '\n';
+      }
+      dirRef +=
+        '\n**IMPORTANT:** Additional context directories are READ-ONLY reference material. ' +
+        'You may read files in these directories for knowledge and context, but you must NEVER ' +
+        'create, modify, or delete any files in them. All code changes happen in PROJECT ROOT only.\n';
+    }
+
+    dirRef +=
+      '\nYou are the agent for **' + (dashboardId || 'dashboard1') + '**. This is your PRE-ASSIGNED dashboard — ' +
       'it was set by the chat view that spawned you. This dashboard binding is AUTHORITATIVE.\n' +
       'When running !p_track or any swarm command, use this dashboard directly — do NOT scan or auto-select a different one.\n' +
       'When running !master_plan_track, use this dashboard for your primary stream (S1) and scan OTHER dashboards for additional streams.\n\n' +
@@ -588,8 +710,10 @@ function registerIPCHandlers(getMainWindow) {
       '  2. {tracker_root}/_commands/project/{command}.md — Synapse project commands\n' +
       '  3. {project_root}/_commands/{command}.md — Project-specific commands (lowest priority)\n\n' +
       'Agent instructions live at: {tracker_root}/agent/instructions/\n' +
-      'All code work happens in PROJECT ROOT. All Synapse commands/instructions/dashboards live in TRACKER ROOT.'
-    );
+      'All code work happens in PROJECT ROOT. All Synapse commands/instructions/dashboards live in TRACKER ROOT.\n' +
+      'Dashboard IDs are assigned dynamically. IDE dashboards are auto-created when workspaces open and auto-deleted when closed.';
+
+    parts.push(dirRef);
 
     // Read Synapse CLAUDE.md FIRST — Synapse context takes priority
     const synapseClaudeMd = path.join(synapseRoot, 'CLAUDE.md');
@@ -608,6 +732,21 @@ function registerIPCHandlers(getMainWindow) {
           : dirName + ' Context';
         parts.push('\n# ' + label + '\n' + ctx.content);
       }
+    }
+
+    // Read CLAUDE.md from each additional context directory (read-only reference)
+    for (const ctxDir of ctxDirs) {
+      try {
+        const ctxContexts = ProjectService.getProjectContext(ctxDir);
+        for (const ctx of ctxContexts) {
+          const dirName = path.basename(ctxDir);
+          const subDirName = path.basename(path.dirname(ctx.path));
+          const label = ctx.path === path.join(ctxDir, 'CLAUDE.md')
+            ? 'Additional Context: ' + dirName
+            : 'Additional Context: ' + dirName + '/' + subDirName;
+          parts.push('\n# ' + label + ' (read-only)\n' + ctx.content);
+        }
+      } catch (e) { /* gracefully skip dirs that don't exist or have no CLAUDE.md */ }
     }
 
     return parts.join('\n\n');
@@ -1134,8 +1273,9 @@ function sendInitialData(getMainWindow, dashboards) {
       return;
     }
 
-    // Send list of all dashboards
-    win.webContents.send('dashboards_list', { dashboards });
+    // Send list of all dashboards (ordered, with custom names)
+    const orderedDashboards = getOrderedDashboards();
+    win.webContents.send('dashboards_list', { dashboards: orderedDashboards, names: getDashboardNames() });
 
     // Send initial data for each dashboard
     for (const id of dashboards) {

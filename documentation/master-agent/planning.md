@@ -16,7 +16,7 @@ The planning phase follows a strict sequence:
 6. Decompose into tasks.
 7. Determine the parallelization type (Waves or Chains).
 8. Create the parallelization plan document.
-9. Create the master XML task file.
+9. Create the master task file.
 10. Verify dependencies and add dependency chains.
 11. Select a dashboard, archive previous data, populate the plan.
 12. Present the plan to the user and wait for approval.
@@ -287,17 +287,17 @@ Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md` with:
 - **Risk assessment** -- Potential failure points and cascade analysis.
 - **Alternative approaches considered** -- Why the chosen approach was selected.
 
-### The Master XML Task File
+### The Master Task File
 
-Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml` containing:
+Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` containing:
 
 - **Metadata** -- Original prompt, type, directories, task and wave counts, overall status.
 - **Waves** -- Each wave contains task entries with: ID, title, description, directory, dependencies, context, critical details, tags, file lists, status fields, and logs.
 - **Dependency chains** -- Every path from root tasks (no dependencies) to terminal tasks (nothing depends on them).
 
-The XML is the authoritative task record. All agents read from it. The master updates it on every completion.
+The task file is the authoritative task record. All agents read from it. The master updates it on every completion.
 
-### Task Status Lifecycle (in the XML)
+### Task Status Lifecycle (in the task file)
 
 1. `pending` -- Not started, waiting for dependencies or dispatch.
 2. `claimed` -- Master has selected this task for dispatch (set before agent launch).
@@ -356,7 +356,7 @@ After the dashboard is populated, present a terminal summary showing:
 - Dependency chains with critical path identification.
 - Total task and wave counts.
 - Dispatch strategy summary.
-- Links to the XML and plan document.
+- Links to the task file and plan document.
 
 Wait for user approval before proceeding to the dispatch phase.
 
@@ -366,4 +366,4 @@ Wait for user approval before proceeding to the dispatch phase.
 
 - [Master Agent Overview](./overview.md) -- Role definition, constraints, and responsibilities.
 - [Dispatch Protocol](./dispatch-protocol.md) -- Eager dispatch, dependency-driven dispatch, pipeline flow, and error handling.
-- [Statusing Protocol](./statusing.md) -- Dashboard updates, logs.json, XML updates, and terminal output rules.
+- [Statusing Protocol](./statusing.md) -- Dashboard updates, logs.json, task file updates, and terminal output rules.

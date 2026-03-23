@@ -1,19 +1,23 @@
 // Sidebar — Dashboard selector with status dots, per-dashboard Project/Agent buttons,
-// add/delete dashboard controls, collapse toggle, and queue section
+// add/delete dashboard controls, collapse toggle, drag-and-drop reorder, inline rename,
+// and queue section
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { getDashboardLabel } from '@/utils/constants.js';
-import { getDashboardProject } from '../utils/dashboardProjects.js';
+import { getDashboardProject, saveDashboardProject } from '../utils/dashboardProjects.js';
+import { isIdeDashboard, getWorkspaceForDashboard, getWorkspaceDashboard, getAllWorkspaceDashboards, removeWorkspaceDashboard } from '../utils/ideWorkspaceManager.js';
 import '../styles/ide-sidebar.css';
 
-function StatusDot({ status }) {
+function StatusDot({ status, hasUnread, chatProcessing }) {
   let cls = 'dashboard-item-status idle';
   if (status === 'in_progress') cls = 'dashboard-item-status in-progress';
   else if (status === 'waiting') cls = 'dashboard-item-status waiting';
   else if (status === 'completed') cls = 'dashboard-item-status completed';
   else if (status === 'error') cls = 'dashboard-item-status error';
   else if (status === 'idle') cls = 'dashboard-item-status idle';
+  if (hasUnread) cls += ' has-unread';
+  if (chatProcessing) cls += ' chat-processing';
   return <span className={cls} />;
 }
 
@@ -24,21 +28,97 @@ function getProjectDisplayName(dashboardId) {
   return parts[parts.length - 1] || null;
 }
 
+/**
+ * Resolve display name: custom name > project name > getDashboardLabel fallback.
+ */
+function getDisplayName(id, dashboardNames) {
+  const customName = dashboardNames?.[id];
+  if (customName) {
+    if (isIdeDashboard(id)) return `IDE - ${customName}`;
+    return customName;
+  }
+  const projectName = getProjectDisplayName(id);
+  if (projectName) {
+    if (isIdeDashboard(id)) return `IDE - ${projectName}`;
+    return projectName;
+  }
+  return getDashboardLabel(id);
+}
+
 export default function Sidebar() {
   const state = useAppState();
   const dispatch = useDispatch();
-  const { currentDashboardId, dashboardStates, dashboardList, queueItems, activeView } = state;
+  const { currentDashboardId, dashboardStates, dashboardList, dashboardNames, queueItems, activeView, chatPreviews, unreadChatCounts, claudeIsProcessing, claudeProcessingStash, ideWorkspaces } = state;
 
   const [collapsed, setCollapsed] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, taskName } or null
 
+  // Keep --sidebar-width CSS variable in sync with collapse state
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      '--sidebar-width',
+      collapsed ? '52px' : '220px'
+    );
+  }, [collapsed]);
+
+  // Cleanup orphaned IDE dashboard mappings when workspace tabs change
+  useEffect(() => {
+    if (!dashboardList || dashboardList.length === 0) return; // wait for dashboard list to load
+    const allMappings = getAllWorkspaceDashboards();
+    const wsIds = new Set((ideWorkspaces || []).map(w => w.id));
+    for (const [wsId, dashId] of Object.entries(allMappings)) {
+      if (!wsIds.has(wsId)) {
+        removeWorkspaceDashboard(wsId);
+        if (window.electronAPI && dashboardList.includes(dashId)) {
+          window.electronAPI.deleteDashboard(dashId).catch(() => {});
+          dispatch({ type: 'REMOVE_DASHBOARD', id: dashId });
+        }
+      }
+    }
+  }, [ideWorkspaces, dashboardList, dispatch]);
+
+  // Rename state
+  const [editingId, setEditingId] = useState(null);
+  const [editingName, setEditingName] = useState('');
+
+  // Drag-and-drop state
+  const [dragId, setDragId] = useState(null);
+  const [dragOverId, setDragOverId] = useState(null);
+  const dragCounterRef = useRef(0);
+
   // Use dashboardList from server (populated via SSE/IPC), fall back to currentDashboardId
-  const dashboards = dashboardList.length > 0 ? dashboardList : [currentDashboardId];
+  const allDashboards = dashboardList.length > 0 ? dashboardList : [currentDashboardId];
+
+  // Build set of valid IDE dashboard IDs from currently open workspace tabs (strict 1:1)
+  const validIdeDashboardIds = useMemo(() => {
+    const set = new Set();
+    (ideWorkspaces || []).forEach(ws => {
+      const dashId = getWorkspaceDashboard(ws.id);
+      if (dashId) set.add(dashId);
+    });
+    return set;
+  }, [ideWorkspaces]);
+
+  // Filter out orphaned IDE dashboards (mapping exists but workspace tab is closed)
+  const dashboards = [...allDashboards]
+    .filter(id => {
+      if (isIdeDashboard(id) && !validIdeDashboardIds.has(id)) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      const aIde = validIdeDashboardIds.has(a);
+      const bIde = validIdeDashboardIds.has(b);
+      if (aIde && !bIde) return -1;
+      if (!aIde && bIde) return 1;
+      return 0;
+    });
 
   function handleSwitch(id) {
     if (id !== currentDashboardId) {
       dispatch({ type: 'SWITCH_DASHBOARD', id });
     }
+    // Always route to the dashboard page, never the code explorer
+    dispatch({ type: 'SET_VIEW', view: 'dashboard' });
   }
 
   function handleProjectClick(e, dashboardId) {
@@ -48,18 +128,34 @@ export default function Sidebar() {
 
   function handleClaudeClick(e, dashboardId) {
     e.stopPropagation();
-    if (dashboardId !== currentDashboardId) {
-      dispatch({ type: 'SWITCH_DASHBOARD', id: dashboardId });
+    if (isIdeDashboard(dashboardId)) {
+      // For IDE dashboards: switch to IDE view, switch workspace, open chat inline
+      const wsId = getWorkspaceForDashboard(dashboardId);
+      if (wsId) dispatch({ type: 'IDE_SWITCH_WORKSPACE', workspaceId: wsId });
+      dispatch({ type: 'SET_VIEW', view: 'ide' });
+      if (dashboardId !== currentDashboardId) {
+        dispatch({ type: 'SWITCH_DASHBOARD', id: dashboardId });
+      }
+      dispatch({ type: 'IDE_OPEN_CHAT' });
+    } else {
+      if (dashboardId !== currentDashboardId) {
+        dispatch({ type: 'SWITCH_DASHBOARD', id: dashboardId });
+      }
+      dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId });
     }
-    dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId });
   }
 
   const handleAddDashboard = useCallback(async () => {
     const api = window.electronAPI;
     if (!api) return;
     try {
+      // Open folder picker first — cancel aborts dashboard creation
+      const selectedPath = await api.selectProjectDirectory();
+      if (!selectedPath) return;
+
       const result = await api.createDashboard();
       if (result && result.id) {
+        saveDashboardProject(result.id, selectedPath);
         dispatch({ type: 'SWITCH_DASHBOARD', id: result.id });
       }
     } catch (err) {
@@ -76,7 +172,6 @@ export default function Sidebar() {
 
     if (hasData) {
       // Show confirmation popup — derive task name from init if available
-      const taskName = null; // Will be fetched async
       setDeleteConfirm({ id, taskName: 'active task data' });
       // Try to get the actual task name
       const api = window.electronAPI;
@@ -116,59 +211,121 @@ export default function Sidebar() {
     setDeleteConfirm(null);
   }, [currentDashboardId, dashboards, dispatch]);
 
+  // --- Rename handlers ---
+
+  const handleRenameStart = useCallback((e, id) => {
+    e.stopPropagation();
+    if (collapsed) return;
+    setEditingId(id);
+    setEditingName(getDisplayName(id, dashboardNames));
+  }, [collapsed, dashboardNames]);
+
+  const handleRenameCommit = useCallback(async (id) => {
+    const trimmed = editingName.trim();
+    setEditingId(null);
+    setEditingName('');
+    if (!trimmed) return;
+    const currentDisplay = getDisplayName(id, dashboardNames);
+    if (trimmed === currentDisplay) return;
+    dispatch({ type: 'RENAME_DASHBOARD', id, name: trimmed });
+    const api = window.electronAPI;
+    if (api) {
+      await api.renameDashboard(id, trimmed);
+    }
+  }, [editingName, dashboardNames, dispatch]);
+
+  const handleRenameCancel = useCallback(() => {
+    setEditingId(null);
+    setEditingName('');
+  }, []);
+
+  // --- Drag-and-drop handlers ---
+
+  const handleDragStart = useCallback((e, id) => {
+    if (isIdeDashboard(id) || collapsed) { e.preventDefault(); return; }
+    setDragId(id);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', id);
+    requestAnimationFrame(() => {
+      if (e.target) e.target.style.opacity = '0.4';
+    });
+  }, [collapsed]);
+
+  const handleDragEnd = useCallback((e) => {
+    if (e.target) e.target.style.opacity = '';
+    setDragId(null);
+    setDragOverId(null);
+    dragCounterRef.current = 0;
+  }, []);
+
+  const handleDragEnter = useCallback((e, id) => {
+    e.preventDefault();
+    if (isIdeDashboard(id)) return;
+    dragCounterRef.current++;
+    setDragOverId(id);
+  }, []);
+
+  const handleDragOver = useCallback((e, id) => {
+    e.preventDefault();
+    if (isIdeDashboard(id)) return;
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleDragLeave = useCallback((e, id) => {
+    dragCounterRef.current--;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      if (dragOverId === id) setDragOverId(null);
+    }
+  }, [dragOverId]);
+
+  const handleDrop = useCallback(async (e, targetId) => {
+    e.preventDefault();
+    setDragOverId(null);
+    dragCounterRef.current = 0;
+    const sourceId = dragId;
+    setDragId(null);
+
+    if (!sourceId || sourceId === targetId || isIdeDashboard(targetId)) return;
+
+    const currentOrder = [...dashboards];
+    const sourceIdx = currentOrder.indexOf(sourceId);
+    const targetIdx = currentOrder.indexOf(targetId);
+    if (sourceIdx < 0 || targetIdx < 0) return;
+
+    currentOrder.splice(sourceIdx, 1);
+    currentOrder.splice(targetIdx, 0, sourceId);
+
+    dispatch({ type: 'REORDER_DASHBOARDS', orderedIds: currentOrder });
+
+    const api = window.electronAPI;
+    if (api) {
+      await api.reorderDashboards(currentOrder);
+    }
+  }, [dragId, dashboards, dispatch]);
+
   // Determine which sidebar tab is active
   const isIdeActive = activeView === 'ide';
-  const isDashboardActive = !isIdeActive; // Default: dashboard tab active for all non-ide views
+  const isDashboardActive = !isIdeActive;
 
   return (
     <aside className={`dashboard-sidebar${collapsed ? ' collapsed' : ''}`}>
-      {/* Tab bar — Code Explorer / Dashboards */}
+      {/* Sidebar header — two rows */}
       <div className="sidebar-tab-bar">
-        <button
-          className={`sidebar-tab${isIdeActive ? ' active' : ''}`}
-          title="Code Explorer"
-          aria-label="Code Explorer"
-          onClick={() => dispatch({ type: 'SET_VIEW', view: 'ide' })}
-        >
-          <span className="sidebar-tab-icon">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <path d="M5.5 4L2 8l3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M10.5 4L14 8l-3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </span>
-          <span className="sidebar-tab-label">Code Explorer</span>
-        </button>
-        <button
-          className={`sidebar-tab${isDashboardActive ? ' active' : ''}`}
-          title="Dashboards"
-          aria-label="Dashboards"
-          onClick={() => dispatch({ type: 'SET_VIEW', view: 'dashboard' })}
-        >
-          <span className="sidebar-tab-icon">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-              <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-              <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-              <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-              <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
-            </svg>
-          </span>
-          <span className="sidebar-tab-label">Dashboards</span>
-        </button>
-      </div>
-
-      {/* Header */}
-      <div className="sidebar-header">
-        <span className="sidebar-title">Dashboards</span>
-        <div className="sidebar-header-actions">
+        <div className="sidebar-tab-row">
           <button
-            className="sidebar-add-btn"
-            title="Add dashboard"
-            aria-label="Add dashboard"
-            onClick={handleAddDashboard}
+            className={`sidebar-tab${isIdeActive ? ' active' : ''}`}
+            title="Code Explorer"
+            aria-label="Code Explorer"
+            onClick={() => dispatch({ type: 'SET_VIEW', view: 'ide' })}
           >
-            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+            <span className="sidebar-tab-icon">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M5.5 4L2 8l3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M10.5 4L14 8l-3.5 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+            <span className="sidebar-tab-label">Code Explorer</span>
           </button>
           <button
             className="sidebar-toggle-btn"
@@ -181,6 +338,34 @@ export default function Sidebar() {
             </svg>
           </button>
         </div>
+        <div className="sidebar-tab-row">
+          <button
+            className={`sidebar-tab${isDashboardActive ? ' active' : ''}`}
+            title="Dashboards"
+            aria-label="Dashboards"
+            onClick={() => dispatch({ type: 'SET_VIEW', view: 'home' })}
+          >
+            <span className="sidebar-tab-icon">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <rect x="2" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <rect x="9" y="2" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <rect x="2" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+                <rect x="9" y="9" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3"/>
+              </svg>
+            </span>
+            <span className="sidebar-tab-label">Dashboards</span>
+          </button>
+          <button
+            className="sidebar-add-btn"
+            title="Add dashboard"
+            aria-label="Add dashboard"
+            onClick={handleAddDashboard}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Dashboard list */}
@@ -188,21 +373,81 @@ export default function Sidebar() {
         {dashboards.map(id => {
           const status = dashboardStates[id] ?? 'idle';
           const isActive = id === currentDashboardId;
-          const projectName = getProjectDisplayName(id);
           const projectPath = getDashboardProject(id);
+          const unreadCount = unreadChatCounts[id] || 0;
+          const isDraggable = !isIdeDashboard(id) && !collapsed;
+          const itemClasses = [
+            'dashboard-item',
+            isActive ? 'active' : '',
+            unreadCount > 0 ? 'has-unread' : '',
+            dragOverId === id && dragId !== id ? 'drag-over' : '',
+            dragId === id ? 'dragging' : '',
+          ].filter(Boolean).join(' ');
+
           return (
             <div
               key={id}
-              className={`dashboard-item${isActive ? ' active' : ''}`}
+              className={itemClasses}
               onClick={() => handleSwitch(id)}
               role="button"
               tabIndex={0}
+              title={unreadCount > 0 ? `${unreadCount} new message${unreadCount !== 1 ? 's' : ''}` : undefined}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSwitch(id); }}
+              draggable={isDraggable}
+              onDragStart={(e) => handleDragStart(e, id)}
+              onDragEnd={handleDragEnd}
+              onDragEnter={(e) => handleDragEnter(e, id)}
+              onDragOver={(e) => handleDragOver(e, id)}
+              onDragLeave={(e) => handleDragLeave(e, id)}
+              onDrop={(e) => handleDrop(e, id)}
             >
-              <StatusDot status={status} />
-              <span className="dashboard-item-name" title={projectPath || undefined}>
-                {projectName || getDashboardLabel(id)}
-              </span>
+              <div className="dashboard-item-dot-wrap">
+                <StatusDot
+                  status={status}
+                  hasUnread={unreadCount > 0}
+                  chatProcessing={id === currentDashboardId ? claudeIsProcessing : !!claudeProcessingStash[id]?.isProcessing}
+                />
+                {unreadCount > 0 && (
+                  <span className="dashboard-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                )}
+              </div>
+              <div className="dashboard-item-content">
+                {editingId === id ? (
+                  <input
+                    className="dashboard-item-rename-input"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onBlur={() => handleRenameCommit(id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); handleRenameCommit(id); }
+                      if (e.key === 'Escape') handleRenameCancel();
+                    }}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                    onDoubleClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span
+                    className="dashboard-item-name"
+                    title={projectPath || undefined}
+                    onDoubleClick={(e) => handleRenameStart(e, id)}
+                  >
+                    {getDisplayName(id, dashboardNames)}
+                  </span>
+                )}
+                {!collapsed && editingId !== id && (
+                  <div className="dashboard-item-meta">
+                    <span className="dashboard-item-id">#{id}</span>
+                    {chatPreviews[id]?.text && (
+                      <span className={`dashboard-item-preview${chatPreviews[id].isStreaming ? ' streaming' : ''}`}>
+                        {chatPreviews[id].text.length > 45
+                          ? chatPreviews[id].text.substring(0, 45) + '...'
+                          : chatPreviews[id].text}
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
               <div className="dashboard-item-actions">
                 <button
                   className={`dashboard-item-action-btn${projectPath ? ' has-project' : ''}`}
@@ -226,7 +471,7 @@ export default function Sidebar() {
                     <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
                   </svg>
                 </button>
-                {dashboards.length > 1 && (
+                {dashboards.length > 1 && !isIdeDashboard(id) && (
                   <button
                     className="dashboard-item-action-btn dashboard-delete-btn"
                     title="Delete dashboard"
@@ -265,7 +510,7 @@ export default function Sidebar() {
           <div className="sidebar-delete-popup" onClick={e => e.stopPropagation()}>
             <div className="sidebar-delete-popup-title">Close Dashboard?</div>
             <p className="sidebar-delete-popup-text">
-              <strong>{getDashboardLabel(deleteConfirm.id)}</strong> has data
+              <strong>{getDisplayName(deleteConfirm.id, dashboardNames)}</strong> has data
               {deleteConfirm.taskName ? ` (${deleteConfirm.taskName})` : ''}.
             </p>
             <div className="sidebar-delete-popup-actions">

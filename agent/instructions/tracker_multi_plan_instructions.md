@@ -20,7 +20,7 @@
 │  CHILD MASTER AGENTS (one per stream)                        │
 │  Read: tracker_master_instructions.md                        │
 │  Role: Own one dashboard, plan one swarm, dispatch workers,  │
-│        run eager dispatch, update XML/logs, report back      │
+│        run eager dispatch, update task file/logs, report back │
 │  Does NOT: Write code, manage other streams, promote queues  │
 ├──────────────────────────────────────────────────────────────┤
 │  WORKER AGENTS (many per stream)                             │
@@ -220,7 +220,7 @@ Your plan has already been created and written to the dashboard. The dashboard
 in the Synapse Electron app already shows your tasks as pending cards.
 
 YOUR FILES:
-- XML:              {tracker_root}/tasks/{MM_DD_YY}/parallel_{stream_slug}.xml
+- Task File:        {tracker_root}/tasks/{MM_DD_YY}/parallel_{stream_slug}.json
 - Plan:             {tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{stream_slug}.md
 - Dashboard Init:   {tracker_root}/dashboards/{dashboardId}/initialization.json
 - Dashboard Logs:   {tracker_root}/dashboards/{dashboardId}/logs.json
@@ -237,8 +237,8 @@ Before dispatching ANY worker agents, read these two files:
    fields that drive it. It documents eager dispatch, failure recovery, write timing,
    and every common mistake. Follow it exactly.
 
-2. {tracker_root}/tasks/{MM_DD_YY}/parallel_{stream_slug}.xml
-   This is YOUR master XML — the single source of truth for your swarm's tasks,
+2. {tracker_root}/tasks/{MM_DD_YY}/parallel_{stream_slug}.json
+   This is YOUR master task file — the single source of truth for your swarm's tasks,
    dependencies, and status.
 
 ═══════════════════════════════════════
@@ -272,7 +272,7 @@ YOUR JOB
 ═══════════════════════════════════════
 
 1. Read tracker_master_instructions.md (NON-NEGOTIABLE)
-2. Read your master XML
+2. Read your master task file
 3. Begin execution — dispatch all Wave 1 tasks (and any higher-wave tasks
    with already-satisfied dependencies) simultaneously
 4. Follow the standard !p_track Phase 2 protocol EXACTLY:
@@ -282,7 +282,7 @@ YOUR JOB
    - Each worker writes its own progress file to:
      {tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json
    - Process completions with eager dispatch scanning (CRITICAL)
-   - Update the XML and logs.json on every event
+   - Update the task file and logs.json on every event
    - Handle failures per the repair task protocol
 5. When all tasks are complete, return your final report
 
@@ -335,7 +335,7 @@ Before dispatching each child master, verify:
 | Required Element | Check |
 |---|---|
 | **Dashboard assignment** | Correct `dashboardId` — must be a live dashboard, never a queue |
-| **XML and plan paths** | Correct date and slug in file paths |
+| **Task file and plan paths** | Correct date and slug in file paths |
 | **Instruction file reference** | `tracker_master_instructions.md` path included |
 | **Worker instruction reference** | `tracker_worker_instructions.md` path included for embedding in worker prompts |
 | **CLAUDE.md conventions** | Relevant sections quoted for embedding in worker prompts |
@@ -468,14 +468,14 @@ Worker failures within a stream are handled entirely by the child master using t
 ### What the Meta-Planner Does NOT Write
 
 - **Progress files** — Workers write these. The meta-planner never touches `progress/*.json`.
-- **Dashboard updates during execution** — Child masters handle their own `logs.json` and XML updates.
+- **Dashboard updates during execution** — Child masters handle their own `logs.json` and task file updates.
 - **Application code** — The meta-planner never writes code. Ever.
 
 ### What Child Masters Write
 
 Child masters follow `tracker_master_instructions.md` exactly:
 - `dashboards/{id}/logs.json` — append on every dispatch, completion, failure, deviation
-- `tasks/{date}/parallel_{slug}.xml` — update on every completion
+- `tasks/{date}/parallel_{slug}.json` — update on every completion
 - They also instruct workers to write `dashboards/{id}/progress/{task_id}.json`
 
 ---

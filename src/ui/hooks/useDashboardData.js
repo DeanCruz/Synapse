@@ -167,7 +167,12 @@ export function useDashboardData() {
     if (!api) return;
     api.getDashboards().then(result => {
       if (result && result.dashboards) {
-        dispatch({ type: 'SET', key: 'dashboardList', value: result.dashboards });
+        dispatch({ type: 'SET_DASHBOARDS_LIST', value: result.dashboards, names: result.names });
+      }
+    }).catch(() => {});
+    api.getDashboardMeta().then(meta => {
+      if (meta && meta.names) {
+        dispatch({ type: 'SET_DASHBOARD_NAMES', names: meta.names });
       }
     }).catch(() => {});
     api.getDashboardStatuses().then(result => {
@@ -245,11 +250,11 @@ export function useDashboardData() {
     });
 
     addListener('dashboards_list', (data) => {
-      dispatch({ type: 'SET', key: 'dashboardList', value: data.dashboards || [] });
+      dispatch({ type: 'SET_DASHBOARDS_LIST', value: data.dashboards || [], names: data.names });
     });
 
     addListener('dashboards_changed', (data) => {
-      dispatch({ type: 'SET', key: 'dashboardList', value: data.dashboards || [] });
+      dispatch({ type: 'SET_DASHBOARDS_LIST', value: data.dashboards || [], names: data.names });
     });
 
     addListener('init_state', (data) => {

@@ -75,7 +75,7 @@ Master writes plan files:
     |
     +-- {tracker_root}/dashboards/{dashboardId}/initialization.json  (static plan)
     +-- {tracker_root}/dashboards/{dashboardId}/logs.json            (initial log entry)
-    +-- {tracker_root}/tasks/{date}/parallel_{name}.xml              (XML task record)
+    +-- {tracker_root}/tasks/{date}/parallel_{name}.json              (task record)
     +-- {tracker_root}/tasks/{date}/parallel_plan_{name}.md          (strategy rationale)
 ```
 

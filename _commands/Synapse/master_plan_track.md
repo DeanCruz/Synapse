@@ -49,7 +49,7 @@ The meta-planner never dispatches workers. Child masters never touch other dashb
 
 **Output files (per planning stream):**
 ```
-{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml               ← Master XML task file
+{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json              ← Master task file
 {tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md            ← Parallelization strategy rationale
 {tracker_root}/dashboards/{dashboardId}/initialization.json             ← Static plan data (dashboard slots)
 {tracker_root}/dashboards/{dashboardId}/logs.json                       ← Initialized event log
@@ -206,7 +206,7 @@ After user approval, dispatch one **planner agent** per stream simultaneously us
 
 Each planner agent receives a self-contained prompt that includes everything needed to create a complete `!p_track` plan independently. The meta-planner embeds all relevant context (CLAUDE.md conventions, code snippets, file structures) directly into each planner's prompt.
 
-**Planner agents create plans. They do NOT execute. They do NOT read `tracker_master_instructions.md`.** Their only job is to produce the `.md` plan, `.xml` task file, and `initialization.json` + `logs.json` for their assigned slot.
+**Planner agents create plans. They do NOT execute. They do NOT read `tracker_master_instructions.md`.** Their only job is to produce the `.md` plan, `.json` task file, and `initialization.json` + `logs.json` for their assigned slot.
 
 ### Step 10: Planner agent prompt template
 
@@ -280,16 +280,16 @@ Follow these steps exactly:
 
    Include: parallelization type rationale, task organization table, dependency analysis, dispatch strategy, risk assessment, alternative approaches.
 
-5. CREATE THE MASTER XML
-   Write to: {tracker_root}/tasks/{MM_DD_YY}/parallel_{stream_slug}.xml
+5. CREATE THE MASTER TASK FILE
+   Write to: {tracker_root}/tasks/{MM_DD_YY}/parallel_{stream_slug}.json
 
-   Follow the exact XML schema from the !p_track protocol:
-   - <parallel_task> root with metadata
-   - <waves> with <task> entries containing all fields
-   - <dependency_chains> section
+   Follow the exact task file schema from the !p_track protocol:
+   - Top-level parallel_task object with metadata
+   - waves array with task entries containing all fields
+   - dependency_chains section
 
 6. VERIFY DEPENDENCIES
-   - Re-read the XML you wrote
+   - Re-read the task file you wrote
    - Cross-check with the .md plan
    - Verify all dependency references exist and are directionally correct
    - Confirm no circular dependencies
@@ -377,7 +377,7 @@ CRITICAL_PATH: {chain description}
 SUMMARY: {one-sentence description of the plan}
 FILES CREATED:
   - {path} (plan .md)
-  - {path} (task .xml)
+  - {path} (task .json)
   - {path} (initialization.json)
   - {path} (logs.json)
 WARNINGS: {anything the master should know — optional}
@@ -437,10 +437,10 @@ Once all planner agents have returned, present a consolidated view:
 - **S5** ({slug}) dispatches after **S2** and **S4** complete
 
 ### Artifacts
-| Stream | Plan | XML | Dashboard/Queue |
+| Stream | Plan | Task File | Dashboard/Queue |
 |---|---|---|---|
-| S1 | `tasks/{date}/parallel_plan_{slug}.md` | `tasks/{date}/parallel_{slug}.xml` | `dashboards/dashboard1/` |
-| S2 | `tasks/{date}/parallel_plan_{slug}.md` | `tasks/{date}/parallel_{slug}.xml` | `dashboards/dashboard2/` |
+| S1 | `tasks/{date}/parallel_plan_{slug}.md` | `tasks/{date}/parallel_{slug}.json` | `dashboards/dashboard1/` |
+| S2 | `tasks/{date}/parallel_plan_{slug}.md` | `tasks/{date}/parallel_{slug}.json` | `dashboards/dashboard2/` |
 
 ### Execution Architecture
 Each approved stream will be handed to an autonomous **child master agent** that:
@@ -475,7 +475,7 @@ For each approved stream assigned to a dashboard, dispatch a **child master agen
 
 Each child master agent receives:
 1. Its dashboard assignment
-2. Paths to its XML, plan, and dashboard files
+2. Paths to its task file, plan, and dashboard files
 3. **Instruction to read `{tracker_root}/agent/instructions/tracker_master_instructions.md`** — this is the child master's primary reference for running its swarm
 4. **Instruction to have workers read `{tracker_root}/agent/instructions/tracker_worker_instructions.md`** — so workers know how to write progress files
 5. Full project context (CLAUDE.md conventions, reference code, upstream results)
@@ -567,7 +567,7 @@ When all streams across all dashboards and queues are complete:
 ### Meta-Planning
 
 5. **Decompose into independent streams first.** The value of this command is parallelizing across multiple dashboards. If the work is a single stream, use `!p_track` instead.
-6. **Each stream gets a complete plan.** Every stream must have its own `.md` plan, `.xml` task file, and dashboard/queue initialization. No shortcuts.
+6. **Each stream gets a complete plan.** Every stream must have its own `.md` plan, `.json` task file, and dashboard/queue initialization. No shortcuts.
 7. **Planner agents do NOT execute.** They create plans and write dashboard/queue files. That's it.
 8. **The meta-planner embeds all context into prompts.** Both planner agents and child master agents receive pre-read context so they minimize redundant file reading.
 

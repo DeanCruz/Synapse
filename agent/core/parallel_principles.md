@@ -101,11 +101,11 @@ Status reporting is split between master and workers:
 - Write detailed logs: `logs[]` array (feeds the popup log box in agent details modal)
 - Dashboard picks up changes in real-time via `fs.watch` + SSE
 
-### Master handles event logging and XML updates only:
+### Master handles event logging and task file updates only:
 
 - Agent dispatched → append to `logs.json`
-- Agent completed → append to `logs.json` + update XML
-- Agent failed → append to `logs.json` + update XML
+- Agent completed → append to `logs.json` + update task file
+- Agent failed → append to `logs.json` + update task file
 - Agent deviated → append to `logs.json` at level `"deviation"`
 - Master does NOT update `initialization.json` after planning
 

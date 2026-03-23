@@ -171,11 +171,11 @@ Execute directly
 
 | File | Purpose |
 |---|---|
-| `dashboards/{dashboardId}/initialization.json` | Static plan data (written ONCE) |
-| `dashboards/{dashboardId}/logs.json` | Timestamped event log |
-| `dashboards/{dashboardId}/master_state.json` | State checkpoint for context recovery |
-| `dashboards/{dashboardId}/metrics.json` | Post-swarm performance metrics |
-| `tasks/{date}/parallel_{name}.xml` | Master task record |
+| `dashboards/{id}/initialization.json` | Static plan data (written ONCE) |
+| `dashboards/{id}/logs.json` | Timestamped event log |
+| `dashboards/{id}/master_state.json` | State checkpoint for context recovery |
+| `dashboards/{id}/metrics.json` | Post-swarm performance metrics |
+| `tasks/{date}/parallel_{name}.json` | Master task record |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
 The master writes **nothing** into `{project_root}`. After a swarm completes, the master may resume normal agent behavior.
@@ -243,7 +243,7 @@ Glob/Grep first for targeted searches. Read `{project_root}/CLAUDE.md` for orien
 | `progress/{task_id}.json` | `dashboards/{id}/progress/` | Workers | Lifecycle + live progress |
 | `master_state.json` | `dashboards/{id}/` | Master | Compaction recovery checkpoint |
 | `metrics.json` | `dashboards/{id}/` | Master | Post-swarm performance metrics |
-| Master XML | `tasks/{date}/` | Master | Authoritative task record |
+| Master task file | `tasks/{date}/` | Master | Authoritative task record |
 
 Dashboard derives all stats from progress files. The master does not maintain counters.
 
@@ -254,10 +254,44 @@ Dashboard derives all stats from progress files. The master does not maintain co
 
 ## Dashboard Features
 
-Two layout modes: **Waves** (vertical columns) and **Chains** (horizontal rows). Up to 5 simultaneous swarms via multi-dashboard sidebar. Dependency lines with hover interaction. Six stat cards derived from progress files. Log panel with level filtering. Per-agent popup log box. Permission popup for terminal bridging.
+Two layout modes: **Waves** (vertical columns) and **Chains** (horizontal rows). Unlimited concurrent swarms via multi-dashboard sidebar with unique IDs. Dependency lines with hover interaction. Six stat cards derived from progress files. Log panel with level filtering. Per-agent popup log box. Permission popup for terminal bridging.
 
 --> Full details: `agent/core/dashboard_features.md`
 --> Selection protocol: `agent/instructions/dashboard_resolution.md`
+
+---
+
+## Dashboard ID System
+
+Dashboard IDs are short, unique identifiers:
+- **`ide`** — Reserved for the IDE agent. Always exists, auto-created on startup, cannot be deleted. Never claimed for swarms.
+- **6-char hex** (e.g., `a3f7k2`) — Generated for new dashboards via `crypto.randomBytes(3).toString('hex')`.
+- **Legacy `dashboardN`** — Existing numbered dashboards continue to work.
+
+Agents receive their dashboard ID in system prompts (`DASHBOARD ID: {id}`). The `--dashboard {id}` flag accepts any valid dashboard ID.
+
+--> Full details: `agent/instructions/dashboard_resolution.md`
+
+---
+
+## Dashboard ID System
+
+Dashboard IDs are short unique identifiers:
+
+| Type | Format | Example | Notes |
+|---|---|---|---|
+| IDE | `ide` | `ide` | Reserved. Always exists. Auto-created on startup. Cannot be deleted. |
+| Regular | 6-char hex | `a3f7k2` | Generated via `crypto.randomBytes(3).toString('hex')` |
+| Legacy | `dashboardN` | `dashboard1` | Backwards compatible. Still functional. |
+
+**IDE Dashboard Protocol:**
+- The `ide` dashboard is permanently associated with the IDE/Code Explorer view
+- It always exists — auto-created on Electron startup if missing
+- Agents receive `DASHBOARD ID:` in their system prompt binding them to their dashboard
+- Master agents must NEVER claim `ide` for swarms — use other dashboards
+- If a master agent needs the IDE dashboard and it was deleted, create it: `mkdir -p {tracker_root}/dashboards/ide/progress`
+
+**Dashboard selection for swarms:** Auto-select first available dashboard (excluding `ide`). Use `--dashboard {id}` to force a specific dashboard.
 
 ---
 
@@ -269,10 +303,10 @@ Synapse/                         <-- {tracker_root}
 |-- .synapse/project.json        <-- Target project config
 |-- _commands/                   <-- Synapse/ (swarm), project/ (analysis), profiles/
 |-- agent/                       <-- instructions/ (hubs), master/, worker/, core/, _commands/
-|-- dashboards/dashboard1-5/     <-- Up to 5 concurrent swarms (init, logs, progress/)
+|-- dashboards/{id}/             <-- Dynamic dashboards (ide, hex IDs, legacy dashboardN)
 |-- documentation/               <-- Deep-dive reference by topic
 |-- queue/, history/, Archive/   <-- Overflow, history summaries, archived snapshots
-|-- tasks/{date}/                <-- Per-swarm XML + plan files
+|-- tasks/{date}/                <-- Per-swarm task + plan files
 |-- src/server/ + src/ui/        <-- SSE server (zero deps) + React dashboard
 +-- electron/                    <-- Desktop app
 ```

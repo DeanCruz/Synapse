@@ -87,7 +87,7 @@
        }
        ```
 
-9. **Update the master XML** — for each pending task that was cancelled, update its `<status>` to `cancelled` and add a log entry noting the graceful shutdown.
+9. **Update the master task file** — for each pending task that was cancelled, update its `status` to `cancelled` and add a log entry noting the graceful shutdown.
 
 10. **Log the completion of graceful shutdown** — append to `{tracker_root}/dashboards/{dashboardId}/logs.json`:
     ```json

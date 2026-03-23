@@ -158,7 +158,7 @@ function reconcileDashboards(broadcastFn) {
   }
 
   // Broadcast updated list
-  broadcastFn('dashboards_changed', { dashboards: Array.from(currentDirs).sort() });
+  broadcastFn('dashboards_changed', { dashboards: Array.from(currentDirs) });
 }
 
 /**

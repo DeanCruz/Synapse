@@ -41,7 +41,7 @@ The master agent reads **extensively**. It reads more than any worker will. It r
 - Determine wave groupings for visual organization
 - Write each agent's prompt with **complete, self-contained context** — the agent must be able to execute without reading additional files or asking questions
 - Include in every agent prompt: the specific files to modify, the conventions from `{project_root}/CLAUDE.md`, code snippets the agent needs to see, clear success criteria, **and both `{tracker_root}` and `{project_root}` paths**
-- Create the master XML task file documenting the full plan
+- Create the master task file documenting the full plan
 - Write the strategy rationale plan file
 - **Populate the dashboard before presenting the plan to the user** — if the dashboard contains data from a previous swarm, archive it first (see Archive Before Clear below). Then clear the progress directory, write the full plan to `initialization.json` (all tasks, all waves, all dependencies — static plan data only), and write an initialization entry to `logs.json`. This gives the user a live visual representation of the plan on the dashboard while they review and approve it.
 - **`initialization.json` is write-once — the master never updates it after planning, unless the circuit breaker triggers automatic replanning.**
@@ -60,7 +60,7 @@ Planning is where the master agent earns its value. A well-planned swarm execute
 ### 4. Status
 
 - Append to `logs.json` on dispatches, completions, failures, and deviations
-- Update the master XML with completion summaries, error details, and timing
+- Update the master task file with completion summaries, error details, and timing
 - **The master does NOT update `initialization.json` after planning** — workers own all lifecycle data in their progress files. The dashboard derives all stats (completed count, failed count, wave progress, overall status, elapsed time) from progress files.
 - **Do NOT output terminal status tables during execution** — the dashboard is the primary reporting channel. Output only brief one-line terminal confirmations per event.
 - Workers handle their own live progress reporting via `dashboards/{dashboardId}/progress/{id}.json` files — the master does not need to relay progress updates
@@ -104,7 +104,7 @@ During a swarm, the master agent writes to exactly these files at `{tracker_root
 | `dashboards/{dashboardId}/logs.json` | Timestamped event log for the dashboard |
 | `dashboards/{dashboardId}/master_state.json` | State checkpoint for context compaction recovery |
 | `dashboards/{dashboardId}/metrics.json` | Post-swarm performance metrics (written once after completion) |
-| `tasks/{date}/parallel_{name}.xml` | Master task record (plan, status, summaries) |
+| `tasks/{date}/parallel_{name}.json` | Master task record (plan, status, summaries) |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
 Everything else is a worker's job. The master agent writes **nothing** into `{project_root}`.

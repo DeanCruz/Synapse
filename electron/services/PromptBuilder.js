@@ -16,6 +16,7 @@ var WORKER_INSTRUCTIONS_PATH = path.join(ROOT, 'agent', 'instructions', 'tracker
  * @param {string} opts.taskId
  * @param {string} opts.dashboardId
  * @param {string} opts.trackerRoot — path to Synapse root
+ * @param {string[]} [opts.additionalContextDirs] — additional read-only context directories
  * @returns {string}
  */
 function buildSystemPrompt(opts) {
@@ -36,6 +37,21 @@ function buildSystemPrompt(opts) {
   parts.push('- **dashboardId:** `' + opts.dashboardId + '`');
   parts.push('- **task_id:** `' + opts.taskId + '`');
   parts.push('- **progress_file:** `' + opts.trackerRoot + '/dashboards/' + opts.dashboardId + '/progress/' + opts.taskId + '.json`');
+  parts.push('- **ide_dashboard:** `ide` (reserved — always exists, never use for swarms)');
+
+  // Additional context directories (read-only reference)
+  var additionalDirs = opts.additionalContextDirs || [];
+  if (additionalDirs.length > 0) {
+    parts.push('');
+    parts.push('## Additional Context Directories (READ-ONLY)');
+    parts.push('The following directories are available as **read-only** reference material.');
+    parts.push('You may read files in these directories for context, but you must **NEVER modify, create, or delete** any files in them.');
+    parts.push('All code changes must happen in the project directory only.');
+    parts.push('');
+    for (var i = 0; i < additionalDirs.length; i++) {
+      parts.push('- `' + additionalDirs[i] + '`');
+    }
+  }
 
   return parts.join('\n');
 }
@@ -49,6 +65,7 @@ function buildSystemPrompt(opts) {
  * @param {string} [opts.taskDescription] — additional description/context
  * @param {{ path: string, content: string }[]} [opts.projectContexts] — CLAUDE.md contents
  * @param {{ taskId: string, summary: string, files?: string[] }[]} [opts.upstreamResults] — completed dependency results
+ * @param {{ path: string, content: string }[]} [opts.additionalContextPaths] — read-only context from additional directories
  * @returns {string}
  */
 function buildTaskPrompt(opts) {
@@ -82,6 +99,25 @@ function buildTaskPrompt(opts) {
         content = content.substring(0, 8000) + '\n\n... (truncated)';
       }
       parts.push(content);
+      parts.push('```');
+      parts.push('');
+    }
+  }
+
+  // Additional context directories (read-only reference)
+  if (opts.additionalContextPaths && opts.additionalContextPaths.length > 0) {
+    parts.push('## Additional Context (READ-ONLY)');
+    parts.push('The following files are from **read-only** reference directories. Use them for context only — do NOT modify these files.');
+    parts.push('');
+    for (var k = 0; k < opts.additionalContextPaths.length; k++) {
+      var actx = opts.additionalContextPaths[k];
+      parts.push('### ' + actx.path);
+      parts.push('```');
+      var actxContent = actx.content;
+      if (actxContent.length > 8000) {
+        actxContent = actxContent.substring(0, 8000) + '\n\n... (truncated)';
+      }
+      parts.push(actxContent);
       parts.push('```');
       parts.push('');
     }

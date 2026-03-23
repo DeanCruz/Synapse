@@ -18,7 +18,7 @@
 
 3. **Read `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`** for the full lifecycle data. If no progress file exists, the task is `"pending"` with no lifecycle data.
 
-4. **Read the master XML** at `{tracker_root}/tasks/{date}/parallel_{task_name}.xml`. Find the task element for `{task_id}`.
+4. **Read the master task file** at `{tracker_root}/tasks/{date}/parallel_{task_name}.json`. Find the task entry for `{task_id}`.
 
 5. **Read `{tracker_root}/dashboards/{dashboardId}/logs.json`** and filter for entries where `task_id` matches.
 
@@ -67,14 +67,14 @@
 {For each agent in initialization.json that lists this task in its depends_on:}
 - **{downstream_id}** — {downstream_title} — {downstream_status emoji} {downstream_status}
 
-### Context (from XML)
-{Full <context> content from the XML task}
+### Context (from task file)
+{Full context content from the task file}
 
 ### Critical Details
-{Full <critical> content from the XML task, or "None"}
+{Full critical content from the task file, or "None"}
 
 ### Files
-{List each file with its action from the XML}
+{List each file with its action from the task file}
 - {action}: {path}
 
 ### Worker Logs

@@ -1,6 +1,6 @@
 # Master Agent — Statusing Protocol
 
-Status reporting is how the user and the system maintain visibility into an active swarm. This document covers the complete statusing protocol: what the master writes and when, what workers handle themselves, dashboard file management, logs.json patterns, XML updates, terminal output rules, and the permission request flow.
+Status reporting is how the user and the system maintain visibility into an active swarm. This document covers the complete statusing protocol: what the master writes and when, what workers handle themselves, dashboard file management, logs.json patterns, task file updates, terminal output rules, and the permission request flow.
 
 ---
 
@@ -34,11 +34,11 @@ The master does not maintain counters. There are no `completed_tasks`, `failed_t
 
 ### What the Master Handles
 
-The master handles event logging and XML updates only:
+The master handles event logging and task file updates only:
 
 - Agent dispatched -- Append to `logs.json`.
-- Agent completed -- Append to `logs.json` + update XML.
-- Agent failed -- Append to `logs.json` + update XML.
+- Agent completed -- Append to `logs.json` + update task file.
+- Agent failed -- Append to `logs.json` + update task file.
 - Agent deviated -- Append to `logs.json` at level `"deviation"`.
 - Swarm initialized -- Append to `logs.json`.
 - Swarm completed -- Append to `logs.json`.
@@ -286,31 +286,29 @@ After each worker completion, when new tasks become available:
 
 ---
 
-## XML Updates
+## Task File Updates
 
-The master XML at `{tracker_root}/tasks/{date}/parallel_{name}.xml` is the authoritative task record. The master updates it on every worker completion.
+The master task file at `{tracker_root}/tasks/{date}/parallel_{name}.json` is the authoritative task record. The master updates it on every worker completion.
 
 ### On Agent Completion
 
-Read the XML. Find the task by ID:
+Read the task file. Find the task by ID:
 
-- Set `<status>` to `completed` or `failed`.
-- Set `<completed_at>` to current ISO timestamp.
-- Write `<summary>` with the agent's SUMMARY line.
-- Append any logs, warnings, or divergent actions to `<logs>`.
-- Write back.
+- Set `status` to `"completed"` or `"failed"`.
+- Write `summary` with the agent's SUMMARY line.
+- Write back the full file.
 
 ### On Agent Failure
 
 Same as completion, but:
 
-- Set `<status>` to `failed`.
+- Set `status` to `"failed"`.
 - Mark any directly dependent tasks as `"blocked"`.
-- Include the error details in `<summary>` and `<logs>`.
+- Include the error details in `summary`.
 
 ### On Overall Completion
 
-Set `<overall_status>` to `completed` (or `failed` if any tasks failed without recovery).
+Update the wave statuses to reflect final state (`"completed"` or `"failed"` as appropriate).
 
 ---
 
@@ -458,7 +456,7 @@ The master's last statusing action is the comprehensive swarm report, delivered 
 {Only if applicable}
 
 ### Artifacts
-- XML: {path}
+- Task file: {path}
 - Plan: {path}
 - Dashboard: {path}
 - Logs: {path}
@@ -468,18 +466,18 @@ The master's last statusing action is the comprehensive swarm report, delivered 
 
 ## Summary of What Gets Updated and When
 
-| Event | logs.json | XML | initialization.json | progress/ | Terminal |
+| Event | logs.json | Task file | initialization.json | progress/ | Terminal |
 |---|---|---|---|---|---|
 | Swarm initialized | Append | Created | Written (once) | Cleared | Plan table |
 | Agent dispatched | Append | Claim task | -- | Worker writes | One line |
 | Agent progressing | -- | -- | -- | Worker writes | -- |
 | Agent completed | Append | Update task | -- | Worker writes | One line |
-| Agent warned | Append | Append to logs | -- | -- | One line |
-| Agent deviated | Append | Append to logs | -- | Worker writes | One line |
+| Agent warned | Append | -- | -- | -- | One line |
+| Agent deviated | Append | -- | -- | Worker writes | One line |
 | Agent failed | Append | Update task | Repair task added | Worker writes | One line |
 | Eager dispatch | Append | -- | -- | -- | -- |
 | Circuit breaker | Append (warn + permission) | -- | -- | -- | Assessment |
-| Swarm complete | Append | Set overall_status | -- | -- | Final report |
+| Swarm complete | Append | Update statuses | -- | -- | Final report |
 
 ---
 
@@ -488,3 +486,4 @@ The master's last statusing action is the comprehensive swarm report, delivered 
 - [Master Agent Overview](./overview.md) -- Role definition, constraints, and responsibilities.
 - [Planning Protocol](./planning.md) -- Task decomposition, dependency mapping, wave grouping, and prompt writing.
 - [Dispatch Protocol](./dispatch-protocol.md) -- Eager dispatch, dependency-driven dispatch, pipeline flow, and error handling.
+

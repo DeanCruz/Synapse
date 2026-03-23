@@ -2,14 +2,34 @@
    IDE Sidebar — Code Explorer / Dashboards tab bar
    ============================================================ */
 
-/* Tab bar container — horizontal row above the sidebar header */
+/* Tab bar container — stacked rows */
 .sidebar-tab-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 10px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* Each row inside the tab bar */
+.sidebar-tab-row {
   display: flex;
   align-items: center;
   gap: 2px;
-  padding: 6px 8px 4px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+}
+
+/* Push add button to the right in its row */
+.sidebar-tab-row .sidebar-add-btn {
+  margin-left: auto;
+}
+
+/* Toggle button pushed to right side of row */
+.sidebar-tab-bar .sidebar-toggle-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  margin-left: auto;
 }
 
 /* Individual tab */
@@ -23,7 +43,7 @@
   background: transparent;
   color: var(--text-tertiary);
   font-family: var(--sans);
-  font-size: 0.72rem;
+  font-size: 0.85rem;
   font-weight: 500;
   letter-spacing: 0.02em;
   cursor: pointer;
@@ -68,9 +88,23 @@
 
 /* Collapsed sidebar — hide tab labels, show only icons */
 .dashboard-sidebar.collapsed .sidebar-tab-bar {
+  padding: 12px 4px 12px;
+}
+
+.dashboard-sidebar.collapsed .sidebar-tab-row {
   flex-direction: column;
-  padding: 6px 4px 4px;
-  gap: 2px;
+  align-items: center;
+  gap: 8px;
+}
+
+/* In collapsed state, toggle goes above Code Explorer */
+.dashboard-sidebar.collapsed .sidebar-tab-row .sidebar-toggle-btn {
+  order: -1;
+  margin-left: 0;
+}
+
+.dashboard-sidebar.collapsed .sidebar-tab-row .sidebar-add-btn {
+  margin-left: 0;
 }
 
 .dashboard-sidebar.collapsed .sidebar-tab {
@@ -80,4 +114,93 @@
 
 .dashboard-sidebar.collapsed .sidebar-tab-label {
   display: none;
+}
+
+/* ============================================================
+   Dashboard Item — Content wrapper, meta row, ID badge, chat preview
+   ============================================================ */
+
+.dashboard-item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dashboard-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dashboard-item-id {
+  font-size: 0.75rem;
+  opacity: 0.35;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.dashboard-item-preview {
+  font-size: 0.78rem;
+  opacity: 0.45;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.dashboard-item-preview.streaming {
+  animation: preview-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes preview-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.7; }
+}
+
+/* ============================================================
+   Drag-and-drop reorder
+   ============================================================ */
+
+.dashboard-item[draggable="true"] {
+  cursor: grab;
+}
+
+.dashboard-item[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.dashboard-item.dragging {
+  opacity: 0.4;
+}
+
+.dashboard-item.drag-over {
+  border-top: 2px solid var(--color-in-progress, #9b7cf0);
+  margin-top: -2px;
+}
+
+/* ============================================================
+   Inline rename input
+   ============================================================ */
+
+.dashboard-item-rename-input {
+  font-size: 0.88rem;
+  font-weight: 400;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--color-in-progress, #9b7cf0);
+  border-radius: 4px;
+  padding: 2px 6px;
+  width: 100%;
+  min-width: 0;
+  outline: none;
+  font-family: var(--sans);
+  line-height: 1.3;
+}
+
+.dashboard-item-rename-input:focus {
+  box-shadow: 0 0 0 1px rgba(155, 124, 240, 0.3);
 }

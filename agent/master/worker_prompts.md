@@ -17,10 +17,10 @@ TASK {id}: {title}
 ═══════════════════════════════════
 
 DESCRIPTION:
-{detailed description from XML <description>}
+{detailed description from task file "description" field}
 
 CONTEXT:
-{all context from XML <context>}
+{all context from task file "context" field}
 
 PROJECT ROOT: {project_root}
 TRACKER ROOT: {tracker_root}
@@ -63,7 +63,7 @@ Omit this entire section if the task has no same-wave siblings, or if sibling fi
 lists do not overlap with this task's area of the codebase.}
 
 CRITICAL:
-{critical details from XML <critical> — omit section if empty}
+{critical details from task file "critical" field — omit section if empty}
 
 SUCCESS CRITERIA:
 {Exactly what "done" looks like — specific, verifiable conditions. The worker should be able
@@ -86,10 +86,10 @@ PREPARATION — REQUIRED BEFORE STARTING WORK
 
 Before writing any code, complete these steps in order:
 
-1. READ YOUR TASK IN THE MASTER XML:
-   Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml` — specifically your task at id="{id}".
+1. READ YOUR TASK IN THE MASTER TASK FILE:
+   Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` — specifically your task at id="{id}".
    Focus on: your task's full description, context, critical details, and dependency relationships.
-   Do NOT read the entire XML — only your task section and any tasks listed in your depends_on.
+   Do NOT read the entire task file — only your task section and any tasks listed in your depends_on.
 
 2. READ PROJECT INSTRUCTIONS (only if not already provided above):
    If the CONVENTIONS section above is empty or says "no CLAUDE.md", check if a CLAUDE.md file
@@ -369,7 +369,7 @@ After processing each completion, store the completed task's results in the mast
 - Any new interfaces, types, exports, or APIs introduced (from the worker's EXPORTS section, or extracted from the summary if EXPORTS is omitted)
 - Any deviations or warnings
 
-This cache is used to populate the `UPSTREAM RESULTS` section when dispatching downstream tasks. After context compaction, reconstruct the cache from prior conversation output or by re-reading the XML summaries.
+This cache is used to populate the `UPSTREAM RESULTS` section when dispatching downstream tasks. After context compaction, reconstruct the cache from prior conversation output or by re-reading the task file summaries.
 
 ---
 

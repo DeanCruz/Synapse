@@ -244,101 +244,95 @@ Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md` with the f
 {If there was a more effective way to organize this, note it here with reasoning for why the chosen approach was selected instead. If the chosen approach is clearly optimal, state that and explain why.}
 ```
 
-### Step 9: Create the master XML task file
+### Step 9: Create the master task file
 
-Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml` with the full task breakdown.
+Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` with the full task breakdown.
 
 > Create the `tasks/{MM_DD_YY}/` directory if it doesn't exist.
 
-**XML Schema:**
+**JSON Schema:**
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<parallel_task name="{task-slug}" created="{YYYY-MM-DD HH:MM}">
-
-  <metadata>
-    <prompt>{original user prompt}</prompt>
-    <type>{Waves|Chains}</type>
-    <directory>
-      <dir>{affected directory}</dir>
-      <!-- One <dir> per affected directory or sub-project -->
-    </directory>
-    <affected_projects>{comma-separated directory list}</affected_projects>
-    <total_tasks>{count}</total_tasks>
-    <total_waves>{count}</total_waves>
-    <overall_status>pending</overall_status>
-    <!-- pending | in_progress | completed | failed -->
-  </metadata>
-
-  <waves>
-
-    <wave id="1" name="{descriptive wave name}" status="pending">
-      <task id="1.1">
-        <title>{Short descriptive title — under 40 chars}</title>
-        <description>{Detailed description of exactly what the agent must do}</description>
-        <directory>{directory this task targets}</directory>
-        <depends_on></depends_on>
-        <!-- Comma-separated task IDs, e.g. "1.1, 1.3" — empty if no dependencies -->
-        <context>{All context the agent needs — current file state, architectural decisions, references to other tasks and what they produce}</context>
-        <critical>{CRITICAL details — things that MUST be known to avoid mistakes. Gotchas, edge cases, non-obvious requirements. Omit if none.}</critical>
-        <tags>{comma-separated: e.g., backend, frontend, types, service, refactor, migration, docs}</tags>
-        <files>
-          <file action="read|modify|create|delete">{file path}</file>
-        </files>
-        <status>pending</status>
-        <!-- pending | claimed | in_progress | completed | failed | blocked -->
-        <assigned_agent></assigned_agent>
-        <started_at></started_at>
-        <completed_at></completed_at>
-        <summary></summary>
-        <logs>
-          <!-- Agents append timestamped log entries here -->
-        </logs>
-      </task>
-
-      <task id="1.2">
-        <!-- ... -->
-      </task>
-    </wave>
-
-    <wave id="2" name="{descriptive wave name}" status="pending">
-      <task id="2.1">
-        <title>{title}</title>
-        <description>{description}</description>
-        <directory>{directory}</directory>
-        <depends_on>1.1, 1.3</depends_on>
-        <context>{context}</context>
-        <critical>{critical details}</critical>
-        <tags>{tags}</tags>
-        <files>
-          <file action="modify">{path}</file>
-        </files>
-        <status>pending</status>
-        <assigned_agent></assigned_agent>
-        <started_at></started_at>
-        <completed_at></completed_at>
-        <summary></summary>
-        <logs></logs>
-      </task>
-    </wave>
-
-    <!-- Additional waves as needed -->
-
-  </waves>
-
-  <dependency_chains>
-    <!-- Each chain traces a full path from root task to terminal task -->
-    <!-- Tasks with no dependencies start chains; tasks with no dependents end them -->
-    <chain id="1">{task_id}, {task_id}, {task_id}</chain>
-    <chain id="2">{task_id}, {task_id}</chain>
-  </dependency_chains>
-
-</parallel_task>
+```json
+{
+  "name": "{task-slug}",
+  "created": "{YYYY-MM-DDTHH:MM:SSZ}",
+  "metadata": {
+    "prompt": "{original user prompt}",
+    "type": "{Waves|Chains}",
+    "directories": ["{affected directory}"],
+    "affected_projects": "{comma-separated directory list}",
+    "total_tasks": 0,
+    "total_waves": 0,
+    "overall_status": "pending"
+  },
+  "waves": [
+    {
+      "id": 1,
+      "name": "{descriptive wave name}",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "1.1",
+          "title": "{Short descriptive title — under 40 chars}",
+          "description": "{Detailed description of exactly what the agent must do}",
+          "directory": "{directory this task targets}",
+          "depends_on": [],
+          "context": "{All context the agent needs — current file state, architectural decisions, references to other tasks and what they produce}",
+          "critical": "{CRITICAL details — things that MUST be known to avoid mistakes. Gotchas, edge cases, non-obvious requirements. Null if none.}",
+          "tags": ["backend", "frontend", "types", "service", "refactor", "migration", "docs"],
+          "files": [
+            { "action": "read|modify|create|delete", "path": "{file path}" }
+          ],
+          "status": "pending",
+          "assigned_agent": null,
+          "started_at": null,
+          "completed_at": null,
+          "summary": null,
+          "logs": []
+        },
+        {
+          "id": "1.2",
+          "...": "..."
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "{descriptive wave name}",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "2.1",
+          "title": "{title}",
+          "description": "{description}",
+          "directory": "{directory}",
+          "depends_on": ["1.1", "1.3"],
+          "context": "{context}",
+          "critical": "{critical details}",
+          "tags": ["{tags}"],
+          "files": [
+            { "action": "modify", "path": "{path}" }
+          ],
+          "status": "pending",
+          "assigned_agent": null,
+          "started_at": null,
+          "completed_at": null,
+          "summary": null,
+          "logs": []
+        }
+      ]
+    }
+  ],
+  "dependency_chains": [
+    { "id": 1, "tasks": ["{task_id}", "{task_id}", "{task_id}"] },
+    { "id": 2, "tasks": ["{task_id}", "{task_id}"] }
+  ]
+}
 ```
 
 **Task status lifecycle:**
 1. `pending` — Not started, waiting for dependencies or dispatch
-2. `claimed` — Master has selected this task for dispatch (set in XML before agent launch)
+2. `claimed` — Master has selected this task for dispatch (set in task file before agent launch)
 3. `in_progress` — Agent is actively working
 4. `completed` — Done successfully
 5. `failed` — Error occurred (agent logs the error)
@@ -347,14 +341,14 @@ Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml` with the full 
 
 ### Step 10: Verify and add dependency chains
 
-1. **Re-read the XML** — Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml` in full.
-2. **Cross-check with the .md** — Look for any discrepancies or inconsistencies between the XML task definitions and the .md plan. Fix any found.
-3. **Verify all dependencies** — For every task with a `<depends_on>` value:
-   - Confirm the referenced task IDs exist in the XML
+1. **Re-read the task file** — Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` in full.
+2. **Cross-check with the .md** — Look for any discrepancies or inconsistencies between the task file definitions and the .md plan. Fix any found.
+3. **Verify all dependencies** — For every task with a `depends_on` value:
+   - Confirm the referenced task IDs exist in the task file
    - Confirm the dependency direction is correct (the depended-on task produces what this task needs)
    - Confirm no circular dependencies exist
 4. **Build dependency chains** — Trace every path from root tasks (no dependencies) to terminal tasks (nothing depends on them). Each unique path is a chain.
-5. **Write the chains** — Populate the `<dependency_chains>` section in the XML with all chains.
+5. **Write the chains** — Populate the `dependency_chains` array in the task file with all chains.
 6. **Identify the critical path** — The longest chain determines the minimum total execution time.
 
 #### Dependency Validation Algorithm
@@ -376,7 +370,7 @@ If `{project_root}/.synapse/dep_graph.json` was consulted in Step 4A, run a fina
 
 Use `!deps validate` (if available) as the validation tool for automated checks. If the command is not available, perform the validation manually by cross-referencing the dep graph against the task plan.
 
-If validation reveals issues, fix them before proceeding to Step 11. Do not write `initialization.json` with an invalid dependency graph.
+If validation reveals issues, fix them before proceeding to Step 11. Do not write `initialization.json` or the task file with an invalid dependency graph.
 
 ---
 
@@ -390,26 +384,27 @@ Before writing any plan data, the master must claim an available dashboard. This
 
 1. **Pre-assigned dashboard from chat context (highest priority).** If your system prompt contains a `DASHBOARD ID:` directive, you are running inside a chat view that is bound to that specific dashboard. **Use it unconditionally** — do not scan, do not auto-select, do not override. Each chat view is associated with exactly one dashboard, and you must write to that dashboard. This is how the user sees your swarm in the correct panel.
 
-2. **Explicit `--dashboard dashboardN` flag.** If the user specified `--dashboard dashboardN` in the command, use that dashboard directly.
+2. **Explicit `--dashboard {id}` flag.** If the user specified `--dashboard {id}` in the command, use that dashboard directly.
    - If it has an active swarm (in-progress agents), warn the user and require confirmation before overwriting.
    - If it has a completed swarm, save a history summary to `{tracker_root}/history/` before overwriting.
 
 3. **Auto-selection (fallback — only when no dashboard is pre-assigned or explicitly specified):**
-   1. Scan `dashboard1` through `dashboard5` in order.
+   1. Scan all dashboards in order (excluding `ide`).
+      > **The `ide` dashboard is always excluded from auto-selection** — it is reserved for the IDE agent and must never be claimed by a swarm.
    2. For each dashboard, read `{tracker_root}/dashboards/{dashboardId}/initialization.json`:
       - If `task` is `null` → **available**. Claim this dashboard.
       - If `task` is not null, read all files in `progress/`:
         - If no progress files exist → **stale** (plan written but never dispatched). Treat as available.
         - If every progress file has status `"completed"` or `"failed"` → **finished but uncleared**. Save a history summary to `{tracker_root}/history/`, then claim this dashboard.
         - Otherwise → **in use**. Skip to next dashboard.
-   3. If all 5 dashboards are in use, display a summary table:
+   3. If all dashboards are in use, display a summary table:
 
    ```markdown
    ## All Dashboards In Use
 
    | Dashboard | Task | Status | Progress |
    |---|---|---|---|
-   | dashboard1 | {task.name} | {overall_status} | {completed}/{total} |
+   | {dashboardId} | {task.name} | {overall_status} | {completed}/{total} |
    | ... | ... | ... | ... |
 
    Pick a dashboard to overwrite, or run `!reset {dashboardId}` first.
@@ -576,7 +571,7 @@ The dashboard is now live with the full plan — all tasks visible as pending ca
 **Total:** {N} tasks across {W} waves
 **Critical path:** Chain {X} ({N} tasks deep)
 **Dispatch strategy:** Tasks dispatched the instant all their dependencies are met — not waiting for full wave completion.
-**XML:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml`
+**Task file:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
 **Plan:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
 ```
 

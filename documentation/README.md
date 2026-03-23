@@ -108,7 +108,7 @@ The React-based real-time dashboard UI that visualizes swarm progress.
 
 ### Data Architecture
 
-The JSON and XML file formats that store swarm plans, progress, logs, and task records.
+The JSON file formats that store swarm plans, progress, logs, and task records.
 
 | Document | Description |
 |---|---|
@@ -116,7 +116,7 @@ The JSON and XML file formats that store swarm plans, progress, logs, and task r
 | [initialization.json](data-architecture/initialization-json.md) | Full schema for the static plan store -- task, agents, waves, chains, and history objects |
 | [logs.json](data-architecture/logs-json.md) | Log entry schema, log levels, write timing, and dashboard rendering |
 | [Progress Files](data-architecture/progress-files.md) | Worker-owned progress file schema, ownership model, stages, lifecycle, and server handling |
-| [XML Task Files](data-architecture/xml-task-files.md) | Master XML element reference, update timing, and real-world examples |
+| [Task Files](data-architecture/xml-task-files.md) | Task file JSON schema reference, update timing, and real-world examples |
 
 ### Electron
 
@@ -138,7 +138,7 @@ The orchestrator role -- how the master agent plans, dispatches, monitors, and r
 | [Overview](master-agent/overview.md) | Master agent responsibilities, constraints, and the five-phase lifecycle |
 | [Planning](master-agent/planning.md) | Deep context gathering, task decomposition, dependency mapping, and prompt construction |
 | [Dispatch Protocol](master-agent/dispatch-protocol.md) | Eager dispatch, prompt templates, upstream result feeding, and failure handling |
-| [Statusing](master-agent/statusing.md) | Event logging to logs.json, XML updates, terminal output rules, and dashboard coordination |
+| [Statusing](master-agent/statusing.md) | Event logging to logs.json, task file updates, terminal output rules, and dashboard coordination |
 
 ### Multi-Dashboard
 
@@ -217,7 +217,7 @@ How worker agents report progress, handle deviations, and consume upstream resul
 | **Commands** | The `!command` system including resolution hierarchy, all swarm lifecycle commands, project analysis commands, and how to create custom commands. |
 | **Configuration** | All configuration surfaces: server constants, Electron settings and packaging, and the CSS/JS theming system. |
 | **Dashboard** | The React dashboard UI covering component architecture, state management with reducers, custom hooks, the CSS design system, and Waves/Chains layout modes. |
-| **Data Architecture** | The four data file formats that drive Synapse: `initialization.json` (static plan), `logs.json` (event log), worker progress files (live lifecycle), and XML task files (authoritative record). |
+| **Data Architecture** | The four data file formats that drive Synapse: `initialization.json` (static plan), `logs.json` (event log), worker progress files (live lifecycle), and task files (authoritative record). |
 | **Electron** | The desktop application layer including the main/renderer process model, all IPC channels, the 8 service modules, and build/packaging configuration. |
 | **Master Agent** | The orchestrator role and its five responsibilities: context gathering, planning, dispatch, statusing, and reporting -- plus the constraints that prevent it from writing code. |
 | **Multi-Dashboard** | Running up to 5 concurrent swarms across independent dashboard slots, including dashboard selection logic, the overflow queue, and archive/history management. |

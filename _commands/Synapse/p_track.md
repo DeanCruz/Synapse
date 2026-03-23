@@ -14,15 +14,15 @@
 
 **Purpose:** The invoking agent becomes the **master agent** — responsible for deep planning, dependency-aware parallel dispatch, live Synapse dashboard updates, and timely detailed statusing. Tasks are dispatched the instant their dependencies are satisfied, regardless of wave boundaries. The master agent's primary job is **deep planning** and **timely detailed statusing**.
 
-**Syntax:** `!p_track [--dashboard dashboardN] {prompt}`
+**Syntax:** `!p_track [--dashboard {id}] {prompt}`
 
 - `{prompt}` — Natural-language description of the work to be done.
-- `--dashboard dashboardN` — (Optional) Force a specific dashboard. If omitted, the master auto-selects the first available dashboard.
+- `--dashboard {id}` — (Optional) Force a specific dashboard by ID (e.g., `a3f7k2`). If omitted, the master auto-selects the first available dashboard.
 
 **Examples:**
 ```
 !p_track refactor the auth flow to use real Firebase Auth
-!p_track --dashboard dashboard3 migrate all hardcoded colors to CSS variables
+!p_track --dashboard a3f7k2 migrate all hardcoded colors to CSS variables
 !p_track add rate limiting to all HTTP endpoints
 ```
 
@@ -41,7 +41,7 @@
 
 **Output files:**
 ```
-{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml               ← Master XML task file (single source of truth)
+{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json              ← Master task file (single source of truth)
 {tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md            ← Parallelization strategy rationale
 {tracker_root}/dashboards/{dashboardId}/initialization.json             ← Static plan data (written once)
 {tracker_root}/dashboards/{dashboardId}/logs.json                       ← Timestamped event log
@@ -49,7 +49,7 @@
 
 > **`{tracker_root}`** refers to the Synapse directory (Synapse). Locate it relative to the project root — it may be at `./Synapse/`, `../Synapse/`, or wherever the user has placed it.
 >
-> **`{dashboardId}`** is automatically selected by scanning dashboards 1-5 for the first available slot. A dashboard is "available" if its `initialization.json` has `task: null`, or if all its progress files show terminal status (completed/failed). The user can override with `--dashboard dashboardN`. See `{tracker_root}/agent/instructions/dashboard_resolution.md` for the full selection algorithm.
+> **`{dashboardId}`** is automatically selected by scanning all available dashboards (excluding `ide`, which is reserved for the IDE agent) for the first available slot. A dashboard is "available" if its `initialization.json` has `task: null`, or if all its progress files show terminal status (completed/failed). The user can override with `--dashboard {id}`. See `{tracker_root}/agent/instructions/dashboard_resolution.md` for the full selection algorithm.
 
 **Dashboard:** Synapse Electron app — live visualization powered by `initialization.json`, `logs.json`, and `progress/` files merged client-side.
 
@@ -57,7 +57,7 @@
 
 ## Phase 1: Planning — Deep Analysis & Decomposition
 
-**Steps 1-11:** Resolve `{project_root}`, read master instructions, parse prompt, deep analysis (including dep graph consultation), read all relevant context files, build convention map, decompose into tasks with budget checks, determine parallelization type (Waves vs Chains), create plan document and master XML, verify dependencies with topological sort, select a dashboard, archive previous data, populate `initialization.json` and `logs.json`, present the plan to the user and wait for approval.
+**Steps 1-11:** Resolve `{project_root}`, read master instructions, parse prompt, deep analysis (including dep graph consultation), read all relevant context files, build convention map, decompose into tasks with budget checks, determine parallelization type (Waves vs Chains), create plan document and master task file, verify dependencies with topological sort, select a dashboard, archive previous data, populate `initialization.json` and `logs.json`, present the plan to the user and wait for approval.
 
 > **Read `{tracker_root}/agent/_commands/p_track_planning.md` for the complete planning protocol.**
 
@@ -73,7 +73,7 @@
 
 ## Phase 3: Completion — Verify & Report
 
-**Step 17:** Update master XML with final status, append completion log entry, run post-swarm verification if warranted (tests/types/build/cross-repo checks), compute swarm metrics (`metrics.json`), read all logs and deliver the final report with files changed/divergent actions/warnings/failures/recommendations, save to history.
+**Step 17:** Update master task file with final status, append completion log entry, run post-swarm verification if warranted (tests/types/build/cross-repo checks), compute swarm metrics (`metrics.json`), read all logs and deliver the final report with files changed/divergent actions/warnings/failures/recommendations, save to history.
 
 > **Read `{tracker_root}/agent/_commands/p_track_completion.md` for the complete completion protocol.**
 
@@ -101,7 +101,7 @@
 ### Agent Prompts
 
 12. **Agent prompts must be self-contained.** Every agent receives its full context in its dispatch prompt — including conventions extracted from CLAUDE.md, reference code patterns, and upstream results.
-13. **Agents read only their XML section.** Every agent prompt instructs the agent to read ONLY their task section in the XML, not the entire file. The master already extracted all relevant context into the prompt.
+13. **Agents read only their task entry.** Every agent prompt instructs the agent to read ONLY their task entry in the master task file, not the entire file. The master already extracted all relevant context into the prompt.
 14. **Master embeds conventions, workers don't re-read.** The master extracts relevant CLAUDE.md sections into each worker's CONVENTIONS block. Workers only read CLAUDE.md if the master couldn't provide conventions.
 15. **Agents must write live progress.** Every agent writes stage transitions, milestones, and logs to `{tracker_root}/dashboards/{dashboardId}/progress/{id}.json`. This is how the dashboard shows real-time worker activity.
 16. **Agents must report deviations immediately.** Any deviation from the plan must be written to the progress file deviations array AND included in the final return. Deviations trigger a yellow badge on the dashboard. Failing to report a deviation is a task failure.
@@ -111,13 +111,13 @@
 
 18. **Cache every completion.** When a worker returns, the master stores its summary, files changed, new interfaces, and deviations in working memory. This cache feeds downstream prompts.
 19. **Feed upstream results into downstream prompts.** Every downstream task's prompt includes its dependencies' results in the UPSTREAM RESULTS section. Downstream workers must know what their prerequisites produced, including deviations.
-20. **Reconstruct cache after compaction.** If context compaction drops the result cache, re-read the XML summaries to rebuild it before dispatching downstream tasks.
+20. **Reconstruct cache after compaction.** If context compaction drops the result cache, re-read the task file summaries to rebuild it before dispatching downstream tasks.
 
 ### Planning
 
-21. **Plan before executing.** Always create the XML. Always create the .md plan. Always verify dependencies. Always get user approval.
-22. **XML is the master file.** All agents read from it. The master updates it on every completion. It is the authoritative record of the task.
-23. **Verify before dispatching.** After creating the XML and .md, re-read the XML, cross-check with the .md, verify all dependencies, and build dependency chains — all before presenting to the user.
+21. **Plan before executing.** Always create the task file. Always create the .md plan. Always verify dependencies. Always get user approval.
+22. **Task file is the master record.** All agents read from it. The master updates it on every completion. It is the authoritative record of the task.
+23. **Verify before dispatching.** After creating the task file and .md, re-read the task file, cross-check with the .md, verify all dependencies, and build dependency chains — all before presenting to the user.
 24. **Right-size tasks.** Target 1-5 minutes per task. A task reading 2-3 files and modifying 1-2 files is right-sized. Tasks reading 10+ files or modifying 5+ files should be decomposed further.
 25. **Handle shared files explicitly.** When multiple tasks need to modify the same file, use one of the shared file patterns (owner task, integration task, or append protocol). Never let two concurrent workers modify the same file.
 
@@ -156,7 +156,7 @@ Multiple tasks need the same file?
 
 ## Timestamp Protocol
 
-Every timestamp written to `initialization.json`, `logs.json`, progress files, or the XML must be captured live:
+Every timestamp written to `initialization.json`, `logs.json`, progress files, or the task file must be captured live:
 
 ```bash
 date -u +"%Y-%m-%dT%H:%M:%SZ"

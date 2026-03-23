@@ -59,7 +59,7 @@ The Write tool is always used for progress file updates because it writes atomic
   "stage": "implementing",
   "message": "Creating rate limiter middleware -- 3/4 methods done",
   "milestones": [
-    { "at": "2026-03-22T14:05:10Z", "msg": "Read CLAUDE.md and task XML" },
+    { "at": "2026-03-22T14:05:10Z", "msg": "Read CLAUDE.md and task file" },
     { "at": "2026-03-22T14:05:35Z", "msg": "Read existing middleware for patterns" },
     { "at": "2026-03-22T14:06:01Z", "msg": "Created rate limiter with sliding window" }
   ],
@@ -102,7 +102,7 @@ reading_context -> planning -> implementing -> testing -> finalizing -> complete
 
 | Stage | Description | When |
 |---|---|---|
-| `reading_context` | Reading project files, documentation, task XML | First stage on task start |
+| `reading_context` | Reading project files, documentation, task file | First stage on task start |
 | `planning` | Assessing readiness, planning approach | After initial context reads |
 | `implementing` | Writing code, creating/modifying files | The main work phase |
 | `testing` | Running tests, validating changes | After implementation |

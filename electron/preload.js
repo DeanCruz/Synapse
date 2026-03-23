@@ -20,6 +20,9 @@ const PUSH_CHANNELS = [
   'terminal-output',
   'terminal-exit',
   'ide-file-change',
+  'heartbeat',
+  'init_state',
+  'tasks_unblocked',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -49,6 +52,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDashboardProgress: (id) => ipcRenderer.invoke('get-dashboard-progress', id),
   clearDashboard: (id) => ipcRenderer.invoke('clear-dashboard', id),
   archiveDashboard: (id) => ipcRenderer.invoke('archive-dashboard', id),
+  reorderDashboards: (orderedIds) => ipcRenderer.invoke('reorder-dashboards', orderedIds),
+  renameDashboard: (id, displayName) => ipcRenderer.invoke('rename-dashboard', id, displayName),
+  getDashboardMeta: () => ipcRenderer.invoke('get-dashboard-meta'),
   saveDashboardHistory: (id) => ipcRenderer.invoke('save-dashboard-history', id),
   exportDashboard: (id) => ipcRenderer.invoke('export-dashboard', id),
   getDashboardMetrics: (id) => ipcRenderer.invoke('get-dashboard-metrics', id),
@@ -106,7 +112,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listProjectCommands: (projectDir) => ipcRenderer.invoke('list-project-commands', projectDir),
 
   // Chat context
-  getChatSystemPrompt: (projectDir, dashboardId) => ipcRenderer.invoke('get-chat-system-prompt', projectDir, dashboardId),
+  getChatSystemPrompt: (projectDir, dashboardId, additionalContextDirs) => ipcRenderer.invoke('get-chat-system-prompt', projectDir, dashboardId, additionalContextDirs),
   logChatEvent: (dashboardId, entry) => ipcRenderer.invoke('log-chat-event', dashboardId, entry),
 
   // Attachments

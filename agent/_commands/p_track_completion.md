@@ -10,9 +10,9 @@
 
 When all tasks reach `"completed"` or `"failed"`:
 
-### 17A. Update the master XML
+### 17A. Update the master task file
 
-Set `<overall_status>` to `completed` (or `failed` if any tasks failed without recovery).
+Set `overall_status` to `"completed"` (or `"failed"` if any tasks failed without recovery).
 
 ### 17B. Append final log entry
 
@@ -194,7 +194,7 @@ Focus on: unexpected findings, key decisions, performance notes.}
 - {Recommendation or next step based on what was learned during execution}
 
 ### Artifacts
-- **XML:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml`
+- **Task file:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
 - **Plan:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
 - **Dashboard:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
 - **Logs:** `{tracker_root}/dashboards/{dashboardId}/logs.json`

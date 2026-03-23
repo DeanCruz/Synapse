@@ -39,7 +39,7 @@ Synapse/                                 <- {tracker_root}
 +-- _commands/                           Command system (markdown specs)
 +-- agent/                               Agent instruction files
 +-- dashboards/                          Live dashboard data (up to 5 slots)
-+-- tasks/                               Generated XML task files per swarm
++-- tasks/                               Generated task files per swarm
 +-- Archive/                             Full dashboard snapshots (archived swarms)
 +-- history/                             Lightweight summary JSON files
 +-- queue/                               Overflow queue for pending swarms
@@ -378,16 +378,16 @@ This separation means:
 ```
 tasks/
 +-- 03_22_26/                            Date-based subdirectory (MM_DD_YY)
-|   +-- parallel_auth_system.xml         Full task record (plan, status, summaries)
+|   +-- parallel_auth_system.json         Full task record (plan, status, summaries)
 |   +-- parallel_plan_auth_system.md     Strategy rationale document
 +-- 03_21_26/
-    +-- parallel_api_redesign.xml
+    +-- parallel_api_redesign.json
     +-- parallel_plan_api_redesign.md
 ```
 
 | File | Description |
 |---|---|
-| `parallel_{name}.xml` | The authoritative XML task record for the swarm. Contains task descriptions, context, critical details, file lists, dependencies, completion status, summaries, and error logs. Updated by the master after each task completion. |
+| `parallel_{name}.json` | The authoritative task record for the swarm. Contains task descriptions, context, critical details, file lists, dependencies, completion status, summaries, and error logs. Updated by the master after each task completion. |
 | `parallel_plan_{name}.md` | The strategy rationale document. Explains the decomposition approach, dependency reasoning, wave grouping logic, risk assessment, and verification strategy. Written during planning for the user's review. |
 
 ---
