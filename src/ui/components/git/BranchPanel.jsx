@@ -406,12 +406,18 @@ function BranchGraph({ repoPath }) {
   if (!graphData || graphData.rows.length === 0) return null;
 
   const { rows, maxCol } = graphData;
-  const ROW_H = 28;
-  const COL_W = 16;
+  const ROW_H = 30;
+  const COL_W = 18;
   const DOT_R = 3.5;
-  const GRAPH_LEFT = 8;
-  const LABEL_LEFT = GRAPH_LEFT + (maxCol + 1) * COL_W + 12;
-  const totalWidth = Math.max(500, LABEL_LEFT + 300);
+  const GRAPH_LEFT = 10;
+  const LABEL_LEFT = GRAPH_LEFT + (maxCol + 1) * COL_W + 16;
+  const DATE_COL_W = 70;
+  // Calculate max label group width to size the SVG properly
+  const maxLabelWidth = rows.reduce((max, row) => {
+    const w = row.labels.reduce((sum, l) => sum + l.name.length * 7 + 18, 0);
+    return Math.max(max, w);
+  }, 0);
+  const totalWidth = Math.max(800, LABEL_LEFT + maxLabelWidth + 420 + DATE_COL_W);
   const totalHeight = rows.length * ROW_H + 10;
 
   function colX(c) { return GRAPH_LEFT + c * COL_W + COL_W / 2; }
@@ -452,7 +458,7 @@ function BranchGraph({ repoPath }) {
           <svg
             width={totalWidth}
             height={totalHeight}
-            style={{ display: 'block', minWidth: '100%' }}
+            style={{ display: 'block' }}
           >
             {/* Connection lines */}
             {rows.map((row, ri) => (
@@ -562,25 +568,28 @@ function BranchGraph({ repoPath }) {
                   />
 
                   {/* Branch/tag labels */}
-                  {row.labels.map((label, li) => {
-                    const labelX = LABEL_LEFT + li * 0;
-                    return (
+                  {row.labels.reduce((acc, label, li) => {
+                    const prevOffset = li === 0 ? 0 : acc.offset;
+                    const labelW = label.name.length * 7 + 12;
+                    const lx = LABEL_LEFT + prevOffset;
+                    acc.offset = prevOffset + labelW + 6;
+                    acc.elements.push(
                       <g key={li}>
                         <rect
-                          x={LABEL_LEFT - 4 + li * 0}
-                          y={cy - 7}
-                          width={label.name.length * 6.5 + 10}
-                          height={14}
+                          x={lx - 4}
+                          y={cy - 8}
+                          width={labelW}
+                          height={16}
                           rx={3}
                           fill={label.isHead ? 'rgba(155,124,240,0.15)' : 'rgba(255,255,255,0.06)'}
                           stroke={label.isHead ? 'rgba(155,124,240,0.3)' : 'rgba(255,255,255,0.1)'}
                           strokeWidth="0.5"
                         />
                         <text
-                          x={labelX + 1}
-                          y={cy + 3}
+                          x={lx + 2}
+                          y={cy + 3.5}
                           fill={label.isHead ? '#9b7cf0' : 'var(--text-secondary)'}
-                          fontSize="9"
+                          fontSize="10"
                           fontFamily="'SF Mono','Fira Code',monospace"
                           fontWeight={label.isHead ? '600' : '400'}
                         >
@@ -588,25 +597,34 @@ function BranchGraph({ repoPath }) {
                         </text>
                       </g>
                     );
-                  })}
+                    return acc;
+                  }, { offset: 0, elements: [] }).elements}
 
                   {/* Commit message */}
-                  <text
-                    x={LABEL_LEFT + (row.labels.length > 0 ? row.labels.reduce((w, l) => w + l.name.length * 6.5 + 14, 0) : 0)}
-                    y={cy + 3}
-                    fill={isHovered ? 'var(--text)' : 'var(--text-secondary)'}
-                    fontSize="10.5"
-                    fontFamily="var(--sans)"
-                  >
-                    {row.subject.length > 50 ? row.subject.substring(0, 50) + '...' : row.subject}
-                  </text>
+                  {(() => {
+                    const labelsW = row.labels.length > 0
+                      ? row.labels.reduce((w, l) => w + l.name.length * 7 + 18, 0)
+                      : 0;
+                    const msgX = LABEL_LEFT + labelsW;
+                    return (
+                      <text
+                        x={msgX}
+                        y={cy + 3.5}
+                        fill={isHovered ? 'var(--text)' : 'var(--text-secondary)'}
+                        fontSize="11"
+                        fontFamily="var(--sans)"
+                      >
+                        {row.subject.length > 60 ? row.subject.substring(0, 60) + '...' : row.subject}
+                      </text>
+                    );
+                  })()}
 
                   {/* Date (right-aligned) */}
                   <text
-                    x={totalWidth - 8}
-                    y={cy + 3}
+                    x={totalWidth - 12}
+                    y={cy + 3.5}
                     fill="var(--text-tertiary)"
-                    fontSize="9"
+                    fontSize="9.5"
                     fontFamily="var(--sans)"
                     textAnchor="end"
                   >
