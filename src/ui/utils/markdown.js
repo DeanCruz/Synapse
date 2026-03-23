@@ -65,6 +65,7 @@ function processInline(text) {
  *  9. Line breaks (single newline within a paragraph → <br>)
  * 10. Horizontal rules (--- alone on a line)
  * 11. Blockquotes (> text)
+ * 12. Tables (| header | ... | with |---| separator)
  *
  * @param {string} text - Raw markdown string (may contain arbitrary user/assistant content)
  * @returns {string} - HTML string safe for innerHTML
@@ -113,6 +114,57 @@ export function renderMarkdown(text) {
     if (/^\s*---\s*$/.test(line)) {
       outputChunks.push('<hr>');
       i++;
+      continue;
+    }
+
+    // Table: detect pipe-delimited rows
+    // A table is: header row | separator row (|---|---| pattern) | body rows
+    // Must check next line exists and is a separator before consuming
+    if (/^\|.+\|$/.test(line.trim()) && i + 1 < lines.length && /^\|[\s:]*-+[\s:]*(\|[\s:]*-+[\s:]*)*\|$/.test(lines[i + 1].trim())) {
+      const headerLine = lines[i].trim();
+      const separatorLine = lines[i + 1].trim();
+      i += 2; // consume header + separator
+
+      // Parse alignment from separator
+      const alignments = separatorLine.split('|').filter(c => c.trim()).map(cell => {
+        const c = cell.trim();
+        if (c.startsWith(':') && c.endsWith(':')) return 'center';
+        if (c.endsWith(':')) return 'right';
+        return 'left';
+      });
+
+      // Parse header cells
+      const headerCells = headerLine.split('|').filter(c => c.trim() !== '' || c === '');
+      // Remove empty first/last from leading/trailing pipes
+      if (headerCells[0] && headerCells[0].trim() === '') headerCells.shift();
+      if (headerCells.length && headerCells[headerCells.length - 1].trim() === '') headerCells.pop();
+
+      let tableHtml = '<table><thead><tr>';
+      headerCells.forEach((cell, idx) => {
+        const align = alignments[idx] || 'left';
+        const alignAttr = align !== 'left' ? ' style="text-align:' + align + '"' : '';
+        tableHtml += '<th' + alignAttr + '>' + processInline(cell.trim()) + '</th>';
+      });
+      tableHtml += '</tr></thead><tbody>';
+
+      // Consume body rows
+      while (i < lines.length && /^\|.+\|$/.test(lines[i].trim())) {
+        const rowCells = lines[i].trim().split('|').filter(c => c.trim() !== '' || c === '');
+        if (rowCells[0] && rowCells[0].trim() === '') rowCells.shift();
+        if (rowCells.length && rowCells[rowCells.length - 1].trim() === '') rowCells.pop();
+
+        tableHtml += '<tr>';
+        rowCells.forEach((cell, idx) => {
+          const align = alignments[idx] || 'left';
+          const alignAttr = align !== 'left' ? ' style="text-align:' + align + '"' : '';
+          tableHtml += '<td' + alignAttr + '>' + processInline(cell.trim()) + '</td>';
+        });
+        tableHtml += '</tr>';
+        i++;
+      }
+
+      tableHtml += '</tbody></table>';
+      outputChunks.push(tableHtml);
       continue;
     }
 
@@ -181,6 +233,8 @@ export function renderMarkdown(text) {
       if (/^&gt;\s?/.test(l)) break;
       if (/^\s*[-*]\s+/.test(l)) break;
       if (/^\s*\d+\.\s+/.test(l)) break;
+      // Stop if this looks like a table start (pipe-delimited line followed by separator)
+      if (/^\|.+\|$/.test(l.trim()) && i + 1 < lines.length && /^\|[\s:]*-+[\s:]*(\|[\s:]*-+[\s:]*)*\|$/.test(lines[i + 1].trim())) break;
       paraLines.push(l);
       i++;
     }
