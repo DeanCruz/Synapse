@@ -121,14 +121,6 @@ export default function WavePipeline({ status, activeStatFilter, onAgentClick, p
 
   return (
     <div ref={containerRef} className="wave-pipeline">
-      {/* Unblocked tasks notification toast */}
-      {unblockedTasks.length > 0 && (
-        <div className="unblocked-toast" onClick={() => appDispatch({ type: 'CLEAR_UNBLOCKED_TASKS' })}>
-          <span className="unblocked-toast-icon">&#9654;</span>
-          <span>{unblockedTasks.length} task{unblockedTasks.length > 1 ? 's' : ''} ready for dispatch</span>
-          <span className="unblocked-toast-ids">{unblockedTasks.map(t => t.id).join(', ')}</span>
-        </div>
-      )}
       {/* Dependency lines SVG overlay — positioned absolute over the pipeline */}
       <svg ref={svgRef} className="chain-svg" />
 

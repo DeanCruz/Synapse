@@ -36,7 +36,7 @@ The planning phase encompasses everything from the moment the user invokes `!p_t
 +---------------------------+
 | 10. Choose Layout Type    |  Waves vs Chains
 | 11. Create Plan Document  |  parallel_plan_{name}.md
-| 12. Create Master XML     |  parallel_{name}.xml
+| 12. Create Master Task    |  parallel_{name}.json
 | 13. Validate Dependencies |  Cycle/orphan/dangling detection
 +---------------------------+
     |
@@ -278,42 +278,50 @@ Created at `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`, this 
 - **Risk assessment** -- Potential failure points, tasks most likely to produce warnings, cascade analysis
 - **Alternative approaches** -- Why the chosen approach was selected over alternatives
 
-### Master XML Task File
+### Master Task File
 
-Created at `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml`, this is the authoritative task record. It contains everything needed to understand and track the swarm: metadata, task definitions with descriptions and context, critical details, file lists, dependencies, status tracking, and dependency chains.
+Created at `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`, this is the authoritative task record. It contains everything needed to understand and track the swarm: metadata, task definitions with descriptions and context, critical details, file lists, dependencies, status tracking, and dependency chains.
 
-```xml
-<parallel_task name="{slug}" created="{timestamp}">
-  <metadata>
-    <prompt>{original prompt}</prompt>
-    <type>{Waves|Chains}</type>
-    <total_tasks>{count}</total_tasks>
-    <total_waves>{count}</total_waves>
-    <overall_status>pending</overall_status>
-  </metadata>
-  <waves>
-    <wave id="1" name="{name}" status="pending">
-      <task id="1.1">
-        <title>{Short title -- under 40 chars}</title>
-        <description>{Detailed description}</description>
-        <depends_on></depends_on>
-        <context>{All context the agent needs}</context>
-        <critical>{Edge cases, gotchas, non-obvious requirements}</critical>
-        <tags>{backend, frontend, types, etc.}</tags>
-        <files>
-          <file action="read|modify|create">{path}</file>
-        </files>
-        <status>pending</status>
-      </task>
-    </wave>
-  </waves>
-  <dependency_chains>
-    <chain id="1">{task_id}, {task_id}, {task_id}</chain>
-  </dependency_chains>
-</parallel_task>
+```json
+{
+  "name": "{slug}",
+  "created": "{timestamp}",
+  "metadata": {
+    "prompt": "{original prompt}",
+    "type": "{Waves|Chains}",
+    "total_tasks": "{count}",
+    "total_waves": "{count}",
+    "overall_status": "pending"
+  },
+  "waves": [
+    {
+      "id": 1,
+      "name": "{name}",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "1.1",
+          "title": "{Short title -- under 40 chars}",
+          "description": "{Detailed description}",
+          "depends_on": [],
+          "context": "{All context the agent needs}",
+          "critical": "{Edge cases, gotchas, non-obvious requirements}",
+          "tags": ["{backend, frontend, types, etc.}"],
+          "files": [
+            { "action": "read|modify|create", "path": "{path}" }
+          ],
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "dependency_chains": [
+    { "id": 1, "tasks": ["{task_id}", "{task_id}", "{task_id}"] }
+  ]
+}
 ```
 
-Every agent reads the XML for context. The master updates it on every completion with summaries, timing, and status changes.
+Every agent reads the task file for context. The master updates it on every completion with summaries, timing, and status changes.
 
 ---
 

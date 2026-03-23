@@ -58,7 +58,7 @@ Planning involves:
 - Mapping every dependency between tasks (what blocks what).
 - Determining wave groupings for visual organization.
 - Writing each agent's prompt with complete, self-contained context so the agent can execute without reading additional files or asking questions.
-- Creating the master XML task file documenting the full plan.
+- Creating the master task file documenting the full plan.
 - Writing the strategy rationale plan file.
 - Populating the dashboard before presenting the plan to the user.
 
@@ -72,7 +72,7 @@ See [dispatch-protocol.md](./dispatch-protocol.md) for the complete dispatch pro
 
 ### 4. Status
 
-The master maintains visibility into the swarm through logging and dashboard updates. It appends to `logs.json` on dispatches, completions, failures, and deviations. It updates the master XML with completion summaries, error details, and timing. Workers handle their own live progress reporting via progress files -- the master does not relay progress updates.
+The master maintains visibility into the swarm through logging and dashboard updates. It appends to `logs.json` on dispatches, completions, failures, and deviations. It updates the master task file with completion summaries, error details, and timing. Workers handle their own live progress reporting via progress files -- the master does not relay progress updates.
 
 See [statusing.md](./statusing.md) for the complete statusing protocol.
 
@@ -90,7 +90,7 @@ The final report includes:
 - Warnings and failures with context.
 - Verification results (if a post-swarm verification agent was dispatched).
 - Recommendations and next steps.
-- Links to all artifacts (XML, plan document, dashboard, logs).
+- Links to all artifacts (task file, plan document, dashboard, logs).
 
 ---
 
@@ -132,7 +132,7 @@ During a swarm, the master agent writes to exactly these files and no others:
 |---|---|
 | `dashboards/{dashboardId}/initialization.json` | Static plan data (written ONCE during planning, with one exception for repair tasks) |
 | `dashboards/{dashboardId}/logs.json` | Timestamped event log for the dashboard |
-| `tasks/{date}/parallel_{name}.xml` | Master task record (plan, status, summaries) |
+| `tasks/{date}/parallel_{name}.json` | Master task record (plan, status, summaries) |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
 Everything else is a worker's job. The master agent writes **nothing** into `{project_root}` during an active swarm.
@@ -163,4 +163,4 @@ Every time a swarm is initiated, the master must read these files before doing a
 
 - [Planning Protocol](./planning.md) -- Task decomposition, dependency mapping, wave grouping, and prompt writing.
 - [Dispatch Protocol](./dispatch-protocol.md) -- Eager dispatch, dependency-driven dispatch, pipeline flow, and error handling.
-- [Statusing Protocol](./statusing.md) -- Dashboard updates, logs.json, XML updates, and terminal output rules.
+- [Statusing Protocol](./statusing.md) -- Dashboard updates, logs.json, task file updates, and terminal output rules.

@@ -25,6 +25,7 @@
   --color-blocked: #f97316;
   --color-purple-start: #667eea;
   --color-purple-end: #9b7cf0;
+  --sidebar-width: 220px;
 }
 
 /* ----- Reset ----- */
@@ -276,6 +277,8 @@ body {
 
 .stat-card {
   flex: 1;
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -333,6 +336,10 @@ body {
 .stat-number.elapsed {
   font-size: 1.15rem;
   white-space: nowrap;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .stat-label {
@@ -1328,6 +1335,32 @@ body {
   margin-right: 6px;
 }
 
+/* ----- Live progress in agent details popup ----- */
+.agent-details-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: rgba(155,124,240,0.06);
+  border: 1px solid rgba(155,124,240,0.15);
+}
+
+.agent-details-stage {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-in-progress, #9b7cf0);
+}
+
+.agent-details-message {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
 /* ----- Milestones list in agent details popup ----- */
 .agent-milestones {
   display: flex;
@@ -1382,6 +1415,9 @@ body {
   z-index: 50;
   max-height: 42px;
   transition: max-height 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 /* Gradient glow — purple left → green right */
@@ -1425,6 +1461,7 @@ body {
   font-family: var(--sans);
   font-weight: 400;
   transition: color 0.2s;
+  flex-shrink: 0;
 }
 
 .log-toggle:hover {
@@ -2166,6 +2203,8 @@ a:hover {
   flex: 1;
   min-width: 0;
   position: relative;
+  height: calc(100vh - 53px);
+  overflow: hidden;
 }
 
 /* ============================================================
@@ -2181,19 +2220,14 @@ a:hover {
   position: sticky;
   top: 53px; /* below header */
   height: calc(100vh - 53px);
-  overflow-y: auto;
+  overflow: hidden;
   z-index: 50;
   transition: width 0.2s ease, min-width 0.2s ease;
-  padding-bottom: 44px; /* clear the fixed log panel */
 }
 
 .dashboard-sidebar.collapsed {
   width: 52px;
   min-width: 52px;
-}
-
-.dashboard-sidebar.collapsed .sidebar-title {
-  display: none;
 }
 
 .dashboard-sidebar.collapsed .dashboard-item-name {
@@ -2209,42 +2243,14 @@ a:hover {
   margin-right: 0;
 }
 
-.dashboard-sidebar.collapsed .sidebar-header {
-  justify-content: center;
-  padding: 16px 12px 12px;
-}
-
 .dashboard-sidebar.collapsed .dashboard-item.archived-item {
   display: none;
 }
 
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.sidebar-title {
-  font-family: var(--display);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.sidebar-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .sidebar-add-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text-secondary);
@@ -2327,7 +2333,7 @@ a:hover {
 }
 
 .dashboard-item-name {
-  font-size: 13px;
+  font-size: 14.5px;
   font-weight: 400;
   color: var(--text);
   white-space: nowrap;
@@ -2399,6 +2405,85 @@ a:hover {
 .dashboard-item-status.idle {
   background: var(--text-tertiary);
   opacity: 0.3;
+}
+
+/* Unread chat glow — yellow ring around the status dot */
+.dashboard-item-status.has-unread {
+  background: #f59e0b;
+  opacity: 1;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.6), 0 0 16px rgba(245, 158, 11, 0.3);
+  animation: pulse-yellow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-yellow {
+  0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.5); }
+  50% { box-shadow: 0 0 14px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.3); }
+}
+
+/* Chat agent processing — pulsing white glow BEHIND the existing status dot color */
+.dashboard-item-status.chat-processing {
+  animation: pulse-white-glow 2s ease-in-out infinite;
+}
+
+/* Chat processing + unread — pulsing yellow glow BEHIND the existing status dot color */
+.dashboard-item-status.chat-processing.has-unread {
+  animation: pulse-yellow-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-white-glow {
+  0%, 100% { box-shadow: 0 0 6px rgba(255, 255, 255, 0.3), 0 0 14px rgba(255, 255, 255, 0.15); }
+  50% { box-shadow: 0 0 10px rgba(255, 255, 255, 0.7), 0 0 22px rgba(255, 255, 255, 0.35); }
+}
+
+@keyframes pulse-yellow-glow {
+  0%, 100% { box-shadow: 0 0 6px rgba(245, 158, 11, 0.3), 0 0 14px rgba(245, 158, 11, 0.15); }
+  50% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.7), 0 0 22px rgba(245, 158, 11, 0.35); }
+}
+
+/* Dot + badge wrapper */
+.dashboard-item-dot-wrap {
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.dashboard-item-dot-wrap .dashboard-item-status {
+  margin-right: 0;
+}
+
+/* Unread count badge — hidden by default, visible on hover */
+.dashboard-unread-badge {
+  position: absolute;
+  top: -8px;
+  left: 4px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 7px;
+  background: #f59e0b;
+  color: #000;
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: var(--sans);
+  line-height: 14px;
+  text-align: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.7);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dashboard-item.has-unread:hover .dashboard-unread-badge {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-item-status.has-unread {
+    animation: none;
+  }
 }
 
 /* Per-dashboard action buttons (Project, Claude) */
@@ -2529,6 +2614,10 @@ a:hover {
 .sidebar-delete-popup-btn.cancel:hover {
   background: var(--surface-hover);
   color: var(--text);
+}
+
+.sidebar-delete-popup-title.agent-active {
+  color: #f6ad55;
 }
 
 .dashboard-item.archived-item {
@@ -2920,6 +3009,17 @@ a:hover {
 }
 
 .header-export-btn:hover {
+  background: color-mix(in srgb, var(--color-purple-end) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--color-purple-end) 50%, transparent);
+  color: var(--color-purple-start);
+}
+
+/* Commands Button — purple accent */
+.header-commands-btn {
+  color: var(--color-purple-end);
+  border-color: color-mix(in srgb, var(--color-purple-end) 30%, transparent);
+}
+.header-commands-btn:hover {
   background: color-mix(in srgb, var(--color-purple-end) 12%, var(--surface));
   border-color: color-mix(in srgb, var(--color-purple-end) 50%, transparent);
   color: var(--color-purple-start);
@@ -4227,7 +4327,7 @@ a:hover {
 }
 
 .sidebar-footer {
-  margin-top: auto;
+  flex-shrink: 0;
   padding: 12px;
   border-top: 1px solid var(--border);
 }
@@ -4243,7 +4343,7 @@ a:hover {
   border-radius: 8px;
   color: var(--text-secondary);
   font-family: var(--sans);
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   cursor: pointer;
   transition: all 0.15s ease;
 }
@@ -4573,6 +4673,91 @@ a:hover {
 
 .project-settings-checkbox {
   align-self: flex-start;
+}
+
+/* ----- Additional Context Section ----- */
+
+.additional-context-description {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.additional-context-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.additional-context-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  gap: 8px;
+  transition: border-color 0.15s;
+}
+
+.additional-context-row:hover {
+  border-color: var(--border-hover);
+}
+
+.additional-context-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.additional-context-name {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.additional-context-path {
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  word-break: break-all;
+  margin-top: 1px;
+}
+
+.additional-context-remove {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1;
+}
+
+.additional-context-remove:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.additional-context-add-btn {
+  border-style: dashed;
+  margin-top: 0;
 }
 
 /* ----- Task Editor Modal ----- */
@@ -5039,6 +5224,13 @@ a:hover {
   border-radius: 0 0 12px 12px;
 }
 
+/* When ClaudeView is nested inside the floating panel's outer .claude-view,
+   it must flex-fill the remaining space instead of relying on height: 100% */
+.claude-view > .claude-view {
+  flex: 1;
+  min-height: 0;
+}
+
 .claude-view-header {
   display: flex;
   align-items: center;
@@ -5165,6 +5357,35 @@ a:hover {
   flex: 1;
   overflow: hidden;
   min-height: 0;
+  position: relative;
+}
+
+/* ----- New Messages Badge ----- */
+.claude-new-messages {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(140, 120, 220, 0.85);
+  color: #fff;
+  border: 1px solid rgba(160, 140, 240, 0.4);
+  border-radius: 16px;
+  padding: 6px 16px;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.claude-new-messages:hover {
+  background: rgba(140, 120, 220, 0.95);
+  box-shadow: 0 4px 16px rgba(140, 120, 220, 0.3);
 }
 
 .claude-history-panel {
@@ -5410,6 +5631,15 @@ a:hover {
   background: rgba(239, 68, 68, 0.08);
   border-radius: 6px;
   padding: 8px 12px;
+}
+
+.claude-system-msg.claude-compaction {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-weight: 500;
 }
 
 /* ----- Thinking bubble (extended thinking / processing indicator) ----- */
@@ -6431,67 +6661,206 @@ a:hover {
 }
 
 /* ============================================================
-   Bottom Panel — Tabbed container (Terminal + Logs)
+   Bottom Panel — VS Code-style (Terminal, Output, Problems, etc.)
    ============================================================ */
 
-/* ----- Tab Bar ----- */
-.bottom-panel-tabs {
+/* ----- Panel Shell ----- */
+.bottom-panel {
   display: flex;
-  flex-direction: row;
-  gap: 6px;
-  padding: 6px 24px;
+  flex-direction: column;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  overflow: hidden;
+  transition: height 0.05s ease-out;
+  position: relative;
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Dashboard mode: fixed to bottom of viewport */
+.bottom-panel:not(.bottom-panel--embedded) {
+  position: fixed;
+  bottom: 0;
+  left: var(--sidebar-width, 220px);
+  right: 0;
+  z-index: 80;
+  transition: left 0.2s ease;
+}
+
+/* Embedded mode (IDE): normal flex child */
+.bottom-panel--embedded {
+  position: relative;
+  flex-shrink: 0;
+}
+
+/* ----- Resize Handle (top edge) ----- */
+.bottom-panel-resize-handle {
+  position: absolute;
+  top: -3px;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  z-index: 90;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.bottom-panel-resize-handle:hover,
+.bottom-panel-resize-handle:active {
+  background: var(--color-in-progress);
+}
+
+/* Body override during drag */
+.bottom-panel-resizing {
+  cursor: ns-resize !important;
+  user-select: none !important;
+}
+
+.bottom-panel-resizing * {
+  cursor: ns-resize !important;
+  user-select: none !important;
+}
+
+/* ----- Header / Tab Bar ----- */
+.bottom-panel-header {
+  display: flex;
+  align-items: center;
+  height: 35px;
+  min-height: 35px;
+  padding: 0 8px 0 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.bottom-panel-tabs-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.bottom-panel-tabs-row::-webkit-scrollbar {
+  display: none;
 }
 
 .bottom-panel-tab {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
   font-family: var(--sans);
-  font-size: 0.72rem;
-  font-weight: 400;
-  background: var(--surface);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 5px 12px;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
   cursor: pointer;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  transition: all 0.25s;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+  height: 100%;
+  box-sizing: border-box;
 }
 
 .bottom-panel-tab:hover {
-  border-color: var(--border-hover);
-  color: var(--text);
-  background: var(--surface-hover);
+  color: var(--text-secondary);
 }
 
 .bottom-panel-tab.active {
-  background: rgba(140,120,220,0.12);
-  color: #e0e0ff;
-  border-color: rgba(160,140,240,0.35);
+  color: var(--text);
+  border-bottom-color: var(--color-in-progress);
 }
 
-.bottom-panel-tab.active:hover {
-  color: #fff;
-  border-color: rgba(160,140,240,0.5);
-  background: rgba(140,120,220,0.22);
+.bottom-panel-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  background: rgba(140, 120, 220, 0.2);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
-/* ----- Tab Bodies ----- */
-.bottom-panel-body {
+/* Header action buttons (close, etc.) */
+.bottom-panel-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.bottom-panel-header-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.bottom-panel-header-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+/* ----- Panel Content Area ----- */
+.bottom-panel-content {
   flex: 1;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
-.bottom-panel-body--terminal {
+/* Individual tab panes */
+.bottom-panel-pane {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  overflow: hidden;
 }
 
-.bottom-panel-body--logs {
+.bottom-panel-pane--terminal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.bottom-panel-pane--output {
+  flex: 1;
   overflow-y: auto;
+}
+
+/* Placeholder for empty tabs (Problems, Debug Console, Ports) */
+.bottom-panel-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 1;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  user-select: none;
 }
 
 /* ----- Terminal Container ----- */
@@ -6519,11 +6888,100 @@ a:hover {
   padding: 24px;
 }
 
+/* ----- Terminal Sub-tabs (multi-terminal instances) ----- */
+.terminal-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px;
+  background: rgba(11, 11, 15, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+}
+
+.terminal-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  font-family: var(--sans);
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.terminal-tab:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-secondary);
+}
+
+.terminal-tab.active {
+  background: rgba(140, 120, 220, 0.10);
+  color: var(--text-secondary);
+  border-color: rgba(160, 140, 240, 0.2);
+}
+
+.terminal-tab-label {
+  white-space: nowrap;
+}
+
+.terminal-tab-close {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  font-size: 11px;
+  line-height: 1;
+  color: var(--text-tertiary);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.terminal-tab-close:hover {
+  background: rgba(255, 80, 80, 0.2);
+  color: #ff6b6b;
+}
+
+.terminal-tab-add {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  color: var(--text-tertiary);
+  border-radius: 5px;
+  cursor: pointer;
+  margin-left: 2px;
+  transition: all 0.2s;
+}
+
+.terminal-tab-add:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+
+.terminal-tab-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 /* ----- Embedded LogPanel overrides -----
-   When LogPanel is rendered inside BottomPanel, strip its fixed
-   positioning, toggle button, and max-height constraints so it
-   behaves as inline content within the Logs tab. */
-.bottom-panel-body--logs .log-panel {
+   Strip LogPanel's standalone positioning when nested inside
+   the Output tab of the bottom panel. */
+.bottom-panel-pane--output .log-panel {
   position: static;
   max-height: none;
   border-top: none;
@@ -6532,14 +6990,22 @@ a:hover {
   transition: none;
 }
 
-.bottom-panel-body--logs .log-panel::before {
+.bottom-panel-pane--output .log-panel::before {
   display: none;
 }
 
-.bottom-panel-body--logs .log-panel .log-toggle {
+.bottom-panel-pane--output .log-panel .log-toggle {
   display: none;
 }
 
-.bottom-panel-body--logs .log-panel .log-body {
-  max-height: 310px;
+.bottom-panel-pane--output .log-panel .log-body {
+  max-height: none;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.bottom-panel-pane--output .log-panel .log-entries {
+  flex: 1;
+  overflow-y: auto;
 }

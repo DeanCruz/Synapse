@@ -18,7 +18,7 @@
 
 **Who this is for:** The master orchestrator agent when running `!p_track` or any swarm command. This hub provides quick orientation and points to detailed module files for each concern.
 
-> **Portability:** This tracker works in any repository. All paths are relative to the Synapse directory (`{tracker_root}`). Dashboard files live under `{tracker_root}/dashboards/{dashboardId}/`. The tracker does not assume any specific project structure.
+> **Portability:** This tracker works in any repository. All paths are relative to the Synapse directory (`{tracker_root}`). Dashboard files live under `{tracker_root}/dashboards/{id}/`. The tracker does not assume any specific project structure.
 
 ---
 
@@ -116,7 +116,11 @@ After all tasks complete, compute `metrics.json` with elapsed time, parallel eff
 │       ├── worker_prompts.md
 │       └── compaction_recovery.md
 ├── dashboards/
-│   └── {dashboardId}/
+│   ├── ide/                                  ← Reserved (IDE agent, never for swarms)
+│   │   ├── initialization.json
+│   │   ├── logs.json
+│   │   └── progress/
+│   └── {hex-id}/                             ← e.g., a3f7k2 (6-char hex)
 │       ├── initialization.json
 │       ├── logs.json
 │       ├── master_state.json
@@ -124,7 +128,7 @@ After all tasks complete, compute `metrics.json` with elapsed time, parallel eff
 │       └── progress/
 └── tasks/
     └── {MM_DD_YY}/
-        ├── parallel_{name}.xml
+        ├── parallel_{name}.json
         └── parallel_plan_{name}.md
 ```
 
@@ -140,5 +144,6 @@ After all tasks complete, compute `metrics.json` with elapsed time, parallel eff
 | **Guessed timestamps** | Always `date -u +"%Y-%m-%dT%H:%M:%SZ"`. |
 | **Asking permission without writing log entry first** | Write `"permission"` level to `logs.json` FIRST, then ask in terminal. |
 | **Not clearing progress/ before new swarm** | Archive first, then clear. Never clear without archiving. |
+| **Claiming ide for a swarm** | Never use the `ide` dashboard for swarms — it is reserved for IDE. Skip it during auto-selection. |
 
 **Read:** `agent/master/ui_map.md` for the full common mistakes table with dashboard effects.

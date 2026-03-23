@@ -1,7 +1,7 @@
 // AgentDetails — Shows agent details: id, title, status, wave, layer, directory,
 // summary, dependencies, meta grid, milestones, deviations, and activity log.
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Modal from './Modal.jsx';
 import { STATUS_COLORS, STATUS_BG_COLORS, colorWithAlpha } from '../../utils/constants.js';
 import { formatTime, calcDuration, formatElapsed } from '../../utils/format.js';
@@ -49,11 +49,24 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
 
   const deps = agent.depends_on || [];
 
+  // Live-updating duration for in-progress tasks
+  const isRunning = merged.started_at && !merged.completed_at;
+  const [elapsed, setElapsed] = useState(() =>
+    isRunning ? formatElapsed(merged.started_at) : null
+  );
+
+  useEffect(() => {
+    if (!isRunning) return;
+    setElapsed(formatElapsed(merged.started_at));
+    const id = setInterval(() => setElapsed(formatElapsed(merged.started_at)), 1000);
+    return () => clearInterval(id);
+  }, [isRunning, merged.started_at]);
+
   let durationStr = null;
   if (merged.started_at && merged.completed_at) {
     durationStr = calcDuration(merged.started_at, merged.completed_at);
-  } else if (merged.started_at) {
-    durationStr = formatElapsed(merged.started_at) + ' (running)';
+  } else if (isRunning) {
+    durationStr = (elapsed || formatElapsed(merged.started_at)) + ' (running)';
   }
 
   return (
@@ -161,6 +174,20 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
             {metaItem('Completed', merged.completed_at ? formatTime(merged.completed_at) : null)}
             {metaItem('Duration', durationStr)}
             {metaItem('Status', merged.status ? merged.status.replace(/_/g, ' ') : null)}
+          </div>
+        )}
+
+        {/* Live progress (stage + message) */}
+        {merged.status === 'in_progress' && (merged.stage || merged.message) && (
+          <div className="agent-details-progress">
+            {merged.stage && (
+              <span className="agent-details-stage">
+                {merged.stage.replace(/_/g, ' ')}
+              </span>
+            )}
+            {merged.message && (
+              <p className="agent-details-message">{merged.message}</p>
+            )}
           </div>
         )}
 

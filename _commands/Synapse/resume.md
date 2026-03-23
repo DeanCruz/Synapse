@@ -6,7 +6,7 @@
 >
 > **2. You MUST read `{tracker_root}/agent/instructions/tracker_master_instructions.md` before dispatching any agents. Do not skip this. Do not work from memory. Read it.**
 >
-> **3. You MUST read the master XML task file to understand the full plan, task descriptions, context, and critical details before dispatching any worker.**
+> **3. You MUST read the master task file to understand the full plan, task descriptions, context, and critical details before dispatching any worker.**
 >
 > **4. Every dispatched worker gets a COMPLETE, SELF-CONTAINED prompt with all context needed to work independently — identical in quality and depth to what `!p_track` would produce.**
 
@@ -56,16 +56,16 @@ Read these **in parallel**:
 2. **All progress files** from `{tracker_root}/dashboards/{dashboardId}/progress/` — Build a status map: `{ task_id → { status, summary, deviations, logs } }`.
 3. **`{tracker_root}/dashboards/{dashboardId}/logs.json`** — Event history for context.
 
-### Step 4: Locate and read the master XML
+### Step 4: Locate and read the master task file
 
-The master XML contains the full task descriptions, context, critical details, and file lists that workers need.
+The master task file contains the full task descriptions, context, critical details, and file lists that workers need.
 
 1. Extract `task.name` from `initialization.json` (the task slug).
 2. Extract `task.created` to determine the date directory.
-3. Look for the XML at: `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml`
-   - If not found, search: `{tracker_root}/tasks/*/parallel_{task_name}.xml`
-   - If still not found, check `{tracker_root}/tasks/` for any XML files matching the task name pattern.
-4. **Read the full master XML.** You need every task's `<description>`, `<context>`, `<critical>`, `<files>`, `<tags>`, and `<depends_on>`.
+3. Look for the task file at: `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
+   - If not found, search: `{tracker_root}/tasks/*/parallel_{task_name}.json`
+   - If still not found, check `{tracker_root}/tasks/` for any task files matching the task name pattern.
+4. **Read the full master task file.** You need every task's `description`, `context`, `critical`, `files`, `tags`, and `depends_on`.
 
 ### Step 5: Read project context
 
@@ -101,7 +101,7 @@ Display a summary showing the state of the swarm and what will be dispatched:
 
 **Dashboard:** {dashboardId}
 **Project:** {project_root}
-**XML:** {path to master XML}
+**Task file:** {path to master task file}
 
 ### Current State
 | Status | Count | Tasks |
@@ -148,10 +148,10 @@ TASK {id}: {title}
 ═══════════════════════════════════
 
 DESCRIPTION:
-{detailed description from XML <description>}
+{detailed description from task file}
 
 CONTEXT:
-{all context from XML <context>}
+{all context from task file}
 
 PROJECT ROOT: {project_root}
 TRACKER ROOT: {tracker_root}
@@ -177,7 +177,7 @@ results define what this worker should build on. Read the actual upstream
 progress files to get ground truth, not stale plan data.}
 
 CRITICAL:
-{critical details from XML <critical> — omit section if empty}
+{critical details from task file — omit section if empty}
 
 FILES:
 {list each file with its action}
@@ -227,10 +227,10 @@ PREPARATION — REQUIRED BEFORE STARTING WORK
 
 Before writing any code, complete these steps in order:
 
-1. READ YOUR TASK IN THE MASTER XML:
-   Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml` — specifically your task at id="{id}".
+1. READ YOUR TASK IN THE MASTER TASK FILE:
+   Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` — specifically your task at id="{id}".
    Focus on: your task's full description, context, critical details, and dependency relationships.
-   Do NOT read the entire XML — only your task section and any tasks listed in your depends_on.
+   Do NOT read the entire task file — only your task section and any tasks listed in your depends_on.
 
 2. READ PROJECT INSTRUCTIONS (only if not already provided above):
    If the CONVENTIONS section above is empty or says "no CLAUDE.md", check if a CLAUDE.md file
@@ -365,7 +365,7 @@ Append to `{tracker_root}/dashboards/{dashboardId}/logs.json`:
 From this point, follow the **exact same execution loop** as `!p_track` Phase 2 (Steps 15-17):
 
 1. **Every time a worker completes**, parse its return (STATUS, SUMMARY, FILES CHANGED, DIVERGENT ACTIONS, WARNINGS, ERRORS).
-2. **Update the master XML** with completion status, timestamp, summary, and any deviations.
+2. **Update the master task file** with completion status, timestamp, summary, and any deviations.
 3. **Log the completion** to `{tracker_root}/dashboards/{dashboardId}/logs.json`.
 4. **Immediately scan ALL remaining tasks** for newly satisfied dependencies and dispatch every ready task. Do not wait for wave boundaries.
 5. **If a worker fails**, follow the failure recovery procedure from `tracker_master_instructions.md` — create a repair task, rewire dependencies, dispatch the repair worker.
@@ -388,7 +388,7 @@ When all tasks are completed (or all remaining are blocked/failed):
    - Any remaining issues or follow-up needed
    - Deviations across all workers
 
-2. **Update the master XML** with final `<overall_status>` and completion summary.
+2. **Update the master task file** with final `overall_status` and completion summary.
 
 3. **Log the completion** to `logs.json`:
    ```json

@@ -96,7 +96,7 @@ The master agent reads **extensively**. It reads more than any worker will. It r
 - Determine wave groupings for visual organization
 - Write each agent's prompt with **complete, self-contained context** — the agent must be able to execute without reading additional files or asking questions
 - Include in every agent prompt: the specific files to modify, the conventions from `{project_root}/AGENTS.md`, code snippets the agent needs to see, clear success criteria, **and both `{tracker_root}` and `{project_root}` paths**
-- Create the master XML task file documenting the full plan
+- Create the master task file documenting the full plan
 - Write the strategy rationale plan file
 - **Populate the dashboard before presenting the plan to the user** — clear the progress directory, write the full plan to `initialization.json` (all tasks, all waves, all dependencies — static plan data only), and write an initialization entry to `logs.json`. This gives the user a live visual representation of the plan on the dashboard while they review and approve it. **`initialization.json` is write-once — the master never updates it after planning.**
 
@@ -114,7 +114,7 @@ Planning is where the master agent earns its value. A well-planned swarm execute
 #### 4. Status
 
 - Append to `logs.json` on dispatches, completions, failures, and deviations
-- Update the master XML with completion summaries, error details, and timing
+- Update the master task file with completion summaries, error details, and timing
 - **The master does NOT update `initialization.json` after planning** — workers own all lifecycle data in their progress files. The dashboard derives all stats (completed count, failed count, wave progress, overall status, elapsed time) from progress files.
 - **Do NOT output terminal status tables during execution** — the dashboard is the primary reporting channel. Output only brief one-line terminal confirmations per event.
 - Workers handle their own live progress reporting via `dashboards/{dashboardId}/progress/{id}.json` files — the master does not need to relay progress updates
@@ -152,7 +152,7 @@ During a swarm, the master agent writes to exactly these files at `{tracker_root
 |---|---|
 | `dashboards/{dashboardId}/initialization.json` | Static plan data (written ONCE during planning) |
 | `dashboards/{dashboardId}/logs.json` | Timestamped event log for the dashboard |
-| `tasks/{date}/parallel_{name}.xml` | Master task record (plan, status, summaries) |
+| `tasks/{date}/parallel_{name}.json` | Master task record (plan, status, summaries) |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
 Everything else is a worker's job. The master agent writes **nothing** into `{project_root}`.
@@ -385,7 +385,7 @@ Dashboard merges init + progress → renders live status, stage, logs
        │
 Worker completes → writes final progress file with status "completed"
        │
-Master processes return → updates logs.json + XML only (NOT initialization.json)
+Master processes return → updates logs.json + task file only (NOT initialization.json)
 ```
 
 **Important:** Workers do their code work in `{project_root}` but write progress files to `{tracker_root}`. These are different locations. Workers **MUST read `{tracker_root}/agent/instructions/tracker_worker_instructions.md`** before starting work.
@@ -409,7 +409,7 @@ The worker writes the **full file** on every update (no read-modify-write needed
   "stage": "implementing",
   "message": "Creating User model — 3/4 CRUD methods done",
   "milestones": [
-    { "at": "2026-02-24T15:05:35Z", "msg": "Reading AGENTS.md and task XML" },
+    { "at": "2026-02-24T15:05:35Z", "msg": "Reading AGENTS.md and task file" },
     { "at": "2026-02-24T15:06:01Z", "msg": "Reading existing model files for patterns" },
     { "at": "2026-02-24T15:06:45Z", "msg": "Creating User model with CRUD operations" }
   ],
@@ -429,7 +429,7 @@ Workers progress through these stages in order:
 
 | Stage | Description |
 |---|---|
-| `reading_context` | Reading project files, AGENTS.md, documentation, task XML |
+| `reading_context` | Reading project files, AGENTS.md, documentation, task file |
 | `planning` | Assessing readiness, planning approach |
 | `implementing` | Writing code, creating/modifying files |
 | `testing` | Running tests, validating changes |
@@ -564,7 +564,7 @@ Synapse/                            ← {tracker_root}
 ├── Archive/                        ← Full archived dashboard snapshots
 ├── tasks/                          ← Generated per swarm
 │   └── {MM_DD_YY}/
-│       ├── parallel_{name}.xml
+│       ├── parallel_{name}.json
 │       └── parallel_plan_{name}.md
 ├── src/
 │   ├── server/index.js             ← Node.js SSE server (zero deps)
@@ -728,10 +728,10 @@ Status reporting is split between master and workers:
 - Write detailed logs: `logs[]` array (feeds the popup log box in agent details modal)
 - Dashboard picks up changes in real-time via `fs.watch` + SSE
 
-**Master handles event logging and XML updates only:**
+**Master handles event logging and task file updates only:**
 - Agent dispatched → append to `logs.json`
-- Agent completed → append to `logs.json` + update XML
-- Agent failed → append to `logs.json` + update XML
+- Agent completed → append to `logs.json` + update task file
+- Agent failed → append to `logs.json` + update task file
 - Agent deviated → append to `logs.json` at level `"deviation"`
 - Master does NOT update `initialization.json` after planning
 
@@ -812,9 +812,9 @@ The timestamped event log, located at `{tracker_root}/dashboards/{dashboardId}/l
 
 **Levels:** `info` (general), `warn` (unexpected), `error` (failure), `debug` (verbose), `permission` (triggers popup), `deviation` (plan divergence)
 
-### Master XML
+### Master Task File
 
-The authoritative task record at `{tracker_root}/tasks/{date}/parallel_{name}.xml`. Contains everything: task descriptions, context, critical details, file lists, dependencies, status, summaries, and logs. Every agent reads it for context. The master updates it on every completion.
+The authoritative task record at `{tracker_root}/tasks/{date}/parallel_{name}.json`. Contains everything: task descriptions, context, critical details, file lists, dependencies, status, summaries, and logs. Every agent reads it for context. The master updates it on every completion.
 
 ### progress/ Directory
 
@@ -880,7 +880,7 @@ When the master writes a `"permission"` level log entry, the dashboard shows an 
 
 ## Timestamp Protocol
 
-Every timestamp in `initialization.json`, `logs.json`, progress files, and the XML must be captured live:
+Every timestamp in `initialization.json`, `logs.json`, progress files, and the task file must be captured live:
 
 ```bash
 date -u +"%Y-%m-%dT%H:%M:%SZ"

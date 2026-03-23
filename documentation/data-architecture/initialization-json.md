@@ -381,4 +381,4 @@ Invalid files are silently rejected -- the server does not broadcast corrupted d
 - [Data Architecture Overview](./overview.md) -- High-level data model and ownership
 - [Progress Files Schema](./progress-files.md) -- Dynamic lifecycle data (the other half of the merge)
 - [logs.json Schema](./logs-json.md) -- Event log format
-- [XML Task Files](./xml-task-files.md) -- Authoritative task record
+- [Task Files](./xml-task-files.md) -- Authoritative task record

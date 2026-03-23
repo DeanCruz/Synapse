@@ -29,7 +29,7 @@ All swarm commands are located at `{tracker_root}/_commands/Synapse/`. They mana
 - Includes circuit breaker logic: if 3+ tasks fail in the same wave or a failure blocks half of remaining tasks, automatic replanning is triggered
 
 **Produces:**
-- `{tracker_root}/tasks/{date}/parallel_{name}.xml` -- Master task record
+- `{tracker_root}/tasks/{date}/parallel_{name}.json` -- Master task record
 - `{tracker_root}/tasks/{date}/parallel_plan_{name}.md` -- Strategy rationale
 - `{tracker_root}/dashboards/{dashboardId}/initialization.json` -- Dashboard plan data
 - `{tracker_root}/dashboards/{dashboardId}/logs.json` -- Event log
@@ -53,7 +53,7 @@ All swarm commands are located at `{tracker_root}/_commands/Synapse/`. They mana
 
 **Key Behavior:**
 - Same deep planning and prompt quality as `!p_track`
-- No XML files, no dashboard writes, no progress files
+- No task files, no dashboard writes, no progress files
 - All plan data lives in conversation context
 - Workers execute and return directly
 - Best for focused tasks with fewer than 5 subtasks where live visualization is not needed
@@ -113,7 +113,7 @@ WORKER AGENTS (many per stream)
 
 **Key Behavior:**
 - Validates that the task exists, is pending, and all dependencies are completed
-- Reads the master XML to extract full task context for the worker prompt
+- Reads the master task file to extract full task context for the worker prompt
 - Dispatches a worker agent with a complete, self-contained prompt
 - Logs the dispatch to `logs.json`
 - Does not create a progress file -- the worker creates its own when it starts
@@ -253,8 +253,8 @@ WORKER AGENTS (many per stream)
 ```
 
 **Key Behavior:**
-- Reads from `initialization.json`, the task's progress file, the master XML, and `logs.json`
-- Displays: status, wave, timeline (created/dispatched/completed/duration), agent info, milestones, deviations, upstream dependencies with their statuses, downstream blocks, XML context and critical details, file lists, worker logs, and dashboard logs
+- Reads from `initialization.json`, the task's progress file, the master task file, and `logs.json`
+- Displays: status, wave, timeline (created/dispatched/completed/duration), agent info, milestones, deviations, upstream dependencies with their statuses, downstream blocks, task context and critical details, file lists, worker logs, and dashboard logs
 
 ---
 

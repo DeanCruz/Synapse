@@ -27,6 +27,7 @@ function init(broadcast) {
  * @param {string} [opts.model] — model to use
  * @param {string} [opts.cliPath] — path to Claude binary
  * @param {boolean} [opts.dangerouslySkipPermissions] — skip permission prompts
+ * @param {string[]} [opts.additionalContextDirs] — additional read-only context directories
  * @returns {{ pid, taskId, dashboardId }}
  */
 function spawnWorker(opts) {
@@ -55,8 +56,19 @@ function spawnWorker(opts) {
   args.push('--add-dir', synapseRoot);
 
   // Then add the target project directory if different from Synapse
-  if (opts.projectDir && path.resolve(opts.projectDir) !== synapseRoot) {
+  var resolvedProjectDir = opts.projectDir ? path.resolve(opts.projectDir) : null;
+  if (resolvedProjectDir && resolvedProjectDir !== synapseRoot) {
     args.push('--add-dir', opts.projectDir);
+  }
+
+  // Add additional context directories (read-only reference dirs)
+  var additionalDirs = opts.additionalContextDirs || [];
+  for (var i = 0; i < additionalDirs.length; i++) {
+    var resolvedDir = path.resolve(additionalDirs[i]);
+    // Deduplicate: skip if already added as synapseRoot or projectDir
+    if (resolvedDir === synapseRoot) continue;
+    if (resolvedProjectDir && resolvedDir === resolvedProjectDir) continue;
+    args.push('--add-dir', resolvedDir);
   }
 
   if (opts.systemPrompt) {

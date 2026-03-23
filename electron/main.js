@@ -149,6 +149,7 @@ app.whenReady().then(() => {
   const { registerIPCHandlers } = require('./ipc-handlers');
   registerIPCHandlers(getMainWindow);
 
+
   createWindow();
 
   app.on('activate', () => {

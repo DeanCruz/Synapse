@@ -41,7 +41,7 @@ The dashboard server watches this directory and broadcasts changes to the browse
   "stage": "implementing",
   "message": "Creating auth middleware — 2/3 endpoints done",
   "milestones": [
-    { "at": "2026-02-25T14:05:10Z", "msg": "Read CLAUDE.md and task XML" },
+    { "at": "2026-02-25T14:05:10Z", "msg": "Read CLAUDE.md and task file" },
     { "at": "2026-02-25T14:05:35Z", "msg": "Read existing middleware for patterns" },
     { "at": "2026-02-25T14:06:01Z", "msg": "Created rate limiter for /api/auth" }
   ],
@@ -100,7 +100,7 @@ Progress through these stages in order:
 
 | Stage | Description |
 |---|---|
-| `reading_context` | Reading project files, CLAUDE.md, documentation, task XML |
+| `reading_context` | Reading project files, CLAUDE.md, documentation, task file |
 | `planning` | Assessing readiness, planning approach |
 | `implementing` | Writing code, creating/modifying files |
 | `testing` | Running tests, validating changes |
@@ -308,7 +308,7 @@ Here's what a typical task's progress file looks like at each stage:
   "summary": null,
   "assigned_agent": "Agent 1",
   "stage": "reading_context",
-  "message": "Reading CLAUDE.md and task XML",
+  "message": "Reading CLAUDE.md and task file",
   "milestones": [],
   "deviations": [],
   "logs": [

@@ -95,7 +95,7 @@ When working across multiple projects:
 
 ## Timestamp Protocol
 
-Every timestamp in `initialization.json`, `logs.json`, progress files, and the XML must be captured live:
+Every timestamp in `initialization.json`, `logs.json`, progress files, and the task file must be captured live:
 
 ```bash
 date -u +"%Y-%m-%dT%H:%M:%SZ"

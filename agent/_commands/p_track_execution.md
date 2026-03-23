@@ -64,10 +64,10 @@ TASK {id}: {title}
 ═══════════════════════════════════
 
 DESCRIPTION:
-{detailed description from XML <description>}
+{detailed description from task file}
 
 CONTEXT:
-{all context from XML <context>}
+{all context from task file}
 
 PROJECT ROOT: {project_root}
 TRACKER ROOT: {tracker_root}
@@ -110,7 +110,7 @@ Omit this entire section if the task has no same-wave siblings, or if sibling fi
 lists do not overlap with this task's area of the codebase.}
 
 CRITICAL:
-{critical details from XML <critical> — omit section if empty}
+{critical details from task file — omit section if null}
 
 SUCCESS CRITERIA:
 {Exactly what "done" looks like — specific, verifiable conditions. The worker should be able
@@ -133,10 +133,10 @@ PREPARATION — REQUIRED BEFORE STARTING WORK
 
 Before writing any code, complete these steps in order:
 
-1. READ YOUR TASK IN THE MASTER XML:
-   Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml` — specifically your task at id="{id}".
+1. READ YOUR TASK IN THE MASTER TASK FILE:
+   Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` — specifically your task at id="{id}".
    Focus on: your task's full description, context, critical details, and dependency relationships.
-   Do NOT read the entire XML — only your task section and any tasks listed in your depends_on.
+   Do NOT read the entire file — only your task entry and any tasks listed in your depends_on.
 
 2. READ PROJECT INSTRUCTIONS (only if not already provided above):
    If the CONVENTIONS section above is empty or says "no CLAUDE.md", check if a CLAUDE.md file
@@ -295,13 +295,13 @@ After parsing the agent's return text, the master must validate these required s
 - If STATUS is `PARTIAL`, treat as completed but log a `"warn"` entry and include the incomplete items in the final report.
 - If STATUS is missing entirely, treat as a failure — create a repair task per the standard procedure.
 
-### B. Update the master XML
+### B. Update the master task file
 
-Read the XML. Find the task by `id`:
-- Set `<status>` to `completed` or `failed`
-- Set `<completed_at>` to current ISO timestamp
-- Write `<summary>` with the agent's SUMMARY line
-- Append any logs, warnings, or divergent actions to `<logs>`
+Read the task file. Find the task by `id`:
+- Set `status` to `"completed"` or `"failed"`
+- Set `completed_at` to current ISO timestamp
+- Set `summary` to the agent's SUMMARY line
+- Append any logs, warnings, or divergent actions to `logs`
 Write back.
 
 ### C. Append to logs.json
@@ -324,7 +324,7 @@ If the agent reported DIVERGENT ACTIONS, append at level `"deviation"` with the 
 
 Write back.
 
-> **Note:** The master does NOT update `initialization.json` on completions. The worker's progress file handles all lifecycle tracking (status, completed_at, summary). The dashboard derives all stats (completed count, failed count, wave progress) from progress files. The master still updates the XML and logs.json.
+> **Note:** The master does NOT update `initialization.json` on completions. The worker's progress file handles all lifecycle tracking (status, completed_at, summary). The dashboard derives all stats (completed count, failed count, wave progress) from progress files. The master still updates the task file and logs.json.
 
 **Do NOT display a terminal status table.** Output only a brief one-line confirmation (e.g., "Agent 5 completed: {summary}"). The dashboard is the primary reporting channel.
 
@@ -337,7 +337,7 @@ Store the completed task's results in the master's working memory:
 - Any new interfaces, types, exports, or APIs introduced (from the worker's EXPORTS section, or extracted from the summary if EXPORTS is omitted)
 - Any deviations or warnings
 
-This cache is used to populate the `UPSTREAM RESULTS` section when dispatching downstream tasks. After context compaction, reconstruct the cache from prior conversation output or by re-reading the XML summaries.
+This cache is used to populate the `UPSTREAM RESULTS` section when dispatching downstream tasks. After context compaction, reconstruct the cache from prior conversation output or by re-reading the task file summaries.
 
 ### Upstream Result Summary Format
 
@@ -371,12 +371,12 @@ Populate KEY DETAILS by:
 
 ### E. Scan for newly dispatchable tasks — CRITICAL
 
-After processing a completion, **read the master XML** and scan ALL pending tasks across ALL waves:
-- If a task's `<depends_on>` references are ALL now `"completed"`, dispatch it **immediately**.
+After processing a completion, **read the master task file** and scan ALL pending tasks across ALL waves:
+- If a task's `depends_on` references are ALL now `"completed"`, dispatch it **immediately**.
 - **Do NOT wait for the rest of its wave.** Do NOT wait for anything other than its direct dependencies.
 - If multiple tasks become available, dispatch ALL of them simultaneously.
 
-**When dispatching downstream tasks, include upstream results:** For each dependency listed in the downstream task's `<depends_on>`, pull the cached result (from Step 15D) and embed it in the worker prompt's `UPSTREAM RESULTS` section. This ensures downstream workers know exactly what their prerequisites produced, including any deviations from the plan.
+**When dispatching downstream tasks, include upstream results:** For each dependency listed in the downstream task's `depends_on`, pull the cached result (from Step 15D) and embed it in the worker prompt's `UPSTREAM RESULTS` section. This ensures downstream workers know exactly what their prerequisites produced, including any deviations from the plan.
 
 Update tracker files for each newly dispatched task **after dispatch** (per the NON-NEGOTIABLE rule in Step 13B).
 
@@ -403,10 +403,10 @@ Task 2.1 fails. The master scans agents[] and finds that tasks 3.1, 3.2, 3.3, an
 ## Step 16: Handle failures
 
 If an agent fails:
-- Mark the task `"failed"` in the XML.
+- Mark the task `"failed"` in the task file.
 - Log the error to `dashboards/{dashboardId}/logs.json` at level `"error"`.
 - Output a brief one-line failure notice to the terminal.
-- Mark any directly dependent tasks as `"blocked"` in the XML.
+- Mark any directly dependent tasks as `"blocked"` in the task file.
 - Continue dispatching all non-dependent tasks.
 
 **Circuit breaker — pause and reassess if ANY of these conditions are met:**

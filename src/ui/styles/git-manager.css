@@ -1,0 +1,2403 @@
+/* ============================================================
+   Git Manager — Distributed Git Control View
+   ============================================================
+   Layout: repo tabs (top) → sidebar (left) + main content (right)
+   Mirrors IDE layout structure (ide-layout.css)
+   All classes prefixed: .git-manager-*
+   ============================================================ */
+
+/* ----- Container — fills parent completely ----- */
+.git-manager-view {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ============================================================
+   Repo Tab Bar — top row of repository tabs
+   ============================================================ */
+.git-manager-repo-tabs {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.git-manager-repo-tabs-scroll {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.git-manager-repo-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Individual repo tab */
+.git-manager-repo-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+  flex-shrink: 0;
+  height: 28px;
+  user-select: none;
+}
+
+.git-manager-repo-tab:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.git-manager-repo-tab.active {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.git-manager-repo-tab.active:hover {
+  background: var(--surface-hover);
+}
+
+/* Repo tab icon (folder/git icon) */
+.git-manager-repo-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.git-manager-repo-tab.active .git-manager-repo-tab-icon {
+  opacity: 1;
+}
+
+/* Branch badge inside repo tab */
+.git-manager-repo-tab-branch {
+  font-size: 0.65rem;
+  color: var(--color-in-progress);
+  opacity: 0.8;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  letter-spacing: 0.02em;
+}
+
+/* Close button on repo tab */
+.git-manager-repo-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.git-manager-repo-tab:hover .git-manager-repo-tab-close,
+.git-manager-repo-tab.active .git-manager-repo-tab-close {
+  opacity: 1;
+}
+
+.git-manager-repo-tab-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+/* Add repo button */
+.git-manager-repo-tab-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.git-manager-repo-tab-add:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+/* ============================================================
+   Main Layout — sidebar + divider + content area
+   ============================================================ */
+.git-manager-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ============================================================
+   Sidebar — changes list + commit panel (~300px default)
+   ============================================================ */
+.git-manager-sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  flex-shrink: 0;
+  height: 100%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  border-right: 1px solid var(--border);
+}
+
+/* Scrollable area for ChangesPanel — fills available space above CommitPanel */
+.git-manager-sidebar-scroll {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Sidebar section tabs (Changes / Stash / etc.) */
+.git-manager-sidebar-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 10px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.git-manager-sidebar-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+}
+
+.git-manager-sidebar-tab:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.git-manager-sidebar-tab.active {
+  color: var(--color-in-progress);
+  background: rgba(155, 124, 240, 0.1);
+}
+
+.git-manager-sidebar-tab.active:hover {
+  background: rgba(155, 124, 240, 0.15);
+}
+
+/* Tab badge (count) */
+.git-manager-sidebar-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-tertiary);
+  font-size: 0.65rem;
+  font-weight: 600;
+  font-family: var(--sans);
+  line-height: 1;
+}
+
+.git-manager-sidebar-tab.active .git-manager-sidebar-tab-badge {
+  background: rgba(155, 124, 240, 0.15);
+  color: var(--color-in-progress);
+}
+
+/* ============================================================
+   Changes Panel — staged/unstaged file lists
+   ============================================================ */
+.git-manager-changes {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Section header (Staged Changes, Unstaged Changes) */
+.git-manager-changes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.git-manager-changes-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Small icon buttons in header (stage all, unstage all, discard all) */
+.git-manager-changes-header-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s, background 0.15s;
+}
+
+.git-manager-changes-header-btn:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.git-manager-changes-header-btn.danger:hover {
+  color: var(--color-failed);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* File list — sizes to content; parent .git-manager-sidebar-scroll handles overflow */
+.git-manager-file-list {
+  overflow-x: hidden;
+}
+
+/* Individual file item */
+.git-manager-file-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+  min-height: 28px;
+}
+
+.git-manager-file-item:hover {
+  background: var(--surface-hover);
+}
+
+.git-manager-file-item.selected {
+  background: var(--surface);
+}
+
+/* File status indicator — colored letter badge */
+.git-manager-file-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+/* M = Modified (yellow/amber) */
+.git-manager-file-status.modified {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+
+/* A = Added (green) */
+.git-manager-file-status.added {
+  color: var(--color-completed);
+  background: rgba(52, 211, 153, 0.12);
+}
+
+/* D = Deleted (red) */
+.git-manager-file-status.deleted {
+  color: var(--color-failed);
+  background: rgba(239, 68, 68, 0.12);
+}
+
+/* R = Renamed (blue) */
+.git-manager-file-status.renamed {
+  color: #60a5fa;
+  background: rgba(96, 165, 250, 0.12);
+}
+
+/* U = Untracked (gray) */
+.git-manager-file-status.untracked {
+  color: var(--text-tertiary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* C = Conflicted (orange) */
+.git-manager-file-status.conflicted {
+  color: var(--color-blocked);
+  background: rgba(249, 115, 22, 0.12);
+}
+
+/* File name */
+.git-manager-file-name {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.git-manager-file-item:hover .git-manager-file-name,
+.git-manager-file-item.selected .git-manager-file-name {
+  color: var(--text);
+}
+
+/* File path (directory portion, dimmed) */
+.git-manager-file-path {
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+  margin-left: 2px;
+}
+
+/* File item action buttons (stage, unstage, discard) */
+.git-manager-file-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+  flex-shrink: 0;
+}
+
+.git-manager-file-item:hover .git-manager-file-actions {
+  opacity: 1;
+}
+
+.git-manager-file-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s, background 0.15s;
+}
+
+.git-manager-file-action-btn:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.git-manager-file-action-btn.danger:hover {
+  color: var(--color-failed);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* ============================================================
+   Commit Panel — message input + commit button
+   ============================================================ */
+.git-manager-commit-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+/* Commit message textarea */
+.git-manager-commit-input {
+  width: 100%;
+  min-height: 72px;
+  max-height: 160px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.8rem;
+  line-height: 1.4;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.git-manager-commit-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.git-manager-commit-input:focus {
+  border-color: var(--color-in-progress);
+  box-shadow: 0 0 0 1px rgba(155, 124, 240, 0.2);
+}
+
+/* Commit actions row */
+.git-manager-commit-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Commit button */
+.git-manager-commit-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: var(--color-in-progress);
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.git-manager-commit-btn:hover {
+  opacity: 0.9;
+}
+
+.git-manager-commit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Amend checkbox */
+.git-manager-commit-amend {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.git-manager-commit-amend input[type="checkbox"] {
+  accent-color: var(--color-in-progress);
+}
+
+/* ============================================================
+   Divider — resizable panel separator
+   ============================================================ */
+.git-manager-divider {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+  margin-left: -2px;
+  margin-right: -2px;
+}
+
+.git-manager-divider:hover,
+.git-manager-divider.dragging {
+  background: var(--color-in-progress);
+}
+
+/* Horizontal divider (for vertical splits) */
+.git-manager-divider-h {
+  height: 4px;
+  width: 100%;
+  cursor: row-resize;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+  margin-top: -2px;
+  margin-bottom: -2px;
+}
+
+.git-manager-divider-h:hover,
+.git-manager-divider-h.dragging {
+  background: var(--color-in-progress);
+}
+
+/* During drag — prevent text selection, set cursor globally */
+.git-manager-dragging {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+.git-manager-dragging * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+.git-manager-dragging-h {
+  cursor: row-resize !important;
+  user-select: none !important;
+}
+
+.git-manager-dragging-h * {
+  cursor: row-resize !important;
+  user-select: none !important;
+}
+
+/* ============================================================
+   Content Area — main right panel (diff/history/branches)
+   ============================================================ */
+.git-manager-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Content tab bar (Diff / History / Branches) */
+.git-manager-content-tabs {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 8px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  gap: 1px;
+}
+
+.git-manager-content-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-weight: 400;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.git-manager-content-tab:hover {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.git-manager-content-tab.active {
+  color: var(--text);
+  background: var(--surface);
+}
+
+/* Active tab top accent */
+.git-manager-content-tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-in-progress);
+}
+
+/* Content tab icon */
+.git-manager-content-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* Content area body */
+.git-manager-content-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   Diff Viewer — green/red line-level highlighting
+   ============================================================ */
+.git-manager-diff {
+  flex: 1;
+  overflow: auto;
+  background: var(--bg);
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  min-height: 0;
+}
+
+/* Diff file header */
+.git-manager-diff-file-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.git-manager-diff-file-header .git-manager-file-status {
+  margin-right: 2px;
+}
+
+/* Diff hunk header (@@ lines) */
+.git-manager-diff-hunk {
+  padding: 4px 16px;
+  background: rgba(155, 124, 240, 0.06);
+  color: var(--color-in-progress);
+  font-size: 0.72rem;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+/* Diff line container */
+.git-manager-diff-line {
+  display: flex;
+  min-height: 20px;
+  line-height: 20px;
+}
+
+/* Line number gutters */
+.git-manager-diff-line-num {
+  display: inline-block;
+  width: 50px;
+  min-width: 50px;
+  padding: 0 8px;
+  text-align: right;
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+  user-select: none;
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* Line content */
+.git-manager-diff-line-content {
+  flex: 1;
+  padding: 0 16px 0 8px;
+  white-space: pre;
+  min-width: 0;
+}
+
+/* Addition line — green */
+.git-manager-diff-line.added {
+  background: rgba(52, 211, 153, 0.08);
+}
+
+.git-manager-diff-line.added .git-manager-diff-line-content {
+  color: var(--color-completed);
+}
+
+.git-manager-diff-line.added .git-manager-diff-line-num {
+  background: rgba(52, 211, 153, 0.05);
+  color: var(--color-completed);
+  opacity: 0.5;
+}
+
+/* Deletion line — red */
+.git-manager-diff-line.removed {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.git-manager-diff-line.removed .git-manager-diff-line-content {
+  color: var(--color-failed);
+}
+
+.git-manager-diff-line.removed .git-manager-diff-line-num {
+  background: rgba(239, 68, 68, 0.05);
+  color: var(--color-failed);
+  opacity: 0.5;
+}
+
+/* Context line — unchanged */
+.git-manager-diff-line.context {
+  background: transparent;
+}
+
+.git-manager-diff-line.context .git-manager-diff-line-content {
+  color: var(--text-secondary);
+}
+
+/* Inline word-level highlight */
+.git-manager-diff-highlight-add {
+  background: rgba(52, 211, 153, 0.2);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.git-manager-diff-highlight-remove {
+  background: rgba(239, 68, 68, 0.2);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* Diff toolbar (unified/split toggle, expand all, etc.) */
+.git-manager-diff-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.git-manager-diff-toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.git-manager-diff-toolbar-btn:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+
+.git-manager-diff-toolbar-btn.active {
+  color: var(--color-in-progress);
+  background: rgba(155, 124, 240, 0.1);
+  border-color: rgba(155, 124, 240, 0.3);
+}
+
+/* Diff stat summary */
+.git-manager-diff-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.git-manager-diff-stats-add {
+  color: var(--color-completed);
+}
+
+.git-manager-diff-stats-del {
+  color: var(--color-failed);
+}
+
+/* ============================================================
+   Branch Panel — branch list + merge/rebase controls
+   ============================================================ */
+.git-manager-branches {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Branch search/filter input */
+.git-manager-branch-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.git-manager-branch-search-input {
+  flex: 1;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.git-manager-branch-search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.git-manager-branch-search-input:focus {
+  border-color: var(--color-in-progress);
+  box-shadow: 0 0 0 1px rgba(155, 124, 240, 0.2);
+}
+
+/* Branch section (Local / Remote) */
+.git-manager-branch-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.git-manager-branch-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.git-manager-branch-section-header:hover {
+  background: var(--surface-hover);
+}
+
+/* Collapse chevron */
+.git-manager-branch-section-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+
+.git-manager-branch-section-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+/* Branch list */
+.git-manager-branch-list {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Individual branch item */
+.git-manager-branch-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 12px 5px 24px;
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: none;
+  min-height: 30px;
+}
+
+.git-manager-branch-item:hover {
+  background: var(--surface-hover);
+}
+
+.git-manager-branch-item.selected {
+  background: var(--surface);
+}
+
+/* Current branch indicator */
+.git-manager-branch-item.current {
+  border-left: 2px solid var(--color-in-progress);
+  padding-left: 22px;
+}
+
+.git-manager-branch-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.git-manager-branch-item.current .git-manager-branch-icon {
+  color: var(--color-in-progress);
+}
+
+.git-manager-branch-name {
+  flex: 1;
+  min-width: 0;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.git-manager-branch-item.current .git-manager-branch-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* Ahead/behind badges */
+.git-manager-branch-tracking {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.git-manager-branch-ahead,
+.git-manager-branch-behind {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.65rem;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.git-manager-branch-ahead {
+  color: var(--color-completed);
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.git-manager-branch-behind {
+  color: var(--color-failed);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+/* Branch action buttons (on hover) */
+.git-manager-branch-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+  flex-shrink: 0;
+}
+
+.git-manager-branch-item:hover .git-manager-branch-actions {
+  opacity: 1;
+}
+
+/* ============================================================
+   History Panel — commit log table
+   ============================================================ */
+.git-manager-history {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* History toolbar (search, filter, refresh) */
+.git-manager-history-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.git-manager-history-search {
+  flex: 1;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.git-manager-history-search::placeholder {
+  color: var(--text-tertiary);
+}
+
+.git-manager-history-search:focus {
+  border-color: var(--color-in-progress);
+  box-shadow: 0 0 0 1px rgba(155, 124, 240, 0.2);
+}
+
+/* History table */
+.git-manager-history-table {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* History row */
+.git-manager-history-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: background 0.15s;
+  min-height: 36px;
+}
+
+.git-manager-history-row:hover {
+  background: var(--surface-hover);
+}
+
+.git-manager-history-row.selected {
+  background: var(--surface);
+}
+
+/* Graph column — space for branch graph lines */
+.git-manager-history-graph {
+  width: 40px;
+  min-width: 40px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* Graph node (commit dot) */
+.git-manager-history-graph-node {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-in-progress);
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+/* Graph line (connecting commits) */
+.git-manager-history-graph-line {
+  position: absolute;
+  width: 2px;
+  background: rgba(155, 124, 240, 0.3);
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 0;
+}
+
+/* Branch merge/fork lines */
+.git-manager-history-graph-branch {
+  position: absolute;
+  width: 2px;
+  background: rgba(52, 211, 153, 0.3);
+  z-index: 0;
+}
+
+/* Commit hash */
+.git-manager-history-hash {
+  width: 65px;
+  min-width: 65px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--color-in-progress);
+  opacity: 0.7;
+  flex-shrink: 0;
+  user-select: all;
+}
+
+/* Commit message */
+.git-manager-history-message {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Branch/tag decorations */
+.git-manager-history-refs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.git-manager-history-ref {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: var(--sans);
+  font-size: 0.65rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.git-manager-history-ref.branch {
+  color: var(--color-in-progress);
+  background: rgba(155, 124, 240, 0.12);
+  border: 1px solid rgba(155, 124, 240, 0.2);
+}
+
+.git-manager-history-ref.tag {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.git-manager-history-ref.head {
+  color: var(--color-completed);
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+/* Author */
+.git-manager-history-author {
+  width: 100px;
+  min-width: 100px;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+/* Date */
+.git-manager-history-date {
+  width: 80px;
+  min-width: 80px;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* Expanded commit details */
+.git-manager-history-details {
+  padding: 10px 16px 14px 56px;
+  background: rgba(255, 255, 255, 0.015);
+  border-bottom: 1px solid var(--border);
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  animation: fadeIn 0.15s ease;
+}
+
+.git-manager-history-details-header {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-bottom: 8px;
+}
+
+.git-manager-history-details-header .git-manager-label {
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-right: 6px;
+}
+
+.git-manager-history-details-hash {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  user-select: all;
+}
+
+.git-manager-history-details-parents {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+}
+
+.git-manager-history-details-author {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.git-manager-history-details-date {
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+}
+
+.git-manager-history-details-body {
+  margin: 6px 0;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.git-manager-history-details-body pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.git-manager-history-details-diff {
+  margin-top: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.git-manager-history-details-diff-content {
+  margin: 0;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.git-manager-history-details-diff::-webkit-scrollbar {
+  width: 6px;
+}
+
+.git-manager-history-details-diff::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.git-manager-history-details-diff::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+/* ============================================================
+   Quick Actions Bar — bottom action strip
+   ============================================================ */
+.git-manager-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* Action button base */
+.git-manager-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.git-manager-action-btn:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+
+.git-manager-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Primary action variant */
+.git-manager-action-btn.primary {
+  background: rgba(155, 124, 240, 0.1);
+  border-color: rgba(155, 124, 240, 0.25);
+  color: var(--color-in-progress);
+}
+
+.git-manager-action-btn.primary:hover {
+  background: rgba(155, 124, 240, 0.18);
+  border-color: rgba(155, 124, 240, 0.4);
+}
+
+/* Success action variant */
+.git-manager-action-btn.success {
+  background: rgba(52, 211, 153, 0.08);
+  border-color: rgba(52, 211, 153, 0.2);
+  color: var(--color-completed);
+}
+
+.git-manager-action-btn.success:hover {
+  background: rgba(52, 211, 153, 0.15);
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+/* Danger action variant */
+.git-manager-action-btn.danger {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.15);
+  color: var(--color-failed);
+}
+
+.git-manager-action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Warning action variant */
+.git-manager-action-btn.warning {
+  background: rgba(249, 115, 22, 0.06);
+  border-color: rgba(249, 115, 22, 0.15);
+  color: var(--color-blocked);
+}
+
+.git-manager-action-btn.warning:hover {
+  background: rgba(249, 115, 22, 0.12);
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+/* Action button icon */
+.git-manager-action-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+/* Separator in quick actions */
+.git-manager-quick-actions-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* Branch indicator in quick actions */
+.git-manager-quick-actions-branch {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: var(--color-in-progress);
+  margin-right: auto;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: rgba(155, 124, 240, 0.08);
+}
+
+/* ============================================================
+   Confirmation / Safety Dialog
+   ============================================================ */
+.git-manager-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: git-manager-fade-in 0.15s ease-out;
+}
+
+@keyframes git-manager-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.git-manager-dialog {
+  width: 420px;
+  max-width: 90vw;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+  animation: git-manager-dialog-enter 0.15s ease-out;
+  overflow: hidden;
+}
+
+@keyframes git-manager-dialog-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Dialog danger level indicators */
+.git-manager-dialog.danger {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.git-manager-dialog.warning {
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.git-manager-dialog.safe {
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+/* Dialog header */
+.git-manager-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 12px;
+}
+
+.git-manager-dialog-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.git-manager-dialog.danger .git-manager-dialog-icon {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--color-failed);
+}
+
+.git-manager-dialog.warning .git-manager-dialog-icon {
+  background: rgba(249, 115, 22, 0.12);
+  color: var(--color-blocked);
+}
+
+.git-manager-dialog.safe .git-manager-dialog-icon {
+  background: rgba(52, 211, 153, 0.12);
+  color: var(--color-completed);
+}
+
+.git-manager-dialog-title {
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* Dialog body */
+.git-manager-dialog-body {
+  padding: 0 20px 16px;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+/* Affected items list in dialog */
+.git-manager-dialog-affected {
+  margin-top: 10px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  max-height: 140px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  line-height: 1.6;
+}
+
+/* Dialog footer */
+.git-manager-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.01);
+}
+
+/* Dialog buttons */
+.git-manager-dialog-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+
+.git-manager-dialog-btn:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+  border-color: var(--border-hover);
+}
+
+/* Cancel button */
+.git-manager-dialog-btn.cancel {
+  border-color: transparent;
+}
+
+/* Danger confirm button */
+.git-manager-dialog-btn.confirm-danger {
+  background: var(--color-failed);
+  border-color: var(--color-failed);
+  color: #fff;
+}
+
+.git-manager-dialog-btn.confirm-danger:hover {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+/* Warning confirm button */
+.git-manager-dialog-btn.confirm-warning {
+  background: var(--color-blocked);
+  border-color: var(--color-blocked);
+  color: #fff;
+}
+
+.git-manager-dialog-btn.confirm-warning:hover {
+  background: #ea580c;
+  border-color: #ea580c;
+}
+
+/* Safe confirm button */
+.git-manager-dialog-btn.confirm-safe {
+  background: var(--color-completed);
+  border-color: var(--color-completed);
+  color: #0a0a0c;
+}
+
+.git-manager-dialog-btn.confirm-safe:hover {
+  background: #2dd4a0;
+  border-color: #2dd4a0;
+}
+
+/* ============================================================
+   Loading Spinner
+   ============================================================ */
+.git-manager-spinner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  animation: git-manager-spin 0.8s linear infinite;
+}
+
+.git-manager-spinner-circle {
+  width: 100%;
+  height: 100%;
+  border: 2px solid rgba(155, 124, 240, 0.2);
+  border-top-color: var(--color-in-progress);
+  border-radius: 50%;
+}
+
+@keyframes git-manager-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Spinner sizes */
+.git-manager-spinner.sm {
+  width: 14px;
+  height: 14px;
+}
+
+.git-manager-spinner.lg {
+  width: 32px;
+  height: 32px;
+}
+
+/* ============================================================
+   Empty States
+   ============================================================ */
+.git-manager-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  padding: 32px 24px;
+  gap: 10px;
+  user-select: none;
+}
+
+.git-manager-empty-icon {
+  width: 48px;
+  height: 48px;
+  opacity: 0.2;
+  color: var(--text-tertiary);
+}
+
+.git-manager-empty-title {
+  font-family: var(--sans);
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.git-manager-empty-text {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.git-manager-empty-action {
+  margin-top: 8px;
+}
+
+.git-manager-empty-message {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 16px;
+}
+
+/* Select dropdown — filter controls */
+.git-manager-select {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  max-width: 160px;
+}
+
+.git-manager-select:focus {
+  border-color: var(--color-in-progress);
+  box-shadow: 0 0 0 1px rgba(155, 124, 240, 0.2);
+}
+
+/* ============================================================
+   Loading State — full panel overlay
+   ============================================================ */
+.git-manager-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 12px;
+  color: var(--text-tertiary);
+  font-family: var(--sans);
+  font-size: 0.82rem;
+}
+
+/* ============================================================
+   Error State
+   ============================================================ */
+.git-manager-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 10px;
+  padding: 32px 24px;
+}
+
+.git-manager-error-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--color-failed);
+  opacity: 0.7;
+}
+
+.git-manager-error-message {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--color-failed);
+  text-align: center;
+  max-width: 320px;
+}
+
+.git-manager-error-details {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.12);
+  border-radius: 6px;
+  padding: 8px 12px;
+  max-width: 400px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* ============================================================
+   Tooltip — generic tooltip for git-manager
+   ============================================================ */
+.git-manager-tooltip {
+  position: absolute;
+  z-index: 500;
+  padding: 4px 8px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: git-manager-tooltip-in 0.1s ease-out;
+}
+
+@keyframes git-manager-tooltip-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================
+   Badge — generic count/status badge
+   ============================================================ */
+.git-manager-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  font-family: var(--sans);
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.git-manager-badge.purple {
+  background: rgba(155, 124, 240, 0.15);
+  color: var(--color-in-progress);
+}
+
+.git-manager-badge.green {
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--color-completed);
+}
+
+.git-manager-badge.red {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-failed);
+}
+
+.git-manager-badge.orange {
+  background: rgba(249, 115, 22, 0.15);
+  color: var(--color-blocked);
+}
+
+.git-manager-badge.gray {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-tertiary);
+}
+
+/* ============================================================
+   Stash List
+   ============================================================ */
+.git-manager-stash-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.git-manager-stash-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.git-manager-stash-item:hover {
+  background: var(--surface-hover);
+}
+
+.git-manager-stash-index {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: var(--color-in-progress);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+.git-manager-stash-message {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.git-manager-stash-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+  flex-shrink: 0;
+}
+
+.git-manager-stash-item:hover .git-manager-stash-actions {
+  opacity: 1;
+}
+
+/* ============================================================
+   Merge/Rebase Conflict Indicator
+   ============================================================ */
+.git-manager-conflict-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(249, 115, 22, 0.08);
+  border: 1px solid rgba(249, 115, 22, 0.2);
+  border-radius: 6px;
+  margin: 8px 12px;
+  flex-shrink: 0;
+}
+
+.git-manager-conflict-banner-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: var(--color-blocked);
+  flex-shrink: 0;
+}
+
+.git-manager-conflict-banner-text {
+  flex: 1;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--color-blocked);
+  font-weight: 500;
+}
+
+.git-manager-conflict-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   Keyboard Shortcut Hints
+   ============================================================ */
+.git-manager-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.62rem;
+  color: var(--text-tertiary);
+  line-height: 1;
+}
+
+/* ============================================================
+   Scrollbar overrides for git-manager panels
+   ============================================================ */
+.git-manager-file-list::-webkit-scrollbar,
+.git-manager-branch-list::-webkit-scrollbar,
+.git-manager-history-table::-webkit-scrollbar,
+.git-manager-diff::-webkit-scrollbar,
+.git-manager-stash-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.git-manager-file-list::-webkit-scrollbar-track,
+.git-manager-branch-list::-webkit-scrollbar-track,
+.git-manager-history-table::-webkit-scrollbar-track,
+.git-manager-diff::-webkit-scrollbar-track,
+.git-manager-stash-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.git-manager-file-list::-webkit-scrollbar-thumb,
+.git-manager-branch-list::-webkit-scrollbar-thumb,
+.git-manager-history-table::-webkit-scrollbar-thumb,
+.git-manager-diff::-webkit-scrollbar-thumb,
+.git-manager-stash-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+
+.git-manager-file-list::-webkit-scrollbar-thumb:hover,
+.git-manager-branch-list::-webkit-scrollbar-thumb:hover,
+.git-manager-history-table::-webkit-scrollbar-thumb:hover,
+.git-manager-diff::-webkit-scrollbar-thumb:hover,
+.git-manager-stash-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ============================================================
+   Quick Actions Bar — compact bottom toolbar with centered modal
+   ============================================================ */
+.git-manager-quick-actions-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  min-height: 36px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.02);
+  font-family: var(--sans);
+  position: relative;
+}
+
+/* The whole bar is a clickable button */
+.git-manager-qa-bar-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: background 0.15s;
+}
+
+.git-manager-qa-bar-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.git-manager-qa-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.git-manager-qa-bar-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.git-manager-qa-bar-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.66rem;
+  color: var(--color-in-progress);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.git-manager-qa-bar-right-hint {
+  display: flex;
+  align-items: center;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+/* Inline toast */
+.git-manager-qa-bar-toast {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  animation: git-manager-fade-in 0.15s ease-out;
+  white-space: nowrap;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.git-manager-qa-bar-toast.success {
+  background: rgba(52, 211, 153, 0.1);
+  color: var(--color-completed);
+}
+
+.git-manager-qa-bar-toast.error {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-failed);
+}
+
+/* ============================================================
+   Quick Actions — Centered Modal Popup
+   ============================================================ */
+.git-manager-qa-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: git-manager-fade-in 0.15s ease-out;
+}
+
+.git-manager-qa-modal {
+  width: 520px;
+  max-width: 90vw;
+  max-height: 80vh;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: git-manager-qa-modal-enter 0.18s ease-out;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes git-manager-qa-modal-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.git-manager-qa-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.git-manager-qa-modal-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.git-manager-qa-modal-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: var(--color-in-progress);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  opacity: 0.8;
+  background: rgba(96, 165, 250, 0.08);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.git-manager-qa-modal-close {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.git-manager-qa-modal-close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.git-manager-qa-modal-body {
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.git-manager-qa-modal-category {
+  margin-bottom: 14px;
+}
+
+.git-manager-qa-modal-category:last-child {
+  margin-bottom: 0;
+}
+
+.git-manager-qa-modal-category-label {
+  font-size: 0.64rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0 4px 6px;
+}
+
+.git-manager-qa-modal-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Individual action card in modal */
+.git-manager-qa-modal-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-family: var(--sans);
+  cursor: pointer;
+  transition: background 0.12s;
+  text-align: left;
+  width: 100%;
+}
+
+.git-manager-qa-modal-card:hover:not(.disabled) {
+  background: var(--surface-hover);
+}
+
+.git-manager-qa-modal-card.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.git-manager-qa-modal-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.git-manager-qa-modal-card-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.git-manager-qa-modal-card-icon.primary { color: var(--color-in-progress); }
+.git-manager-qa-modal-card-icon.success { color: var(--color-completed); }
+.git-manager-qa-modal-card-icon.warning { color: var(--color-blocked); }
+.git-manager-qa-modal-card-icon.danger { color: var(--color-failed); }
+
+.git-manager-qa-modal-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  flex: 1;
+  min-width: 0;
+}
+
+.git-manager-qa-modal-card-title {
+  font-size: 0.78rem;
+  font-weight: 550;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.git-manager-qa-modal-card-desc {
+  font-size: 0.66rem;
+  color: var(--text-tertiary);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.git-manager-qa-modal-card-badge {
+  font-size: 0.6rem;
+  color: var(--text-tertiary);
+  opacity: 0.7;
+  flex-shrink: 0;
+}
+
+/* Branch input inside move-to-branch dialog */
+.git-manager-quick-action-branch-input-wrap {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.git-manager-quick-action-branch-label {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.git-manager-quick-action-branch-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.git-manager-quick-action-branch-input:focus {
+  border-color: var(--color-in-progress);
+}
+
+.git-manager-quick-action-branch-input::placeholder {
+  color: var(--text-tertiary);
+  opacity: 0.6;
+}
+
+/* Inline error message in dialogs */
+.git-manager-quick-action-error {
+  margin-top: 10px;
+  padding: 6px 10px;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: 5px;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--color-failed);
+  line-height: 1.4;
+}

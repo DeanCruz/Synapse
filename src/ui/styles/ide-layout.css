@@ -1,0 +1,241 @@
+/* ============================================================
+   IDE Layout — IDEView + WorkspaceTabs
+   ============================================================ */
+
+/* ----- IDE Container — fills parent completely ----- */
+.ide-view {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ----- Workspace Tabs Bar ----- */
+.workspace-tabs {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  min-height: 36px;
+  padding: 0 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.workspace-tabs-scroll {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none; /* Firefox */
+}
+
+.workspace-tabs-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Individual workspace tab */
+.workspace-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+  line-height: 1;
+  flex-shrink: 0;
+  height: 28px;
+  user-select: none;
+}
+
+.workspace-tab:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.workspace-tab.active {
+  color: var(--text);
+  background: var(--surface);
+}
+
+.workspace-tab.active:hover {
+  background: var(--surface-hover);
+}
+
+/* Folder icon in workspace tab */
+.workspace-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.workspace-tab.active .workspace-tab-icon {
+  opacity: 1;
+}
+
+/* Close button on workspace tab */
+.workspace-tab-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+  flex-shrink: 0;
+}
+
+.workspace-tab:hover .workspace-tab-close,
+.workspace-tab.active .workspace-tab-close {
+  opacity: 1;
+}
+
+.workspace-tab-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text);
+}
+
+/* "+" button to add workspace */
+.workspace-tab-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s, background 0.15s;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+.workspace-tab-add:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+/* ----- IDE Main Layout — split panel ----- */
+.ide-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ----- File Explorer Panel ----- */
+.ide-explorer-panel {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.02);
+  border-right: 1px solid var(--border);
+}
+
+/* ----- Draggable Divider ----- */
+.ide-divider {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  flex-shrink: 0;
+  transition: background 0.15s;
+  position: relative;
+  z-index: 10;
+  margin-left: -2px;
+  margin-right: -2px;
+}
+
+.ide-divider:hover,
+.ide-divider.dragging {
+  background: var(--color-in-progress);
+}
+
+/* During drag, prevent text selection and set cursor globally */
+.ide-dragging {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+.ide-dragging * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* ----- Editor Area ----- */
+.ide-editor-area {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Empty state when no file is open */
+.ide-editor-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-tertiary);
+  font-family: var(--sans);
+  gap: 8px;
+  user-select: none;
+}
+
+.ide-editor-empty-icon {
+  width: 48px;
+  height: 48px;
+  opacity: 0.3;
+}
+
+.ide-editor-empty-text {
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+/* ----- Editor Content Area (Monaco host) ----- */
+.ide-editor-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   IDE Chat — floating popup (same as dashboard view)
+   ============================================================ */
+
+/* No IDE-specific overrides — chat uses the same floating popup
+   behavior as the dashboard view (position: fixed, bottom-right). */

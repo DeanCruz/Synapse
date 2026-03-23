@@ -62,6 +62,8 @@ Completion Phase
 - Log panel shows all `logs.json` entries with level filtering
 - Agent detail modals show per-worker `logs[]` from progress files
 
+**IDE exclusion:** The `ide` dashboard must never be claimed for `!p_track` swarms. It is reserved for the IDE agent. Auto-selection always skips `ide`.
+
 ---
 
 ## `!p` Mode — Lightweight Dashboard
@@ -158,6 +160,8 @@ Only three write moments:
 - No live stage badges, no milestone messages, no elapsed timers on individual cards
 - Stat cards show Total and Pending only during execution (no progress files = no Completed/In Progress/Failed counts)
 
+**IDE exclusion:** The `ide` dashboard must never be claimed for `!p` swarms. It is reserved for the IDE agent. Auto-selection always skips `ide`.
+
 ### Worker Prompt Differences
 
 Workers dispatched via `!p` do NOT receive progress file instructions. Their prompts use `TEMPLATE_VERSION: p_v2` and omit:
@@ -191,7 +195,7 @@ When the master agent decides to parallelize automatically (without the user inv
 | Worker progress files | **No** | **Yes** — workers write throughout |
 | master_state.json | **No** | **Yes** — checkpoint after every event |
 | metrics.json | **No** | **Yes** — computed after completion |
-| Master XML task file | **No** | **Yes** — written + updated throughout |
+| Master task file | **No** | **Yes** — written + updated throughout |
 | Plan rationale (.md) | **No** | **Yes** — written during planning |
 | Live dashboard updates | **No** (static during execution) | **Yes** (real-time) |
 | Live stage badges | **No** | **Yes** |
@@ -214,8 +218,8 @@ When the master agent decides to parallelize automatically (without the user inv
 Both `!p` and `!p_track` follow the same dashboard selection priority chain:
 
 1. **Pre-assigned dashboard** — If the agent's system prompt contains a `DASHBOARD ID:` directive, use it unconditionally.
-2. **Explicit flag** — `--dashboard dashboardN` forces a specific slot.
-3. **Auto-selection** — Scan dashboards 1-5 for the first available slot (where `task` is `null` in `initialization.json`).
+2. **Explicit flag** — `--dashboard {id}` forces a specific dashboard.
+3. **Auto-selection** — Scan all dashboards (excluding `ide`) for the first available one (where `task` is `null` in `initialization.json`). The `ide` dashboard is reserved for the IDE agent and must never be claimed for swarms.
 
 Never overwrite an in-progress swarm. See `agent/instructions/dashboard_resolution.md` for the full protocol.
 

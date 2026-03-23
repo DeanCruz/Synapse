@@ -8,9 +8,13 @@ This document defines every file the master agent writes to the dashboard, the e
 
 The server (`server.js`) watches three data sources per dashboard:
 
-- **`dashboards/{dashboardId}/initialization.json`** — Static plan data, watched via `fs.watchFile`
-- **`dashboards/{dashboardId}/logs.json`** — Event log, watched via `fs.watchFile`
-- **`dashboards/{dashboardId}/progress/`** — Worker progress files, watched via `fs.watch` on the directory
+- **`dashboards/{id}/initialization.json`** — Static plan data, watched via `fs.watchFile`
+- **`dashboards/{id}/logs.json`** — Event log, watched via `fs.watchFile`
+- **`dashboards/{id}/progress/`** — Worker progress files, watched via `fs.watch` on the directory
+
+Where `{id}` is `ide` (reserved), a 6-char hex string (e.g., `a3f7k2`), or a legacy `dashboardN` format.
+
+> **Note:** The `ide` dashboard is reserved and permanent — it is not used for swarm data. Master agents must never write swarm initialization, logs, or progress to the `ide` dashboard.
 
 When any file changes, the server immediately pushes the update to every open browser tab via Server-Sent Events (SSE).
 
@@ -22,11 +26,13 @@ Because the server re-reads the full file on every change, **atomic writes are m
 
 **Do not modify or remove the `_instructions` key** present in data files. It is metadata for the master agent and does not affect rendering.
 
+**IDE Dashboard (`ide`):** The `ide` dashboard exists permanently and is reserved for the IDE/Code Explorer agent. It is auto-created on Electron startup and cannot be deleted. Master agents must NEVER claim `ide` for swarm dispatch — always use other dashboards. Do not overwrite `ide`'s `initialization.json` with swarm plan data.
+
 ---
 
 ## initialization.json — Static Plan Data
 
-**Location:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
+**Location:** `{tracker_root}/dashboards/{id}/initialization.json`
 
 ### Write-Once Rule — NON-NEGOTIABLE
 
@@ -93,7 +99,7 @@ Previous swarm records. Populated when the master moves a completed swarm to his
 ### Write Rules
 
 - Write the full `task` object, all `agents[]`, all `waves[]`, and all `chains[]` (if applicable) in a single atomic write
-- Clear `dashboards/{dashboardId}/progress/` directory before writing
+- Clear `dashboards/{id}/progress/` directory before writing
 - **This is the ONLY write to initialization.json** — it is write-once after the planning phase
 - Never write partial JSON — an invalid file silently stops all dashboard updates
 - Always use 2-space indent when stringifying
@@ -114,7 +120,7 @@ When a worker fails, the master appends a repair task to `initialization.json`:
 
 ## logs.json — Event Log
 
-**Location:** `{tracker_root}/dashboards/{dashboardId}/logs.json`
+**Location:** `{tracker_root}/dashboards/{id}/logs.json`
 
 The log panel reads entirely from this file. Each entry in `entries[]` becomes one row in the dashboard log panel.
 
@@ -157,7 +163,7 @@ The log panel reads entirely from this file. Each entry in `entries[]` becomes o
 
 ## master_state.json — State Checkpoint
 
-**Location:** `{tracker_root}/dashboards/{dashboardId}/master_state.json`
+**Location:** `{tracker_root}/dashboards/{id}/master_state.json`
 
 The master's state checkpoint, written after every dispatch event (worker dispatched, completed, or failed) to enable recovery after context compaction.
 
@@ -213,7 +219,7 @@ When context compaction causes the master to lose track of state:
 
 ## metrics.json — Swarm Performance Metrics
 
-**Location:** `{tracker_root}/dashboards/{dashboardId}/metrics.json`
+**Location:** `{tracker_root}/dashboards/{id}/metrics.json`
 
 Swarm performance metrics — written **once** after all tasks complete. Contains elapsed time, efficiency ratios, duration distribution, and parallelism statistics. This file enables historical performance comparison across swarms and helps calibrate future task decomposition.
 
@@ -325,7 +331,7 @@ During long-running swarms, context compaction may discard the master's cached u
 
 **Recovery:**
 
-1. Read all progress files in `{tracker_root}/dashboards/{dashboardId}/progress/` where `status === "completed"`.
+1. Read all progress files in `{tracker_root}/dashboards/{id}/progress/` where `status === "completed"`.
 2. For each, extract `task_id`, `summary`, `milestones[]`, `deviations[]`, and scan `logs[]` for `"warn"`/`"error"` entries.
 3. Rebuild the upstream result cache from these fields. Note: `FILES CHANGED` data (from the worker's return) is lost after compaction — recover what you can from summaries and milestones.
 4. Log a `"warn"` entry to `logs.json`: `"Context compaction detected — rebuilt upstream cache from {N} progress files. File change data may be incomplete."`

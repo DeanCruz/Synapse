@@ -4,7 +4,7 @@ Use these command specs as the canonical procedures for swarm execution.
 
 | Command | Use When | Source File |
 |---|---|---|
-| `!p_track {prompt}` | Full tracked swarm with dashboard, XML plan, logs, and dependency-aware dispatch | `/_commands/p_track.md` |
+| `!p_track {prompt}` | Full tracked swarm with dashboard, task plan, logs, and dependency-aware dispatch | `/_commands/p_track.md` |
 | `!p {prompt}` | Lightweight parallel execution without the full tracking flow | `/_commands/p.md` |
 | `!master_plan_track {prompt}` | Higher-level coordination across multiple streams or swarms | `/_commands/master_plan_track.md` |
 | `!dispatch [dashboardId] {task_id \| --ready}` | Manually dispatch one pending task or all ready tasks | `/_commands/dispatch.md` |
@@ -20,7 +20,7 @@ Use these command specs as the canonical procedures for swarm execution.
 
 ## Shared Swarm Outputs
 
-- `/tasks/{MM_DD_YY}/parallel_{task_name}.xml`
+- `/tasks/{MM_DD_YY}/parallel_{task_name}.json`
 - `/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
 - `/dashboards/{dashboardId}/initialization.json`
 - `/dashboards/{dashboardId}/logs.json`

@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Modal from './Modal.jsx';
+import { getDashboardAdditionalContext } from '../../utils/dashboardProjects.js';
 
 function buildPlanningPrompt(userPrompt) {
   return (
@@ -137,6 +138,7 @@ export default function PlanningModal({ onClose, dashboardId, projectPath, onPla
         taskId: '_planner',
         dashboardId,
         projectDir: projectPath || null,
+        additionalContextDirs: getDashboardAdditionalContext(dashboardId) || [],
         prompt: planPrompt,
         systemPrompt: 'You are a task planner. Output ONLY valid JSON matching the initialization.json schema. No markdown, no explanation — just the JSON object.',
         model: settings.defaultModel || undefined,

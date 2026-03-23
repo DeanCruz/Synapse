@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { renderMarkdown } from '../utils/markdown.js';
-import { getDashboardProject } from '../utils/dashboardProjects.js';
+import { getDashboardProject, getDashboardAdditionalContext } from '../utils/dashboardProjects.js';
 
 // Strip ANSI escape codes and terminal control characters from text
 function stripAnsi(str) {
@@ -203,7 +203,7 @@ function ConversationMessage({ msg, isLatestThinking }) {
   }
   if (msg.type === 'system') {
     return (
-      <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '')}>
+      <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '') + (msg.isCompaction ? ' claude-compaction' : '')}>
         {msg.text}
       </div>
     );
@@ -225,7 +225,7 @@ function ConversationMessage({ msg, isLatestThinking }) {
   );
 }
 
-export default function ClaudeView({ onClose, hideHeader }) {
+export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const api = window.electronAPI || null;
   const state = useAppState();
   const dispatch = useDispatch();
@@ -262,6 +262,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
   const activeTabRef = useRef(activeTabId);
 
   const conversationRef = useRef(null);
+  // Smart scroll — track whether user is at bottom, count unseen messages
+  const isAtBottomRef = useRef(true);
+  const prevMsgLengthRef = useRef(0);
+  const [newMsgCount, setNewMsgCount] = useState(0);
   // Track all active task IDs (multiple workers can be running)
   const activeTaskIdsRef = useRef(new Set());
   const codexStreamedTaskIdsRef = useRef(new Set());
@@ -274,6 +278,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
   // Stable refs so IPC listeners always call latest functions
   const handleChunkRef = useRef(null);
   const finishRef = useRef(null);
+  // Throttled preview dispatch timer for sidebar chat previews
+  const previewFlushTimerRef = useRef(null);
 
   // Keep refs in sync for async operations
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -345,26 +351,71 @@ export default function ClaudeView({ onClose, hideHeader }) {
     prevTabRef.current = activeTabId;
   }, [dashboardId, activeTabId]);
 
-  // Auto-scroll on new messages or dashboard switch
-  // Uses messages.length + last message text length to detect both new messages and content updates
+  // Scroll helpers
   const scrollTrigger = messages.length + (messages[messages.length - 1]?.text?.length || 0);
   function scrollToBottom() {
     if (!conversationRef.current) return;
     conversationRef.current.scrollTop = conversationRef.current.scrollHeight;
   }
-  useEffect(() => {
-    // Double-rAF ensures the DOM has been painted before we measure scrollHeight
-    requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
-  }, [scrollTrigger, dashboardId, activeTabId]);
 
-  // Scroll to bottom on initial mount and whenever the conversation ref attaches
+  // Track scroll position — detect when user scrolls away from bottom
   useEffect(() => {
-    // Immediate attempt + delayed fallback to catch late-rendering content
+    const el = conversationRef.current;
+    if (!el) return;
+    function handleScroll() {
+      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+      isAtBottomRef.current = atBottom;
+      if (atBottom) setNewMsgCount(0);
+    }
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Smart auto-scroll — only scroll if user is near bottom, otherwise count new messages
+  useEffect(() => {
+    if (isAtBottomRef.current) {
+      requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
+    } else {
+      const added = messages.length - prevMsgLengthRef.current;
+      if (added > 0) setNewMsgCount(c => c + added);
+    }
+    prevMsgLengthRef.current = messages.length;
+  }, [scrollTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll to bottom on dashboard/tab switch (always)
+  useEffect(() => {
+    isAtBottomRef.current = true;
+    setNewMsgCount(0);
+    prevMsgLengthRef.current = messages.length;
+    requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
+  }, [dashboardId, activeTabId]); // eslint-disable-line react-hooks-exhaustive-deps
+
+  // Scroll to bottom on initial mount
+  useEffect(() => {
+    isAtBottomRef.current = true;
     scrollToBottom();
     requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
     const timer = setTimeout(scrollToBottom, 100);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scroll to bottom when chat panel expands from minimized (e.g. sidebar click, expand button)
+  const prevViewModeRef = useRef(viewMode);
+  useEffect(() => {
+    const prev = prevViewModeRef.current;
+    prevViewModeRef.current = viewMode;
+    if (prev === 'minimized' && viewMode && viewMode !== 'minimized') {
+      isAtBottomRef.current = true;
+      setNewMsgCount(0);
+      requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
+    }
+  }, [viewMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function scrollToNew() {
+    scrollToBottom();
+    isAtBottomRef.current = true;
+    setNewMsgCount(0);
+  }
 
   // Load conversation list when history panel opens (filtered by current dashboard)
   useEffect(() => {
@@ -479,6 +530,8 @@ export default function ClaudeView({ onClose, hideHeader }) {
                   const cleaned = stripAnsi(block.text);
                   if (cleaned && cleaned.trim()) {
                     dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'assistant', text: cleaned } });
+                    // Also update preview for this stashed dashboard
+                    dispatch({ type: 'SET_CHAT_PREVIEW', dashboardId: targetDash, text: cleaned.substring(0, 60), isStreaming: true });
                   }
                 } else if (block.type === 'tool_use' || block.type === 'server_tool_use') {
                   dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
@@ -579,6 +632,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         api.off('worker-output', workerListener);
         api.off('worker-complete', completeListener);
       }
+      if (previewFlushTimerRef.current) clearTimeout(previewFlushTimerRef.current);
     };
   }, [api, dispatch]);
 
@@ -619,6 +673,21 @@ export default function ClaudeView({ onClose, hideHeader }) {
       currentTextIndexRef.current = prev.length;
       return [...prev, newMsg];
     }});
+
+    // Throttled preview update for sidebar
+    if (!previewFlushTimerRef.current) {
+      previewFlushTimerRef.current = setTimeout(() => {
+        previewFlushTimerRef.current = null;
+        const msgs = messagesRef.current;
+        if (msgs.length > 0) {
+          const last = msgs[msgs.length - 1];
+          if (last.type === 'assistant' && last.text) {
+            const preview = last.text.length > 60 ? '...' + last.text.slice(-57) : last.text;
+            dispatch({ type: 'SET_CHAT_PREVIEW', dashboardId, text: preview, isStreaming: true });
+          }
+        }
+      }, 200);
+    }
   }
 
   function commitThinkingBuffer() {
@@ -721,7 +790,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
       } catch (e) {
         // Non-JSON output from CLI — strip ANSI and skip progress/spinner lines
         const cleaned = stripAnsi(trimmed).trim();
-        if (cleaned && !isProgressBarLine(cleaned)) {
+        if (cleaned && /auto.?compact|compacting conversation/i.test(cleaned)) {
+          flushText();
+          appendMsg({ type: 'system', text: 'Context is being compacted — earlier messages may be summarized', isCompaction: true });
+        } else if (cleaned && !isProgressBarLine(cleaned)) {
           appendTextContent(cleaned + '\n');
         }
       }
@@ -740,7 +812,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
             text: `Connected — model: ${evt.model || '?'}, ${tools.length} tools available`,
           });
         } else {
-          appendMsg({ type: 'system', text: evt.message || JSON.stringify(evt) });
+          const msg = evt.message || JSON.stringify(evt);
+          const isCompaction = /compact|context.*(truncat|compress|summar)/i.test(msg)
+            || evt.subtype === 'auto_compact' || evt.subtype === 'compact';
+          appendMsg({ type: 'system', text: isCompaction ? 'Context is being compacted — earlier messages may be summarized' : msg, isCompaction });
         }
         break;
       }
@@ -896,6 +971,22 @@ export default function ClaudeView({ onClose, hideHeader }) {
       dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
       dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
       setProcessingTabId(null);
+    }
+
+    // Clear preview throttle timer
+    if (previewFlushTimerRef.current) {
+      clearTimeout(previewFlushTimerRef.current);
+      previewFlushTimerRef.current = null;
+    }
+
+    // Update preview to show final message (not streaming)
+    const finalMsgs = messagesRef.current;
+    if (finalMsgs.length > 0) {
+      const lastMsg = finalMsgs[finalMsgs.length - 1];
+      if (lastMsg.type === 'assistant' && lastMsg.text) {
+        const preview = lastMsg.text.length > 60 ? '...' + lastMsg.text.slice(-57) : lastMsg.text;
+        dispatch({ type: 'SET_CHAT_PREVIEW', dashboardId, text: preview, isStreaming: false });
+      }
     }
     currentTextIndexRef.current = null;
     flushText();
@@ -1078,6 +1169,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
     const currentMsgs = messagesRef.current;
 
     appendMsg({ type: 'user', text, attachments });
+    dispatch({ type: 'SET_CHAT_PREVIEW', dashboardId, text: text.substring(0, 60), isStreaming: false });
+    // User sent a message — always scroll to show it
+    isAtBottomRef.current = true;
+    setNewMsgCount(0);
     dispatch({ type: 'CLAUDE_SET_PROCESSING', value: true });
     dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
     currentTextIndexRef.current = null;
@@ -1094,6 +1189,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
       const settings = await api.getSettings();
       const perDashboardPath = getDashboardProject(dashboardId);
       const projectDir = perDashboardPath || settings.activeProjectPath || null;
+      const additionalContextDirs = getDashboardAdditionalContext(dashboardId) || [];
       const provider = settings.agentProvider || 'claude';
       const selectedModel = resolveModel(provider, model || settings.defaultModel);
       const cliPath = provider === 'codex'
@@ -1101,7 +1197,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         : (settings.claudeCliPath || null);
 
       // Only inject system prompt on fresh sessions — resumed sessions already have context
-      const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir, dashboardId);
+      const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir, dashboardId, additionalContextDirs);
 
       // Build conversation history context.
       // For resumed sessions, the CLI already has full history — but we still inject
@@ -1139,6 +1235,7 @@ export default function ClaudeView({ onClose, hideHeader }) {
         cliPath,
         dangerouslySkipPermissions: settings.dangerouslySkipPermissions || false,
         projectDir,
+        additionalContextDirs,
       });
     } catch (err) {
       appendMsg({ type: 'system', text: 'Error: ' + (err.message || String(err)), isError: true });
@@ -1388,22 +1485,36 @@ export default function ClaudeView({ onClose, hideHeader }) {
   }
 
   function newTab() {
-    // If current tab is empty (only welcome message), don't create another
+    // Don't clear an already-empty conversation
     if (messages.length <= 1 && messages[0]?.id === 'welcome') return;
-    // Stash current tab's input text, new tab starts clean
-    promptStashRef.current[dashboardId + ':' + activeTabId] = prompt;
-    setPrompt('');
-    // Flush streaming buffers before switching
-    if (textFlushTimerRef.current) { clearTimeout(textFlushTimerRef.current); textFlushTimerRef.current = null; }
-    commitTextBuffer();
-    if (thinkingFlushTimerRef.current) { clearTimeout(thinkingFlushTimerRef.current); thinkingFlushTimerRef.current = null; }
-    commitThinkingBuffer();
-    // Save current tab's conversation to disk before creating new tab
+
+    // Save current conversation to history before clearing
     saveTabToDisk(activeTabId);
-    dispatch({ type: 'CLAUDE_NEW_TAB' });
+
+    // Reset session refs
+    sessionIdRef.current = null;
+    convIdRef.current = null;
+    convCreatedRef.current = null;
+    delete sessionMapRef.current[dashboardId + ':' + activeTabId];
+
+    // Reset streaming state
     currentTextIndexRef.current = null;
     currentThinkingIndexRef.current = null;
     streamingBlocksRef.current = {};
+    textBufferRef.current = '';
+    thinkingBufferRef.current = '';
+    if (textFlushTimerRef.current) {
+      clearTimeout(textFlushTimerRef.current);
+      textFlushTimerRef.current = null;
+    }
+    if (thinkingFlushTimerRef.current) {
+      clearTimeout(thinkingFlushTimerRef.current);
+      thinkingFlushTimerRef.current = null;
+    }
+    toolCallIndexRef.current = {};
+
+    // Clear messages to fresh state (also clears localStorage entry + pending attachments)
+    dispatch({ type: 'CLAUDE_CLEAR_MESSAGES' });
   }
 
   function closeTab(tabId) {
@@ -1454,6 +1565,10 @@ export default function ClaudeView({ onClose, hideHeader }) {
       sessionIdRef.current = full.sessionId || null;
       convIdRef.current = full.id;
       convCreatedRef.current = full.created;
+      // Scroll to bottom of loaded conversation
+      isAtBottomRef.current = true;
+      setNewMsgCount(0);
+      requestAnimationFrame(() => requestAnimationFrame(scrollToBottom));
       setShowHistory(false);
     } catch (e) {
       // silently ignore
@@ -1593,11 +1708,16 @@ export default function ClaudeView({ onClose, hideHeader }) {
               />
             ));
           })()}
-          {/* Show animated dots when processing on THIS tab and last message isn't already a thinking block */}
-          {isProcessing && processingTabId === activeTabId && messages.length > 0 && messages[messages.length - 1]?.type !== 'thinking' && (
+          {/* Show animated dots whenever processing on THIS tab */}
+          {isProcessing && processingTabId === activeTabId && (
             <ProcessingIndicator />
           )}
         </div>
+        {newMsgCount > 0 && (
+          <button className="claude-new-messages" onClick={scrollToNew}>
+            {newMsgCount} new message{newMsgCount !== 1 ? 's' : ''} ↓
+          </button>
+        )}
       </div>
 
       <div className="claude-suggestion-chips">

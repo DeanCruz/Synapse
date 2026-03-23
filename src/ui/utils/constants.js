@@ -65,8 +65,13 @@ export const TIMELINE_COLORS = {
 // Dashboard labels are derived dynamically from dashboard IDs.
 // No hardcoded list — the sidebar is driven by dashboardList from the server.
 export function getDashboardLabel(id) {
-  const num = id.replace('dashboard', '');
-  return `Dashboard ${num}`;
+  // Backwards compat for legacy dashboardN format
+  if (id && id.startsWith('dashboard')) {
+    const num = id.replace('dashboard', '');
+    return `Dashboard ${num}`;
+  }
+  // New short hex IDs — display uppercase
+  return id ? id.toUpperCase() : 'Unknown';
 }
 
 export function initStatusColorsFromCSS() {

@@ -142,25 +142,13 @@ export default function Header() {
             <span>History</span>
           </button>
 
-          <button
-            className="header-action-btn header-export-btn"
-            title="Export swarm data"
-            aria-label="Export swarm data as JSON"
-            onClick={handleExport}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <path d="M8 2v8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-              <path d="M5 7l3 3 3-3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M2.5 11v2a1 1 0 001 1h9a1 1 0 001-1v-2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-            </svg>
-            <span>Export</span>
-          </button>
+          {/* Export button hidden for now */}
         </div>
 
         {/* Electron-only swarm controls */}
         {isElectron && (
           <div className="header-btn-group">
-            <button className="header-action-btn" title="Commands" onClick={handleCommands}>
+            <button className="header-action-btn header-commands-btn" title="Commands" onClick={handleCommands}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M4 5l4 3-4 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                 <path d="M9 12h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>

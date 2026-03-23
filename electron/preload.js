@@ -19,16 +19,20 @@ const PUSH_CHANNELS = [
   'swarm-state',
   'terminal-output',
   'terminal-exit',
+  'ide-file-change',
+  'heartbeat',
+  'init_state',
+  'tasks_unblocked',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // --- Push events (main → renderer) ---
 
   on: (channel, callback) => {
-    if (!PUSH_CHANNELS.includes(channel)) return;
+    if (!PUSH_CHANNELS.includes(channel)) return () => {};
     const listener = (_event, data) => callback(data);
     ipcRenderer.on(channel, listener);
-    return listener;
+    return () => ipcRenderer.removeListener(channel, listener);
   },
 
   off: (channel, listener) => {
@@ -48,6 +52,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDashboardProgress: (id) => ipcRenderer.invoke('get-dashboard-progress', id),
   clearDashboard: (id) => ipcRenderer.invoke('clear-dashboard', id),
   archiveDashboard: (id) => ipcRenderer.invoke('archive-dashboard', id),
+  reorderDashboards: (orderedIds) => ipcRenderer.invoke('reorder-dashboards', orderedIds),
+  renameDashboard: (id, displayName) => ipcRenderer.invoke('rename-dashboard', id, displayName),
+  getDashboardMeta: () => ipcRenderer.invoke('get-dashboard-meta'),
   saveDashboardHistory: (id) => ipcRenderer.invoke('save-dashboard-history', id),
   exportDashboard: (id) => ipcRenderer.invoke('export-dashboard', id),
   getDashboardMetrics: (id) => ipcRenderer.invoke('get-dashboard-metrics', id),
@@ -105,7 +112,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   listProjectCommands: (projectDir) => ipcRenderer.invoke('list-project-commands', projectDir),
 
   // Chat context
-  getChatSystemPrompt: (projectDir, dashboardId) => ipcRenderer.invoke('get-chat-system-prompt', projectDir, dashboardId),
+  getChatSystemPrompt: (projectDir, dashboardId, additionalContextDirs) => ipcRenderer.invoke('get-chat-system-prompt', projectDir, dashboardId, additionalContextDirs),
   logChatEvent: (dashboardId, entry) => ipcRenderer.invoke('log-chat-event', dashboardId, entry),
 
   // Attachments
@@ -145,4 +152,45 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveTempFile: (base64, mimeType, name) => ipcRenderer.invoke('save-temp-file', base64, mimeType, name),
   selectImageFile: () => ipcRenderer.invoke('select-image-file'),
   readFileAsBase64: (filePath) => ipcRenderer.invoke('read-file-as-base64', filePath),
+
+  // IDE File System
+  ideReadFile: (filePath, workspaceRoot) => ipcRenderer.invoke('ide-read-file', filePath, workspaceRoot),
+  ideWriteFile: (filePath, content, workspaceRoot) => ipcRenderer.invoke('ide-write-file', filePath, content, workspaceRoot),
+  ideReadDir: (dirPath, options) => ipcRenderer.invoke('ide-read-dir', dirPath, options),
+  ideListDir: (dirPath, options) => ipcRenderer.invoke('ide-list-dir', dirPath, options),
+  ideCreateFile: (filePath, content, workspaceRoot) => ipcRenderer.invoke('ide-create-file', filePath, content, workspaceRoot),
+  ideCreateFolder: (dirPath, workspaceRoot) => ipcRenderer.invoke('ide-create-folder', dirPath, workspaceRoot),
+  ideRename: (oldPath, newPath, workspaceRoot) => ipcRenderer.invoke('ide-rename', oldPath, newPath, workspaceRoot),
+  ideDelete: (targetPath, workspaceRoot) => ipcRenderer.invoke('ide-delete', targetPath, workspaceRoot),
+  ideSelectFolder: () => ipcRenderer.invoke('ide-select-folder'),
+
+  // Git Operations
+  gitIsRepo: (repoPath) => ipcRenderer.invoke('git-is-repo', repoPath),
+  gitInit: (repoPath) => ipcRenderer.invoke('git-init', repoPath),
+  gitStatus: (repoPath) => ipcRenderer.invoke('git-status', repoPath),
+  gitDiff: (repoPath, staged) => ipcRenderer.invoke('git-diff', repoPath, staged),
+  gitDiffFile: (repoPath, filePath, staged) => ipcRenderer.invoke('git-diff-file', repoPath, filePath, staged),
+  gitLog: (repoPath, maxCount, extraArgs) => ipcRenderer.invoke('git-log', repoPath, maxCount, extraArgs),
+  gitBranches: (repoPath) => ipcRenderer.invoke('git-branches', repoPath),
+  gitCurrentBranch: (repoPath) => ipcRenderer.invoke('git-current-branch', repoPath),
+  gitStage: (repoPath, files) => ipcRenderer.invoke('git-stage', repoPath, files),
+  gitUnstage: (repoPath, files) => ipcRenderer.invoke('git-unstage', repoPath, files),
+  gitStageAll: (repoPath) => ipcRenderer.invoke('git-stage-all', repoPath),
+  gitUnstageAll: (repoPath) => ipcRenderer.invoke('git-unstage-all', repoPath),
+  gitCommit: (repoPath, message) => ipcRenderer.invoke('git-commit', repoPath, message),
+  gitPush: (repoPath, remote, branch, setUpstream) => ipcRenderer.invoke('git-push', repoPath, remote, branch, setUpstream),
+  gitPull: (repoPath, remote, branch) => ipcRenderer.invoke('git-pull', repoPath, remote, branch),
+  gitFetch: (repoPath, remote) => ipcRenderer.invoke('git-fetch', repoPath, remote),
+  gitCheckout: (repoPath, target) => ipcRenderer.invoke('git-checkout', repoPath, target),
+  gitCreateBranch: (repoPath, branchName, checkout) => ipcRenderer.invoke('git-create-branch', repoPath, branchName, checkout),
+  gitDeleteBranch: (repoPath, branchName, force) => ipcRenderer.invoke('git-delete-branch', repoPath, branchName, force),
+  gitMerge: (repoPath, branchName) => ipcRenderer.invoke('git-merge', repoPath, branchName),
+  gitStash: (repoPath, message) => ipcRenderer.invoke('git-stash', repoPath, message),
+  gitStashPop: (repoPath) => ipcRenderer.invoke('git-stash-pop', repoPath),
+  gitRemotes: (repoPath) => ipcRenderer.invoke('git-remotes', repoPath),
+  gitReset: (repoPath, target, mode) => ipcRenderer.invoke('git-reset', repoPath, target, mode),
+  gitRevert: (repoPath, commitHash) => ipcRenderer.invoke('git-revert', repoPath, commitHash),
+  gitAheadBehind: (repoPath, branch) => ipcRenderer.invoke('git-ahead-behind', repoPath, branch),
+  gitDiscardFile: (repoPath, filePath) => ipcRenderer.invoke('git-discard-file', repoPath, filePath),
+  gitGraph: (repoPath, maxCount) => ipcRenderer.invoke('git-graph', repoPath, maxCount),
 });

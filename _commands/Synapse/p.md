@@ -1,6 +1,6 @@
 # `!p {prompt}`
 
-**Purpose:** Lightweight parallel dispatch — deep planning and high-quality worker prompts with minimal dashboard overhead. The master agent plans, decomposes, and dispatches worker agents with self-contained, context-rich prompts. No XML files, no progress files, no live tracking. Dashboard receives a plan snapshot before dispatch and final results after completion.
+**Purpose:** Lightweight parallel dispatch — deep planning and high-quality worker prompts with minimal dashboard overhead. The master agent plans, decomposes, and dispatches worker agents with self-contained, context-rich prompts. No task files, no progress files, no live tracking. Dashboard receives a plan snapshot before dispatch and final results after completion.
 
 **Syntax:** `!p {prompt}`
 
@@ -122,7 +122,7 @@ Use `subagent_type: "general-purpose"` for each worker.
 
 ### Step 8: Worker prompt construction
 
-**This is the most critical step.** Each worker gets a self-contained, highly detailed prompt. The worker must be able to complete its task using ONLY the information in the prompt plus the tools available to it. No external tracking files, no XML references.
+**This is the most critical step.** Each worker gets a self-contained, highly detailed prompt. The worker must be able to complete its task using ONLY the information in the prompt plus the tools available to it. No external tracking files, no task file references.
 
 ```
 You are executing task {id}: {title}
@@ -316,7 +316,7 @@ Include verification results in the final report.
 
 Write `initialization.json` with a snapshot of the plan:
 
-1. **Resolve the dashboard** — follow the standard dashboard selection priority chain (chat-spawned directive > `--dashboard` flag > auto-select first available slot). See `agent/instructions/dashboard_resolution.md`.
+1. **Resolve the dashboard** — follow the standard dashboard selection priority chain (chat-spawned directive > `--dashboard {id}` flag > auto-select first available slot, excluding the `ide` dashboard which is reserved for the IDE agent). See `agent/instructions/dashboard_resolution.md`.
 2. **Archive if needed** — if the selected dashboard has previous swarm data (`task` is not `null`), archive it first before clearing.
 3. **Clear the `progress/` directory** — remove any leftover progress files.
 4. **Write `initialization.json`** with:

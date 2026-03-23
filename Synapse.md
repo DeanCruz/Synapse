@@ -191,7 +191,7 @@ The system dispatches as many agents as there are ready tasks. If 8 tasks are un
 
 ## The Swarm Builder
 
-Beyond command-line orchestration, Synapse includes a visual swarm builder — a GUI for constructing task graphs without writing JSON or XML.
+Beyond command-line orchestration, Synapse includes a visual swarm builder — a GUI for constructing task graphs without writing JSON manually.
 
 The builder provides a task form where you define each unit of work, a dependency editor where you wire tasks together, and a wave preview that shows the resulting parallel structure. You can drag tasks between waves, add or remove dependencies, and see how changes affect the execution order.
 
@@ -259,7 +259,7 @@ The only files the master writes during a swarm:
 |---|---|
 | `initialization.json` | Static plan data (written once) |
 | `logs.json` | Timestamped event log |
-| Master XML | Task record with status updates |
+| Master task file | Task record with status updates |
 | Plan document | Strategy rationale |
 
 Everything else — every line of application code, every new file, every test — is a worker's job.

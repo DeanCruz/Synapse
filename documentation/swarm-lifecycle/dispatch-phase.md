@@ -26,7 +26,7 @@ User approves plan
 | Worker returns (success/failure)  |
 |   -> Parse return format          |
 |   -> Log to logs.json             |
-|   -> Update master XML            |
+|   -> Update master task file       |
 |   -> Cache result for downstream  |
 |   -> Build completed set          |
 |   -> Build in-progress set        |
@@ -102,7 +102,7 @@ Every dispatched agent receives a self-contained prompt built from the plan and 
 
 Before writing any code, workers complete a readiness checklist:
 
-1. Read their task section in the master XML
+1. Read their task section in the master task file
 2. Read project CLAUDE.md (if conventions were not already provided in the prompt)
 3. Verify each item:
    - Every file path to modify/create has been listed
@@ -269,7 +269,7 @@ The master populates KEY DETAILS by:
 
 ### Cache Reconstruction After Context Compaction
 
-If context compaction drops the result cache, the master reconstructs it by re-reading the XML summaries before dispatching downstream tasks. Stale or missing upstream results cause downstream workers to operate on incorrect assumptions.
+If context compaction drops the result cache, the master reconstructs it by re-reading the task file summaries before dispatching downstream tasks. Stale or missing upstream results cause downstream workers to operate on incorrect assumptions.
 
 ---
 

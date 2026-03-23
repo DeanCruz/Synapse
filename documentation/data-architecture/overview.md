@@ -69,7 +69,7 @@ Synapse enforces strict file ownership. Each file has exactly one writer:
 | `initialization.json` | Master agent (write-once during planning) | Dashboard, master (for dispatch scans), workers (optional) |
 | `logs.json` | Master agent (append via read-modify-write) | Dashboard (log panel) |
 | `progress/{task_id}.json` | The worker assigned to that task (sole writer) | Dashboard (agent cards, stats), master (for dispatch scans) |
-| `tasks/{date}/parallel_{name}.xml` | Master agent | Workers (for context), master (for status tracking) |
+| `tasks/{date}/parallel_{name}.json` | Master agent | Workers (for context), master (for status tracking) |
 | `tasks/{date}/parallel_plan_{name}.md` | Master agent | Users (for plan review) |
 
 Workers never write to `initialization.json` or `logs.json`. The master never writes to `progress/` files. This eliminates all write conflicts.
@@ -118,11 +118,11 @@ const DEFAULT_LOGS = { entries: [] };
 4. Master monitors completions
    |-> Reads progress/ files to build completed/in-progress sets
    |-> Appends completion/failure/deviation entries to logs.json
-   |-> Updates XML task file with summaries
+   |-> Updates task file with summaries
 
 5. Swarm completes
    |-> Master appends final summary to logs.json
-   |-> Master updates XML with final status
+   |-> Master updates task file with final status
 ```
 
 ### Read Flow (Dashboard)
@@ -316,7 +316,7 @@ Archive/
 
 | Path | Purpose |
 |---|---|
-| `tasks/{MM_DD_YY}/parallel_{name}.xml` | Authoritative task record with full context, descriptions, dependencies, and completion summaries |
+| `tasks/{MM_DD_YY}/parallel_{name}.json` | Authoritative task record with full context, descriptions, dependencies, and completion summaries |
 | `tasks/{MM_DD_YY}/parallel_plan_{name}.md` | Strategy rationale document explaining the plan |
 
 ---
@@ -387,4 +387,4 @@ The server watches all 5 dashboards independently, broadcasting SSE events tagge
 - [initialization.json Schema](./initialization-json.md) -- Complete schema, field-to-UI mapping, write rules
 - [logs.json Schema](./logs-json.md) -- Event log format, levels, entry structure
 - [Progress Files Schema](./progress-files.md) -- Worker progress lifecycle, stages, rendering
-- [XML Task Files](./xml-task-files.md) -- Authoritative task record format and structure
+- [Task Files](./xml-task-files.md) -- Authoritative task record format and structure

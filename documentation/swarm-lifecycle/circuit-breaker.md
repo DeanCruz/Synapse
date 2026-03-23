@@ -152,7 +152,7 @@ The orchestrator spawns a Claude CLI process in `--print` mode with the full fai
 ```
 Replanner receives:
   - Complete failure context (everything from Step 2)
-  - The original plan's intent (from initialization.json and the XML)
+  - The original plan's intent (from initialization.json and the task file)
   - Instructions to analyze root cause and produce a structured revision
 
 Replanner returns:

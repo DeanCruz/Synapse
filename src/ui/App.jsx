@@ -14,6 +14,7 @@ import EmptyState from './components/EmptyState.jsx';
 import HomeView from './components/HomeView.jsx';
 import SwarmBuilder from './components/SwarmBuilder.jsx';
 import ClaudeView from './components/ClaudeView.jsx';
+import IDEView from './components/ide/IDEView.jsx';
 import WavePipeline from './components/WavePipeline.jsx';
 import ChainPipeline from './components/ChainPipeline.jsx';
 import TimelinePanel from './components/TimelinePanel.jsx';
@@ -24,6 +25,10 @@ import PlanningModal from './components/modals/PlanningModal.jsx';
 import SettingsModal from './components/modals/SettingsModal.jsx';
 import AgentDetails from './components/modals/AgentDetails.jsx';
 import { getDashboardProject } from './utils/dashboardProjects.js';
+
+// Lazy import for GitManagerView — prevents crashes before the component exists
+let GitManagerView = null;
+try { GitManagerView = require('./components/git/GitManagerView.jsx').default; } catch(e) {}
 
 // ── ClearDashboardSection ────────────────────────────────────────────────────
 function ClearDashboardSection({ visible, onClear, taskName }) {
@@ -262,6 +267,7 @@ export default function App() {
   const claudeViewMode = state.claudeViewMode;
   const claudeDashboardId = state.claudeDashboardId || currentDashboardId;
   const showClaudeFloat = activeView === 'claude';
+  const ideChatActive = activeView === 'ide' && state.ideChatOpen;
 
   function renderMainContent() {
     switch (activeView) {
@@ -285,6 +291,10 @@ export default function App() {
       case 'claude':
         // Claude is now a floating panel — show the dashboard behind it
         return <DashboardContent />;
+      case 'git':
+        return GitManagerView ? <GitManagerView /> : <div>Loading Git Manager...</div>;
+      case 'ide':
+        return <IDEView />;
       case 'dashboard':
       default:
         return <DashboardContent />;
@@ -299,6 +309,30 @@ export default function App() {
         <div className="dashboard-content">
           {renderMainContent()}
         </div>
+        {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
+        <ClaudeFloatingPanel
+          isVisible={true}
+          dashboardId={claudeDashboardId}
+          viewMode={ideChatActive ? claudeViewMode : (showClaudeFloat ? claudeViewMode : 'minimized')}
+          onOpen={() => {
+            if (activeView === 'ide') {
+              dispatch({ type: 'IDE_OPEN_CHAT' });
+            } else {
+              dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode: 'expanded' });
+              dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId: claudeDashboardId || currentDashboardId });
+            }
+          }}
+          onSetMode={(mode) => {
+            dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode });
+            if (mode === 'minimized') {
+              if (activeView === 'ide') {
+                dispatch({ type: 'IDE_CLOSE_CHAT' });
+              } else {
+                dispatch({ type: 'SET_VIEW', view: 'dashboard' });
+              }
+            }
+          }}
+        />
       </div>
 
       {activeModal === 'commands' && (
@@ -320,21 +354,6 @@ export default function App() {
       {activeModal === 'settings' && (
         <SettingsModal onClose={closeModal} />
       )}
-
-      {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
-      <ClaudeFloatingPanel
-        isVisible={true}
-        dashboardId={claudeDashboardId}
-        viewMode={showClaudeFloat ? claudeViewMode : 'minimized'}
-        onOpen={() => {
-          dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode: 'expanded' });
-          dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId: claudeDashboardId || currentDashboardId });
-        }}
-        onSetMode={(mode) => {
-          dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode });
-          if (mode === 'minimized') dispatch({ type: 'SET_VIEW', view: 'dashboard' });
-        }}
-      />
     </>
   );
 }
@@ -432,7 +451,7 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMo
             onSetMode={onSetMode}
           />
         )}
-        <ClaudeView hideHeader />
+        <ClaudeView hideHeader viewMode={viewMode} />
       </div>
     </div>
   );

@@ -5,6 +5,7 @@
 const { ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const { execFile } = require('child_process');
 
 // Import existing services (CommonJS — paths resolve relative to the required file)
 const {
@@ -21,7 +22,10 @@ const {
   copyDirSync,
   deleteDashboard,
   nextDashboardId,
+  getDashboardCreationTime,
 } = require('../src/server/services/DashboardService');
+
+const settings = require('./settings');
 
 const {
   watchDashboard,
@@ -86,6 +90,11 @@ const fsPromises = fs.promises;
  */
 function createBroadcastFn(getMainWindow) {
   return function broadcast(eventName, data) {
+    // Intercept dashboard list events to apply persisted ordering + names
+    if ((eventName === 'dashboards_changed' || eventName === 'dashboards_list') && data && data.dashboards) {
+      data = { ...data, dashboards: getOrderedDashboards(), names: getDashboardNames() };
+    }
+
     const win = getMainWindow();
     if (win && !win.isDestroyed()) {
       win.webContents.send(eventName, data);
@@ -166,6 +175,57 @@ function ensureDirectories() {
 }
 
 // ---------------------------------------------------------------------------
+// Dashboard ordering — reconciles filesystem truth with persisted order
+// ---------------------------------------------------------------------------
+
+/**
+ * Get dashboards in persisted order, appending newly-discovered ones by creation time.
+ * IDE is always pinned at index 0.
+ *
+ * @returns {string[]} ordered dashboard IDs
+ */
+function getOrderedDashboards() {
+  const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+  const existingIds = new Set(listDashboards());
+
+  // Filter persisted order to only existing dashboards
+  const validOrder = (meta.order || []).filter(id => existingIds.has(id));
+  const orderedSet = new Set(validOrder);
+
+  // Find new dashboards not yet in order, sort by creation time (oldest first, newest last)
+  const newIds = [...existingIds].filter(id => !orderedSet.has(id));
+  newIds.sort((a, b) => {
+    if (a === 'ide') return -1;
+    if (b === 'ide') return 1;
+    return getDashboardCreationTime(a) - getDashboardCreationTime(b);
+  });
+
+  // Merge: persisted order + new dashboards appended at end
+  let result = [...validOrder, ...newIds];
+
+  // Ensure 'ide' is always first
+  result = result.filter(id => id !== 'ide');
+  if (existingIds.has('ide')) {
+    result.unshift('ide');
+  }
+
+  // Persist the reconciled order
+  meta.order = result;
+  settings.set('dashboardMeta', meta);
+
+  return result;
+}
+
+/**
+ * Get the custom display names from dashboard metadata.
+ * @returns {Object} { [dashboardId]: displayName }
+ */
+function getDashboardNames() {
+  const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+  return meta.names || {};
+}
+
+// ---------------------------------------------------------------------------
 // IPC Handler registration
 // ---------------------------------------------------------------------------
 
@@ -185,7 +245,7 @@ function registerIPCHandlers(getMainWindow) {
 
   // GET /api/dashboards -> get-dashboards
   ipcMain.handle('get-dashboards', async () => {
-    return { dashboards: listDashboards() };
+    return { dashboards: getOrderedDashboards(), names: getDashboardNames() };
   });
 
   // POST /api/dashboards -> create-dashboard
@@ -193,6 +253,12 @@ function registerIPCHandlers(getMainWindow) {
     const id = nextDashboardId();
     ensureDashboard(id);
     watchDashboard(id, broadcastFn);
+    // Append to persisted order
+    const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+    if (!meta.order.includes(id)) {
+      meta.order.push(id);
+    }
+    settings.set('dashboardMeta', meta);
     broadcastFn('dashboards_changed', { dashboards: listDashboards() });
     return { success: true, id };
   });
@@ -202,8 +268,50 @@ function registerIPCHandlers(getMainWindow) {
     unwatchDashboard(id);
     const deleted = deleteDashboard(id);
     if (!deleted) return { success: false, error: 'Dashboard not found' };
+    // Clean up metadata
+    const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+    meta.order = (meta.order || []).filter(oid => oid !== id);
+    delete meta.names[id];
+    settings.set('dashboardMeta', meta);
     broadcastFn('dashboards_changed', { dashboards: listDashboards() });
     return { success: true };
+  });
+
+  // PUT /api/dashboards/reorder -> reorder-dashboards
+  ipcMain.handle('reorder-dashboards', async (_event, orderedIds) => {
+    const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+    const existingIds = new Set(listDashboards());
+    // Validate: only accept IDs that actually exist
+    let newOrder = orderedIds.filter(id => existingIds.has(id));
+    // Ensure ide stays first
+    newOrder = newOrder.filter(id => id !== 'ide');
+    if (existingIds.has('ide')) newOrder.unshift('ide');
+    // Append any existing dashboards missing from the reorder request
+    for (const id of existingIds) {
+      if (!newOrder.includes(id)) newOrder.push(id);
+    }
+    meta.order = newOrder;
+    settings.set('dashboardMeta', meta);
+    broadcastFn('dashboards_changed', { dashboards: newOrder });
+    return { success: true };
+  });
+
+  // PUT /api/dashboards/:id/rename -> rename-dashboard
+  ipcMain.handle('rename-dashboard', async (_event, id, displayName) => {
+    const meta = settings.get('dashboardMeta') || { order: [], names: {} };
+    if (displayName && displayName.trim()) {
+      meta.names[id] = displayName.trim();
+    } else {
+      delete meta.names[id];
+    }
+    settings.set('dashboardMeta', meta);
+    broadcastFn('dashboards_changed', { dashboards: getOrderedDashboards(), names: meta.names });
+    return { success: true };
+  });
+
+  // GET /api/dashboards/meta -> get-dashboard-meta
+  ipcMain.handle('get-dashboard-meta', async () => {
+    return settings.get('dashboardMeta') || { order: [], names: {} };
   });
 
   // GET /api/dashboards/statuses -> get-dashboard-statuses
@@ -565,17 +673,32 @@ function registerIPCHandlers(getMainWindow) {
   TerminalService.init(broadcastFn);
 
   // Build system prompt for in-app agent chat — reads Synapse CLAUDE.md + project CLAUDE.md
-  ipcMain.handle('get-chat-system-prompt', async (_event, projectDir, dashboardId) => {
+  ipcMain.handle('get-chat-system-prompt', async (_event, projectDir, dashboardId, additionalContextDirs) => {
     const parts = [];
     const synapseRoot = path.resolve(__dirname, '..');
+    const ctxDirs = Array.isArray(additionalContextDirs) ? additionalContextDirs : [];
 
     // Path reference block — agent must always know both directories AND its dashboard
-    parts.push(
+    let dirRef =
       '# Directory References\n\n' +
       'TRACKER ROOT (Synapse): ' + synapseRoot + '\n' +
       'PROJECT ROOT (target project): ' + (projectDir || synapseRoot) + '\n' +
-      'DASHBOARD ID: ' + (dashboardId || 'dashboard1') + '\n\n' +
-      'You are the agent for **' + (dashboardId || 'dashboard1') + '**. This is your PRE-ASSIGNED dashboard — ' +
+      'DASHBOARD ID: ' + (dashboardId || 'dashboard1') + '\n';
+
+    // Include additional context directories in the reference block
+    if (ctxDirs.length > 0) {
+      dirRef += '\nADDITIONAL CONTEXT (read-only):\n';
+      for (const dir of ctxDirs) {
+        dirRef += '  - ' + dir + '\n';
+      }
+      dirRef +=
+        '\n**IMPORTANT:** Additional context directories are READ-ONLY reference material. ' +
+        'You may read files in these directories for knowledge and context, but you must NEVER ' +
+        'create, modify, or delete any files in them. All code changes happen in PROJECT ROOT only.\n';
+    }
+
+    dirRef +=
+      '\nYou are the agent for **' + (dashboardId || 'dashboard1') + '**. This is your PRE-ASSIGNED dashboard — ' +
       'it was set by the chat view that spawned you. This dashboard binding is AUTHORITATIVE.\n' +
       'When running !p_track or any swarm command, use this dashboard directly — do NOT scan or auto-select a different one.\n' +
       'When running !master_plan_track, use this dashboard for your primary stream (S1) and scan OTHER dashboards for additional streams.\n\n' +
@@ -588,8 +711,10 @@ function registerIPCHandlers(getMainWindow) {
       '  2. {tracker_root}/_commands/project/{command}.md — Synapse project commands\n' +
       '  3. {project_root}/_commands/{command}.md — Project-specific commands (lowest priority)\n\n' +
       'Agent instructions live at: {tracker_root}/agent/instructions/\n' +
-      'All code work happens in PROJECT ROOT. All Synapse commands/instructions/dashboards live in TRACKER ROOT.'
-    );
+      'All code work happens in PROJECT ROOT. All Synapse commands/instructions/dashboards live in TRACKER ROOT.\n' +
+      'Dashboard IDs are assigned dynamically. IDE dashboards are auto-created when workspaces open and auto-deleted when closed.';
+
+    parts.push(dirRef);
 
     // Read Synapse CLAUDE.md FIRST — Synapse context takes priority
     const synapseClaudeMd = path.join(synapseRoot, 'CLAUDE.md');
@@ -608,6 +733,21 @@ function registerIPCHandlers(getMainWindow) {
           : dirName + ' Context';
         parts.push('\n# ' + label + '\n' + ctx.content);
       }
+    }
+
+    // Read CLAUDE.md from each additional context directory (read-only reference)
+    for (const ctxDir of ctxDirs) {
+      try {
+        const ctxContexts = ProjectService.getProjectContext(ctxDir);
+        for (const ctx of ctxContexts) {
+          const dirName = path.basename(ctxDir);
+          const subDirName = path.basename(path.dirname(ctx.path));
+          const label = ctx.path === path.join(ctxDir, 'CLAUDE.md')
+            ? 'Additional Context: ' + dirName
+            : 'Additional Context: ' + dirName + '/' + subDirName;
+          parts.push('\n# ' + label + ' (read-only)\n' + ctx.content);
+        }
+      } catch (e) { /* gracefully skip dirs that don't exist or have no CLAUDE.md */ }
     }
 
     return parts.join('\n\n');
@@ -872,6 +1012,864 @@ function registerIPCHandlers(getMainWindow) {
     return { base64: 'data:' + mimeType + ';base64,' + data.toString('base64'), mimeType, name: path.basename(filePath) };
   });
 
+  // ---------------------------------------------------------------------------
+  // IDE File System handlers — namespaced with 'ide-' prefix
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Validate that a file path is within the given workspace root.
+   * Rejects directory traversal attempts.
+   */
+  function ideValidatePath(filePath, workspaceRoot) {
+    const resolved = path.resolve(filePath);
+    const resolvedRoot = path.resolve(workspaceRoot);
+    if (!resolved.startsWith(resolvedRoot + path.sep) && resolved !== resolvedRoot) {
+      throw new Error('Path escapes workspace root: ' + filePath);
+    }
+    return resolved;
+  }
+
+  /**
+   * Detect if a file is binary by reading the first 8KB and checking for null bytes.
+   */
+  function isBinaryFile(buffer) {
+    const sampleSize = Math.min(buffer.length, 8192);
+    for (let i = 0; i < sampleSize; i++) {
+      if (buffer[i] === 0) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Default filter for directory entries: skip hidden files and node_modules.
+   */
+  const IDE_DEFAULT_IGNORE = ['.git', 'node_modules', '.DS_Store', '__pycache__', '.next', '.cache', 'dist', 'build', '.venv', 'venv'];
+
+  /**
+   * Read a directory recursively into a tree structure.
+   * Uses lstat to avoid following symlinks.
+   */
+  async function ideReadDirRecursive(dirPath, ignore, maxDepth, currentDepth) {
+    if (currentDepth >= maxDepth) return [];
+
+    let entries;
+    try {
+      entries = await fsPromises.readdir(dirPath);
+    } catch (err) {
+      return [];
+    }
+
+    // Filter out ignored entries and hidden files
+    entries = entries.filter(name => {
+      if (name.startsWith('.') && ignore.includes(name)) return false;
+      if (name.startsWith('.')) return false;
+      if (ignore.includes(name)) return false;
+      return true;
+    });
+
+    // Sort: directories first, then alphabetical
+    const results = [];
+    for (const name of entries) {
+      const fullPath = path.join(dirPath, name);
+      try {
+        const stat = await fsPromises.lstat(fullPath);
+        if (stat.isSymbolicLink()) continue; // skip symlinks entirely
+        results.push({
+          name,
+          path: fullPath,
+          type: stat.isDirectory() ? 'directory' : 'file',
+          _isDir: stat.isDirectory(),
+        });
+      } catch (err) {
+        // Skip entries we can't stat
+        continue;
+      }
+    }
+
+    // Sort: directories first, then alphabetical case-insensitive
+    results.sort((a, b) => {
+      if (a._isDir && !b._isDir) return -1;
+      if (!a._isDir && b._isDir) return 1;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+    });
+
+    // Recursively read children for directories
+    const tree = [];
+    for (const entry of results) {
+      const node = { name: entry.name, path: entry.path, type: entry.type };
+      if (entry._isDir) {
+        node.children = await ideReadDirRecursive(entry.path, ignore, maxDepth, currentDepth + 1);
+      }
+      tree.push(node);
+    }
+
+    return tree;
+  }
+
+  // --- ide-read-file: Read file contents, detect binary ---
+  ipcMain.handle('ide-read-file', async (_event, filePath, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(filePath, workspaceRoot);
+      const buffer = await fsPromises.readFile(filePath);
+      if (isBinaryFile(buffer)) {
+        return { success: true, binary: true, path: filePath, name: path.basename(filePath) };
+      }
+      return {
+        success: true,
+        binary: false,
+        content: buffer.toString('utf-8'),
+        path: filePath,
+        name: path.basename(filePath),
+      };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-write-file: Write content to a file ---
+  ipcMain.handle('ide-write-file', async (_event, filePath, content, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(filePath, workspaceRoot);
+      await fsPromises.writeFile(filePath, content, 'utf-8');
+      return { success: true, path: filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-read-dir: Recursive directory tree ---
+  ipcMain.handle('ide-read-dir', async (_event, dirPath, options) => {
+    try {
+      const opts = options || {};
+      const ignore = opts.ignore || IDE_DEFAULT_IGNORE;
+      const maxDepth = opts.maxDepth || 20;
+      const tree = await ideReadDirRecursive(dirPath, ignore, maxDepth, 0);
+      return {
+        success: true,
+        tree: {
+          name: path.basename(dirPath),
+          path: dirPath,
+          type: 'directory',
+          children: tree,
+        },
+      };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-list-dir: Single-level directory listing (lazy load) ---
+  ipcMain.handle('ide-list-dir', async (_event, dirPath, options) => {
+    try {
+      const opts = options || {};
+      const ignore = opts.ignore || IDE_DEFAULT_IGNORE;
+
+      let entries = await fsPromises.readdir(dirPath);
+
+      // Only filter specific ignored names, not all dotfiles
+      entries = entries.filter(name => !ignore.includes(name));
+
+      const results = [];
+      for (const name of entries) {
+        const fullPath = path.join(dirPath, name);
+        try {
+          const stat = await fsPromises.lstat(fullPath);
+          if (stat.isSymbolicLink()) continue;
+          const isDir = stat.isDirectory();
+          results.push({
+            name,
+            path: fullPath,
+            type: isDir ? 'directory' : 'file',
+            ...(isDir ? { children: null } : {}),
+          });
+        } catch (err) {
+          continue;
+        }
+      }
+
+      // Sort: directories first, then alphabetical case-insensitive
+      results.sort((a, b) => {
+        const aDir = a.type === 'directory';
+        const bDir = b.type === 'directory';
+        if (aDir && !bDir) return -1;
+        if (!aDir && bDir) return 1;
+        return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+      });
+
+      return { success: true, entries: results };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-create-file: Create a new file ---
+  ipcMain.handle('ide-create-file', async (_event, filePath, content, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(filePath, workspaceRoot);
+      // Ensure parent directory exists
+      await fsPromises.mkdir(path.dirname(filePath), { recursive: true });
+      // Fail if file already exists
+      try {
+        await fsPromises.access(filePath);
+        return { success: false, error: 'File already exists: ' + filePath };
+      } catch (_) {
+        // File doesn't exist — good, proceed
+      }
+      await fsPromises.writeFile(filePath, content || '', 'utf-8');
+      return { success: true, path: filePath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-create-folder: Create a new directory ---
+  ipcMain.handle('ide-create-folder', async (_event, dirPath, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(dirPath, workspaceRoot);
+      await fsPromises.mkdir(dirPath, { recursive: true });
+      return { success: true, path: dirPath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-rename: Rename a file or folder ---
+  ipcMain.handle('ide-rename', async (_event, oldPath, newPath, workspaceRoot) => {
+    try {
+      if (workspaceRoot) {
+        ideValidatePath(oldPath, workspaceRoot);
+        ideValidatePath(newPath, workspaceRoot);
+      }
+      await fsPromises.rename(oldPath, newPath);
+      return { success: true, oldPath, newPath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-delete: Delete a file or folder ---
+  ipcMain.handle('ide-delete', async (_event, targetPath, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(targetPath, workspaceRoot);
+      const stat = await fsPromises.lstat(targetPath);
+      if (stat.isDirectory()) {
+        await fsPromises.rm(targetPath, { recursive: true, force: true });
+      } else {
+        await fsPromises.unlink(targetPath);
+      }
+      return { success: true, path: targetPath };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-select-folder: Native folder picker dialog for IDE ---
+  ipcMain.handle('ide-select-folder', async () => {
+    const { dialog } = require('electron');
+    const win = getMainWindow();
+    const result = await dialog.showOpenDialog(win, {
+      properties: ['openDirectory', 'createDirectory'],
+      title: 'Open Folder',
+    });
+    if (result.canceled || result.filePaths.length === 0) return null;
+    return result.filePaths[0];
+  });
+
+
+
+  // ---------------------------------------------------------------------------
+  // Git Operations — IPC handlers using execFile for security
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Execute a git command safely using execFile (not exec) to prevent injection.
+   * All operations run in the given repoPath directory.
+   *
+   * @param {string[]} args - git subcommand and arguments
+   * @param {string} repoPath - working directory for the git command
+   * @param {Object} [opts] - additional options (maxBuffer, etc.)
+   * @returns {Promise<{success: boolean, data?: string, error?: string}>}
+   */
+  function gitExec(args, repoPath, opts = {}) {
+    return new Promise((resolve) => {
+      const options = {
+        cwd: repoPath,
+        maxBuffer: opts.maxBuffer || 10 * 1024 * 1024, // 10MB default
+        timeout: opts.timeout || 30000, // 30s default
+      };
+      execFile('git', args, options, (error, stdout, stderr) => {
+        if (error) {
+          resolve({
+            success: false,
+            error: stderr ? stderr.trim() : error.message,
+          });
+        } else {
+          resolve({
+            success: true,
+            data: stdout,
+          });
+        }
+      });
+    });
+  }
+
+  /**
+   * Validate that a repoPath exists and is a directory.
+   * @param {string} repoPath
+   */
+  async function gitValidateRepoPath(repoPath) {
+    if (!repoPath || typeof repoPath !== 'string') {
+      throw new Error('repoPath is required and must be a string');
+    }
+    const resolved = path.resolve(repoPath);
+    try {
+      const stat = await fsPromises.stat(resolved);
+      if (!stat.isDirectory()) {
+        throw new Error('repoPath is not a directory: ' + resolved);
+      }
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        throw new Error('repoPath does not exist: ' + resolved);
+      }
+      throw err;
+    }
+    return resolved;
+  }
+
+  // --- git-is-repo: Check if a directory is a git repository ---
+  ipcMain.handle('git-is-repo', async (_event, repoPath) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const result = await gitExec(['rev-parse', '--is-inside-work-tree'], resolved);
+      return { success: true, data: result.success && result.data.trim() === 'true' };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-init: Initialize a new git repository ---
+  ipcMain.handle('git-init', async (_event, repoPath) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const result = await gitExec(['init'], resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-status: Get working tree status (porcelain v1 for parsing) ---
+  ipcMain.handle('git-status', async (_event, repoPath) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const result = await gitExec(['status', '--porcelain', '-uall'], resolved);
+      if (!result.success) return result;
+
+      const staged = [];
+      const unstaged = [];
+      const untracked = [];
+
+      const lines = result.data.split('\n').filter(Boolean);
+      for (const line of lines) {
+        const x = line[0]; // index (staging area) status
+        const y = line[1]; // worktree status
+        const filePath = line.substring(3);
+
+        if (x === '?' && y === '?') {
+          untracked.push(filePath);
+        } else if (x === '!' && y === '!') {
+          // ignored — skip
+        } else {
+          if (x !== ' ' && x !== '?') {
+            staged.push({ status: x, path: filePath });
+          }
+          if (y !== ' ' && y !== '?') {
+            unstaged.push({ status: y, path: filePath });
+          }
+        }
+      }
+
+      return { success: true, data: { staged, unstaged, untracked } };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-diff: Get unstaged diff (or staged with --cached) ---
+  ipcMain.handle('git-diff', async (_event, repoPath, staged) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const args = staged ? ['diff', '--cached'] : ['diff'];
+      const result = await gitExec(args, resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-diff-file: Get diff for a specific file ---
+  ipcMain.handle('git-diff-file', async (_event, repoPath, filePath, staged) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const args = staged ? ['diff', '--cached', '--', filePath] : ['diff', '--', filePath];
+      const result = await gitExec(args, resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-log: Get commit log ---
+  ipcMain.handle('git-log', async (_event, repoPath, maxCount, extraArgs) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const count = maxCount || 50;
+      const args = [
+        'log',
+        `--max-count=${count}`,
+        '--format=%H%n%h%n%an%n%ae%n%aI%n%s%n%b%n---END---',
+      ];
+      if (Array.isArray(extraArgs)) {
+        args.push(...extraArgs);
+      }
+      const result = await gitExec(args, resolved);
+      if (!result.success) return result;
+      const commits = [];
+      const entries = result.data.split('---END---\n').filter(Boolean);
+      for (const entry of entries) {
+        const lines = entry.trim().split('\n');
+        if (lines.length < 6) continue;
+        commits.push({
+          hash: lines[0],
+          shortHash: lines[1],
+          author: lines[2],
+          email: lines[3],
+          date: lines[4],
+          subject: lines[5],
+          body: lines.slice(6).join('\n').trim(),
+        });
+      }
+      return { success: true, data: commits };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-branches: List all branches ---
+  ipcMain.handle('git-branches', async (_event, repoPath) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const result = await gitExec(
+        ['branch', '-a', '--format=%(refname:short)|||%(objectname:short)|||%(upstream:short)|||%(HEAD)'],
+        resolved
+      );
+      if (!result.success) return result;
+      const branches = result.data
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => {
+          const [name, hash, upstream, head] = line.split('|||');
+          return {
+            name: name.trim(),
+            hash: hash.trim(),
+            upstream: upstream.trim() || null,
+            current: head.trim() === '*',
+          };
+        });
+      return { success: true, data: branches };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-current-branch: Get current branch name ---
+  ipcMain.handle('git-current-branch', async (_event, repoPath) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const result = await gitExec(['rev-parse', '--abbrev-ref', 'HEAD'], resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-stage: Stage specific files ---
+  ipcMain.handle('git-stage', async (_event, repoPath, files) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      if (!Array.isArray(files) || files.length === 0) {
+        return { success: false, error: 'files must be a non-empty array' };
+      }
+      const result = await gitExec(['add', '--', ...files], resolved);
+      return result.success
+        ? { success: true, data: null }
+        : result;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-unstage: Unstage specific files ---
+  ipcMain.handle('git-unstage', async (_event, repoPath, files) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      if (!Array.isArray(files) || files.length === 0) {
+        return { success: false, error: 'files must be a non-empty array' };
+      }
+      const result = await gitExec(['reset', 'HEAD', '--', ...files], resolved);
+      return result.success
+        ? { success: true, data: null }
+        : result;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-stage-all: Stage all changes ---
+  ipcMain.handle('git-stage-all', async (_event, repoPath) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const result = await gitExec(['add', '-A'], resolved);
+      return result.success
+        ? { success: true, data: null }
+        : result;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-unstage-all: Unstage all changes ---
+  ipcMain.handle('git-unstage-all', async (_event, repoPath) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const result = await gitExec(['reset', 'HEAD'], resolved);
+      return result.success
+        ? { success: true, data: null }
+        : result;
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-commit: Create a commit ---
+  ipcMain.handle('git-commit', async (_event, repoPath, message) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      if (!message || typeof message !== 'string' || message.trim().length === 0) {
+        return { success: false, error: 'Commit message is required' };
+      }
+      const result = await gitExec(['commit', '-m', message], resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-push: Push to remote ---
+  ipcMain.handle('git-push', async (_event, repoPath, remote, branch, setUpstream) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const args = ['push'];
+      if (setUpstream) args.push('-u');
+      if (remote) args.push(remote);
+      if (branch) args.push(branch);
+      const result = await gitExec(args, resolved, { timeout: 60000 });
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-pull: Pull from remote ---
+  ipcMain.handle('git-pull', async (_event, repoPath, remote, branch) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const args = ['pull'];
+      if (remote) args.push(remote);
+      if (branch) args.push(branch);
+      const result = await gitExec(args, resolved, { timeout: 60000 });
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-fetch: Fetch from remote ---
+  ipcMain.handle('git-fetch', async (_event, repoPath, remote) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const args = ['fetch'];
+      if (remote) args.push(remote);
+      else args.push('--all');
+      const result = await gitExec(args, resolved, { timeout: 60000 });
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-checkout: Checkout a branch or commit ---
+  ipcMain.handle('git-checkout', async (_event, repoPath, target) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      if (!target || typeof target !== 'string') {
+        return { success: false, error: 'Checkout target is required' };
+      }
+      const result = await gitExec(['checkout', target], resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-create-branch: Create and optionally checkout a new branch ---
+  ipcMain.handle('git-create-branch', async (_event, repoPath, branchName, checkout) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      if (!branchName || typeof branchName !== 'string') {
+        return { success: false, error: 'Branch name is required' };
+      }
+      const args = checkout !== false
+        ? ['checkout', '-b', branchName]
+        : ['branch', branchName];
+      const result = await gitExec(args, resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-delete-branch: Delete a branch ---
+  ipcMain.handle('git-delete-branch', async (_event, repoPath, branchName, force) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      if (!branchName || typeof branchName !== 'string') {
+        return { success: false, error: 'Branch name is required' };
+      }
+      const flag = force ? '-D' : '-d';
+      const result = await gitExec(['branch', flag, branchName], resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-merge: Merge a branch into the current branch ---
+  ipcMain.handle('git-merge', async (_event, repoPath, branchName) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      if (!branchName || typeof branchName !== 'string') {
+        return { success: false, error: 'Branch name is required' };
+      }
+      const result = await gitExec(['merge', branchName], resolved, { timeout: 60000 });
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-stash: Stash current changes ---
+  ipcMain.handle('git-stash', async (_event, repoPath, message) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const args = ['stash', 'push'];
+      if (message && typeof message === 'string') {
+        args.push('-m', message);
+      }
+      const result = await gitExec(args, resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-stash-pop: Pop the most recent stash ---
+  ipcMain.handle('git-stash-pop', async (_event, repoPath) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const result = await gitExec(['stash', 'pop'], resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-remotes: List remotes with URLs ---
+  ipcMain.handle('git-remotes', async (_event, repoPath) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const result = await gitExec(['remote', '-v'], resolved);
+      if (!result.success) return result;
+      const remotes = {};
+      result.data
+        .split('\n')
+        .filter(Boolean)
+        .forEach((line) => {
+          const match = line.match(/^(\S+)\s+(\S+)\s+\((fetch|push)\)$/);
+          if (match) {
+            const [, name, url, type] = match;
+            if (!remotes[name]) remotes[name] = {};
+            remotes[name][type] = url;
+          }
+        });
+      const remoteList = Object.entries(remotes).map(([name, urls]) => ({
+        name,
+        fetchUrl: urls.fetch || null,
+        pushUrl: urls.push || null,
+      }));
+      return { success: true, data: remoteList };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-reset: Reset to a specific commit ---
+  ipcMain.handle('git-reset', async (_event, repoPath, target, mode) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const validModes = ['--soft', '--mixed', '--hard'];
+      const resetMode = validModes.includes(mode) ? mode : '--mixed';
+      const args = ['reset', resetMode];
+      if (target) args.push(target);
+      const result = await gitExec(args, resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-revert: Revert a specific commit ---
+  ipcMain.handle('git-revert', async (_event, repoPath, commitHash) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      if (!commitHash || typeof commitHash !== 'string') {
+        return { success: false, error: 'Commit hash is required' };
+      }
+      const result = await gitExec(['revert', '--no-edit', commitHash], resolved, { timeout: 60000 });
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-ahead-behind: Count commits ahead/behind upstream ---
+  ipcMain.handle('git-ahead-behind', async (_event, repoPath, branch) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      // Get current branch if not specified
+      let branchName = branch;
+      if (!branchName) {
+        const brRes = await gitExec(['rev-parse', '--abbrev-ref', 'HEAD'], resolved);
+        if (!brRes.success) return brRes;
+        branchName = brRes.data.trim();
+      }
+      // Get upstream tracking branch
+      const upRes = await gitExec(
+        ['rev-parse', '--abbrev-ref', `${branchName}@{upstream}`],
+        resolved
+      );
+      if (!upRes.success) {
+        return { success: true, data: { ahead: 0, behind: 0, upstream: null } };
+      }
+      const upstream = upRes.data.trim();
+      // Count ahead/behind
+      const countRes = await gitExec(
+        ['rev-list', '--left-right', '--count', `${branchName}...${upstream}`],
+        resolved
+      );
+      if (!countRes.success) return countRes;
+      const parts = countRes.data.trim().split(/\s+/);
+      return {
+        success: true,
+        data: {
+          ahead: parseInt(parts[0], 10) || 0,
+          behind: parseInt(parts[1], 10) || 0,
+          upstream,
+        },
+      };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-discard-file: Discard changes to a specific file ---
+  ipcMain.handle('git-discard-file', async (_event, repoPath, filePath) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      if (!filePath || typeof filePath !== 'string') {
+        return { success: false, error: 'File path is required' };
+      }
+      // Check if file is untracked
+      const statusRes = await gitExec(['status', '--porcelain', '--', filePath], resolved);
+      if (statusRes.success && statusRes.data.trim().startsWith('??')) {
+        // Untracked file — remove it
+        const fullPath = path.join(resolved, filePath);
+        await fsPromises.unlink(fullPath);
+        return { success: true, data: 'Untracked file removed' };
+      }
+      // Tracked file — checkout from HEAD
+      const result = await gitExec(['checkout', 'HEAD', '--', filePath], resolved);
+      if (!result.success) return result;
+      return { success: true, data: 'Changes discarded' };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-graph: Get commit graph with parent info and branch refs for visualization ---
+  ipcMain.handle('git-graph', async (_event, repoPath, maxCount) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      const count = maxCount || 150;
+      const SEP = '\x01'; // SOH — safe delimiter that won't appear in git data
+      const result = await gitExec(
+        [
+          'log', '--all', '--topo-order',
+          `--max-count=${count}`,
+          `--format=%H${SEP}%P${SEP}%D${SEP}%s${SEP}%an${SEP}%aI`,
+        ],
+        resolved
+      );
+      if (!result.success) return result;
+
+      const commits = [];
+      const lines = result.data.split('\n').filter(Boolean);
+      for (const line of lines) {
+        const parts = line.split(SEP);
+        if (parts.length < 6) continue;
+        const hash = parts[0];
+        const parents = parts[1] ? parts[1].split(' ').filter(Boolean) : [];
+        const refsRaw = parts[2] ? parts[2].trim() : '';
+        const refs = refsRaw ? refsRaw.split(',').map(r => r.trim()).filter(Boolean) : [];
+        const subject = parts[3];
+        const author = parts[4];
+        const date = parts[5];
+        commits.push({ hash, parents, refs, subject, author, date });
+      }
+
+      return { success: true, data: commits };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+
   // --- 3. Set up file watchers with IPC broadcast ---
 
   const dashboards = listDashboards();
@@ -913,8 +1911,9 @@ function sendInitialData(getMainWindow, dashboards) {
       return;
     }
 
-    // Send list of all dashboards
-    win.webContents.send('dashboards_list', { dashboards });
+    // Send list of all dashboards (ordered, with custom names)
+    const orderedDashboards = getOrderedDashboards();
+    win.webContents.send('dashboards_list', { dashboards: orderedDashboards, names: getDashboardNames() });
 
     // Send initial data for each dashboard
     for (const id of dashboards) {

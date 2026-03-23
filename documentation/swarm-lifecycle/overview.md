@@ -53,7 +53,7 @@ User invokes !p_track {prompt}
         |
         v
 11. FINAL REPORT
-    Compile summary, update XML, write final log entries
+    Compile summary, update task file, write final log entries
         |
         v
 12. POST-SWARM
@@ -75,7 +75,7 @@ The master agent has exactly five responsibilities:
 1. **Gather Context** -- Read project files, documentation, types, and code to build a complete mental model of the codebase and the task.
 2. **Plan** -- Decompose the task into atomic units, map dependencies between them, assign wave groupings, and write self-contained agent prompts with full context.
 3. **Dispatch** -- Spawn worker agents via the Task tool, feed them upstream results from completed tasks, and keep the pipeline maximally saturated.
-4. **Status** -- Log events to `logs.json`, update the master XML on completions and failures, and maintain awareness of the swarm's state.
+4. **Status** -- Log events to `logs.json`, update the master task file on completions and failures, and maintain awareness of the swarm's state.
 5. **Report** -- Compile a final summary when all workers have finished, including verification results, deviations, and recommendations.
 
 The master writes to exactly four categories of files during a swarm, and no others:
@@ -84,7 +84,7 @@ The master writes to exactly four categories of files during a swarm, and no oth
 |---|---|
 | `dashboards/{dashboardId}/initialization.json` | Static plan data (written once during planning) |
 | `dashboards/{dashboardId}/logs.json` | Timestamped event log for the dashboard |
-| `tasks/{date}/parallel_{name}.xml` | Master task record (plan, status, summaries) |
+| `tasks/{date}/parallel_{name}.json` | Master task record (plan, status, summaries) |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
 ### Worker Agents
@@ -95,7 +95,7 @@ Workers progress through fixed stages in order:
 
 | Stage | Description |
 |---|---|
-| `reading_context` | Reading project files, documentation, task XML |
+| `reading_context` | Reading project files, documentation, task file |
 | `planning` | Assessing readiness, planning approach |
 | `implementing` | Writing code, creating/modifying files |
 | `testing` | Running tests, validating changes |
@@ -116,7 +116,7 @@ The swarm lifecycle revolves around four categories of data files. Understanding
 | `initialization.json` | Master (once) | During planning phase | Static plan data: task metadata, agent entries, wave structure, dependency graph |
 | `logs.json` | Master (throughout) | On every event | Timestamped event log for the dashboard log panel |
 | `progress/{task_id}.json` | Workers (each owns one) | Throughout execution | Live lifecycle data: status, stage, milestones, deviations, logs |
-| `parallel_{name}.xml` | Master (throughout) | Planning + on each completion | Authoritative task record: descriptions, context, summaries, status |
+| `parallel_{name}.json` | Master (throughout) | Planning + on each completion | Authoritative task record: descriptions, context, summaries, status |
 
 The dashboard merges `initialization.json` (static plan) with `progress/` files (dynamic lifecycle) to render the complete swarm view. All stat cards (Total, Completed, In Progress, Failed, Pending, Elapsed) are derived from progress files -- the master maintains no counters.
 
@@ -129,7 +129,7 @@ Master Agent                   Dashboard Files                    Dashboard UI
 Planning:
   Write once  ---------->  initialization.json  ---------->  Task cards (pending)
   Write once  ---------->  logs.json (init entry)  ------->  Log panel
-  Write once  ---------->  XML task file                      (not rendered)
+  Write once  ---------->  Task file                          (not rendered)
   Write once  ---------->  Plan rationale .md                 (not rendered)
 
 Dispatch:
@@ -139,7 +139,7 @@ Dispatch:
 Monitoring:
   (workers write)  ------>  progress/*.json  -------------->  Live stage, milestones
   Log completions  ------>  logs.json (events)  ----------->  Log panel updates
-  Update XML  ---------->  XML (summaries)                    (not rendered)
+  Update task file  ---->  Task file (summaries)              (not rendered)
 
 Completion:
   Log final  ------------>  logs.json (completion)  -------->  "Complete" badge
@@ -214,7 +214,7 @@ A well-planned swarm follows this approximate timing profile:
 | Phase | Typical Duration | Notes |
 |---|---|---|
 | Context Gathering | 30-90 seconds | Depends on project size and number of files to read |
-| Planning | 1-3 minutes | Includes decomposition, prompt writing, XML/plan creation |
+| Planning | 1-3 minutes | Includes decomposition, prompt writing, task file/plan creation |
 | Dashboard Population | 5-15 seconds | File writes are fast |
 | User Approval | Variable | Depends on the user |
 | Execution (dispatch + monitoring) | 3-15 minutes | Depends on task count and critical path length |
@@ -239,7 +239,7 @@ These invariants hold throughout every swarm lifecycle:
 
 5. **Timestamps are always live.** Every timestamp is captured via `date -u +"%Y-%m-%dT%H:%M:%SZ"` at the exact moment of writing. No estimates, no guesses, no construction from memory.
 
-6. **The master never writes code.** During an active swarm, the master's only outputs are dashboard files (`initialization.json`, `logs.json`), the XML task record, and the plan rationale document. Everything in `{project_root}` is written by worker agents.
+6. **The master never writes code.** During an active swarm, the master's only outputs are dashboard files (`initialization.json`, `logs.json`), the task record, and the plan rationale document. Everything in `{project_root}` is written by worker agents.
 
 7. **Atomic writes are mandatory.** Always read the full file, parse, modify in memory, stringify with 2-space indent, and write the full file back. Partial JSON writes cause the dashboard to freeze.
 

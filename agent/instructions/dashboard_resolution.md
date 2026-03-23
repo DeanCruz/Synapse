@@ -1,12 +1,12 @@
 # Dashboard Resolution Protocol
 
-**Purpose:** Shared reference for how all commands resolve `{dashboardId}`, derive swarm status, and read dashboard data. Every command that interacts with dashboard data references this file.
+**Purpose:** Shared reference for how all commands resolve `{id}`, derive swarm status, and read dashboard data. Every command that interacts with dashboard data references this file.
 
 ---
 
 ## Data Paths
 
-All dashboard data lives under `{tracker_root}/dashboards/{dashboardId}/`:
+All dashboard data lives under `{tracker_root}/dashboards/{id}/`:
 
 | Path | Contents | Written By |
 |---|---|---|
@@ -20,26 +20,26 @@ Global directories (not per-dashboard):
 |---|---|
 | `{tracker_root}/history/` | History summary JSON files (one per cleared task) |
 | `{tracker_root}/Archive/` | Full archived dashboard snapshots |
-| `{tracker_root}/tasks/{date}/` | Master XML and plan files |
+| `{tracker_root}/tasks/{date}/` | Master task and plan files |
 
 ---
 
 ## Parameter Parsing
 
-All commands accept an optional `{dashboardId}` as the **first positional argument**.
+All commands accept an optional `{id}` as the **first positional argument**.
 
-**Rule:** If the first argument matches `dashboard\d+`, consume it as `{dashboardId}`. Otherwise, run auto-detection.
+**Rule:** If the first argument is a valid dashboard ID (any non-flag string that is not a task ID), consume it as `{id}`. Otherwise, run auto-detection. Valid IDs include `ide`, 6-char hex strings (e.g., `a3f7k2`), and legacy `dashboardN` format.
 
 ```
 !status                     → auto-detect
-!status dashboard3          → explicit: dashboard3
+!status a3f7k2              → explicit: a3f7k2
 !inspect 2.3                → auto-detect + task_id "2.3"
-!inspect dashboard1 2.3     → explicit: dashboard1 + task_id "2.3"
+!inspect a3f7k2 2.3         → explicit: a3f7k2 + task_id "2.3"
 !logs --level error         → auto-detect + filter
-!logs dashboard2 --level error → explicit: dashboard2 + filter
+!logs ide --level error     → explicit: ide + filter
 ```
 
-Task IDs use `N.N` format (e.g., `2.3`), flags start with `--` — neither conflicts with `dashboard\d+`.
+Task IDs use `N.N` format (e.g., `2.3`), flags start with `--` — neither conflicts with dashboard IDs.
 
 ---
 
@@ -49,7 +49,7 @@ Used by read commands (`!status`, `!logs`, `!inspect`, `!deps`) when no dashboar
 
 **Algorithm:**
 
-1. Scan all dashboards returned by `listDashboards()`.
+1. Scan all dashboards returned by `listDashboards()` (excluding `ide`).
 2. For each, read `initialization.json`. Skip any where `task` is `null` (empty dashboard).
 3. For dashboards with a task, derive `overallStatus` (see below) and find the latest activity timestamp (most recent `started_at` or `completed_at` from progress files, or `task.created` as fallback).
 4. Collect all non-empty dashboards as candidates.
@@ -63,7 +63,7 @@ Used by read commands (`!status`, `!logs`, `!inspect`, `!deps`) when no dashboar
 | Exactly 1 candidate is `in_progress` | Use it |
 | Multiple candidates | Use the one with the most recent activity timestamp |
 
-If auto-detection selects a dashboard, announce it: `"[dashboard3] ..."` prefix on output.
+If auto-detection selects a dashboard, announce it: `"[a3f7k2] ..."` prefix on output (using the dashboard's short ID).
 
 ---
 
@@ -81,7 +81,7 @@ Each chat view in the Synapse Electron app is associated with exactly one dashbo
 
 ### 2. Explicit `--dashboard` flag
 
-`!p_track --dashboard dashboard3 {prompt}` bypasses auto-selection and uses `dashboard3` directly. If it's in use, warn and require confirmation.
+`!p_track --dashboard a3f7k2 {prompt}` bypasses auto-selection and uses `a3f7k2` directly. If it's in use, warn and require confirmation.
 
 ### 3. Auto-selection (fallback)
 
@@ -89,7 +89,7 @@ Only used when no dashboard is pre-assigned and no `--dashboard` flag is specifi
 
 **Algorithm:**
 
-1. Scan all dashboards returned by `listDashboards()` in order.
+1. Scan all dashboards returned by `listDashboards()` in order, **excluding `ide`** (the IDE dashboard is never auto-selected for swarms).
 2. For each dashboard:
    - Read `initialization.json`. If `task` is `null` → **available**. Return this dashboard.
    - If `task` is not null, read all files in `progress/`.
@@ -103,10 +103,10 @@ Only used when no dashboard is pre-assigned and no `--dashboard` flag is specifi
 
 | Dashboard | Task | Status | Progress |
 |---|---|---|---|
-| dashboard1 | {task.name} | {overall_status} | {completed}/{total} |
+| a3f7k2 | {task.name} | {overall_status} | {completed}/{total} |
 | ... | ... | ... | ... |
 
-Pick a dashboard to overwrite, or run `!reset {dashboardId}` first.
+Pick a dashboard to overwrite, or run `!reset {id}` first.
 ```
 
 4. If the user picks a dashboard, save history before overwriting if it had data.
@@ -184,12 +184,25 @@ A dashboard is **in use** if:
 
 ---
 
+## IDE Dashboard Protocol
+
+The `ide` dashboard is permanently reserved for the IDE agent:
+
+- **Always exists** — auto-created on Electron app startup via `ensureIdeDashboard()`
+- **Cannot be deleted** — `DashboardService.deleteDashboard('ide')` returns false
+- **Never auto-selected for swarms** — the dashboard selection algorithm must skip `ide`
+- **Explicitly bindable** — IDE chat views bind to `ide` via the system prompt `DASHBOARD ID: ide`
+
+When a master agent needs to find the IDE dashboard, it checks for `ide`. If somehow missing, it creates it by running `mkdir -p {tracker_root}/dashboards/ide/progress`.
+
+---
+
 ## Worker Dashboard Routing
 
-Workers must know their `{dashboardId}` to write progress files to the correct location. The master includes the dashboard ID in every worker dispatch prompt:
+Workers must know their `{id}` to write progress files to the correct location. The master includes the dashboard ID in every worker dispatch prompt:
 
 ```
-Write your progress to: {tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json
+Write your progress to: {tracker_root}/dashboards/{id}/progress/{task_id}.json
 ```
 
 Workers never auto-detect dashboards. They write exactly where the master tells them to.

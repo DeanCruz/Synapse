@@ -11,7 +11,7 @@ All workers returned (completed or failed)
     |
     v
 +----------------------------------+
-| 1. UPDATE MASTER XML             |
+| 1. UPDATE MASTER TASK FILE       |
 |    Set overall_status             |
 |    Verify all task summaries      |
 +----------------------------------+
@@ -51,14 +51,14 @@ All workers returned (completed or failed)
 
 ---
 
-## Step 1: Update the Master XML
+## Step 1: Update the Master Task File
 
-When all tasks have reached terminal state, the master updates the XML task file at `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml`:
+When all tasks have reached terminal state, the master updates the task file at `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`:
 
 - Set `<overall_status>` to `completed` (if all tasks succeeded or were repaired) or `failed` (if any tasks failed without recovery)
 - Verify that every task has its `<status>`, `<completed_at>`, and `<summary>` populated from earlier monitoring-phase updates
 
-The XML is the authoritative long-term record of the swarm. It contains the complete history: descriptions, context, dependency chains, status, summaries, logs, and timing for every task.
+The task file is the authoritative long-term record of the swarm. It contains the complete history: descriptions, context, dependency chains, status, summaries, logs, and timing for every task.
 
 ---
 
@@ -212,7 +212,7 @@ matter. Focus on: unexpected findings, key decisions, performance notes.}
 - {Recommendation based on what was learned during execution}
 
 ### Artifacts
-- **XML:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.xml`
+- **Task Record:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
 - **Plan:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
 - **Dashboard:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
 - **Logs:** `{tracker_root}/dashboards/{dashboardId}/logs.json`
