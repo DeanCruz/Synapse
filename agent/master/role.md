@@ -103,6 +103,7 @@ During a swarm, the master agent writes to exactly these files at `{tracker_root
 | `dashboards/{dashboardId}/initialization.json` | Static plan data (written ONCE during planning) |
 | `dashboards/{dashboardId}/logs.json` | Timestamped event log for the dashboard |
 | `dashboards/{dashboardId}/master_state.json` | State checkpoint for context compaction recovery |
+| `dashboards/{dashboardId}/metrics.json` | Post-swarm performance metrics (written once after completion) |
 | `tasks/{date}/parallel_{name}.xml` | Master task record (plan, status, summaries) |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 

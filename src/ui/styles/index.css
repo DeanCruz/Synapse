@@ -4772,9 +4772,9 @@ a:hover {
               box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Minimized: pill in bottom-right */
+/* Minimized: pill in bottom-right, above the bottom panel (42px) */
 .claude-float--minimized {
-  bottom: 20px;
+  bottom: 62px;
   right: 20px;
 }
 
