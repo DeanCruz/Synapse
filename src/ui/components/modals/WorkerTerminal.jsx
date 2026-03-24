@@ -143,8 +143,8 @@ export default function WorkerTerminal({ onClose, taskId, title, pid }) {
     });
 
     return () => {
-      api.off('worker-output', workerListener);
-      api.off('worker-complete', completeListener);
+      if (workerListener) workerListener();
+      if (completeListener) completeListener();
     };
   }, [api, taskId]);
 

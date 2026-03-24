@@ -169,8 +169,101 @@ function ToolCallBlock({ block }) {
   );
 }
 
+// Interactive question card for AskUserQuestion tool_use events
+function AskUserQuestionBlock({ block, onSendAnswer }) {
+  const questions = block.input?.questions || [];
+  const [selections, setSelections] = useState(() =>
+    questions.map(() => [])
+  );
+  const [answered, setAnswered] = useState(false);
+
+  function toggleOption(qIdx, optIdx, multiSelect) {
+    if (answered) return;
+    setSelections(prev => {
+      const updated = prev.map(s => [...s]);
+      if (multiSelect) {
+        const idx = updated[qIdx].indexOf(optIdx);
+        if (idx >= 0) updated[qIdx].splice(idx, 1);
+        else updated[qIdx].push(optIdx);
+      } else {
+        updated[qIdx] = updated[qIdx][0] === optIdx ? [] : [optIdx];
+      }
+      return updated;
+    });
+  }
+
+  function handleSubmit() {
+    if (answered) return;
+    const hasAnySelection = selections.some(s => s.length > 0);
+    if (!hasAnySelection) return;
+
+    const lines = ['Here are my answers:\n'];
+    questions.forEach((q, qIdx) => {
+      const selectedLabels = selections[qIdx].map(i => q.options[i]?.label).filter(Boolean);
+      if (selectedLabels.length > 0) {
+        lines.push(`**${q.header || q.question}**: ${selectedLabels.join(', ')}`);
+      }
+    });
+
+    setAnswered(true);
+    if (onSendAnswer) onSendAnswer(lines.join('\n'));
+  }
+
+  if (questions.length === 0) return null;
+
+  return (
+    <div className={'claude-ask-question' + (answered ? ' claude-ask-answered' : '')}>
+      {questions.map((q, qIdx) => (
+        <div key={qIdx} className="claude-ask-section">
+          <div className="claude-ask-header">{q.header || q.question}</div>
+          {q.question && q.header && (
+            <div className="claude-ask-subheader">{q.question}</div>
+          )}
+          <div className="claude-ask-options">
+            {(q.options || []).map((opt, optIdx) => {
+              const isSelected = selections[qIdx].includes(optIdx);
+              return (
+                <button
+                  key={optIdx}
+                  className={'claude-ask-option' + (isSelected ? ' selected' : '')}
+                  onClick={() => toggleOption(qIdx, optIdx, q.multiSelect)}
+                  disabled={answered}
+                >
+                  <span className="claude-ask-option-indicator">
+                    {q.multiSelect
+                      ? (isSelected ? '☑' : '☐')
+                      : (isSelected ? '◉' : '○')}
+                  </span>
+                  <span className="claude-ask-option-content">
+                    <span className="claude-ask-option-label">{opt.label}</span>
+                    {opt.description && (
+                      <span className="claude-ask-option-desc">{opt.description}</span>
+                    )}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+      {!answered && (
+        <button
+          className="claude-ask-submit"
+          onClick={handleSubmit}
+          disabled={!selections.some(s => s.length > 0)}
+        >
+          Submit Answers
+        </button>
+      )}
+      {answered && (
+        <div className="claude-ask-submitted-label">Answers submitted</div>
+      )}
+    </div>
+  );
+}
+
 // A single conversation message
-function ConversationMessage({ msg, isLatestThinking }) {
+function ConversationMessage({ msg, isLatestThinking, onSendAnswer }) {
   if (msg.type === 'thinking') {
     return <ThinkingBubble msg={msg} isLatest={isLatestThinking} />;
   }
@@ -199,6 +292,9 @@ function ConversationMessage({ msg, isLatestThinking }) {
     );
   }
   if (msg.type === 'tool_call') {
+    if (msg.block?.name === 'AskUserQuestion') {
+      return <AskUserQuestionBlock block={msg.block} onSendAnswer={onSendAnswer} />;
+    }
     return <ToolCallBlock block={msg.block || {}} />;
   }
   if (msg.type === 'system') {
@@ -277,6 +373,10 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const currentTextIndexRef = useRef(null);
   // Streaming content block accumulator: { index -> { type, id, name, input_json, thinking } }
   const streamingBlocksRef = useRef({});
+  // Track whether we received streaming content_block events (to skip duplicate assistant summary)
+  const sawStreamingRef = useRef(false);
+  // Track whether current task is a resumed session (history replay events should be ignored)
+  const isResumedSessionRef = useRef(false);
   // Stable refs so IPC listeners always call latest functions
   const handleChunkRef = useRef(null);
   const finishRef = useRef(null);
@@ -632,10 +732,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     });
 
     return () => {
-      if (api) {
-        api.off('worker-output', workerListener);
-        api.off('worker-complete', completeListener);
-      }
+      if (workerListener) workerListener();
+      if (completeListener) completeListener();
       if (previewFlushTimerRef.current) clearTimeout(previewFlushTimerRef.current);
     };
   }, [api, dispatch]);
@@ -825,6 +923,10 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       }
 
       case 'assistant': {
+        // Skip if: (a) streaming content_block events already rendered this turn's
+        // content, or (b) this is a resumed session replaying history that's already
+        // in the UI. In both cases, the assistant event would produce duplicates.
+        if (sawStreamingRef.current || isResumedSessionRef.current) break;
         const content = evt.message?.content || evt.content || [];
         for (const block of content) {
           if (block.type === 'text') {
@@ -848,6 +950,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
 
       // --- Streaming content block events (Claude CLI stream-json format) ---
       case 'content_block_start': {
+        sawStreamingRef.current = true;
+        isResumedSessionRef.current = false; // history replay is over, new content starts
         const block = evt.content_block || {};
         const idx = evt.index ?? 0;
         if (block.type === 'tool_use' || block.type === 'server_tool_use') {
@@ -911,10 +1015,14 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         flushText();
         flushThinking();
         streamingBlocksRef.current = {};
+        sawStreamingRef.current = false;
+        isResumedSessionRef.current = false;
         dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
         break;
 
       case 'user': {
+        // Skip replayed user events during resumed sessions — already in the UI
+        if (isResumedSessionRef.current) break;
         const content = evt.message?.content || [];
         for (const block of content) {
           if (block.type === 'tool_result') {
@@ -929,6 +1037,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         flushText();
         flushThinking();
         streamingBlocksRef.current = {};
+        sawStreamingRef.current = false;
+        isResumedSessionRef.current = false;
         if (evt.session_id) sessionIdRef.current = evt.session_id;
         dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
         break;
@@ -1181,6 +1291,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     dispatch({ type: 'CLAUDE_SET_PROCESSING', value: true });
     dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
     currentTextIndexRef.current = null;
+    sawStreamingRef.current = false;
+    isResumedSessionRef.current = !!sessionIdRef.current;
 
     const taskId = '_claude_' + Date.now();
     activeTaskIdsRef.current.add(taskId);
@@ -1490,6 +1602,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     currentTextIndexRef.current = null;
     currentThinkingIndexRef.current = null;
     streamingBlocksRef.current = {};
+    sawStreamingRef.current = false;
+    isResumedSessionRef.current = false;
   }
 
   function newTab() {
@@ -1509,6 +1623,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     currentTextIndexRef.current = null;
     currentThinkingIndexRef.current = null;
     streamingBlocksRef.current = {};
+    sawStreamingRef.current = false;
+    isResumedSessionRef.current = false;
     textBufferRef.current = '';
     thinkingBufferRef.current = '';
     if (textFlushTimerRef.current) {
@@ -1732,6 +1848,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
                 key={msg.id}
                 msg={msg}
                 isLatestThinking={msg.type === 'thinking' && idx === lastThinkingIdx && isProcessing}
+                onSendAnswer={sendText}
               />
             ));
           })()}

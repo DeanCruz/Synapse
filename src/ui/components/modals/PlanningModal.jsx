@@ -107,8 +107,8 @@ export default function PlanningModal({ onClose, dashboardId, projectPath, onPla
   useEffect(() => {
     return () => {
       // Clean up listeners on unmount
-      if (api && outputListenerRef.current) api.off('worker-output', outputListenerRef.current);
-      if (api && completeListenerRef.current) api.off('worker-complete', completeListenerRef.current);
+      if (outputListenerRef.current) outputListenerRef.current();
+      if (completeListenerRef.current) completeListenerRef.current();
     };
   }, [api]);
 
@@ -159,8 +159,8 @@ export default function PlanningModal({ onClose, dashboardId, projectPath, onPla
 
     completeListenerRef.current = api.on('worker-complete', (data) => {
       if (data.taskId !== '_planner') return;
-      api.off('worker-output', outputListenerRef.current);
-      api.off('worker-complete', completeListenerRef.current);
+      if (outputListenerRef.current) outputListenerRef.current();
+      if (completeListenerRef.current) completeListenerRef.current();
       outputListenerRef.current = null;
       completeListenerRef.current = null;
 
