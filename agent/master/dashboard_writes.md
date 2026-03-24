@@ -36,12 +36,13 @@ Because the server re-reads the full file on every change, **atomic writes are m
 
 ### Write-Once Rule — NON-NEGOTIABLE
 
-`initialization.json` is written **once** during the planning phase. After the plan is written, the master **never updates it** — with exactly two exceptions:
+`initialization.json` is written **once** during the planning phase. After the plan is written, the master **never updates it** — with exactly three exceptions:
 
 1. **Repair task creation** — when a worker fails, the master appends a repair agent to `agents[]`, increments `task.total_tasks` and the relevant `waves[].total`, and rewires `depends_on` references.
 2. **Circuit breaker replanning** — when cascading failures trigger automatic replanning, the master applies the revision plan (modified, added, removed, retry categories).
+3. **Dynamic task addition (`!add_task`)** — when the user invokes `!add_task` to inject new tasks into the active swarm, the master appends new agents to `agents[]`, creates new `waves[]` entries if needed, increments `task.total_tasks` and `task.total_waves`, and optionally rewires `depends_on` on existing pending tasks. See `{tracker_root}/_commands/Synapse/add_task.md` for the full protocol.
 
-Outside of these two exception cases, the master does not touch `initialization.json` again.
+Outside of these three exception cases, the master does not touch `initialization.json` again.
 
 ### Schema
 
@@ -304,6 +305,7 @@ This applies everywhere a dashboard is cleared:
 | **Plan finalized, before user approval** | Full `task` object (static data only), full `agents[]` (id, title, wave, layer, directory, depends_on), full `waves[]` (id, name, total), full `chains[]` if applicable. Clear `progress/` directory. **This is the ONLY write.** |
 | **Worker fails (repair task creation)** | **EXCEPTION to write-once rule.** Append repair agent to `agents[]`, increment `task.total_tasks` and `waves[].total`, rewire `depends_on`. |
 | **Circuit breaker replanning** | **EXCEPTION to write-once rule.** Apply revision plan: modify, add, remove, retry. |
+| **Dynamic task addition (`!add_task`)** | **EXCEPTION to write-once rule.** Append new agents to `agents[]`, create new `waves[]` if needed, increment `task.total_tasks` and `task.total_waves`, optionally rewire `depends_on` on existing pending tasks. |
 
 ### logs.json write points
 

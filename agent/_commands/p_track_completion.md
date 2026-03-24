@@ -148,57 +148,137 @@ After all tasks complete (and after verification, if run), compute swarm perform
 
 > **Note:** `metrics.json` is written once after swarm completion. It is not watched by the server for live updates — it is a post-hoc analysis artifact. The dashboard may optionally read it for a metrics summary panel in future versions.
 
-### 17E. Read logs and deliver final report
+### 17E. Compile and deliver final report — NON-NEGOTIABLE
 
-**Read `{tracker_root}/dashboards/{dashboardId}/logs.json` in full.** Analyze all entries for the current task. Then deliver:
+> **The master MUST compile and deliver a comprehensive final report after every swarm. No exceptions. This is not optional. Do not skip it. Do not abbreviate it. The report is the user's primary artifact for understanding what happened, what changed, and what to do next.**
+
+**Data gathering — read ALL of these before writing the report:**
+
+1. **Read `{tracker_root}/dashboards/{dashboardId}/logs.json` in full** — analyze all entries for the current task.
+2. **Read every progress file** in `{tracker_root}/dashboards/{dashboardId}/progress/` — extract summaries, deviations, milestones, warnings, and logs from each worker.
+3. **Read the master task file** at `{tracker_root}/tasks/{date}/parallel_{task_name}.json` — cross-reference planned vs. actual outcomes.
+4. **Read `{tracker_root}/dashboards/{dashboardId}/metrics.json`** (written in Step 17D) — include performance data.
+
+**Synthesize all gathered data into a report with the following structure. Every section marked REQUIRED must appear. Sections marked CONDITIONAL appear only when their trigger condition is met.**
 
 ```markdown
 ## Swarm Complete: {task-slug}
 
-**{completed}/{total} tasks** · **{W} waves** · **{0 or N} failures** · **Type: {Waves|Chains}**
+**{completed}/{total} tasks** · **{W} waves** · **{0 or N} failures** · **{elapsed_seconds}s elapsed** · **{parallel_efficiency}x parallel efficiency** · **Type: {Waves|Chains}**
 
-### What Was Done
-{2-4 sentences. What was the goal? What was accomplished? Any significant decisions made?}
+---
 
-### Files Changed
-| File | Action | Task |
-|---|---|---|
-| {path} | created / modified / deleted | {task id} |
+### Summary of Work Completed (REQUIRED)
 
-### Important Logs & Observations
-{Summary of the most significant log entries — not every log, just the ones that matter.
-Focus on: unexpected findings, key decisions, performance notes.}
+{Thorough summary of what was accomplished. This is NOT a 2-sentence blurb — it should give the
+user a complete understanding of the work without needing to read individual task outputs. Cover:
+- What was the original goal?
+- What was actually built/changed/fixed?
+- How does the implementation work at a high level?
+- Any significant architectural or design decisions made during execution?
+- What is the current state of the feature/fix — is it fully functional, partially complete, or needs follow-up?
 
-### Divergent Actions
-(Only if any agents deviated from the plan — omit entirely if all agents followed the plan exactly)
-- **{task id} — {title}:** {what was different and why}
+Aim for a well-structured summary that tells the full story. Use sub-bullets for clarity if the
+swarm touched multiple areas. The user should walk away from this section understanding exactly
+what happened.}
 
-### Warnings
-(Only if agents reported unexpected findings — omit entirely if none)
-- **{task id}:** {warning description}
+### Files Changed (REQUIRED)
 
-### Failures
-(Only if tasks failed — omit entirely if all succeeded)
+| File | Action | Task | What Changed |
+|---|---|---|---|
+| {path} | created / modified / deleted | {task id} | {1-line description of the change} |
+
+{Group files logically if the swarm was large — by feature area, directory, or layer.}
+
+### Deviations & Their Impact (CONDITIONAL — include if ANY worker reported deviations)
+
+> Any time a worker deviated from the original plan, it must be reported here with an analysis
+> of how it affects the project. This is not just a list — explain the WHY and the IMPACT.
+
+For each deviation:
+- **Task {id} — {title}**
+  - **What changed:** {What the worker did differently from the plan}
+  - **Why:** {The reason for the deviation — discovered constraint, better approach, missing dependency, etc.}
+  - **Impact on project:** {How this deviation affects the codebase, other features, future work, or maintenance. Does it introduce technical debt? Does it change an API contract? Does it affect other parts of the system not touched by this swarm?}
+
+If no deviations occurred, omit this section entirely.
+
+### Warnings & Observations (CONDITIONAL — include if any workers reported warnings or unexpected findings)
+
+- **{task id}:** {warning description and its significance}
+
+If no warnings occurred, omit this section entirely.
+
+### Failures (CONDITIONAL — include if any tasks failed)
+
 - **{task id} — {title}:** {what failed and why}
+- **Recovery:** {was a repair task dispatched? Did it succeed?}
 - **Blocked by failure:** {any tasks that could not run as a result}
+- **Residual impact:** {any incomplete work or broken state left behind}
 
-### Verification
-(Only if a verification step was run — omit entirely if skipped)
+If no failures occurred, omit this section entirely.
+
+### Verification Results (CONDITIONAL — include if a verification step was run in 17C)
+
 - **Tests:** {pass | fail | no test suite}
 - **Types:** {pass | fail | N/A}
 - **Build:** {pass | fail | N/A}
 - **Issues:** {list of integration problems, or "None"}
 
-### Recommendations & Next Steps
-(Only if applicable — omit entirely if the task is fully complete with no follow-up needed)
-- {Recommendation or next step based on what was learned during execution}
+If verification was skipped, omit this section entirely.
+
+### Potential Improvements (REQUIRED)
+
+{Based on everything the master observed during the swarm — worker logs, deviations, code patterns,
+architectural decisions — identify improvements that could be made to the work that was just completed
+or to the surrounding codebase. This is the master's expert analysis, not a generic checklist.
+
+Consider:
+- Code quality: Are there patterns that could be cleaner? DRY violations? Missing abstractions?
+- Performance: Did any worker note potential performance concerns? Are there obvious optimizations?
+- Robustness: Error handling gaps? Missing edge cases? Incomplete validation?
+- Testing: Are the changes adequately tested? What test coverage is missing?
+- Architecture: Does the new code fit well with the existing architecture? Any coupling concerns?
+
+If the work is genuinely clean and complete with no improvements needed, explicitly state that
+and briefly explain why (e.g., "The implementation follows existing patterns consistently and
+all edge cases identified during planning were addressed.").}
+
+### Future Steps (REQUIRED)
+
+{Concrete, actionable next steps the user could take. These should emerge naturally from the
+work that was done — not generic advice. Think about:
+- Follow-up work that was out of scope but is now possible or necessary
+- Integration steps (e.g., "Wire the new component into the main layout")
+- Testing that should be done manually (e.g., "Test the auth flow end-to-end in the browser")
+- Configuration or environment changes needed
+- Related features or improvements that would complement this work
+- Technical debt that should be addressed soon
+
+If the task is truly self-contained with no follow-up, state: "No immediate follow-up required.
+The implementation is self-contained and fully integrated."}
+
+### Performance (REQUIRED)
+
+| Metric | Value |
+|---|---|
+| Wall-clock time | {elapsed_seconds}s |
+| Serial estimate | {serial_estimate_seconds}s |
+| Parallel efficiency | {parallel_efficiency}x |
+| Max concurrent agents | {max_concurrent} |
+| Total deviations | {deviation_count} |
+| Failure rate | {failure_rate} |
 
 ### Artifacts
+
 - **Task file:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
 - **Plan:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
 - **Dashboard:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
 - **Logs:** `{tracker_root}/dashboards/{dashboardId}/logs.json`
+- **Metrics:** `{tracker_root}/dashboards/{dashboardId}/metrics.json`
 ```
+
+> **Quality bar:** The final report should be good enough that a developer who was not present during the swarm can read it and fully understand: (1) what was done, (2) what went sideways, (3) what state the project is in now, (4) what they should do next. If your report doesn't meet this bar, it's incomplete.
 
 ### 17F. Save to history
 

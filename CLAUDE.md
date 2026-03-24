@@ -325,6 +325,7 @@ Synapse/                         <-- {tracker_root}
 | **Swarm** | `!p_track {prompt}` | **Primary.** Full parallel swarm with live dashboard |
 | | `!p {prompt}` | Lightweight parallel dispatch |
 | | `!master_plan_track` | Multi-stream orchestration across dashboards |
+| | `!add_task {prompt}` | Add tasks to an active swarm mid-flight |
 | | `!dispatch {id}` | Manually dispatch pending tasks |
 | | `!retry {id}` | Re-dispatch a failed task |
 | | `!resume` | Resume a chat session after interruption |

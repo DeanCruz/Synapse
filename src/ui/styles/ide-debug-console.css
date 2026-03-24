@@ -1,0 +1,288 @@
+/* ============================================================
+   IDE Debug Console Panel
+   REPL-style output display with expression evaluation input.
+   ============================================================ */
+
+/* ----- Container ----- */
+.debug-console {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #1a1a1a;
+  color: #cccccc;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* ----- Header Bar ----- */
+.debug-console-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #333333;
+  flex-shrink: 0;
+}
+
+.debug-console-title {
+  font-family: var(--sans, -apple-system, BlinkMacSystemFont, sans-serif);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #999999;
+  user-select: none;
+}
+
+.debug-console-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.debug-console-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #999999;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.debug-console-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+.debug-console-btn:hover {
+  color: #cccccc;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.debug-console-btn--active {
+  color: var(--color-in-progress, #9B7CF0);
+}
+
+/* ----- Filter Bar ----- */
+.debug-console-filters {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #1e1e1e;
+  border-bottom: 1px solid #333333;
+  flex-shrink: 0;
+}
+
+.debug-console-filter-btn {
+  padding: 2px 8px;
+  border: 1px solid #444444;
+  border-radius: 3px;
+  background: transparent;
+  color: #808080;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.68rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.debug-console-filter-btn:hover {
+  border-color: #666666;
+  color: #cccccc;
+}
+
+.debug-console-filter-btn--active {
+  border-color: var(--color-in-progress, #9B7CF0);
+  color: #cccccc;
+  background: rgba(155, 124, 240, 0.12);
+}
+
+/* ----- Output Area ----- */
+.debug-console-output {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 10px;
+  min-height: 0;
+}
+
+/* Scrollbar styling */
+.debug-console-output::-webkit-scrollbar {
+  width: 8px;
+}
+
+.debug-console-output::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.debug-console-output::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+}
+
+.debug-console-output::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ----- Empty state ----- */
+.debug-console-empty {
+  color: #555555;
+  font-style: italic;
+  padding: 12px 0;
+  text-align: center;
+}
+
+/* ----- Output Line ----- */
+.debug-console-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 1px 0;
+  word-break: break-all;
+}
+
+.debug-console-line-ts {
+  color: #555555;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+  min-width: 58px;
+}
+
+.debug-console-line-type {
+  color: #666666;
+  font-size: 0.72rem;
+  flex-shrink: 0;
+  min-width: 32px;
+}
+
+.debug-console-line-text {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+}
+
+/* -- stdout: default white/light gray -- */
+.debug-console-line--stdout .debug-console-line-text {
+  color: #cccccc;
+}
+
+.debug-console-line--stdout .debug-console-line-type {
+  color: #666666;
+}
+
+/* -- stderr: red -- */
+.debug-console-line--stderr .debug-console-line-text {
+  color: #f44747;
+}
+
+.debug-console-line--stderr .debug-console-line-type {
+  color: #f44747;
+}
+
+/* -- log: gray -- */
+.debug-console-line--log .debug-console-line-text {
+  color: #808080;
+}
+
+.debug-console-line--log .debug-console-line-type {
+  color: #808080;
+}
+
+/* -- error: red bold -- */
+.debug-console-line--error .debug-console-line-text {
+  color: #f44747;
+  font-weight: 700;
+}
+
+.debug-console-line--error .debug-console-line-type {
+  color: #f44747;
+  font-weight: 700;
+}
+
+/* -- eval result: blue (#569cd6) -- */
+.debug-console-line--eval .debug-console-line-text {
+  color: #569cd6;
+}
+
+.debug-console-line--eval .debug-console-line-type {
+  color: #569cd6;
+}
+
+/* -- eval-error: red -- */
+.debug-console-line--eval-error .debug-console-line-text {
+  color: #f44747;
+}
+
+.debug-console-line--eval-error .debug-console-line-type {
+  color: #f44747;
+}
+
+/* -- system message: dim gray italic -- */
+.debug-console-line--system .debug-console-line-text {
+  color: #666666;
+  font-style: italic;
+}
+
+.debug-console-line--system .debug-console-line-type {
+  color: #666666;
+}
+
+/* ----- Input Area ----- */
+.debug-console-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-top: 1px solid #333333;
+  background: #1e1e1e;
+  flex-shrink: 0;
+}
+
+.debug-console-prompt {
+  color: #569cd6;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.debug-console-input {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid #333333;
+  border-radius: 3px;
+  background: #1a1a1a;
+  color: #cccccc;
+  font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.debug-console-input::placeholder {
+  color: #555555;
+}
+
+.debug-console-input:focus {
+  border-color: #569cd6;
+}
+
+.debug-console-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.debug-console-input:disabled::placeholder {
+  color: #444444;
+}

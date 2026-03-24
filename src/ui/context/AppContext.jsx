@@ -159,6 +159,15 @@ const initialState = {
   ideFileTrees: {}, // { [workspaceId]: treeData }
   ideSidebarView: 'explorer', // which sidebar panel is shown in IDE
   ideChatOpen: false, // whether IDE inline chat is open
+  // Debug state — breakpoints, session, call stack, variables, scopes, watch expressions
+  debugBreakpoints: {}, // { [filePath]: [lineNumber, ...] }
+  debugSession: { status: 'idle', pausedFile: null, pausedLine: null, threadId: null }, // debug session state
+  debugCallStack: [], // [{ id, name, source, line, column }]
+  debugVariables: {}, // { [scopeId]: [{ name, value, type, variablesReference }] }
+  debugScopes: [], // [{ name, variablesReference, expensive }]
+  debugWatchExpressions: [], // [{ id, expression, value, error }]
+  // Diagnostics state — per-file syntax errors, warnings, info
+  diagnostics: {}, // { [filePath]: [{ line, column, endLine, endColumn, message, severity, source }] }
   // Git Manager state — open repos, active repo, git data, loading states
   gitRepos: savedGitRepos, // [{ id, path, name }]
   gitActiveRepoId: savedGitRepos.length > 0 ? savedGitRepos[0].id : null,
@@ -231,12 +240,17 @@ function appReducerCore(state, action) {
       const switchUnread = targetActiveView === 'claude'
         ? (({ [action.id]: _, ...rest }) => rest)(state.unreadChatCounts)
         : state.unreadChatCounts;
+      // Use cached data from allDashboardProgress/allDashboardLogs instead of
+      // resetting to empty — prevents tasks from flickering to "pending" during
+      // the async re-fetch window.
+      const cachedProgress = state.allDashboardProgress[action.id] || {};
+      const cachedLogs = state.allDashboardLogs[action.id] || null;
       return {
         ...state,
         currentDashboardId: action.id,
         currentInit: null,
-        currentProgress: {},
-        currentLogs: null,
+        currentProgress: cachedProgress,
+        currentLogs: cachedLogs,
         currentStatus: null,
         activeLogFilter: 'all',
         seenPermissionCount: 0,
@@ -486,8 +500,45 @@ function appReducerCore(state, action) {
         ? { ...state.dashboardNames, ...action.names }
         : state.dashboardNames;
       // If current dashboard doesn't exist in the list, switch to first available
+      // Must stash chat state first (same as SWITCH_DASHBOARD) to avoid losing messages
       if (dashboardList.length > 0 && !dashboardList.includes(state.currentDashboardId)) {
-        return { ...state, dashboardList, dashboardNames, currentDashboardId: dashboardList[0] };
+        const prevDid = state.currentDashboardId;
+        const prevTabId = state.claudeActiveTabId;
+        const prevStashKey = prevDid + ':' + prevTabId;
+        const newTabStash = { ...state.claudeTabStash, [prevStashKey]: state.claudeMessages };
+        const newActiveTabMap = { ...state.claudeActiveTabMap, [prevDid]: prevTabId };
+        const procStash = { ...state.claudeProcessingStash, [prevDid]: {
+          isProcessing: state.claudeIsProcessing,
+          status: state.claudeStatus,
+          pendingAttachments: state.claudePendingAttachments,
+          viewMode: state.claudeViewMode,
+          chatOpen: state.activeView === 'claude',
+          ideChatOpen: state.ideChatOpen,
+        }};
+        // Persist stashed messages immediately to avoid loss
+        try { localStorage.setItem(claudeMessagesKey(prevDid, prevTabId), JSON.stringify(state.claudeMessages)); } catch (e) { /* */ }
+        const targetId = dashboardList[0];
+        const targetTabId = newActiveTabMap[targetId] || 'default';
+        const targetStashKey = targetId + ':' + targetTabId;
+        const targetMessages = newTabStash[targetStashKey] || loadSavedMessages(targetId, targetTabId) || [CLAUDE_WELCOME_MSG];
+        const targetProc = procStash[targetId] || {};
+        const targetTabs = state.claudeTabs[targetId] || loadSavedTabs(targetId) || [{ ...DEFAULT_TAB }];
+        return {
+          ...state,
+          dashboardList,
+          dashboardNames,
+          currentDashboardId: targetId,
+          claudeTabStash: newTabStash,
+          claudeActiveTabMap: newActiveTabMap,
+          claudeActiveTabId: targetTabId,
+          claudeTabs: { ...state.claudeTabs, [targetId]: targetTabs },
+          claudeProcessingStash: procStash,
+          claudeMessages: targetMessages,
+          claudeIsProcessing: targetProc.isProcessing || false,
+          claudeStatus: targetProc.status || 'Ready',
+          claudePendingAttachments: targetProc.pendingAttachments || [],
+          claudeDashboardId: targetId,
+        };
       }
       return { ...state, dashboardList, dashboardNames };
     }
@@ -726,6 +777,58 @@ function appReducerCore(state, action) {
       return { ...state, gitError: action.error };
     case 'GIT_SET_SELECTED_FILE':
       return { ...state, gitSelectedFile: action.filePath };
+    // --- Debug state management ---
+    case 'DEBUG_SET_SESSION': {
+      const newSession = { ...state.debugSession, ...action.session };
+      return { ...state, debugSession: newSession };
+    }
+    case 'DEBUG_TOGGLE_BREAKPOINT': {
+      const filePath = action.filePath;
+      const line = action.line;
+      const currentBps = state.debugBreakpoints[filePath] || [];
+      const idx = currentBps.indexOf(line);
+      const newBps = idx === -1
+        ? [...currentBps, line].sort((a, b) => a - b)
+        : currentBps.filter(l => l !== line);
+      const newBreakpoints = { ...state.debugBreakpoints, [filePath]: newBps };
+      // Clean up empty arrays
+      if (newBps.length === 0) {
+        delete newBreakpoints[filePath];
+      }
+      return { ...state, debugBreakpoints: newBreakpoints };
+    }
+    case 'DEBUG_SET_BREAKPOINTS': {
+      const newBreakpoints = { ...state.debugBreakpoints, [action.filePath]: action.breakpoints };
+      return { ...state, debugBreakpoints: newBreakpoints };
+    }
+    case 'DEBUG_SET_CALL_STACK':
+      return { ...state, debugCallStack: action.callStack };
+    case 'DEBUG_SET_VARIABLES': {
+      const newVars = { ...state.debugVariables, [action.scopeId]: action.variables };
+      return { ...state, debugVariables: newVars };
+    }
+    case 'DEBUG_SET_SCOPES':
+      return { ...state, debugScopes: action.scopes };
+    case 'DEBUG_CLEAR_SESSION':
+      return {
+        ...state,
+        debugSession: { status: 'idle', pausedFile: null, pausedLine: null, threadId: null },
+        debugCallStack: [],
+        debugVariables: {},
+        debugScopes: [],
+      };
+    // --- Diagnostics state management ---
+    case 'DIAGNOSTICS_SET': {
+      const newDiagnostics = { ...state.diagnostics, [action.filePath]: action.diagnostics };
+      return { ...state, diagnostics: newDiagnostics };
+    }
+    case 'DIAGNOSTICS_CLEAR':
+      return { ...state, diagnostics: {} };
+    case 'DIAGNOSTICS_CLEAR_FILE': {
+      const newDiagnostics = { ...state.diagnostics };
+      delete newDiagnostics[action.filePath];
+      return { ...state, diagnostics: newDiagnostics };
+    }
     default:
       return state;
   }

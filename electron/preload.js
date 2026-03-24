@@ -23,6 +23,10 @@ const PUSH_CHANNELS = [
   'heartbeat',
   'init_state',
   'tasks_unblocked',
+  'debug-paused',
+  'debug-resumed',
+  'debug-stopped',
+  'debug-output',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -168,6 +172,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ideRename: (oldPath, newPath, workspaceRoot) => ipcRenderer.invoke('ide-rename', oldPath, newPath, workspaceRoot),
   ideDelete: (targetPath, workspaceRoot) => ipcRenderer.invoke('ide-delete', targetPath, workspaceRoot),
   ideSelectFolder: () => ipcRenderer.invoke('ide-select-folder'),
+  ideCheckSyntax: (filePath, workspaceRoot) => ipcRenderer.invoke('ide-check-syntax', filePath, workspaceRoot),
+  ideCheckSyntaxBatch: (filePaths, workspaceRoot) => ipcRenderer.invoke('ide-check-syntax-batch', filePaths, workspaceRoot),
+
+  // Debug Service
+  debugLaunch: (opts) => ipcRenderer.invoke('debug-launch', opts),
+  debugStop: () => ipcRenderer.invoke('debug-stop'),
+  debugSetBreakpoint: (filePath, lineNumber, condition) => ipcRenderer.invoke('debug-set-breakpoint', filePath, lineNumber, condition),
+  debugRemoveBreakpoint: (breakpointId) => ipcRenderer.invoke('debug-remove-breakpoint', breakpointId),
+  debugContinue: () => ipcRenderer.invoke('debug-continue'),
+  debugPause: () => ipcRenderer.invoke('debug-pause'),
+  debugStepOver: () => ipcRenderer.invoke('debug-step-over'),
+  debugStepInto: () => ipcRenderer.invoke('debug-step-into'),
+  debugStepOut: () => ipcRenderer.invoke('debug-step-out'),
+  debugEvaluate: (expression, callFrameId) => ipcRenderer.invoke('debug-evaluate', expression, callFrameId),
+  debugGetVariables: (objectId) => ipcRenderer.invoke('debug-get-variables', objectId),
+  debugGetScopes: (callFrameId) => ipcRenderer.invoke('debug-get-scopes', callFrameId),
+  debugSessionInfo: () => ipcRenderer.invoke('debug-session-info'),
 
   // Git Operations
   gitIsRepo: (repoPath) => ipcRenderer.invoke('git-is-repo', repoPath),

@@ -10,6 +10,8 @@
 >
 > **4. You MUST dispatch ALL implementation work via worker agents using the Task tool. Every file edit, every code change, every test — dispatched to a worker. The master's only job is: read context → plan tasks → write dashboard → dispatch agents → monitor → report.**
 >
+> **5. You MUST compile and deliver a comprehensive final report after all tasks complete. Read all progress files, analyze deviations and their project impact, identify improvements, and provide concrete future steps. The report is the user's primary deliverable — not the dashboard, not the logs. No exceptions.**
+>
 > **If the user's prompt is long or complex, that is MORE reason to follow these rules, not less. Long prompts require MORE planning and MORE agents, not direct implementation.**
 
 **Purpose:** The invoking agent becomes the **master agent** — responsible for deep planning, dependency-aware parallel dispatch, live Synapse dashboard updates, and timely detailed statusing. Tasks are dispatched the instant their dependencies are satisfied, regardless of wave boundaries. The master agent's primary job is **deep planning** and **timely detailed statusing**.
@@ -73,7 +75,9 @@
 
 ## Phase 3: Completion — Verify & Report
 
-**Step 17:** Update master task file with final status, append completion log entry, run post-swarm verification if warranted (tests/types/build/cross-repo checks), compute swarm metrics (`metrics.json`), read all logs and deliver the final report with files changed/divergent actions/warnings/failures/recommendations, save to history.
+**Step 17:** Update master task file with final status, append completion log entry, run post-swarm verification if warranted (tests/types/build/cross-repo checks), compute swarm metrics (`metrics.json`), **compile and deliver a comprehensive final report (NON-NEGOTIABLE)** — read all progress files, logs, and the master task file, then synthesize a thorough report covering: summary of all work completed, files changed, deviations and their project impact, potential improvements, and concrete future steps. Save to history.
+
+> **The final report is NON-NEGOTIABLE. The master MUST read all worker progress files and compile a complete report. See Step 17E.**
 
 > **Read `{tracker_root}/agent/_commands/p_track_completion.md` for the complete completion protocol.**
 
@@ -144,13 +148,14 @@ Multiple tasks need the same file?
 27. **Batch size: unlimited.** Dispatch as many agents as there are ready tasks. If the tool limits simultaneous dispatches, send multiple dispatch rounds back-to-back.
 28. **Pipeline must flow continuously.** As slots open up (agents complete), immediately scan for and dispatch newly unblocked tasks.
 
-### Verification
+### Verification & Reporting
 
 29. **Verify after completion when warranted.** If the swarm modified existing code across multiple files, dispatch a verification agent to run tests, type check, and build. Skip for purely additive swarms with no deviations. See Step 17C.
+30. **Final report is NON-NEGOTIABLE.** After all tasks complete, the master MUST read all progress files, logs, and the master task file, then compile and deliver a comprehensive final report. The report MUST include: a thorough summary of work completed, all files changed, analysis of deviations and their project impact, potential improvements identified during execution, and concrete future steps. This is not optional. Not "the dashboard shows everything." Not "the user can check the logs." The master delivers a complete written report every time. See Step 17E.
 
 ### Permission Requests
 
-30. **Dashboard popup before terminal question.** If the master agent needs to ask the user a question during execution, write a `"permission"` level log entry to `{tracker_root}/dashboards/{dashboardId}/logs.json` FIRST, then ask in the terminal. This triggers the dashboard popup. See `tracker_master_instructions.md` for details.
+31. **Dashboard popup before terminal question.** If the master agent needs to ask the user a question during execution, write a `"permission"` level log entry to `{tracker_root}/dashboards/{dashboardId}/logs.json` FIRST, then ask in the terminal. This triggers the dashboard popup. See `tracker_master_instructions.md` for details.
 
 ---
 

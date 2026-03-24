@@ -2271,7 +2271,25 @@ a:hover {
   min-width: 0;
   position: relative;
   height: calc(100vh - 53px);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.dashboard-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-content::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.02);
+}
+
+.dashboard-content::-webkit-scrollbar-thumb {
+  background: rgba(155,124,240,0.25);
+  border-radius: 3px;
+}
+
+.dashboard-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(155,124,240,0.4);
 }
 
 /* ============================================================
@@ -7279,6 +7297,16 @@ a:hover {
   border-radius: 8px;
   letter-spacing: 0;
   text-transform: none;
+}
+
+.bottom-panel-tab-badge--error {
+  background: rgba(255, 107, 107, 0.2);
+  color: var(--color-failed, #FF6B6B);
+}
+
+.bottom-panel-tab-badge--warning {
+  background: rgba(255, 217, 61, 0.2);
+  color: var(--color-warning, #FFD93D);
 }
 
 /* Header action buttons (close, etc.) */
