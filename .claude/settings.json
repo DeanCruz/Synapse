@@ -7,10 +7,6 @@
           {
             "type": "command",
             "command": ".claude/hooks/validate-master-write.sh"
-          },
-          {
-            "type": "command",
-            "command": ".claude/hooks/validate-init-write-once.sh"
           }
         ]
       },
@@ -31,6 +27,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/validate-progress-file.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/mark-annotation-stale.sh"
           }
         ]
       }

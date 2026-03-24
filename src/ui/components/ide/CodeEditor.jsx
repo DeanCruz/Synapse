@@ -477,6 +477,7 @@ export default function CodeEditor({ filePath, workspaceId, workspacePath }) {
         horizontalScrollbarSize: 10,
         useShadows: false,
       },
+      renderLineHighlight: 'none',
       overviewRulerBorder: false,
       hideCursorInOverviewRuler: true,
       contextmenu: true,

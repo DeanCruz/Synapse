@@ -3,6 +3,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import Modal from './Modal.jsx';
+import { useDispatch } from '../../context/AppContext.jsx';
 import { STATUS_COLORS, STATUS_BG_COLORS, colorWithAlpha } from '../../utils/constants.js';
 import { formatTime, calcDuration, formatElapsed } from '../../utils/format.js';
 
@@ -23,8 +24,9 @@ function StatusBadge({ status }) {
   );
 }
 
-export default function AgentDetails({ onClose, agent, progressData, findAgentFn }) {
+export default function AgentDetails({ onClose, agent, progressData, findAgentFn, projectRoot }) {
   const logsBoxRef = useRef(null);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     if (logsBoxRef.current) {
@@ -36,6 +38,24 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
 
   // Merge lifecycle data from progress file into agent
   const merged = { ...agent, ...(agentProg || {}) };
+
+  const filesChanged = (agentProg && agentProg.files_changed) || merged.files_changed || [];
+
+  function handleFileClick(file) {
+    dispatch({
+      type: 'GIT_NAVIGATE_TO_FILE',
+      projectRoot: projectRoot || null,
+      filePath: file.path,
+    });
+    onClose();
+  }
+
+  function splitFilePath(filePath) {
+    if (!filePath) return { name: '', dir: '' };
+    const idx = filePath.lastIndexOf('/');
+    if (idx === -1) return { name: filePath, dir: '' };
+    return { name: filePath.substring(idx + 1), dir: filePath.substring(0, idx + 1) };
+  }
 
   function metaItem(label, value) {
     if (!value) return null;
@@ -174,6 +194,36 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
             {metaItem('Completed', merged.completed_at ? formatTime(merged.completed_at) : null)}
             {metaItem('Duration', durationStr)}
             {metaItem('Status', merged.status ? merged.status.replace(/_/g, ' ') : null)}
+          </div>
+        )}
+
+        {/* Files changed */}
+        {filesChanged.length > 0 && (
+          <div className="files-changed-section">
+            <span className="files-changed-label">Files Changed</span>
+            <div className="files-changed-list">
+              {filesChanged.map((file, i) => {
+                const { name, dir } = splitFilePath(file.path);
+                const actionLabel = (file.action || 'M')[0].toUpperCase();
+                return (
+                  <div
+                    key={i}
+                    className="files-changed-item"
+                    onClick={() => handleFileClick(file)}
+                    title={`Click to view ${file.path} in Git Manager`}
+                  >
+                    <span className={`files-changed-action ${file.action || 'modified'}`}>
+                      {actionLabel}
+                    </span>
+                    <span className="files-changed-path">
+                      <span className="files-changed-name">{name}</span>
+                      {dir && <span className="files-changed-dir"> {dir}</span>}
+                    </span>
+                    <span className="files-changed-nav-hint">View in Git</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 

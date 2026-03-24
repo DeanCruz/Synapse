@@ -777,6 +777,45 @@ function appReducerCore(state, action) {
       return { ...state, gitError: action.error };
     case 'GIT_SET_SELECTED_FILE':
       return { ...state, gitSelectedFile: action.filePath };
+    case 'GIT_NAVIGATE_TO_FILE': {
+      // Opens (or selects) the repo at action.projectRoot, switches to git view,
+      // and highlights action.filePath in the Changes panel.
+      const navPath = action.projectRoot;
+      const navFile = action.filePath;
+      if (!navPath) return { ...state, activeView: 'git' };
+
+      // Check if this repo is already open
+      const existingNavRepo = state.gitRepos.find(r => r.path === navPath);
+      if (existingNavRepo) {
+        return {
+          ...state,
+          activeView: 'git',
+          gitActiveRepoId: existingNavRepo.id,
+          gitSelectedFile: navFile || null,
+        };
+      }
+
+      // Open the repo as a new tab
+      const navRepoId = String(Date.now());
+      const navRepoName = navPath.replace(/\/+$/, '').split('/').pop();
+      const newNavRepo = { id: navRepoId, path: navPath, name: navRepoName };
+      const updatedNavRepos = [...state.gitRepos, newNavRepo];
+      saveGitRepos(updatedNavRepos);
+      return {
+        ...state,
+        activeView: 'git',
+        gitRepos: updatedNavRepos,
+        gitActiveRepoId: navRepoId,
+        gitStatus: null,
+        gitBranches: [],
+        gitCurrentBranch: null,
+        gitLog: [],
+        gitDiff: null,
+        gitRemotes: [],
+        gitError: null,
+        gitSelectedFile: navFile || null,
+      };
+    }
     // --- Debug state management ---
     case 'DEBUG_SET_SESSION': {
       const newSession = { ...state.debugSession, ...action.session };

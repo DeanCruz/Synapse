@@ -31,6 +31,7 @@ export function mergeState(init, progress, logs) {
       milestones: prog ? prog.milestones : [],
       deviations: prog ? prog.deviations : [],
       logs: prog ? prog.logs : [],
+      files_changed: prog ? prog.files_changed : [],
     };
   });
 
@@ -337,6 +338,11 @@ export function useDashboardData() {
       if (data.dashboardId === currentDashboardIdRef.current) {
         dispatch({ type: 'SET_UNBLOCKED_TASKS', tasks: data.unblocked, completedTaskId: data.completedTaskId });
       }
+    });
+
+    addListener('write_rejected', (data) => {
+      if (!data.dashboardId) return;
+      console.error('[write_rejected]', data.reason, data.details);
     });
 
     dispatch({ type: 'SET', key: 'connected', value: true });

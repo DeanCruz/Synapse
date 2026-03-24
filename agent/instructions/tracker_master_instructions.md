@@ -32,6 +32,7 @@
 | **Eager Dispatch** | `agent/master/eager_dispatch.md` | On every worker completion — the full dispatch protocol, mechanism steps, examples, and server-side alerts |
 | **Failure Recovery** | `agent/master/failure_recovery.md` | When a worker fails — repair tasks, double failure handling, circuit breaker, and worker return validation |
 | **Worker Prompts** | `agent/master/worker_prompts.md` | When constructing worker dispatch prompts — template, convention map, budget guidelines, and completeness checklist |
+| **PKI Integration** | `agent/master/pki_integration.md` | Before task decomposition — read the Project Knowledge Index to front-load gotchas, patterns, and conventions into worker prompts |
 | **Compaction Recovery** | `agent/master/compaction_recovery.md` | After context compaction — state checkpoint schema, recovery procedure, cache awareness, and swarm metrics |
 | **Dashboard Protocol** | `agent/master/dashboard_protocol.md` | When understanding `!p` vs `!p_track` dashboard interaction — write timelines, mode comparison, and decision flowchart |
 
@@ -68,6 +69,16 @@ The **circuit breaker** triggers automatic replanning when: 3+ tasks fail in the
 Every worker receives a self-contained prompt with all context needed to work independently. The master builds a **convention map** from `{project_root}/CLAUDE.md` and injects only relevant categories per task. Prompts should target ~8000 tokens (~800 lines). Each task should take 1-5 minutes (right-sized). Downstream tasks must include structured `UPSTREAM RESULTS` from completed dependencies.
 
 **Read:** `agent/master/worker_prompts.md` for the full prompt template, instruction mode selection (FULL vs LITE), convention relevance checklist, context budget guidelines, and the pre-dispatch completeness checklist.
+
+---
+
+## PKI Integration — Knowledge-Augmented Planning
+
+When a Project Knowledge Index (PKI) exists at `{project_root}/.synapse/knowledge/`, the master reads `manifest.json` before decomposing tasks. It extracts relevant domains and tags from the user's prompt, looks up files via the manifest's reverse indexes (`domain_index`, `tag_index`, `concept_map`), and reads annotations for matched files. Gotchas, patterns, and conventions from annotations are injected into each worker's CONVENTIONS section — filtered per-worker based on that worker's specific files. The PKI supplements but never replaces the CLAUDE.md convention map.
+
+If no PKI exists, the master proceeds with standard planning — the PKI is an enhancement, not a requirement. Stale annotations are included with caveats. The master caps annotation reads at 8-10 files and limits PKI knowledge to ~100 lines per worker prompt.
+
+**Read:** `agent/master/pki_integration.md` before task decomposition — covers the full 6-step pre-planning flow, manifest lookup queries, annotation extraction, prompt injection format, fallback behavior, and context budget rules.
 
 ---
 
@@ -114,6 +125,7 @@ After all tasks complete, compute `metrics.json` with elapsed time, parallel eff
 │       ├── eager_dispatch.md
 │       ├── failure_recovery.md
 │       ├── worker_prompts.md
+│       ├── pki_integration.md
 │       └── compaction_recovery.md
 ├── dashboards/
 │   ├── ide/                                  ← Reserved (IDE agent, never for swarms)

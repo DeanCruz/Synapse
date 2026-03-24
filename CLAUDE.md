@@ -92,6 +92,10 @@ Synapse/                         <-- {tracker_root}
 +-- electron/                    <-- Desktop app
 ```
 
+## Project Knowledge Index (PKI)
+
+The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` that accumulates deep operational understanding of the target project -- gotchas, patterns, conventions, domain taxonomy, and file relationships. It is populated by four mechanisms: `!learn` (cold-start bootstrap), worker annotations (swarm-time discovery), a PostToolUse staleness hook (automatic change detection), and `!learn_update` (incremental refresh). Masters use the PKI during pre-planning to inject relevant knowledge into worker prompts. The `!context` command queries it for enriched output. See [`documentation/project-integration/pki-overview.md`](documentation/project-integration/pki-overview.md) for full details.
+
 ## Commands
 
 | Category | Command | Description |
@@ -101,6 +105,8 @@ Synapse/                         <-- {tracker_root}
 | | `!onboard` | Project walkthrough |
 | | `!scaffold` | Generate a CLAUDE.md for a project |
 | | `!create_claude` | Create or update an opinionated CLAUDE.md |
+| | `!learn` | Bootstrap the Project Knowledge Index (PKI) from scratch |
+| | `!learn_update` | Incrementally refresh the PKI (stale/new files only) |
 | **Swarm** | `!p_track {prompt}` | **Primary.** Full parallel swarm with live dashboard |
 | | `!p {prompt}` | Lightweight parallel dispatch |
 | | `!master_plan_track` | Multi-stream orchestration across dashboards |
