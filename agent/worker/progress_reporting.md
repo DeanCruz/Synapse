@@ -144,13 +144,30 @@ Progress through these stages in order:
 
 7. **On task failure** — Set `status: "failed"`, `stage: "failed"`, `completed_at`, `summary` (with error description), and add a log entry at `level: "error"`.
 
-### Recommended writes (as often as useful):
+### After every significant action (strongly encouraged — hooks enforce this):
 
+- **After reading files** — Log what you read and what you learned from it.
+- **After making a decision** — Log what you decided and why.
+- **After editing code** — Log what you changed and the result.
+- **After running tests/commands** — Log what you ran and the output.
 - **On significant milestones** within a stage — Add to `milestones[]` and `logs[]`.
 - **On unexpected findings** — Add a log entry at `level: "warn"`.
 - **On starting a new sub-operation** — Update `message` and add a log entry.
 - **On populating shared_context** — Recommended when the worker creates exports, interfaces, or patterns that same-wave siblings may find useful. Populate `shared_context` as early as possible so siblings can read it.
 - **On discovering operational knowledge about a file** — Add to `annotations` whenever you gain deep understanding of a file you read. Populate during `reading_context` and `implementing` stages.
+
+### Log Quality Enforcement (via hooks)
+
+Hooks automatically validate your progress files on every write. You will be warned if:
+- **logs[] is empty** — you must always have log entries
+- **Log messages are too brief** (<20 chars) — describe what you did, not just "Done"
+- **Vague placeholder messages** — "Starting...", "Working on it", "Done" are rejected
+- **Insufficient log count for stage** — `planning` ≥2, `implementing` ≥3, `testing` ≥4, `finalizing`/`completed` ≥5
+- **Consecutive duplicate messages** — each log must describe a distinct action
+- **Missing milestones** — from `implementing` stage onward, milestones[] must not be empty
+- **Stale progress** — if you edit project files without updating progress, you'll be nudged
+
+Write logs that tell a **narrative** — a future reader should understand your entire task execution just from the logs.
 
 ---
 

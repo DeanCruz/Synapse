@@ -176,13 +176,31 @@ Workers still return structured results (STATUS, SUMMARY, FILES CHANGED, etc.) t
 
 ## Automatic Parallel Mode
 
-When the master agent decides to parallelize automatically (without the user invoking `!p` or `!p_track`), it follows the same protocol as `!p` — lightweight dashboard writes.
+When the master agent decides to parallelize automatically (without the user invoking `!p` or `!p_track`), it evaluates the **full tracking thresholds** to determine which dashboard mode to use:
 
-- Same data writes as `!p` mode
+### Full Tracking Thresholds (auto-escalation to `!p_track` mode)
+
+| Condition | Tracking Level | Non-Negotiable? |
+|---|---|---|
+| **3+ parallel agents** | Full `!p_track` tracking | Yes |
+| **More than 1 wave** | Full `!p_track` tracking | **Absolutely non-negotiable** |
+| <3 agents AND 1 wave | Lightweight `!p` tracking | — |
+
+**When thresholds are met (3+ agents OR >1 wave):**
+- Master writes `initialization.json`, continuous `logs.json`, `master_state.json`, and `metrics.json`
+- Workers write progress files to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`
+- Worker prompts include `INSTRUCTION MODE: FULL | LITE` and the path to `tracker_worker_instructions.md` or `tracker_worker_instructions_lite.md`
+- Full live dashboard with real-time stage badges, milestones, elapsed timers
+- Master informs the user: "Swarm has {N} agents across {W} waves — using full dashboard tracking."
+
+**When thresholds are NOT met (<3 agents AND 1 wave):**
+- Same data writes as `!p` mode (lightweight)
 - Master writes `initialization.json` before dispatch and `logs.json` entries at init + completion
 - Workers do NOT write progress files
 - No `master_state.json` or `metrics.json`
 - Master informs the user before entering parallel mode
+
+> **The >1 wave threshold is absolutely non-negotiable.** Multi-wave swarms have dependency chains, sequential phases, and longer execution times — the user MUST have full dashboard visibility. Even a 2-task swarm with 2 waves gets full tracking.
 
 ---
 
@@ -252,15 +270,24 @@ Is it !p? ----------YES----> LIGHTWEIGHT MODE
        |                      - Master writes init + final log entries only
        v                      - Dashboard shows plan + final results
 Does master decide
-to parallelize? ----YES----> AUTO-PARALLEL (same as lightweight)
-       |                      - Same writes as !p
-       NO                     - Inform user first
-       |
-       v
-SERIAL MODE
-No dashboard writes
-Execute directly
+to parallelize? ----YES----> CHECK THRESHOLDS
+       |                      |
+       NO                     v
+       |              3+ agents OR >1 wave?
+       v                |             |
+SERIAL MODE            YES            NO
+No dashboard writes     |             |
+Execute directly        v             v
+                  FULL TRACKING    LIGHTWEIGHT
+                  (same as         (same as !p)
+                   !p_track)       - Plan snapshot
+                  - Workers write  - No progress files
+                    progress files
+                  - Full live
+                    dashboard
 ```
+
+> **Critical:** The `>1 wave` threshold is non-negotiable. Multi-wave swarms ALWAYS get full dashboard tracking regardless of agent count. The `3+ agents` threshold applies even for single-wave swarms.
 
 ---
 
@@ -268,7 +295,7 @@ Execute directly
 
 1. **Always write initialization.json before dispatching** — in all parallel modes. The dashboard must show the plan before workers start.
 2. **Always archive before clearing** — if a dashboard has previous data, archive it before writing new plan data. This applies to all modes.
-3. **Workers only write progress files in `!p_track` mode** — in `!p` and auto-parallel, workers execute and return without any dashboard interaction.
+3. **Workers write progress files in full tracking mode** — in `!p_track` and in auto-parallel that meets the full tracking thresholds (3+ agents OR >1 wave), workers write progress files. In `!p` mode and sub-threshold auto-parallel, workers do NOT write progress files.
 4. **logs.json is always written** — even in lightweight mode, initialization and completion entries are logged so the dashboard has a record.
 5. **initialization.json is write-once** — the only exceptions are repair task creation and circuit breaker replanning (both only in `!p_track` mode).
 6. **Clear progress/ before writing initialization.json** — in all modes, ensure the progress directory is empty before writing the new plan.

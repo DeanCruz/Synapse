@@ -186,7 +186,10 @@ Return a structured summary with STATUS, SUMMARY, FILES CHANGED, and optionally 
 5. **Use live timestamps** — always via `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 6. **Write the full file every time** — no partial updates
 7. **Always use the Write tool** for progress files — not echo/cat shell commands
-8. **Include logs** — the popup log box renders from your `logs[]` array
-9. **Set lifecycle fields** — `started_at` on first write, `completed_at` on completion/failure
-10. **Summary must be descriptive** — specific and quantified, never vague
-11. **Include `dashboard_id` in every write** — from your dispatch context. The server rejects mismatches.
+8. **Include detailed logs** — NON-NEGOTIABLE — the popup log box renders from your `logs[]` array. Every log entry must be specific and descriptive (≥20 chars). Never use vague placeholders like "Starting...", "Done", or "Working on it". Log what you read, what you learned, what you decided, what you changed, and why.
+9. **Update progress after every significant action** — NON-NEGOTIABLE — after reading files, making decisions, editing code, running tests, or completing sub-steps, update your progress file with a detailed log entry. Hooks enforce this — you will be warned if your logs are too sparse or your progress file is stale.
+10. **Set lifecycle fields** — `started_at` on first write, `completed_at` on completion/failure
+11. **Summary must be descriptive** — specific and quantified, never vague
+12. **Include `dashboard_id` in every write** — from your dispatch context. The server rejects mismatches.
+13. **Minimum log counts enforced by stage** — `reading_context` ≥1, `planning` ≥2, `implementing` ≥3, `testing` ≥4, `finalizing`/`completed` ≥5. Hooks will warn if you fall below these thresholds.
+14. **Add milestones for significant accomplishments** — from `implementing` stage onward, milestones[] must not be empty. Record files created, features implemented, tests passed.

@@ -32,12 +32,16 @@
 
 | Condition | Command | Why |
 |---|---|---|
-| <5 tasks + <5 min total estimated work | `!p` | Lightweight dispatch — planning overhead not justified |
+| <3 tasks, single wave, quick burst | `!p` | Lightweight dispatch — planning overhead not justified |
+| **3+ parallel agents** | **`!p_track`** | **Full dashboard tracking is mandatory at this threshold** |
+| **More than 1 wave** | **`!p_track`** | **NON-NEGOTIABLE — multi-wave swarms always get full tracking** |
 | 5+ tasks OR 5+ min estimated work | `!p_track` | Full planning, dependency tracking, and live dashboard |
 | Cross-repo work (any size) | `!p_track` | Dependency tracking prevents cross-repo conflicts |
 | Shared files between tasks | `!p_track` | Explicit shared-file pattern selection required |
 
-**Rule of thumb:** If you can describe the full plan in your head in 10 seconds, use `!p`. If you need to draw a dependency graph, use `!p_track`.
+**Rule of thumb:** If you can describe the full plan in your head in 10 seconds AND it's <3 tasks in a single wave, use `!p`. Otherwise, use `!p_track`.
+
+> **Full Dashboard Tracking Thresholds:** When a swarm has **3+ agents** or **more than 1 wave** (multi-wave is non-negotiable), the master MUST populate its designated dashboard and instruct workers to write progress files. This applies to `!p_track`, auto-parallel, and any non-`!p` swarm mode. Workers must be prompted to read `tracker_worker_instructions.md` (FULL or LITE) and report progress to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`. The `!p` command is the ONLY exception — it stays lightweight by design, though the master should recommend escalation when thresholds are met.
 
 ---
 
