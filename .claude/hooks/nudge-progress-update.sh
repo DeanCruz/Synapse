@@ -1,8 +1,10 @@
 #!/bin/bash
-# nudge-progress-update.sh — PostToolUse hook on Edit
-# Reminds workers to update their progress file after editing project code.
+# nudge-progress-update.sh — PostToolUse hook on Edit and Write
+# Reminds workers to update their progress file after editing/creating project files.
+# Includes the specific file path and action to make files_changed tracking easy.
+#
 # Only fires when:
-#   1. The edited file is a project file (not a Synapse internal file)
+#   1. The changed file is a project file (not a Synapse internal file)
 #   2. An active swarm exists (in_progress progress files found)
 #   3. No progress file was updated in the last ~1 minute (avoids nagging
 #      workers who are already diligently updating)
@@ -20,20 +22,22 @@ if ! command -v jq &>/dev/null; then ok; fi
 INPUT=$(cat 2>/dev/null) || ok
 [ -z "$INPUT" ] && ok
 
-# Extract file_path from tool_input
+# Extract file_path and tool_name from tool_input
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null) || ok
 [ -z "$FILE_PATH" ] && ok
+
+TOOL_NAME=$(echo "$INPUT" | jq -r '.tool_name // empty' 2>/dev/null)
 
 # Resolve tracker root (two levels up from this script's location)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TRACKER_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-# Skip if editing a Synapse internal file (dashboards, agent, commands, etc.)
+# Skip if changing a Synapse internal file (dashboards, agent, commands, etc.)
 case "$FILE_PATH" in
   "$TRACKER_ROOT"/*) ok ;;
 esac
 
-# Skip if editing hidden config directories
+# Skip if changing hidden config directories
 case "$FILE_PATH" in
   */.claude/*|*/.git/*|*/.synapse/*) ok ;;
 esac
@@ -70,6 +74,15 @@ done
 
 $RECENTLY_UPDATED && ok
 
-# Progress file is stale — nudge the worker
-echo "{\"message\":\"📝 You edited a project file but haven't updated your progress file recently. Add a detailed log entry describing: what you changed, why, and the result. Keep your logs telling the full story.\"}"
+# Determine action type from tool name
+ACTION="modified"
+if [ "$TOOL_NAME" = "Write" ]; then
+  ACTION="created/modified"
+fi
+
+# Extract just the filename for a concise message
+FILENAME=$(basename "$FILE_PATH")
+
+# Progress file is stale — nudge the worker with specific file info
+echo "{\"message\":\"📝 You ${ACTION} '${FILENAME}' — update your progress file: (1) add to files_changed[] as { \\\"path\\\": \\\"...\\\", \\\"action\\\": \\\"${ACTION}\\\" }, (2) add a detailed log entry describing what you changed and why.\"}"
 exit 0

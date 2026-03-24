@@ -63,6 +63,11 @@ The dashboard server watches this directory and broadcasts changes to the browse
     "patterns": [],
     "notes": ""
   },
+  "files_changed": [
+    { "path": "src/middleware/auth.ts", "action": "created" },
+    { "path": "src/middleware/rateLimit.ts", "action": "created" },
+    { "path": "src/routes/index.ts", "action": "modified" }
+  ],
   "sibling_reads": [],
   "annotations": {
     "src/auth/login.ts": {
@@ -93,6 +98,7 @@ The dashboard server watches this directory and broadcasts changes to the browse
 | `prompt_size` | object \| null | Optional. Size metrics of the dispatch prompt received. Contains `total_chars` (integer) and `estimated_tokens` (integer). |
 | `template_version` | string \| null | The version identifier from TEMPLATE_VERSION field. Set on first write. |
 | `shared_context` | object \| null | Optional. Info this worker makes available to same-wave siblings. Sub-fields: `exports` (array of export names), `interfaces` (array of interface signatures), `patterns` (array of pattern descriptions), `notes` (free-form string). |
+| `files_changed` | array | **Required from `implementing` stage onward.** Every file the worker creates, modifies, or deletes during execution. Each entry: `{ "path": "relative/path", "action": "created\|modified\|deleted" }`. Paths are relative to `{project_root}`. Updated incrementally — add each file as you change it, not just at the end. The dashboard renders this as a clickable file list in the task popup. |
 | `sibling_reads` | array | Optional. Array of task ID strings of sibling progress files read. Used by dashboard for sibling communication lines. |
 | `annotations` | object \| null | Optional. Operational knowledge about files the worker READ during execution. Keys are relative file paths; values are objects with optional `gotchas`, `patterns`, and `conventions` arrays (all arrays of strings). See **Annotations** below. |
 
@@ -140,9 +146,11 @@ Progress through these stages in order:
 
 5. **On any error** — Add a log entry at `level: "error"` with details.
 
-6. **On task completion** — Set `status: "completed"`, `stage: "completed"`, `completed_at`, `summary`, and add a final log entry.
+6. **On every file change** — When you create, modify, or delete a project file, add it to `files_changed[]` with `{ "path": "relative/path", "action": "created|modified|deleted" }`. Do this incrementally as you work — do NOT wait until finalization. The dashboard renders this as a clickable file list in the task popup. Also add a log entry describing the change.
 
-7. **On task failure** — Set `status: "failed"`, `stage: "failed"`, `completed_at`, `summary` (with error description), and add a log entry at `level: "error"`.
+7. **On task completion** — Set `status: "completed"`, `stage: "completed"`, `completed_at`, `summary`, and add a final log entry. Ensure `files_changed` is complete — it must match the FILES CHANGED section of your return format.
+
+8. **On task failure** — Set `status: "failed"`, `stage: "failed"`, `completed_at`, `summary` (with error description), and add a log entry at `level: "error"`.
 
 ### After every significant action (strongly encouraged — hooks enforce this):
 
@@ -395,6 +403,7 @@ Here's what a typical task's progress file looks like at each stage:
   "logs": [
     { "at": "2026-02-25T14:05:00Z", "level": "info", "msg": "Starting task — reading context files" }
   ],
+  "files_changed": [],
   "shared_context": {
     "exports": [],
     "interfaces": [],
@@ -429,6 +438,9 @@ Here's what a typical task's progress file looks like at each stage:
     { "at": "2026-02-25T14:05:10Z", "level": "info", "msg": "Read CLAUDE.md — JWT auth pattern with rate limiting" },
     { "at": "2026-02-25T14:05:35Z", "level": "info", "msg": "Existing middleware uses express-rate-limit pattern" },
     { "at": "2026-02-25T14:06:01Z", "level": "info", "msg": "Created rate limiter — 100 req/15min for /api/auth" }
+  ],
+  "files_changed": [
+    { "path": "src/middleware/rateLimit.ts", "action": "created" }
   ],
   "shared_context": {
     "exports": ["rateLimiter", "authMiddleware"],
@@ -475,6 +487,12 @@ Here's what a typical task's progress file looks like at each stage:
     { "at": "2026-02-25T14:07:15Z", "level": "info", "msg": "JWT validation middleware added to 3 protected routes" },
     { "at": "2026-02-25T14:08:00Z", "level": "info", "msg": "All tests passing — 12/12" },
     { "at": "2026-02-25T14:08:30Z", "level": "info", "msg": "Task complete — auth middleware with rate limiting for 3 endpoints" }
+  ],
+  "files_changed": [
+    { "path": "src/middleware/rateLimit.ts", "action": "created" },
+    { "path": "src/middleware/auth.ts", "action": "created" },
+    { "path": "src/middleware/__tests__/auth.test.ts", "action": "created" },
+    { "path": "src/routes/index.ts", "action": "modified" }
   ],
   "shared_context": {
     "exports": ["rateLimiter", "authMiddleware", "validateToken"],

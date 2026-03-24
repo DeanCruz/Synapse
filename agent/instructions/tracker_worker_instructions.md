@@ -25,11 +25,12 @@ Follow these steps in order for every task:
 2. **If you have dependencies:** Read upstream progress files at `{tracker_root}/dashboards/{dashboardId}/progress/{dep_id}.json`. Check `status`, `summary`, `deviations[]` (especially `CRITICAL`), and `logs[]` for errors. Adapt if upstream deviated. Log what you found. --> Read `agent/worker/upstream_deps.md`
 3. **Progress through fixed stages in order:** `reading_context` --> `planning` --> `implementing` --> `testing` --> `finalizing` --> `completed` | `failed`
 4. **Write on every stage transition** — update `stage`, `message`, and add a log entry. Append milestones for significant accomplishments.
-5. **Report deviations IMMEDIATELY** — add to both `deviations[]` (with severity) and `logs[]` (at `level: "deviation"`) the moment any divergence occurs. --> Read `agent/worker/deviations.md`
-6. **Populate `shared_context`** if you create exports, interfaces, or patterns that same-wave siblings could use. --> Read `agent/worker/sibling_comms.md`
-7. **Annotate files you read deeply** (optional but encouraged): When you gain non-obvious understanding of a file during `reading_context` or `implementing`, add an `annotations` field to your progress file. This feeds the PKI (Project Knowledge Index) and helps future sessions. --> See PKI Annotations section below.
-8. **On completion:** Set `status: "completed"`, `stage: "completed"`, `completed_at`, and a descriptive `summary`. For partial completion (80%+ done), use `"completed"` with summary stating what remains blocked. Reserve `"failed"` for zero useful output.
-9. **Return structured summary** to the master. --> Read `agent/worker/return_format.md`
+5. **Track every file change in `files_changed[]`** — NON-NEGOTIABLE. When you create, modify, or delete a project file, immediately add it to `files_changed` as `{ "path": "relative/path", "action": "created|modified|deleted" }`. Also add a log entry describing the change. Update incrementally — do NOT wait until finalization. The dashboard renders this as a clickable file list in the task popup.
+6. **Report deviations IMMEDIATELY** — add to both `deviations[]` (with severity) and `logs[]` (at `level: "deviation"`) the moment any divergence occurs. --> Read `agent/worker/deviations.md`
+7. **Populate `shared_context`** if you create exports, interfaces, or patterns that same-wave siblings could use. --> Read `agent/worker/sibling_comms.md`
+8. **Annotate files you read deeply** (optional but encouraged): When you gain non-obvious understanding of a file during `reading_context` or `implementing`, add an `annotations` field to your progress file. This feeds the PKI (Project Knowledge Index) and helps future sessions. --> See PKI Annotations section below.
+9. **On completion:** Set `status: "completed"`, `stage: "completed"`, `completed_at`, and a descriptive `summary`. Ensure `files_changed` is complete and matches your FILES CHANGED return. For partial completion (80%+ done), use `"completed"` with summary stating what remains blocked. Reserve `"failed"` for zero useful output.
+10. **Return structured summary** to the master. --> Read `agent/worker/return_format.md`
 
 ```
 STATUS: completed | failed
@@ -74,9 +75,9 @@ Detailed instructions are organized into focused modules. Read the ones relevant
 
 ## Progress Reporting — Summary
 
-Your progress file is the full lifecycle record of your task — status, timestamps, stage, message, milestones, deviations, logs, and optional shared context. The dashboard watches this file and broadcasts changes in real-time (~50ms). Write the full JSON on every update. Use the Write tool for atomic writes.
+Your progress file is the full lifecycle record of your task — status, timestamps, stage, message, milestones, deviations, logs, files_changed, and optional shared context. The dashboard watches this file and broadcasts changes in real-time (~50ms). Write the full JSON on every update. Use the Write tool for atomic writes.
 
-**7 mandatory writes** (skipping any is a failure): (1) before starting work, (2) after reading upstream dependencies, (3) on every stage transition, (4) on any deviation, (5) on any error, (6) on completion, (7) on failure.
+**8 mandatory writes** (skipping any is a failure): (1) before starting work, (2) after reading upstream dependencies, (3) on every stage transition, (4) on any deviation, (5) on any error, (6) on every file change (add to `files_changed[]`), (7) on completion, (8) on failure.
 
 --> Full details: `agent/worker/progress_reporting.md`
 
@@ -193,3 +194,4 @@ Return a structured summary with STATUS, SUMMARY, FILES CHANGED, and optionally 
 12. **Include `dashboard_id` in every write** — from your dispatch context. The server rejects mismatches.
 13. **Minimum log counts enforced by stage** — `reading_context` ≥1, `planning` ≥2, `implementing` ≥3, `testing` ≥4, `finalizing`/`completed` ≥5. Hooks will warn if you fall below these thresholds.
 14. **Add milestones for significant accomplishments** — from `implementing` stage onward, milestones[] must not be empty. Record files created, features implemented, tests passed.
+15. **Track every file change in `files_changed[]`** — NON-NEGOTIABLE — add `{ "path": "relative/path", "action": "created|modified|deleted" }` for every project file you create, modify, or delete. Update incrementally as you work. Hooks will warn if `files_changed` is empty during `implementing` stage or later. The dashboard renders this as a clickable file list in the task popup.

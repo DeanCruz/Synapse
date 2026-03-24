@@ -2317,7 +2317,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       const response = JSON.stringify({
         type: 'control_response',
         request_id: requestId,
-        response: { subtype: 'success', response: { behavior: 'deny' } },
+        response: { subtype: 'success', response: { behavior: 'deny', message: 'User denied this action' } },
       }) + '\n';
       api.writeWorker(pid, response);
     }

@@ -300,6 +300,67 @@ Execute directly        v             v
 5. **initialization.json is write-once** — the only exceptions are repair task creation and circuit breaker replanning (both only in `!p_track` mode).
 6. **Clear progress/ before writing initialization.json** — in all modes, ensure the progress directory is empty before writing the new plan.
 7. **Use the correct worker template** — `p_track_v2` for full tracking (includes progress instructions), `p_v2` for lightweight (omits progress instructions).
+8. **Master writes progress files in lightweight/serial mode** — When workers do NOT write their own progress files (`!p` mode, sub-threshold auto-parallel, or serial dispatch), the master MUST create a minimal progress file for each completed task using the worker's return data. This ensures the dashboard always shows file changes, summaries, and completion status. See **Master-Written Progress Files** below.
+
+---
+
+## Master-Written Progress Files (Lightweight/Serial Mode)
+
+When workers don't write their own progress files, the master bridges the gap by creating a progress file from each worker's return. This is **mandatory** — without it, the dashboard has no file change tracking or per-task detail for lightweight dispatches.
+
+### When This Applies
+
+- `!p` mode (all workers)
+- Sub-threshold auto-parallel (<3 agents AND single wave)
+- Serial dispatch (single worker, no dashboard) — skip if no dashboard is active
+
+### What to Write
+
+After each worker returns, the master writes:
+
+```
+{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json
+```
+
+### Minimal Progress File Schema
+
+```json
+{
+  "task_id": "{task_id}",
+  "dashboard_id": "{dashboardId}",
+  "status": "completed",
+  "started_at": "{dispatch_timestamp}",
+  "completed_at": "{completion_timestamp}",
+  "summary": "{from worker STATUS/SUMMARY return}",
+  "assigned_agent": "Agent {N}",
+  "stage": "completed",
+  "message": "Task complete",
+  "milestones": [],
+  "deviations": [],
+  "logs": [
+    { "at": "{dispatch_timestamp}", "level": "info", "msg": "Task dispatched in lightweight mode" },
+    { "at": "{completion_timestamp}", "level": "info", "msg": "{worker summary}" }
+  ],
+  "files_changed": [
+    { "path": "relative/path/to/file", "action": "created|modified|deleted" }
+  ]
+}
+```
+
+### How to Populate `files_changed`
+
+Parse the worker's `FILES CHANGED:` return section. Each line has a prefix (`created`, `modified`, `deleted`) and a path. Convert to the JSON format:
+
+```
+Worker returns:         →  files_changed entry:
+created src/auth.ts     →  { "path": "src/auth.ts", "action": "created" }
+modified src/index.ts   →  { "path": "src/index.ts", "action": "modified" }
+deleted src/old.ts      →  { "path": "src/old.ts", "action": "deleted" }
+```
+
+### For Failed Workers
+
+If a worker returns `STATUS: failed`, write the progress file with `status: "failed"`, `stage: "failed"`, and extract the ERRORS section into a log entry at level `"error"`.
 
 ---
 

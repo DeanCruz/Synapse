@@ -12,6 +12,8 @@
 >
 > **3A. FULL DASHBOARD TRACKING THRESHOLDS.** When a swarm has **3+ parallel agents** OR **more than 1 wave** (multi-wave is NON-NEGOTIABLE), the master MUST use full dashboard tracking — workers write progress files, the master writes `master_state.json`, and `metrics.json` is computed at completion. The ONLY exception is when the user explicitly invoked `!p` (lightweight mode). For auto-parallel and all other swarm modes, these thresholds trigger automatic escalation to `!p_track`-level tracking. Workers must be prompted to read `tracker_worker_instructions.md` (FULL or LITE) and write progress to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`.
 >
+> **3B. MASTER WRITES PROGRESS IN LIGHTWEIGHT MODE.** When workers do NOT write their own progress files (`!p` mode, sub-threshold auto-parallel, or serial dispatch), the master MUST create a minimal progress file for each completed worker using the worker's return data — including `files_changed`, `summary`, and completion logs. This ensures the dashboard always shows per-task file changes and status. See `agent/master/dashboard_protocol.md` — "Master-Written Progress Files".
+>
 > **4. LONG OR COMPLEX PROMPTS ARE NOT AN EXCUSE.** When the user's prompt is long, that means MORE planning and MORE agents are needed — not that the master should "just do the work directly." The longer the prompt, the more important it is to decompose, plan, and dispatch. Never let prompt length cause you to forget your role.
 >
 > **5. READ THE COMMAND FILE EVERY TIME.** When `!p_track` is invoked, read `{tracker_root}/_commands/Synapse/p_track.md` in full. When `!p` is invoked, read `{tracker_root}/_commands/Synapse/p.md`. Do not work from memory. Follow the steps exactly as written.

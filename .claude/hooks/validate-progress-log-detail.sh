@@ -12,6 +12,7 @@
 #   5. Minimum log count per stage
 #   6. No consecutive duplicate log messages
 #   7. Milestones exist for later stages
+#   8. files_changed populated during implementing+ stages
 #
 # PostToolUse hooks cannot block — they warn the agent to improve quality.
 
@@ -124,6 +125,21 @@ case "$STAGE" in
   implementing|testing|finalizing|completed)
     if [ "$MILESTONE_COUNT" -eq 0 ]; then
       WARNINGS="${WARNINGS}• No milestones at stage '${STAGE}' — add milestones for significant accomplishments (files created, features implemented, tests passed). "
+    fi
+    ;;
+esac
+
+# --- Check 7: files_changed for later stages ---
+FILES_CHANGED_COUNT=$(echo "$CONTENT" | jq '.files_changed | length' 2>/dev/null) || FILES_CHANGED_COUNT=0
+case "$STAGE" in
+  implementing|testing|finalizing)
+    if [ "$FILES_CHANGED_COUNT" -eq 0 ]; then
+      WARNINGS="${WARNINGS}• No files_changed entries at stage '${STAGE}' — add every file you create, modify, or delete as { \"path\": \"relative/path\", \"action\": \"created|modified|deleted\" }. Update incrementally as you work. "
+    fi
+    ;;
+  completed)
+    if [ "$FILES_CHANGED_COUNT" -eq 0 ] && [ "$STATUS" = "completed" ]; then
+      WARNINGS="${WARNINGS}• Task completed with ZERO files_changed — you MUST record every file you created, modified, or deleted. The dashboard renders this as a clickable file list. "
     fi
     ;;
 esac
