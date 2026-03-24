@@ -4,6 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
 import { colorWithAlpha, initStatusColorsFromCSS } from '../../utils/constants.js';
+import { CheckForUpdatesButton } from '../UpdateNotification.jsx';
 
 const THEMES = [
   {
@@ -219,7 +220,7 @@ export default function SettingsModal({ onClose, currentTheme, onThemeChange }) 
                 </div>
               </div>
               <span className="settings-theme-name">{theme.name}</span>
-              <span className="settings-theme-check">✓</span>
+              <span className="settings-theme-check">{'\u2713'}</span>
             </div>
           ))}
 
@@ -239,7 +240,7 @@ export default function SettingsModal({ onClose, currentTheme, onThemeChange }) 
               </div>
             </div>
             <span className="settings-theme-name">Custom</span>
-            <span className="settings-theme-check">✓</span>
+            <span className="settings-theme-check">{'\u2713'}</span>
           </div>
         </div>
 
@@ -296,6 +297,19 @@ export default function SettingsModal({ onClose, currentTheme, onThemeChange }) 
           <button className="settings-custom-reset-btn" onClick={handleResetAllSettings}>
             Reset All to Defaults
           </button>
+        </div>
+      )}
+
+      {/* Updates Section (Electron only) */}
+      {api && (
+        <div className="settings-section">
+          <div className="settings-section-title">Updates</div>
+          <div className="settings-update-row">
+            <span className="settings-update-label">
+              Check if a newer version of Synapse is available.
+            </span>
+            <CheckForUpdatesButton className="settings-check-update-btn" />
+          </div>
         </div>
       )}
     </Modal>

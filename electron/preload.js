@@ -23,6 +23,13 @@ const PUSH_CHANNELS = [
   'heartbeat',
   'init_state',
   'tasks_unblocked',
+  // Auto-update push channels
+  'update-checking',
+  'update-available',
+  'update-not-available',
+  'update-progress',
+  'update-downloaded',
+  'update-error',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -193,4 +200,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   gitAheadBehind: (repoPath, branch) => ipcRenderer.invoke('git-ahead-behind', repoPath, branch),
   gitDiscardFile: (repoPath, filePath) => ipcRenderer.invoke('git-discard-file', repoPath, filePath),
   gitGraph: (repoPath, maxCount) => ipcRenderer.invoke('git-graph', repoPath, maxCount),
+
+  // Auto-update
+  checkForUpdate: () => ipcRenderer.invoke('check-for-update'),
+  downloadUpdate: () => ipcRenderer.invoke('download-update'),
+  quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
+  getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
 });

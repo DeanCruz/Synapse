@@ -22,19 +22,71 @@
       "electron/**/*",
       "src/server/**/*",
       "dist/**/*",
-      "dashboards/**/*",
       "!node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/node-pty/**"
     ],
     "extraResources": [
       {
-        "from": "dashboards",
-        "to": "dashboards"
-      },
-      {
         "from": "electron/assets/icon.icns",
         "to": "icon.icns"
+      },
+      {
+        "from": "agent",
+        "to": "synapse/agent",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "documentation",
+        "to": "synapse/documentation",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "CLAUDE.md",
+        "to": "synapse/CLAUDE.md"
+      },
+      {
+        "from": "dashboards",
+        "to": "synapse/dashboards",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "_commands",
+        "to": "synapse/_commands",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "tasks",
+        "to": "synapse/tasks",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "Archive",
+        "to": "synapse/Archive",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "queue",
+        "to": "synapse/queue",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "history",
+        "to": "synapse/history",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "conversations",
+        "to": "synapse/conversations",
+        "filter": ["**/*"]
       }
-    ]
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "YourGitHubOwner",
+      "repo": "Synapse"
+    }
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.3",
@@ -47,6 +99,7 @@
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
+    "electron-updater": "^6.3.9",
     "monaco-editor": "^0.55.1",
     "node-pty": "^1.1.0",
     "nvm": "^0.0.4",

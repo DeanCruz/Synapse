@@ -6,6 +6,7 @@ const { app, BrowserWindow, protocol, net } = require('electron');
 const path = require('path');
 const url = require('url');
 const fs = require('fs');
+const paths = require('./paths');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const MAC_DOCK_ICON_PATH = path.join(__dirname, 'assets', 'icon.icns');
@@ -113,13 +114,46 @@ function saveWindowState() {
 // --- App Lifecycle ---
 
 app.whenReady().then(() => {
-  // Custom app:// protocol handler — resolves paths relative to PROJECT_ROOT.
-  // The protocol maps absolute paths to the correct locations on disk.
+  // Initialize the paths module first — sets up resourcesRoot, dataRoot, projectRoot
+  // and exports SYNAPSE_RESOURCES_ROOT / SYNAPSE_DATA_ROOT env vars for the server.
+  paths.init(app);
+
+  // Seed writable data directory on first packaged launch (copies templates
+  // from the flat synapse/ extraResources bundle to userData/synapse-data/).
+  // Must run after paths.init() but before createWindow() / server startup.
+  paths.initDataDir();
+
+  // Determine the root to use for the app:// protocol.
+  // In dev: repo root (PROJECT_ROOT). In packaged: the asar (app root) for
+  // dist/ UI assets, and dataRoot for data files.
+  const appRoot = app.isPackaged ? path.dirname(app.getAppPath()) : PROJECT_ROOT;
+
+  // Custom app:// protocol handler — resolves paths to the correct locations.
   protocol.handle('app', (request) => {
     const reqUrl = new URL(request.url);
     let filePath = decodeURIComponent(reqUrl.pathname);
 
-    // Try the direct path first
+    // In packaged mode, dist/ lives inside the asar. Serve UI assets from there.
+    if (app.isPackaged) {
+      // First try inside the asar (dist/ build output)
+      let resolved = path.join(app.getAppPath(), filePath);
+      if (!fs.existsSync(resolved)) {
+        const distResolved = path.join(app.getAppPath(), 'dist', filePath);
+        if (fs.existsSync(distResolved)) {
+          resolved = distResolved;
+        }
+      }
+      // Fallback: try the writable data root (for dynamic data files)
+      if (!fs.existsSync(resolved)) {
+        const dataResolved = path.join(paths.getDataRoot(), filePath);
+        if (fs.existsSync(dataResolved)) {
+          resolved = dataResolved;
+        }
+      }
+      return net.fetch(url.pathToFileURL(resolved).href);
+    }
+
+    // Dev mode: resolve relative to PROJECT_ROOT as before
     let resolved = path.join(PROJECT_ROOT, filePath);
 
     // If not found, try dist/ subdirectory (Vite build output)

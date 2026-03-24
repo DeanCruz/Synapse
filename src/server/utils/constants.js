@@ -1,7 +1,7 @@
 const path = require('path');
 
 const PORT = process.env.PORT || 3456;
-const ROOT = path.resolve(__dirname, '..', '..', '..');
+const ROOT = process.env.SYNAPSE_DATA_ROOT || path.resolve(__dirname, '..', '..', '..');
 const DASHBOARDS_DIR = path.join(ROOT, 'dashboards');
 const QUEUE_DIR = path.join(ROOT, 'queue');
 const ARCHIVE_DIR = path.join(ROOT, 'Archive');

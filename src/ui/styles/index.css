@@ -7480,3 +7480,217 @@ a:hover {
   flex: 1;
   overflow-y: auto;
 }
+
+/* ============================================================
+   Update Notification — header pill for auto-update status
+   ============================================================ */
+
+.update-notification {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-family: var(--sans);
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+/* State variants */
+.update-notification--checking {
+  background: rgba(155, 124, 240, 0.1);
+  color: var(--text-tertiary);
+  border: 1px solid rgba(155, 124, 240, 0.15);
+}
+
+.update-notification--available {
+  background: rgba(155, 124, 240, 0.12);
+  color: #c4b5fd;
+  border: 1px solid rgba(155, 124, 240, 0.25);
+}
+
+.update-notification--downloading {
+  background: rgba(155, 124, 240, 0.1);
+  color: var(--text-secondary);
+  border: 1px solid rgba(155, 124, 240, 0.15);
+}
+
+.update-notification--downloaded {
+  background: rgba(52, 211, 153, 0.12);
+  color: #6ee7b7;
+  border: 1px solid rgba(52, 211, 153, 0.25);
+}
+
+.update-notification--error {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Spinner — small rotating ring */
+.update-notification__spinner {
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid rgba(155, 124, 240, 0.25);
+  border-top-color: #9b7cf0;
+  border-radius: 50%;
+  animation: update-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes update-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Status dot */
+.update-notification__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.update-notification__dot--available {
+  background: #9b7cf0;
+  box-shadow: 0 0 6px rgba(155, 124, 240, 0.5);
+}
+
+.update-notification__dot--ready {
+  background: #34d399;
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.5);
+  animation: update-pulse 2s ease-in-out infinite;
+}
+
+.update-notification__dot--error {
+  background: #ef4444;
+}
+
+@keyframes update-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Text label */
+.update-notification__text {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Action button (Download / Restart) */
+.update-notification__action {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-family: var(--sans);
+  font-size: 0.65rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: rgba(155, 124, 240, 0.2);
+  color: #c4b5fd;
+}
+
+.update-notification__action:hover {
+  background: rgba(155, 124, 240, 0.35);
+  color: #ddd6fe;
+}
+
+.update-notification__action--install {
+  background: rgba(52, 211, 153, 0.2);
+  color: #6ee7b7;
+}
+
+.update-notification__action--install:hover {
+  background: rgba(52, 211, 153, 0.35);
+  color: #a7f3d0;
+}
+
+/* Dismiss button */
+.update-notification__dismiss {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.update-notification__dismiss:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Progress track */
+.update-notification__progress-track {
+  width: 40px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.update-notification__progress-bar {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #667eea, #9b7cf0);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* ============================================================
+   Settings — Check for Updates button
+   ============================================================ */
+
+.settings-update-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.settings-update-label {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.settings-check-update-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--color-accent, #9b7cf0);
+  background: rgba(155, 124, 240, 0.1);
+  border: 1px solid rgba(155, 124, 240, 0.25);
+  border-radius: 8px;
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.settings-check-update-btn:hover {
+  background: rgba(155, 124, 240, 0.2);
+  border-color: rgba(155, 124, 240, 0.4);
+}
+
+.settings-check-update-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

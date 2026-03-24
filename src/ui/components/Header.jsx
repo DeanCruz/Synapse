@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { useIsElectron } from '../hooks/useElectronAPI.js';
 import logoMark from '../assets/synapse-logo-mark.svg';
+import UpdateNotification from './UpdateNotification.jsx';
 
 export default function Header() {
   const state = useAppState();
@@ -105,7 +106,7 @@ export default function Header() {
         )}
       </div>
 
-      {/* Right — archive, history, swarm controls, active badge */}
+      {/* Right — archive, history, swarm controls, update notification, active badge */}
       <div className="header-right">
         {/* Archive + History button group */}
         <div className="header-btn-group">
@@ -163,6 +164,9 @@ export default function Header() {
             </button>
           </div>
         )}
+
+        {/* Update notification pill — Electron only */}
+        {isElectron && <UpdateNotification />}
 
         {/* Active agents count badge */}
         <span className="active-badge">{activeCount} active</span>

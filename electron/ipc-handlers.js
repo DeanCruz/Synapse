@@ -75,6 +75,7 @@ const {
   DEFAULT_LOGS,
 } = require('../src/server/utils/constants');
 
+const UpdateService = require('./services/UpdateService');
 const fsPromises = fs.promises;
 
 // ---------------------------------------------------------------------------
@@ -240,6 +241,9 @@ function registerIPCHandlers(getMainWindow) {
 
   // --- 1. Ensure directories exist ---
   ensureDirectories();
+
+  // --- 1b. Initialize UpdateService with broadcast function ---
+  UpdateService.init(broadcastFn);
 
   // --- 2. Register all ipcMain.handle() handlers ---
 
@@ -1863,6 +1867,26 @@ function registerIPCHandlers(getMainWindow) {
     }
   });
 
+
+
+  // --- Auto-update IPC handlers ---
+
+  ipcMain.handle('check-for-update', async () => {
+    return UpdateService.checkForUpdates();
+  });
+
+  ipcMain.handle('download-update', async () => {
+    return UpdateService.downloadUpdate();
+  });
+
+  ipcMain.handle('quit-and-install', async () => {
+    UpdateService.quitAndInstall();
+    return { success: true };
+  });
+
+  ipcMain.handle('get-update-status', async () => {
+    return UpdateService.getUpdateInfo();
+  });
 
   // --- 3. Set up file watchers with IPC broadcast ---
 
