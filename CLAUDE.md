@@ -327,7 +327,8 @@ Synapse/                         <-- {tracker_root}
 | | `!master_plan_track` | Multi-stream orchestration across dashboards |
 | | `!dispatch {id}` | Manually dispatch pending tasks |
 | | `!retry {id}` | Re-dispatch a failed task |
-| | `!resume` | Resume a stalled/interrupted swarm |
+| | `!resume` | Resume a chat session after interruption |
+| | `!track_resume` | Resume a stalled/interrupted swarm |
 | | `!cancel` | Cancel the active swarm |
 | | `!cancel-safe` | Graceful shutdown |
 | **Monitor** | `!status` | Terminal status summary |

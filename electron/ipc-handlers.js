@@ -893,6 +893,26 @@ function registerIPCHandlers(getMainWindow) {
     return CommandsService.listProjectCommands(projectDir);
   });
 
+  ipcMain.handle('list-user-commands', async () => {
+    return CommandsService.listUserCommands();
+  });
+
+  ipcMain.handle('get-user-command', async (_event, name, folderName) => {
+    return CommandsService.getUserCommand(name, folderName || undefined);
+  });
+
+  ipcMain.handle('save-user-command', async (_event, name, content, folderName) => {
+    return CommandsService.saveUserCommand(name, content, folderName || undefined);
+  });
+
+  ipcMain.handle('delete-user-command', async (_event, name, folderName) => {
+    return CommandsService.deleteUserCommand(name, folderName || undefined);
+  });
+
+  ipcMain.handle('generate-user-command', async (_event, description, folderName, commandName, opts) => {
+    return CommandsService.generateUserCommand(description, folderName, commandName, opts || {});
+  });
+
   // --- Orchestration handlers ---
   const SwarmOrchestrator = require('./services/SwarmOrchestrator');
   SwarmOrchestrator.init(broadcastFn);

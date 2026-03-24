@@ -116,7 +116,7 @@ function computeGraphLayout(commits) {
       lane: commitLane,
       isMerge,
       lines: [],           // vertical pass-through rails
-      mergeLines: [],       // curves going DOWN to a parent lane
+      mergeLines: [],       // curves coming IN from a parent lane above
       convergingLines: [],  // curves coming IN from freed duplicate lanes
       laneCount: 0,
     };
@@ -162,7 +162,8 @@ function computeGraphLayout(commits) {
       });
     }
 
-    // Pass-through lines for all active lanes
+    // Pass-through lines for all active lanes (including merge parent lanes,
+    // whose visual connection is handled by the merge curve entering from above)
     for (let l = 0; l < activeLanes.length; l++) {
       if (activeLanes[l] !== null) {
         entry.lines.push({ lane: l, colorIdx: l % LANE_COLORS.length });
@@ -182,7 +183,7 @@ function computeGraphLayout(commits) {
 // ── SVG Graph Cell ───────────────────────────────────────────────
 function GraphCell({ layoutEntry, maxLanes }) {
   if (!layoutEntry) return null;
-  const { lane, isMerge, lines, mergeLines } = layoutEntry;
+  const { lane, isMerge, lines, mergeLines, convergingLines } = layoutEntry;
   const cappedLanes = Math.min(maxLanes, MAX_DISPLAY_LANES);
   const svgWidth = Math.max(28, cappedLanes * LANE_WIDTH + GRAPH_PADDING * 2);
   const cy = ROW_HEIGHT / 2;
@@ -231,19 +232,36 @@ function GraphCell({ layoutEntry, maxLanes }) {
         );
       })}
 
-      {/* Merge curves (bezier from commit node to parent lane) */}
+      {/* Merge curves (bezier from parent lane above into commit node) */}
       {mergeLines.map((ml, idx) => {
-        const fromX = laneX(ml.fromLane);
-        const toX = laneX(ml.toLane);
-        // Smooth cubic bezier from commit center down to the parent lane bottom
-        const cp1y = cy + (ROW_HEIGHT - cy) * 0.4;
-        const cp2y = cy + (ROW_HEIGHT - cy) * 0.7;
+        const commitX = laneX(ml.fromLane);
+        const parentX = laneX(ml.toLane);
+        // Descends vertically on parent lane, then curves horizontally into commit node
+        const midX = (parentX + commitX) / 2;
         return (
           <path
             key={'m' + idx}
-            d={`M ${fromX} ${cy} C ${fromX} ${cp1y}, ${toX} ${cp2y}, ${toX} ${ROW_HEIGHT}`}
+            d={`M ${parentX} 0 C ${parentX} ${cy * 0.6}, ${midX} ${cy}, ${commitX} ${cy}`}
             fill="none"
             stroke={LANE_COLORS[ml.colorIdx]}
+            strokeWidth={2}
+            opacity={0.55}
+          />
+        );
+      })}
+
+      {/* Converging curves (branch merging back into this commit's lane) */}
+      {convergingLines && convergingLines.map((cl, idx) => {
+        const fromX = laneX(cl.fromLane);
+        const toX = laneX(cl.toLane);
+        // Descends vertically on branch lane, then curves horizontally into commit node
+        const midX = (fromX + toX) / 2;
+        return (
+          <path
+            key={'c' + idx}
+            d={`M ${fromX} 0 C ${fromX} ${cy * 0.6}, ${midX} ${cy}, ${toX} ${cy}`}
+            fill="none"
+            stroke={LANE_COLORS[cl.colorIdx]}
             strokeWidth={2}
             opacity={0.55}
           />

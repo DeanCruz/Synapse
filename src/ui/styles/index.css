@@ -6628,6 +6628,23 @@ a:hover {
 }
 .commands-add-btn:hover { background: var(--surface); }
 
+.commands-section-divider {
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.commands-user-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.commands-user-empty {
+  color: var(--text-secondary);
+  font-style: italic;
+  padding: 8px 16px;
+  font-size: 0.75rem;
+}
+
 .commands-list {
   padding: 4px 0;
 }
