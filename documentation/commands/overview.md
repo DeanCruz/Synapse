@@ -53,7 +53,7 @@ Synapse commands are organized into several functional groups:
 
 Located at `{tracker_root}/_commands/Synapse/`. These commands manage the full lifecycle of parallel agent swarms -- from planning and dispatch through monitoring and completion. See [Swarm Commands](swarm-commands.md) for full documentation.
 
-Key commands: `!p_track`, `!p`, `!master_plan_track`, `!dispatch`, `!retry`, `!resume`, `!cancel`, `!cancel-safe`
+Key commands: `!p_track`, `!p`, `!master_plan_track`, `!dispatch`, `!retry`, `!resume`, `!track_resume`, `!cancel`, `!cancel-safe`
 
 ### Monitoring Commands
 
@@ -136,7 +136,7 @@ Projects can define their own commands at `{project_root}/_commands/`. These fol
 
 | Category | Commands |
 |----------|----------|
-| **Swarm Lifecycle** | `!p_track`, `!p`, `!master_plan_track`, `!dispatch`, `!retry`, `!resume`, `!cancel`, `!cancel-safe` |
+| **Swarm Lifecycle** | `!p_track`, `!p`, `!master_plan_track`, `!dispatch`, `!retry`, `!resume`, `!track_resume`, `!cancel`, `!cancel-safe` |
 | **Monitoring** | `!status`, `!logs`, `!inspect`, `!deps`, `!history`, `!update_dashboard` |
 | **Server** | `!start`, `!stop`, `!reset` |
 | **Project Mgmt** | `!project` |

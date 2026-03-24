@@ -15,6 +15,9 @@ node_modules/
 # OS
 .DS_Store
 
+# User-created commands (local, not tracked)
+_commands/user/
+
 # Parent directory
 _parent/*
 

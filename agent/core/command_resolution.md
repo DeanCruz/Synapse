@@ -13,7 +13,8 @@ When the user types `!{command}`, locate and execute the corresponding command f
 ```
 1. {tracker_root}/_commands/Synapse/{command}.md       ← Synapse swarm commands (highest priority)
 2. {tracker_root}/_commands/project/{command}.md       ← Synapse project commands
-3. {project_root}/_commands/{command}.md               ← Project-specific commands
+3. {tracker_root}/_commands/user/{command}.md           ← User-created commands (git-ignored, local only)
+4. {project_root}/_commands/{command}.md               ← Project-specific commands
 ```
 
 ### Resolution Rules
@@ -22,9 +23,11 @@ When the user types `!{command}`, locate and execute the corresponding command f
 
 2. **Check Synapse project commands second.** Project analysis and management commands (`!context`, `!review`, `!health`, `!toc`, etc.) live at `{tracker_root}/_commands/project/`.
 
-3. **Check the target project last.** Projects may define their own commands at `{project_root}/_commands/`. These allow project-specific workflows and overrides.
+3. **Check user commands third.** User-created commands live at `{tracker_root}/_commands/user/` (and subfolders). This directory is git-ignored so user commands persist locally without interfering with repo updates.
 
-4. **If not found anywhere**, inform the user that `!{command}` does not exist and list available commands from all discovered locations.
+4. **Check the target project last.** Projects may define their own commands at `{project_root}/_commands/`. These allow project-specific workflows and overrides.
+
+5. **If not found anywhere**, inform the user that `!{command}` does not exist and list available commands from all discovered locations.
 
 5. **Once found, read the command file in full and follow it exactly.** Command files are complete specs — do not improvise, skip steps, or partially execute.
 
@@ -36,7 +39,7 @@ When the user asks to create a new command or profile, the agent **must check fo
 
 ### For Commands
 
-1. Search all command locations: `{tracker_root}/_commands/Synapse/`, `{tracker_root}/_commands/project/`, `{project_root}/_commands/`
+1. Search all command locations: `{tracker_root}/_commands/Synapse/`, `{tracker_root}/_commands/project/`, `{tracker_root}/_commands/user/`, `{project_root}/_commands/`
 2. If a command with the same name exists, alert the user, summarize the existing command, and ask whether to overwrite, rename, or cancel
 3. If no duplicate exists, proceed with creation
 
@@ -72,7 +75,8 @@ When the user types a command prefixed with `!`, resolve it using the command re
 | `!master_plan_track {prompt}` | Multi-stream orchestration — decompose into independent swarms across dashboards. |
 | `!dispatch {id}` | Manually dispatch a specific pending task. `!dispatch --ready` dispatches all unblocked tasks. |
 | `!retry {id}` | Re-dispatch a failed task with a fresh agent. |
-| `!resume` | Resume a stalled/interrupted swarm — re-dispatch all incomplete tasks with full context. |
+| `!resume` | Resume a chat session after interruption — reviews history and continues where it left off. |
+| `!track_resume` | Resume a stalled/interrupted swarm — re-dispatch all incomplete tasks with full context. |
 | `!cancel` | Cancel the active swarm. `!cancel --force` skips confirmation. |
 | `!cancel-safe` | Graceful shutdown — let running tasks finish, cancel pending. |
 

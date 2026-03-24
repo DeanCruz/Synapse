@@ -110,6 +110,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   generateCommand: (description, folderName, commandName, opts) => ipcRenderer.invoke('generate-command', description, folderName, commandName, opts),
   loadProjectClaudeMd: (projectDir) => ipcRenderer.invoke('load-project-claude-md', projectDir),
   listProjectCommands: (projectDir) => ipcRenderer.invoke('list-project-commands', projectDir),
+  listUserCommands: () => ipcRenderer.invoke('list-user-commands'),
+  getUserCommand: (name, folderName) => ipcRenderer.invoke('get-user-command', name, folderName),
+  saveUserCommand: (name, content, folderName) => ipcRenderer.invoke('save-user-command', name, content, folderName),
+  deleteUserCommand: (name, folderName) => ipcRenderer.invoke('delete-user-command', name, folderName),
+  generateUserCommand: (description, folderName, commandName, opts) => ipcRenderer.invoke('generate-user-command', description, folderName, commandName, opts),
 
   // Chat context
   getChatSystemPrompt: (projectDir, dashboardId, additionalContextDirs) => ipcRenderer.invoke('get-chat-system-prompt', projectDir, dashboardId, additionalContextDirs),

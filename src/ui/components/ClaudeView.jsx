@@ -731,11 +731,151 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       }
     });
 
+    // Listen for worker-error events (process spawn failures, etc.)
+    const errorListener = api.on('worker-error', (data) => {
+      if (!isKnownTask(data.taskId)) return;
+
+      if (isCurrentDashboardTask(data.taskId)) {
+        const taskTab = taskTabMapRef.current[data.taskId];
+        const isActiveTab = !taskTab || taskTab === activeTabRef.current;
+
+        if (isActiveTab) {
+          dispatch({
+            type: 'CLAUDE_APPEND_MSG',
+            msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly' + (data.error ? ': ' + data.error : '.'), isError: true }
+          });
+          if (finishRef.current) finishRef.current(data.taskId);
+        } else {
+          dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: taskTab, msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly.', isError: true } });
+          activeTaskIdsRef.current.delete(data.taskId);
+          delete taskDashboardMapRef.current[data.taskId];
+          delete taskTabMapRef.current[data.taskId];
+          delete taskPidMapRef.current[data.taskId];
+          if (activeTaskIdsRef.current.size === 0) {
+            dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+            dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+            setProcessingTabId(null);
+          }
+        }
+      } else {
+        const targetDash = getStashedDashboard(data.taskId);
+        if (targetDash) {
+          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly.', isError: true } });
+          const stashedSet = activeTaskStashRef.current[targetDash];
+          if (stashedSet) {
+            stashedSet.delete(data.taskId);
+            if (stashedSet.size === 0) {
+              dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', dashboardId: targetDash, value: false, status: 'Ready' });
+            }
+          }
+          delete taskDashboardMapRef.current[data.taskId];
+          delete taskTabMapRef.current[data.taskId];
+          delete taskPidMapRef.current[data.taskId];
+        }
+      }
+    });
+
     return () => {
       if (workerListener) workerListener();
       if (completeListener) completeListener();
+      if (errorListener) errorListener();
       if (previewFlushTimerRef.current) clearTimeout(previewFlushTimerRef.current);
     };
+  }, [api, dispatch]);
+
+  // --- Process health check: detect orphaned tasks where the subprocess died silently ---
+  // Polls getActiveWorkers() every 8s and compares against locally tracked tasks.
+  // If a tracked task's PID is no longer in the active workers list, it means the
+  // process exited but we never received the worker-complete/worker-error event.
+  useEffect(() => {
+    if (!api || !api.getActiveWorkers) return;
+    const HEALTH_CHECK_INTERVAL = 8000;
+
+    const healthTimer = setInterval(async () => {
+      // Only check if we think we have active tasks
+      if (activeTaskIdsRef.current.size === 0) return;
+
+      try {
+        const remoteWorkers = await api.getActiveWorkers();
+        const remotePids = new Set(remoteWorkers.map(w => w.pid));
+
+        // Check each locally tracked task
+        const orphanedTasks = [];
+        for (const taskId of activeTaskIdsRef.current) {
+          const pid = taskPidMapRef.current[taskId];
+          // If we have a PID and it's not in the remote active list, the process is gone
+          if (pid && !remotePids.has(pid)) {
+            orphanedTasks.push(taskId);
+          }
+        }
+
+        // Clean up orphaned tasks
+        for (const taskId of orphanedTasks) {
+          const taskTab = taskTabMapRef.current[taskId];
+          const isActiveTab = !taskTab || taskTab === activeTabRef.current;
+
+          if (isActiveTab) {
+            dispatch({
+              type: 'CLAUDE_APPEND_MSG',
+              msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly. You can send a new message to continue.', isError: true }
+            });
+          } else {
+            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: taskTab, msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly.', isError: true } });
+          }
+
+          activeTaskIdsRef.current.delete(taskId);
+          codexStreamedTaskIdsRef.current.delete(taskId);
+          delete taskDashboardMapRef.current[taskId];
+          delete taskTabMapRef.current[taskId];
+          delete taskPidMapRef.current[taskId];
+        }
+
+        if (orphanedTasks.length > 0 && activeTaskIdsRef.current.size === 0) {
+          dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+          setProcessingTabId(null);
+        }
+
+        // Also check stashed dashboard tasks
+        for (const [dashId, stashedSet] of Object.entries(activeTaskStashRef.current)) {
+          if (!stashedSet || stashedSet.size === 0) continue;
+          const stashedOrphans = [];
+          for (const taskId of stashedSet) {
+            const pid = taskPidMapRef.current[taskId];
+            if (pid && !remotePids.has(pid)) {
+              stashedOrphans.push(taskId);
+            }
+          }
+          for (const taskId of stashedOrphans) {
+            dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: dashId, msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly.', isError: true } });
+            stashedSet.delete(taskId);
+            delete taskDashboardMapRef.current[taskId];
+            delete taskTabMapRef.current[taskId];
+            delete taskPidMapRef.current[taskId];
+          }
+          if (stashedOrphans.length > 0 && stashedSet.size === 0) {
+            dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', dashboardId: dashId, value: false, status: 'Ready' });
+          }
+        }
+      } catch (e) {
+        // getActiveWorkers failed — IPC itself may be broken, do a hard reset
+        if (activeTaskIdsRef.current.size > 0) {
+          dispatch({
+            type: 'CLAUDE_APPEND_MSG',
+            msg: { type: 'system', text: '⚠ Connection lost — unable to reach the agent process. You can send a new message to continue.', isError: true }
+          });
+          activeTaskIdsRef.current.clear();
+          taskPidMapRef.current = {};
+          taskDashboardMapRef.current = {};
+          taskTabMapRef.current = {};
+          dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+          setProcessingTabId(null);
+        }
+      }
+    }, HEALTH_CHECK_INTERVAL);
+
+    return () => clearInterval(healthTimer);
   }, [api, dispatch]);
 
   // --- State mutation helpers using functional updater (avoids stale closures) ---
@@ -1419,6 +1559,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       { label: '!deps', command: '!deps', autoSend: true },
       { label: '!retry', command: '!retry ', autoSend: false },
       { label: '!resume', command: '!resume', autoSend: true },
+      { label: '!track_resume', command: '!track_resume', autoSend: true },
       { label: '!cancel', command: '!cancel', autoSend: true },
       { label: '!cancel-safe', command: '!cancel-safe', autoSend: true },
       { label: '!reset', command: '!reset', autoSend: false },
