@@ -55,6 +55,7 @@ Never guess or construct timestamps from memory. The dashboard derives elapsed t
 ```json
 {
   "task_id": "string",
+  "dashboard_id": "string",
   "status": "string",
   "started_at": "ISO 8601 string | null",
   "completed_at": "ISO 8601 string | null",
@@ -70,7 +71,17 @@ Never guess or construct timestamps from memory. The dashboard derives elapsed t
   ],
   "logs": [
     { "at": "ISO 8601 string", "level": "string", "msg": "string" }
-  ]
+  ],
+  "files_changed": [
+    { "action": "created | modified | deleted", "path": "string (relative to project root)" }
+  ],
+  "annotations": {
+    "{relative_file_path}": {
+      "gotchas": ["string"],
+      "patterns": ["string"],
+      "conventions": ["string"]
+    }
+  }
 }
 ```
 
@@ -83,6 +94,7 @@ Never guess or construct timestamps from memory. The dashboard derives elapsed t
 | Field | Type | Set When | Description |
 |---|---|---|---|
 | `task_id` | string | First write | Task identifier matching `agents[].id` in `initialization.json` (e.g., `"1.1"`, `"2.3"`). |
+| `dashboard_id` | string | First write | Dashboard identifier this task belongs to (e.g., `"a3f2c1"`). Must match the dashboard directory the progress file resides in. The server rejects progress files where `dashboard_id` does not match the directory — this enforces dashboard-agent binding. Optional for backwards compatibility (old files without it are accepted with a warning). |
 | `status` | string | Updated throughout | Current lifecycle status. See **Status Values** below. |
 | `started_at` | ISO 8601 or null | First write | Timestamp when work began. Drives the per-card elapsed timer and the swarm-level elapsed stat (earliest across all workers). |
 | `completed_at` | ISO 8601 or null | Completion/failure | Timestamp when work finished. Must be `null` when `status` is `"in_progress"`. Freezes the per-card timer. The swarm elapsed timer freezes when all workers have `completed_at` set. |
@@ -98,6 +110,8 @@ Never guess or construct timestamps from memory. The dashboard derives elapsed t
 | `milestones` | array of `{ at, msg }` | Significant accomplishments during execution. Append-only. Shown in the agent details popup timeline. |
 | `deviations` | array of `{ at, severity, description }` | Any divergences from the original plan. Append-only. Drives the yellow deviation badge on the card. |
 | `logs` | array of `{ at, level, msg }` | Detailed log entries. Append-only. Feeds the popup log box in the agent details modal. |
+| `files_changed` | array of `{ action, path }` | Files created, modified, or deleted during the task. Optional. Workers should populate this during their final progress write when status transitions to `"completed"`. |
+| `annotations` | object or null | Operational knowledge about files the worker READ during execution. Optional. Keys are relative file paths; values are objects with optional `gotchas`, `patterns`, and `conventions` arrays (all arrays of strings). Workers populate this during `reading_context` and `implementing` stages as they gain deep understanding of source files. The master merges these into the PKI after task completion. |
 
 ---
 
@@ -216,6 +230,70 @@ Worker logs feed the popup log box in the agent details modal. They should tell 
 
 ---
 
+## files_changed Entry Format
+
+```json
+{ "action": "modified", "path": "src/models/User.ts" }
+```
+
+| Field | Type | Description |
+|---|---|---|
+| `action` | string | One of: `"created"`, `"modified"`, `"deleted"`. |
+| `path` | string | File path relative to the project root. |
+
+Workers should populate `files_changed` during their **final progress write** -- when `status` transitions to `"completed"`. This field provides a machine-readable record of every file the worker touched, complementing the human-readable `FILES CHANGED` section in the worker's return format.
+
+### Example
+
+```json
+"files_changed": [
+  { "action": "created", "path": "src/models/User.ts" },
+  { "action": "modified", "path": "src/models/index.ts" },
+  { "action": "deleted", "path": "src/old/Legacy.ts" }
+]
+```
+
+---
+
+## Annotations Entry Format
+
+```json
+"annotations": {
+  "src/auth/login.ts": {
+    "gotchas": ["Refresh token rotation: old token must be invalidated before issuing new one"],
+    "patterns": ["Uses asyncHandler wrapper for all async routes"],
+    "conventions": ["Error shape: { error: string, code: number }"]
+  },
+  "src/models/User.ts": {
+    "gotchas": ["findByEmail returns null not undefined when not found"]
+  }
+}
+```
+
+The `annotations` field is an object keyed by relative file path. Each entry can contain any combination of the following sub-fields:
+
+| Sub-field | Type | Description |
+|---|---|---|
+| `gotchas` | array of strings | Non-obvious behaviors, edge cases, or foot-guns a developer should know before modifying this file. |
+| `patterns` | array of strings | Design or coding patterns used in this file (e.g., "singleton service", "async handler wrapper"). |
+| `conventions` | array of strings | Project-specific conventions this file follows (e.g., "error shape: { error: string, code: number }"). |
+
+All sub-fields are optional -- include only what was discovered. An entry with just `gotchas` is valid.
+
+### What to Annotate
+
+Workers annotate files they **read and understood deeply** during task execution -- not files they changed (those are tracked in `files_changed`). Good candidates are files studied to understand an API or data flow, files with non-obvious edge cases, or files whose patterns the worker followed in its own implementation.
+
+### When to Annotate
+
+Workers should populate `annotations` during the **`reading_context`** and **`implementing`** stages as they gain operational understanding of source files. The field can be updated incrementally across progress writes.
+
+### Alignment with PKI
+
+The `gotchas`, `patterns`, and `conventions` sub-fields match the corresponding fields in the PKI per-file annotation schema (see `documentation/data-architecture/pki-schemas.md`). The progress file `annotations` field is a lightweight subset -- the master merges these into the full per-file annotation structure after task completion.
+
+---
+
 ## Dashboard Rendering
 
 ### Agent Card (In-Progress State)
@@ -283,8 +361,11 @@ The server watches the `progress/` directory using `fs.watch` (OS-level events).
 1. Wait `PROGRESS_READ_DELAY_MS` (30ms) to let the write settle
 2. Read and parse the file
 3. If parse fails (file mid-write), retry after `PROGRESS_RETRY_MS` (80ms)
-4. Validate using `isValidProgress()` in `src/server/utils/json.js`
-5. Broadcast `agent_progress` SSE event to all connected clients
+4. Validate schema using `isValidProgress()` in `src/server/utils/json.js`
+5. Check `task_id` matches filename — reject with `write_rejected` SSE event if mismatch
+6. Check `dashboard_id` matches directory — reject with `write_rejected` SSE event if mismatch
+7. Warn if `dashboard_id` is missing (backwards compatibility — file still accepted)
+8. Broadcast `agent_progress` SSE event to all connected clients
 
 ### Validation (isValidProgress)
 
@@ -292,7 +373,8 @@ The server validates every progress file read:
 
 | Rule | Detail |
 |---|---|
-| `task_id` | Required, must be a string |
+| `task_id` | Required, must be a string. Must match the filename (e.g., `task_id: "1.1"` in `1.1.json`). Mismatches are rejected with a `write_rejected` SSE event. |
+| `dashboard_id` | Optional, but if present must be a non-empty string matching the dashboard directory. Mismatches trigger hard rejection + `write_rejected` SSE event. Missing values are accepted with a warning (backwards compatibility). |
 | `status` | Required, must be one of: `"in_progress"`, `"completed"`, `"failed"` |
 | `stage` | Optional, but if present must be one of: `"reading_context"`, `"planning"`, `"implementing"`, `"testing"`, `"finalizing"`, `"completed"`, `"failed"` |
 | `started_at` | Optional, but if present must be a string |
@@ -300,6 +382,8 @@ The server validates every progress file read:
 | `milestones` | Optional, but if present must be an array |
 | `deviations` | Optional, but if present must be an array |
 | `logs` | Optional, but if present must be an array |
+| `files_changed` | Optional, but if present must be an array |
+| `annotations` | Optional, but if present must be an object. Keys must be non-empty strings (relative file paths). Values must be objects with optional `gotchas`, `patterns`, and `conventions` fields, each an array of strings if present. |
 
 Fields like `stage`, `started_at`, `milestones`, etc. are validated **if present** but not required to exist. This handles initial writes where the worker may not have all fields populated yet.
 
@@ -325,6 +409,7 @@ When a progress file changes to `status: "completed"`, the server runs a depende
 ```json
 {
   "task_id": "1.1",
+  "dashboard_id": "{dashboardId}",
   "status": "in_progress",
   "started_at": "2026-03-22T07:03:04Z",
   "completed_at": null,
@@ -345,6 +430,7 @@ When a progress file changes to `status: "completed"`, the server runs a depende
 ```json
 {
   "task_id": "1.1",
+  "dashboard_id": "{dashboardId}",
   "status": "in_progress",
   "started_at": "2026-03-22T07:03:04Z",
   "completed_at": null,
@@ -371,6 +457,7 @@ When a progress file changes to `status: "completed"`, the server runs a depende
 ```json
 {
   "task_id": "1.1",
+  "dashboard_id": "{dashboardId}",
   "status": "completed",
   "started_at": "2026-03-22T07:03:04Z",
   "completed_at": "2026-03-22T07:04:19Z",
@@ -391,7 +478,17 @@ When a progress file changes to `status: "completed"`, the server runs a depende
     { "at": "2026-03-22T07:03:49Z", "level": "info", "msg": "All 4 edits complete -- moving to verification" },
     { "at": "2026-03-22T07:04:19Z", "level": "info", "msg": "Verification passed: zero context_cache matches; table formatting correct; tree connectors correct" },
     { "at": "2026-03-22T07:04:19Z", "level": "info", "msg": "Task complete" }
-  ]
+  ],
+  "files_changed": [
+    { "action": "modified", "path": "CLAUDE.md" },
+    { "action": "modified", "path": "AGENTS.md" }
+  ],
+  "annotations": {
+    "src/server/services/WatcherService.js": {
+      "gotchas": ["fs.watch fires twice on some OS -- debounce with 30ms delay required"],
+      "patterns": ["Singleton service instantiated once in index.js and shared across route handlers"]
+    }
+  }
 }
 ```
 
@@ -402,6 +499,7 @@ From task 3.1 (a real worker that deviated from its plan):
 ```json
 {
   "task_id": "3.1",
+  "dashboard_id": "{dashboardId}",
   "status": "completed",
   "started_at": "2026-03-22T07:12:11Z",
   "completed_at": "2026-03-22T07:13:32Z",

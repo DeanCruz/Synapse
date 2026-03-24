@@ -5,7 +5,7 @@
 // Logs chat events to the active dashboard.
 // Allows sending follow-up messages while an agent is still running.
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { renderMarkdown } from '../utils/markdown.js';
 import { getDashboardProject, getDashboardAdditionalContext } from '../utils/dashboardProjects.js';
@@ -62,6 +62,11 @@ function toolResultText(content) {
     try { return JSON.stringify(content, null, 2); } catch (e) { return String(content); }
   }
   return String(content);
+}
+
+// Tools whose summary is a file path (clickable to open)
+function toolHasFilePath(name) {
+  return name === 'Read' || name === 'Edit' || name === 'Write';
 }
 
 // Format tool input for display — show a compact summary for common tools
@@ -132,13 +137,285 @@ function ExpandablePre({ className, children }) {
   );
 }
 
+// Shorten absolute paths — keep last 3 segments
+function shortPath(p) {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('/').filter(Boolean);
+  if (parts.length <= 3) return p;
+  return '…/' + parts.slice(-3).join('/');
+}
+
+// Clickable file path — opens file in the IDE explorer
+function ClickablePath({ path, onOpenFile }) {
+  if (!path || !onOpenFile) {
+    return <span className="tool-field-value tool-field-path" title={path}>{shortPath(path)}</span>;
+  }
+  return (
+    <span
+      className="tool-field-value tool-field-path tool-field-path-link"
+      title={path + ' — click to open'}
+      onClick={(e) => { e.stopPropagation(); onOpenFile(path); }}
+    >{shortPath(path)}</span>
+  );
+}
+
+// Rich formatted body for each tool type
+function ToolInputFormatted({ name, input, onOpenFile }) {
+  if (!input) return null;
+
+  if (name === 'Read') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">File</span>
+          <ClickablePath path={input.file_path} onOpenFile={onOpenFile} />
+        </div>
+        {input.offset && (
+          <div className="tool-field">
+            <span className="tool-field-label">Lines</span>
+            <span className="tool-field-value">{input.offset}{input.limit ? `–${input.offset + input.limit}` : '+'}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Edit') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">File</span>
+          <ClickablePath path={input.file_path} onOpenFile={onOpenFile} />
+        </div>
+        {input.replace_all && (
+          <div className="tool-field">
+            <span className="tool-field-label">Mode</span>
+            <span className="tool-field-value tool-field-badge">Replace All</span>
+          </div>
+        )}
+        {input.old_string && (
+          <div className="tool-diff">
+            <div className="tool-diff-section tool-diff-remove">
+              <span className="tool-diff-marker">−</span>
+              <pre className="tool-diff-code">{input.old_string}</pre>
+            </div>
+            <div className="tool-diff-section tool-diff-add">
+              <span className="tool-diff-marker">+</span>
+              <pre className="tool-diff-code">{input.new_string}</pre>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Write') {
+    const preview = input.content && input.content.length > 500
+      ? input.content.substring(0, 500) + '\n… (truncated)'
+      : input.content;
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">File</span>
+          <ClickablePath path={input.file_path} onOpenFile={onOpenFile} />
+        </div>
+        {preview && (
+          <div className="tool-diff">
+            <div className="tool-diff-section tool-diff-add">
+              <span className="tool-diff-marker">+</span>
+              <pre className="tool-diff-code">{preview}</pre>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Bash') {
+    return (
+      <div className="tool-formatted">
+        {input.description && (
+          <div className="tool-field">
+            <span className="tool-field-label">Action</span>
+            <span className="tool-field-value">{input.description}</span>
+          </div>
+        )}
+        <div className="tool-bash-command">
+          <span className="tool-bash-prompt">$</span>
+          <code>{input.command}</code>
+        </div>
+        {input.timeout && (
+          <div className="tool-field">
+            <span className="tool-field-label">Timeout</span>
+            <span className="tool-field-value">{input.timeout >= 1000 ? `${(input.timeout / 1000).toFixed(0)}s` : `${input.timeout}ms`}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Grep') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">Pattern</span>
+          <code className="tool-field-value tool-field-code">/{input.pattern}/</code>
+        </div>
+        {input.path && (
+          <div className="tool-field">
+            <span className="tool-field-label">Path</span>
+            <ClickablePath path={input.path} onOpenFile={onOpenFile} />
+          </div>
+        )}
+        {input.glob && (
+          <div className="tool-field">
+            <span className="tool-field-label">Glob</span>
+            <span className="tool-field-value">{input.glob}</span>
+          </div>
+        )}
+        {input.output_mode && (
+          <div className="tool-field">
+            <span className="tool-field-label">Output</span>
+            <span className="tool-field-value">{input.output_mode}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Glob') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">Pattern</span>
+          <code className="tool-field-value tool-field-code">{input.pattern}</code>
+        </div>
+        {input.path && (
+          <div className="tool-field">
+            <span className="tool-field-label">Path</span>
+            <ClickablePath path={input.path} onOpenFile={onOpenFile} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Task') {
+    return (
+      <div className="tool-formatted">
+        {input.description && (
+          <div className="tool-field">
+            <span className="tool-field-label">Task</span>
+            <span className="tool-field-value">{input.description}</span>
+          </div>
+        )}
+        {input.subagent_type && (
+          <div className="tool-field">
+            <span className="tool-field-label">Agent</span>
+            <span className="tool-field-value tool-field-badge">{input.subagent_type}</span>
+          </div>
+        )}
+        {input.prompt && (
+          <div className="tool-field-block">
+            <span className="tool-field-label">Prompt</span>
+            <ExpandablePre className="claude-tool-input">{input.prompt}</ExpandablePre>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'WebFetch') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">URL</span>
+          <span className="tool-field-value tool-field-path">{input.url}</span>
+        </div>
+        {input.prompt && (
+          <div className="tool-field">
+            <span className="tool-field-label">Prompt</span>
+            <span className="tool-field-value">{input.prompt}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'WebSearch') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">Query</span>
+          <span className="tool-field-value">{input.query}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (name === 'TodoWrite') {
+    const todos = input.todos || [];
+    if (todos.length === 0) return null;
+    const icons = { completed: '✓', in_progress: '◉', pending: '○' };
+    const colors = { completed: 'var(--color-completed)', in_progress: 'var(--color-in-progress)', pending: 'var(--text-tertiary)' };
+    return (
+      <div className="tool-formatted">
+        <div className="tool-todo-list">
+          {todos.map((t, i) => (
+            <div key={i} className={`tool-todo-item tool-todo-${t.status}`}>
+              <span className="tool-todo-icon" style={{ color: colors[t.status] }}>{icons[t.status] || '○'}</span>
+              <span className="tool-todo-text">{t.content}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (name === 'NotebookEdit') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">Notebook</span>
+          <ClickablePath path={input.notebook_path} onOpenFile={onOpenFile} />
+        </div>
+        {input.cell_type && (
+          <div className="tool-field">
+            <span className="tool-field-label">Cell</span>
+            <span className="tool-field-value tool-field-badge">{input.cell_type}</span>
+          </div>
+        )}
+        {input.edit_mode && (
+          <div className="tool-field">
+            <span className="tool-field-label">Mode</span>
+            <span className="tool-field-value">{input.edit_mode}</span>
+          </div>
+        )}
+        {input.new_source && (
+          <div className="tool-diff">
+            <div className="tool-diff-section tool-diff-add">
+              <span className="tool-diff-marker">+</span>
+              <pre className="tool-diff-code">{input.new_source.length > 500 ? input.new_source.substring(0, 500) + '\n… (truncated)' : input.new_source}</pre>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback: show raw JSON for unknown tools
+  const raw = typeof input === 'string' ? input : JSON.stringify(input, null, 2);
+  return (
+    <div className="tool-formatted">
+      <ExpandablePre className="claude-tool-input">{raw}</ExpandablePre>
+    </div>
+  );
+}
+
 // Single collapsible tool call block
-function ToolCallBlock({ block }) {
+function ToolCallBlock({ block, onOpenFile }) {
   const [expanded, setExpanded] = useState(false);
   const summary = toolInputSummary(block.name, block.input);
-  const inputStr = block.input
-    ? (typeof block.input === 'string' ? block.input : JSON.stringify(block.input, null, 2))
-    : null;
   const hasResult = block._result !== undefined && block._result !== null;
 
   return (
@@ -146,17 +423,22 @@ function ToolCallBlock({ block }) {
       <div className="claude-tool-header" onClick={() => setExpanded(e => !e)}>
         <span className="claude-tool-icon">{hasResult ? '✓' : '⚙'}</span>
         <span className="claude-tool-name">{block.name}</span>
-        {summary && <span className="claude-tool-summary">{summary}</span>}
+        {summary && (
+          toolHasFilePath(block.name) && onOpenFile ? (
+            <span
+              className="claude-tool-summary claude-tool-summary-link"
+              title={summary + ' — click to open'}
+              onClick={(e) => { e.stopPropagation(); onOpenFile(summary); }}
+            >{shortPath(summary)}</span>
+          ) : (
+            <span className="claude-tool-summary">{summary}</span>
+          )
+        )}
         <span className="claude-tool-toggle">{expanded ? '▼' : '▶'}</span>
       </div>
       {expanded && (
         <div className="claude-tool-body">
-          {inputStr && (
-            <>
-              <div className="claude-tool-label">Input:</div>
-              <ExpandablePre className="claude-tool-input">{inputStr}</ExpandablePre>
-            </>
-          )}
+          <ToolInputFormatted name={block.name} input={block.input} onOpenFile={onOpenFile} />
           {hasResult && (
             <>
               <div className="claude-tool-label claude-tool-result-label">Result:</div>
@@ -262,14 +544,110 @@ function AskUserQuestionBlock({ block, onSendAnswer }) {
   );
 }
 
+// Human-readable labels for task event fields
+const TASK_EVENT_LABELS = {
+  subtype: 'Event',
+  task_id: 'Task ID',
+  tool_use_id: 'Tool Use',
+  description: 'Description',
+  task_type: 'Task Type',
+  uuid: 'UUID',
+  session_id: 'Session',
+  total_tokens: 'Tokens',
+  tool_uses: 'Tool Uses',
+  duration_ms: 'Duration',
+  last_tool_name: 'Last Tool',
+};
+
+function formatTaskEventValue(key, value) {
+  if (key === 'duration_ms' && typeof value === 'number') {
+    return value >= 1000 ? `${(value / 1000).toFixed(1)}s` : `${value}ms`;
+  }
+  if (key === 'total_tokens' && typeof value === 'number') {
+    return value.toLocaleString();
+  }
+  if (key === 'subtype') {
+    return String(value).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+  return String(value);
+}
+
+function TaskEventMessage({ data }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const subtype = data.subtype || 'task_event';
+  const description = data.description || '';
+  const label = subtype === 'task_started' ? 'Task Started'
+    : subtype === 'task_progress' ? 'Task Progress'
+    : subtype.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  // Fields to show in the expanded details (exclude type and fields already shown in header)
+  const detailFields = Object.entries(data).filter(([k]) =>
+    k !== 'type' && k !== 'description' && k !== 'message'
+  );
+
+  // Flatten usage object into detail fields
+  const allDetails = [];
+  for (const [k, v] of detailFields) {
+    if (k === 'usage' && v && typeof v === 'object') {
+      for (const [uk, uv] of Object.entries(v)) {
+        allDetails.push([uk, uv]);
+      }
+    } else {
+      allDetails.push([k, v]);
+    }
+  }
+
+  return (
+    <div className="claude-task-event">
+      <div className="claude-task-event-header" onClick={() => setExpanded(!expanded)}>
+        <span className="claude-task-event-icon">{expanded ? '▾' : '▸'}</span>
+        <span className="claude-task-event-label">{label}</span>
+        {description && <span className="claude-task-event-desc">{description}</span>}
+      </div>
+      {expanded && (
+        <div className="claude-task-event-details">
+          {allDetails.map(([k, v]) => (
+            <div key={k} className="claude-task-event-row">
+              <span className="claude-task-event-key">{TASK_EVENT_LABELS[k] || k}</span>
+              <span className="claude-task-event-value">{formatTaskEventValue(k, v)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Copy-to-clipboard button shown on hover over chat bubbles
+function CopyBubbleButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback((e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [text]);
+  return (
+    <button className="claude-bubble-copy" onClick={handleCopy} title="Copy message">
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+      )}
+    </button>
+  );
+}
+
 // A single conversation message
-function ConversationMessage({ msg, isLatestThinking, onSendAnswer }) {
+function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }) {
   if (msg.type === 'thinking') {
     return <ThinkingBubble msg={msg} isLatest={isLatestThinking} />;
   }
   if (msg.type === 'user') {
     return (
       <div className="claude-message claude-user">
+        <CopyBubbleButton text={msg.text} />
         {msg.attachments && msg.attachments.length > 0 && (
           <div className="claude-message-attachments">
             {msg.attachments.map((a, i) => (
@@ -284,6 +662,7 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer }) {
   if (msg.type === 'assistant') {
     return (
       <div className="claude-message claude-assistant">
+        <CopyBubbleButton text={msg.text} />
         <div
           className="claude-message-text"
           dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }}
@@ -295,9 +674,19 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer }) {
     if (msg.block?.name === 'AskUserQuestion') {
       return <AskUserQuestionBlock block={msg.block} onSendAnswer={onSendAnswer} />;
     }
-    return <ToolCallBlock block={msg.block || {}} />;
+    return <ToolCallBlock block={msg.block || {}} onOpenFile={onOpenFile} />;
   }
   if (msg.type === 'system') {
+    if (msg.isTaskEvent && msg.taskEventData) {
+      return <TaskEventMessage data={msg.taskEventData} />;
+    }
+    // Catch legacy raw-JSON task events already stored in message history
+    if (msg.text && msg.text.startsWith('{') && /"subtype"\s*:\s*"task_(progress|started|completed|failed)"/.test(msg.text)) {
+      try {
+        const parsed = JSON.parse(msg.text);
+        return <TaskEventMessage data={parsed} />;
+      } catch (_) { /* fall through to default rendering */ }
+    }
     return (
       <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '') + (msg.isCompaction ? ' claude-compaction' : '')}>
         {msg.text}
@@ -1053,6 +1442,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
             type: 'system',
             text: `Connected — model: ${evt.model || '?'}, ${tools.length} tools available`,
           });
+        } else if (evt.subtype === 'task_progress' || evt.subtype === 'task_started' || evt.subtype === 'task_completed' || evt.subtype === 'task_failed') {
+          appendMsg({ type: 'system', isTaskEvent: true, taskEventData: evt, text: evt.description || evt.subtype });
         } else {
           const msg = evt.message || JSON.stringify(evt);
           const isCompaction = /compact|context.*(truncat|compress|summar)/i.test(msg)
@@ -1415,6 +1806,19 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       });
     }
   }
+
+  // Open a file in the IDE code explorer by path
+  const handleOpenFile = useCallback((filePath) => {
+    if (!filePath) return;
+    const wsId = state.ideActiveWorkspaceId;
+    if (!wsId) return;
+    const name = filePath.split('/').filter(Boolean).pop() || filePath;
+    dispatch({ type: 'IDE_OPEN_FILE', workspaceId: wsId, file: { path: filePath, name } });
+    // Switch to IDE view if not already there
+    if (state.activeView !== 'ide') {
+      dispatch({ type: 'SET_VIEW', view: 'ide' });
+    }
+  }, [state.ideActiveWorkspaceId, state.activeView, dispatch]);
 
   async function sendText(text, attachments = []) {
     if (!text || !api) return;
@@ -1990,6 +2394,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
                 msg={msg}
                 isLatestThinking={msg.type === 'thinking' && idx === lastThinkingIdx && isProcessing}
                 onSendAnswer={sendText}
+                onOpenFile={handleOpenFile}
               />
             ));
           })()}

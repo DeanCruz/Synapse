@@ -31,6 +31,7 @@ export function mergeState(init, progress, logs) {
       milestones: prog ? prog.milestones : [],
       deviations: prog ? prog.deviations : [],
       logs: prog ? prog.logs : [],
+      files_changed: prog ? prog.files_changed : [],
     };
   });
 
@@ -147,7 +148,26 @@ export function useDashboardData() {
 
     try {
       const progress = await api.getDashboardProgress(id);
-      if (progress) dispatch({ type: 'SET_PROGRESS', data: progress });
+      if (progress) {
+        // Merge with existing cached progress to avoid overwriting more recent
+        // push-event updates that arrived while this pull was in flight.
+        const existing = progressRef.current[id] || {};
+        const merged = { ...progress };
+        for (const [taskId, existingEntry] of Object.entries(existing)) {
+          const incoming = merged[taskId];
+          if (!incoming) {
+            merged[taskId] = existingEntry;
+          } else if (existingEntry.status === 'in_progress' && incoming.status === 'pending') {
+            merged[taskId] = existingEntry;
+          } else if (existingEntry.status === 'completed' && incoming.status !== 'completed') {
+            merged[taskId] = existingEntry;
+          } else if (existingEntry.status === 'failed' && incoming.status === 'pending') {
+            merged[taskId] = existingEntry;
+          }
+        }
+        progressRef.current[id] = merged;
+        dispatch({ type: 'SET_PROGRESS', data: merged });
+      }
     } catch (_) {}
 
     try {
@@ -236,15 +256,34 @@ export function useDashboardData() {
     addListener('all_progress', (data) => {
       if (!data.dashboardId) return;
       const { dashboardId, ...progressMap } = data;
-      progressRef.current[dashboardId] = progressMap;
-      dispatch({ type: 'SET_DASHBOARD_PROGRESS', dashboardId, progress: progressMap });
+      // Merge with existing progress instead of overwriting — prevents losing
+      // recent individual agent_progress updates that may not yet be reflected
+      // in the bulk data (race condition between push events and pull data).
+      const existing = progressRef.current[dashboardId] || {};
+      const merged = { ...progressMap };
+      for (const [taskId, existingEntry] of Object.entries(existing)) {
+        const incoming = merged[taskId];
+        if (!incoming) {
+          // Task exists in cache but not in bulk — keep it (may be very recent)
+          merged[taskId] = existingEntry;
+        } else if (existingEntry.status === 'in_progress' && incoming.status === 'pending') {
+          // Existing has more advanced status — keep it
+          merged[taskId] = existingEntry;
+        } else if (existingEntry.status === 'completed' && incoming.status !== 'completed') {
+          merged[taskId] = existingEntry;
+        } else if (existingEntry.status === 'failed' && incoming.status === 'pending') {
+          merged[taskId] = existingEntry;
+        }
+      }
+      progressRef.current[dashboardId] = merged;
+      dispatch({ type: 'SET_DASHBOARD_PROGRESS', dashboardId, progress: merged });
       if (dashboardId === currentDashboardIdRef.current) {
-        dispatch({ type: 'SET_PROGRESS', data: progressMap });
+        dispatch({ type: 'SET_PROGRESS', data: merged });
       }
       // Recompute sidebar status
       const init = initRef.current[dashboardId];
       if (init) {
-        const newStatus = deriveDashboardStatus(init, progressMap);
+        const newStatus = deriveDashboardStatus(init, merged);
         dispatch({ type: 'SET_DASHBOARD_STATE', id: dashboardId, status: newStatus });
       }
     });
@@ -299,6 +338,11 @@ export function useDashboardData() {
       if (data.dashboardId === currentDashboardIdRef.current) {
         dispatch({ type: 'SET_UNBLOCKED_TASKS', tasks: data.unblocked, completedTaskId: data.completedTaskId });
       }
+    });
+
+    addListener('write_rejected', (data) => {
+      if (!data.dashboardId) return;
+      console.error('[write_rejected]', data.reason, data.details);
     });
 
     dispatch({ type: 'SET', key: 'connected', value: true });

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Synapse Dashboard Operations"
-  short_description: "Inspect and manage swarms"
-  default_prompt: "Use $synapse-dashboard-operations to inspect or operate a Synapse dashboard swarm."

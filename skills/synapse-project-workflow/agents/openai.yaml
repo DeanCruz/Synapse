@@ -1,4 +1,0 @@
-interface:
-  display_name: "Synapse Project Workflow"
-  short_description: "Project setup and analysis"
-  default_prompt: "Use $synapse-project-workflow to run Synapse project setup, discovery, or analysis workflows."

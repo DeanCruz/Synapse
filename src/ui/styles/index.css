@@ -2271,7 +2271,25 @@ a:hover {
   min-width: 0;
   position: relative;
   height: calc(100vh - 53px);
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.dashboard-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-content::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.02);
+}
+
+.dashboard-content::-webkit-scrollbar-thumb {
+  background: rgba(155,124,240,0.25);
+  border-radius: 3px;
+}
+
+.dashboard-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(155,124,240,0.4);
 }
 
 /* ============================================================
@@ -3035,6 +3053,121 @@ a:hover {
   font-size: 11.5px;
   word-break: break-word;
   flex: 1;
+}
+
+/* ============================================================
+   Files Changed — compact badge on AgentCard
+   ============================================================ */
+.files-changed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.15);
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: default;
+}
+
+.files-changed-badge svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+}
+
+/* Files Changed — full list in AgentDetails modal */
+.files-changed-section {
+  margin-top: 12px;
+}
+
+.files-changed-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.files-changed-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.files-changed-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  color: var(--text);
+}
+
+.files-changed-item:hover {
+  background: var(--surface-hover);
+}
+
+.files-changed-action {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.files-changed-action.created {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.files-changed-action.modified {
+  background: rgba(96, 165, 250, 0.15);
+  color: #60a5fa;
+}
+
+.files-changed-action.deleted {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.files-changed-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-changed-dir {
+  color: var(--text-tertiary);
+}
+
+.files-changed-name {
+  color: var(--text);
+}
+
+.files-changed-nav-hint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  flex-shrink: 0;
+}
+
+.files-changed-item:hover .files-changed-nav-hint {
+  opacity: 1;
 }
 
 /* ============================================================
@@ -5805,9 +5938,50 @@ a:hover {
   min-width: 0;
   border-radius: 12px;
   padding: 10px 14px;
-  overflow: hidden;
+  overflow: visible;
   overflow-wrap: break-word;
   word-break: break-word;
+  position: relative;
+}
+
+.claude-bubble-copy {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+  padding: 0;
+}
+
+.claude-message:hover .claude-bubble-copy {
+  opacity: 1;
+}
+
+.claude-bubble-copy:hover {
+  background: var(--surface-raised);
+  color: var(--text-primary);
+}
+
+.claude-user .claude-bubble-copy {
+  border-color: rgba(255,255,255,0.25);
+  background: rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.7);
+}
+
+.claude-user .claude-bubble-copy:hover {
+  background: rgba(255,255,255,0.22);
+  color: #fff;
 }
 
 .claude-user {
@@ -5968,6 +6142,78 @@ a:hover {
   font-weight: 500;
 }
 
+/* ----- Task event expandable box (task_progress, task_started, etc.) ----- */
+.claude-task-event {
+  align-self: stretch;
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: 8px;
+  margin: 4px 0;
+  font-size: 0.75rem;
+  overflow: hidden;
+}
+
+.claude-task-event-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.claude-task-event-header:hover {
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.claude-task-event-icon {
+  color: #34d399;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+.claude-task-event-label {
+  color: #34d399;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.claude-task-event-desc {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claude-task-event-details {
+  border-top: 1px solid rgba(52, 211, 153, 0.15);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.claude-task-event-row {
+  display: flex;
+  gap: 12px;
+  line-height: 1.5;
+}
+
+.claude-task-event-key {
+  color: rgba(52, 211, 153, 0.7);
+  min-width: 90px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.claude-task-event-value {
+  color: var(--text-secondary);
+  overflow-wrap: break-word;
+  word-break: break-all;
+  min-width: 0;
+}
+
 /* ----- Thinking bubble (extended thinking / processing indicator) ----- */
 @keyframes thinking-dot {
   0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
@@ -6118,6 +6364,20 @@ a:hover {
   flex: 1;
 }
 
+.claude-tool-summary-link {
+  cursor: pointer;
+  color: var(--color-in-progress);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s, color 0.15s;
+}
+
+.claude-tool-summary-link:hover {
+  text-decoration-color: var(--color-in-progress);
+  color: var(--text);
+}
+
 .claude-tool-toggle {
   margin-left: auto;
   font-size: 0.65rem;
@@ -6183,6 +6443,205 @@ a:hover {
   overflow-wrap: break-word;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+/* ─── Rich tool call formatting ─── */
+.tool-formatted {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-field {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.tool-field-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.78rem;
+}
+
+.tool-field-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  min-width: 52px;
+}
+
+.tool-field-value {
+  color: var(--text-secondary);
+  word-break: break-all;
+  min-width: 0;
+}
+
+.tool-field-path {
+  font-family: 'Space Grotesk', monospace;
+  color: var(--color-in-progress);
+  font-size: 0.76rem;
+}
+
+.tool-field-path-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 2px;
+  transition: text-decoration-color 0.15s, color 0.15s;
+}
+
+.tool-field-path-link:hover {
+  text-decoration-color: var(--color-in-progress);
+  color: var(--text);
+}
+
+.tool-field-code {
+  font-family: 'Space Grotesk', monospace;
+  background: var(--background);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.76rem;
+  color: var(--text);
+}
+
+.tool-field-badge {
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--color-in-progress);
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+/* Diff-style old/new display for Edit/Write */
+.tool-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.tool-diff-section {
+  display: flex;
+  gap: 0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.tool-diff-marker {
+  flex-shrink: 0;
+  width: 22px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 7px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  font-family: 'Space Grotesk', monospace;
+}
+
+.tool-diff-remove {
+  background: rgba(239, 68, 68, 0.07);
+}
+
+.tool-diff-remove .tool-diff-marker {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+
+.tool-diff-add {
+  background: rgba(52, 211, 153, 0.07);
+}
+
+.tool-diff-add .tool-diff-marker {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.tool-diff-code {
+  flex: 1;
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 0.73rem;
+  font-family: 'Space Grotesk', monospace;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+/* Bash command display */
+.tool-bash-command {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background: var(--background);
+  padding: 7px 10px;
+  border-radius: 5px;
+  font-size: 0.76rem;
+  font-family: 'Space Grotesk', monospace;
+  line-height: 1.4;
+}
+
+.tool-bash-prompt {
+  color: var(--color-completed);
+  font-weight: 700;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.tool-bash-command code {
+  color: var(--text);
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Todo list display in tool calls */
+.tool-todo-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.tool-todo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.tool-todo-icon {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  width: 16px;
+  text-align: center;
+}
+
+.tool-todo-completed .tool-todo-text {
+  text-decoration: line-through;
+  opacity: 0.55;
+}
+
+.tool-todo-in_progress {
+  background: rgba(139, 92, 246, 0.06);
+}
+
+.tool-todo-in_progress .tool-todo-text {
+  color: var(--text);
+  font-weight: 500;
 }
 
 /* ─── AskUserQuestion interactive cards ─── */
@@ -7279,6 +7738,16 @@ a:hover {
   border-radius: 8px;
   letter-spacing: 0;
   text-transform: none;
+}
+
+.bottom-panel-tab-badge--error {
+  background: rgba(255, 107, 107, 0.2);
+  color: var(--color-failed, #FF6B6B);
+}
+
+.bottom-panel-tab-badge--warning {
+  background: rgba(255, 217, 61, 0.2);
+  color: var(--color-warning, #FFD93D);
 }
 
 /* Header action buttons (close, etc.) */

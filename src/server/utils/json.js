@@ -90,7 +90,7 @@ function isValidInitialization(data) {
   return true;
 }
 
-function isValidProgress(data, expectedTaskId) {
+function isValidProgress(data, expectedTaskId, expectedDashboardId) {
   if (!data || typeof data !== 'object') return false;
 
   // Required string fields
@@ -99,6 +99,16 @@ function isValidProgress(data, expectedTaskId) {
 
   // Optional task_id match validation (backward compatible — only checks if expectedTaskId is provided)
   if (expectedTaskId !== undefined && data.task_id !== expectedTaskId) return false;
+
+  // dashboard_id type validation (if present, must be a non-empty string)
+  if (data.dashboard_id !== undefined && data.dashboard_id !== null) {
+    if (typeof data.dashboard_id !== 'string' || data.dashboard_id.length === 0) return false;
+  }
+
+  // Optional dashboard_id match validation (backward compatible — only checks if both are provided)
+  if (expectedDashboardId !== undefined && data.dashboard_id !== undefined && data.dashboard_id !== null) {
+    if (data.dashboard_id !== expectedDashboardId) return false;
+  }
 
   // Status must be one of the valid values
   const VALID_STATUSES = ['in_progress', 'completed', 'failed'];

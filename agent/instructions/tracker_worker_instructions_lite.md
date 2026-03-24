@@ -42,6 +42,7 @@ Write to: `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — 
 | `milestones` | array | `{ "at": "ISO", "msg": "..." }` — significant accomplishments |
 | `deviations` | array | `{ "at": "ISO", "description": "..." }` — plan divergences |
 | `logs` | array | `{ "at": "ISO", "level": "info\|warn\|error\|deviation", "msg": "..." }` |
+| `annotations` | object \| null | Optional. Per-file knowledge for the PKI (see below) |
 
 ## Fixed Stages
 
@@ -64,6 +65,24 @@ Write to: `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — 
 5. **On failure** — Set `status: "failed"`, `stage: "failed"`, `completed_at`, `summary` (with error), log at `level: "error"`.
 
 **Timestamps:** Always capture live via `date -u +"%Y-%m-%dT%H:%M:%SZ"`. Never guess or hardcode.
+
+## PKI Annotations (Optional)
+
+When you gain deep understanding of a file during your task, you can capture that knowledge in the optional `annotations` field. This feeds the Project Knowledge Index (PKI) — a persistent knowledge layer for future sessions. Add annotations for files where you discovered non-obvious gotchas, patterns, or conventions:
+
+```json
+{
+  "annotations": {
+    "src/auth/login.ts": {
+      "gotchas": ["Refresh token rotation: old must be invalidated first"],
+      "patterns": ["Uses asyncHandler wrapper for all async routes"],
+      "conventions": ["Error shape: { error: string, code: number }"]
+    }
+  }
+}
+```
+
+All sub-fields (`gotchas`, `patterns`, `conventions`) are optional arrays of strings. Only annotate files you actually read deeply — don't speculate.
 
 ## Return Format
 

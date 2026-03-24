@@ -33,6 +33,7 @@ The dashboard server watches this directory and broadcasts changes to the browse
 ```json
 {
   "task_id": "1.1",
+  "dashboard_id": "{dashboardId}",
   "status": "in_progress",
   "started_at": "2026-02-25T14:05:00Z",
   "completed_at": null,
@@ -62,7 +63,14 @@ The dashboard server watches this directory and broadcasts changes to the browse
     "patterns": [],
     "notes": ""
   },
-  "sibling_reads": []
+  "sibling_reads": [],
+  "annotations": {
+    "src/auth/login.ts": {
+      "gotchas": ["Refresh token rotation: old token must be invalidated before issuing new one"],
+      "patterns": ["Uses asyncHandler wrapper for all async routes"],
+      "conventions": ["Error shape: { error: string, code: number }"]
+    }
+  }
 }
 ```
 
@@ -71,6 +79,7 @@ The dashboard server watches this directory and broadcasts changes to the browse
 | Field | Type | Description |
 |---|---|---|
 | `task_id` | string | Your task ID (e.g., `"1.1"`, `"2.3"`). Provided in your dispatch prompt. |
+| `dashboard_id` | string | Your dashboard ID (e.g., `"a3f2c1"`). Provided in your dispatch context as `dashboardId`. Include in every write. Required for dashboard binding enforcement — the server rejects progress files where `dashboard_id` does not match the directory. |
 | `status` | string | Current lifecycle status. See **Status Values** below. |
 | `started_at` | ISO 8601 \| null | Timestamp when you began work. Set on your first write. |
 | `completed_at` | ISO 8601 \| null | Timestamp when you finished. Set only on `"completed"` or `"failed"`. |
@@ -85,6 +94,7 @@ The dashboard server watches this directory and broadcasts changes to the browse
 | `template_version` | string \| null | The version identifier from TEMPLATE_VERSION field. Set on first write. |
 | `shared_context` | object \| null | Optional. Info this worker makes available to same-wave siblings. Sub-fields: `exports` (array of export names), `interfaces` (array of interface signatures), `patterns` (array of pattern descriptions), `notes` (free-form string). |
 | `sibling_reads` | array | Optional. Array of task ID strings of sibling progress files read. Used by dashboard for sibling communication lines. |
+| `annotations` | object \| null | Optional. Operational knowledge about files the worker READ during execution. Keys are relative file paths; values are objects with optional `gotchas`, `patterns`, and `conventions` arrays (all arrays of strings). See **Annotations** below. |
 
 ### Status Values
 
@@ -140,6 +150,58 @@ Progress through these stages in order:
 - **On unexpected findings** — Add a log entry at `level: "warn"`.
 - **On starting a new sub-operation** — Update `message` and add a log entry.
 - **On populating shared_context** — Recommended when the worker creates exports, interfaces, or patterns that same-wave siblings may find useful. Populate `shared_context` as early as possible so siblings can read it.
+- **On discovering operational knowledge about a file** — Add to `annotations` whenever you gain deep understanding of a file you read. Populate during `reading_context` and `implementing` stages.
+
+---
+
+## Annotations
+
+Workers can optionally report **operational knowledge** about files they READ during task execution -- not just files they changed. The master merges these annotations into the Project Knowledge Index (PKI) after task completion.
+
+### What to Annotate
+
+Annotate files you **read and understood deeply** during your work. Good candidates:
+
+- Files you studied to understand an API, interface, or data flow before writing your own code
+- Files where you discovered non-obvious behavior, edge cases, or gotchas
+- Files whose patterns or conventions you followed in your implementation
+
+Do NOT annotate files you only glanced at or skimmed superficially. The goal is capturing knowledge that would save a future agent significant exploration time.
+
+### When to Annotate
+
+Build annotations during the **`reading_context`** and **`implementing`** stages -- these are the stages where you gain deep understanding of the codebase. Populate the `annotations` field in your progress file as you discover knowledge. You do not need to wait until finalization.
+
+### Annotation Schema
+
+The `annotations` field is an object keyed by relative file path. Each entry can include any combination of:
+
+| Sub-field | Type | Description |
+|---|---|---|
+| `gotchas` | array of strings | Non-obvious behaviors, edge cases, foot-guns, or things a developer should know before modifying this file. |
+| `patterns` | array of strings | Design or coding patterns used in this file (e.g., "async handler wrapper", "singleton service", "event-driven architecture"). |
+| `conventions` | array of strings | Project-specific conventions this file follows (e.g., "error shape: { error: string, code: number }", "JSDoc on all exports"). |
+
+All sub-fields are optional -- include only what you discovered. An entry with just `gotchas` is perfectly valid.
+
+### Example
+
+```json
+"annotations": {
+  "src/auth/login.ts": {
+    "gotchas": ["Refresh token rotation: old token must be invalidated before issuing new one"],
+    "patterns": ["Uses asyncHandler wrapper for all async routes"],
+    "conventions": ["Error shape: { error: string, code: number }"]
+  },
+  "src/models/User.ts": {
+    "gotchas": ["findByEmail returns null not undefined when not found"]
+  }
+}
+```
+
+### Alignment with PKI
+
+The `gotchas`, `patterns`, and `conventions` sub-fields match the corresponding fields in the PKI annotation file schema (see `documentation/data-architecture/pki-schemas.md`). The progress file `annotations` field is a lightweight subset -- the master merges these into the full per-file annotation structure after task completion.
 
 ---
 
@@ -290,6 +352,7 @@ Good logs tell a narrative. Bad logs are just "Starting..." / "Done."
 7. **Include logs** — the popup log box renders from your `logs[]` array
 8. **Set status lifecycle fields** — `started_at` on first write, `completed_at` on completion/failure
 9. **Summary must be descriptive** — "Created auth middleware with rate limiting — 3 endpoints" not "Done"
+10. **Include `dashboard_id` in every write** — your dispatch context provides `dashboardId`. Include it as `"dashboard_id"` in the progress JSON. The server rejects writes where this field doesn't match the dashboard directory.
 
 ---
 
@@ -302,6 +365,7 @@ Here's what a typical task's progress file looks like at each stage:
 ```json
 {
   "task_id": "1.1",
+  "dashboard_id": "{dashboardId}",
   "status": "in_progress",
   "started_at": "2026-02-25T14:05:00Z",
   "completed_at": null,
@@ -329,6 +393,7 @@ Here's what a typical task's progress file looks like at each stage:
 ```json
 {
   "task_id": "1.1",
+  "dashboard_id": "{dashboardId}",
   "status": "in_progress",
   "started_at": "2026-02-25T14:05:00Z",
   "completed_at": null,
@@ -354,7 +419,13 @@ Here's what a typical task's progress file looks like at each stage:
     "patterns": ["Express middleware pattern with next() chaining"],
     "notes": "Rate limiter configured for 100 req/15min — siblings using auth should import from this module"
   },
-  "sibling_reads": []
+  "sibling_reads": [],
+  "annotations": {
+    "src/middleware/cors.ts": {
+      "gotchas": ["CORS middleware must be registered before auth middleware — order matters in Express pipeline"],
+      "patterns": ["Uses express-cors with allowlist from env variable"]
+    }
+  }
 }
 ```
 
@@ -363,6 +434,7 @@ Here's what a typical task's progress file looks like at each stage:
 ```json
 {
   "task_id": "1.1",
+  "dashboard_id": "{dashboardId}",
   "status": "completed",
   "started_at": "2026-02-25T14:05:00Z",
   "completed_at": "2026-02-25T14:08:30Z",
@@ -393,6 +465,16 @@ Here's what a typical task's progress file looks like at each stage:
     "patterns": ["Express middleware pattern with next() chaining"],
     "notes": "Rate limiter configured for 100 req/15min — siblings using auth should import from this module"
   },
-  "sibling_reads": []
+  "sibling_reads": [],
+  "annotations": {
+    "src/middleware/cors.ts": {
+      "gotchas": ["CORS middleware must be registered before auth middleware — order matters in Express pipeline"],
+      "patterns": ["Uses express-cors with allowlist from env variable"]
+    },
+    "src/config/auth.ts": {
+      "conventions": ["All auth config values come from env vars with AUTH_ prefix"],
+      "gotchas": ["JWT_SECRET defaults to 'dev-secret' in development — never set in production env file"]
+    }
+  }
 }
 ```

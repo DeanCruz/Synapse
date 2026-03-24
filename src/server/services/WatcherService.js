@@ -15,6 +15,57 @@ const { getDashboardDir, ensureDashboard, listDashboards } = require('./Dashboar
 const { listQueueSummaries } = require('./QueueService');
 const { computeNewlyUnblocked } = require('./DependencyService');
 
+// --- Dashboard Write Validation ---
+
+/**
+ * Validate a progress file and broadcast it if valid.
+ * Hard-rejects task_id mismatches and dashboard_id mismatches.
+ * Returns true if broadcast, false if rejected.
+ */
+function validateAndBroadcast(data, dashboardId, filename, broadcastFn) {
+  const expectedTaskId = filename.replace('.json', '');
+
+  // Hard guard 1: task_id must match filename
+  if (data.task_id !== expectedTaskId) {
+    console.error(`[watcher] REJECTED: Progress file ${dashboardId}/${filename} contains task_id "${data.task_id}" — expected "${expectedTaskId}". Write violation.`);
+    broadcastFn('write_rejected', {
+      dashboardId,
+      filename,
+      task_id: data.task_id,
+      reason: 'task_id_mismatch',
+      details: `File contains task_id "${data.task_id}" but filename is "${filename}" (expected task_id "${expectedTaskId}")`,
+      expected_task_id: expectedTaskId,
+      timestamp: new Date().toISOString(),
+    });
+    return false;
+  }
+
+  // Hard guard 2: dashboard_id must match directory (if present in file)
+  if (data.dashboard_id != null && data.dashboard_id !== dashboardId) {
+    console.error(`[watcher] REJECTED: Progress file ${dashboardId}/${filename} contains dashboard_id "${data.dashboard_id}" — expected "${dashboardId}". Dashboard binding violation.`);
+    broadcastFn('write_rejected', {
+      dashboardId,
+      filename,
+      task_id: data.task_id,
+      reason: 'dashboard_id_mismatch',
+      details: `File contains dashboard_id "${data.dashboard_id}" but is in dashboard "${dashboardId}"`,
+      file_dashboard_id: data.dashboard_id,
+      expected_dashboard_id: dashboardId,
+      timestamp: new Date().toISOString(),
+    });
+    return false;
+  }
+
+  // Soft warning: dashboard_id missing (backwards compat — old format files)
+  if (data.dashboard_id == null) {
+    console.warn(`[watcher] WARN: Progress file ${dashboardId}/${filename} missing dashboard_id field. Old format — accepting but dashboard binding is unverified.`);
+  }
+
+  // Passed all guards — broadcast
+  broadcastFn('agent_progress', { dashboardId, ...data });
+  return true;
+}
+
 // --- Dashboard Watcher Management ---
 
 // Map<string, { initFile, logsFile, progressWatcher }>
@@ -72,13 +123,8 @@ function watchDashboard(id, broadcastFn) {
           if (!fs.existsSync(filePath)) return; // file was deleted (reset)
           const data = await readJSONWithRetry(filePath, PROGRESS_RETRY_MS);
           if (data && isValidProgress(data)) {
-            // Write-guard: warn if task_id inside the file doesn't match the filename
-            const expectedId = filename.replace('.json', '');
-            if (data.task_id !== expectedId) {
-              console.warn(`[watcher] GUARD: Progress file ${id}/${filename} contains task_id "${data.task_id}" — expected "${expectedId}". Possible cross-worker write violation.`);
-              // Still broadcast — soft guard, warn only
-            }
-            broadcastFn('agent_progress', { dashboardId: id, ...data });
+            const accepted = validateAndBroadcast(data, id, filename, broadcastFn);
+            if (!accepted) return; // rejected — do not proceed to dependency check
 
             // Dependency check: when a task completes, check if new tasks are unblocked
             if (data.status === 'completed') {
@@ -236,13 +282,8 @@ function reconcileProgressFiles(id, broadcastFn) {
         known.set(file, stat.mtimeMs);
         const data = readJSON(filePath);
         if (data && isValidProgress(data)) {
-          // Write-guard: warn if task_id inside the file doesn't match the filename
-          const expectedId = file.replace('.json', '');
-          if (data.task_id !== expectedId) {
-            console.warn(`[watcher] GUARD: Progress file ${id}/${file} contains task_id "${data.task_id}" — expected "${expectedId}". Possible cross-worker write violation.`);
-            // Still broadcast — soft guard, warn only
-          }
-          broadcastFn('agent_progress', { dashboardId: id, ...data });
+          const accepted = validateAndBroadcast(data, id, file, broadcastFn);
+          if (!accepted) continue; // rejected — skip dependency check for this file
 
           // Dependency check: when a task completes, check if new tasks are unblocked
           if (data.status === 'completed') {
