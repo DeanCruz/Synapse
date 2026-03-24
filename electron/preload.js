@@ -47,6 +47,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // --- Pull requests (renderer → main) ---
 
+  // IPC heartbeat — verify the bridge is alive
+  ipcHeartbeat: () => ipcRenderer.invoke('ipc-heartbeat'),
+
   // Dashboards
   getDashboards: () => ipcRenderer.invoke('get-dashboards'),
   createDashboard: () => ipcRenderer.invoke('create-dashboard'),

@@ -10,6 +10,7 @@ const CLAUDE_MESSAGES_KEY_PREFIX = 'synapse-claude-messages-';
 const CLAUDE_TABS_KEY_PREFIX = 'synapse-claude-tabs-';
 const CLAUDE_WELCOME_MSG = { id: 'welcome', type: 'system', text: 'Agent chat is ready. Type a message below to start.' };
 const DEFAULT_TAB = { id: 'default', name: 'Chat 1' };
+const MAX_CHAT_MESSAGES = 200; // Hard cap on in-memory message count per tab
 
 const IDE_WORKSPACES_KEY = 'synapse-ide-workspaces';
 const GIT_REPOS_KEY = 'synapse-git-repos';
@@ -24,6 +25,20 @@ function updateTreeNode(node, targetPath, children) {
     ...node,
     children: node.children.map(child => updateTreeNode(child, targetPath, children)),
   };
+}
+
+// Trim a messages array to MAX_CHAT_MESSAGES, preserving the first system
+// message (e.g. "Connected" / welcome) and inserting a trim notice.
+function trimMessages(msgs) {
+  if (msgs.length <= MAX_CHAT_MESSAGES) return msgs;
+  const trimCount = msgs.length - MAX_CHAT_MESSAGES;
+  const first = msgs[0]?.type === 'system' ? [msgs[0]] : [];
+  const trimNotice = { id: 'trim-notice-' + Date.now(), type: 'system', text: `[${trimCount} older messages trimmed]` };
+  // Keep: first system message (if any) + trim notice + last (MAX - first.length - 1) messages
+  return first.concat(
+    [trimNotice],
+    msgs.slice(msgs.length - MAX_CHAT_MESSAGES + first.length + 1)
+  );
 }
 
 function claudeMessagesKey(dashboardId, tabId) {
@@ -297,7 +312,7 @@ function appReducerCore(state, action) {
     case 'CLAUDE_SET_MESSAGES':
       return { ...state, claudeMessages: action.messages };
     case 'CLAUDE_APPEND_MSG': {
-      const newMessages = [...state.claudeMessages, { id: Date.now() + Math.random(), ...action.msg }];
+      const newMessages = trimMessages([...state.claudeMessages, { id: Date.now() + Math.random(), ...action.msg }]);
       // Track unread if user isn't viewing this dashboard's chat
       const shouldTrackUnread = action.msg.type === 'assistant' && state.activeView !== 'claude';
       const updatedUnread = shouldTrackUnread
@@ -307,7 +322,7 @@ function appReducerCore(state, action) {
     }
     case 'CLAUDE_UPDATE_MESSAGES':
       // Functional update: action.updater(prevMessages) => newMessages
-      return { ...state, claudeMessages: action.updater(state.claudeMessages) };
+      return { ...state, claudeMessages: trimMessages(action.updater(state.claudeMessages)) };
     case 'CLAUDE_CLEAR_MESSAGES':
       try { localStorage.removeItem(claudeMessagesKey(state.currentDashboardId, state.claudeActiveTabId)); } catch (e) { /* unavailable */ }
       return { ...state, claudeMessages: [CLAUDE_WELCOME_MSG], claudePendingAttachments: [] };
@@ -415,7 +430,7 @@ function appReducerCore(state, action) {
       const did = state.currentDashboardId;
       const stashKey = did + ':' + action.tabId;
       const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
-      const updatedMsgs = [...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }];
+      const updatedMsgs = trimMessages([...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }]);
       const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, action.tabId), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
       return { ...state, claudeTabStash: newTabStash };
@@ -426,7 +441,7 @@ function appReducerCore(state, action) {
       const activeTab = state.claudeActiveTabMap[did] || 'default';
       const stashKey = did + ':' + activeTab;
       const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, activeTab) || [CLAUDE_WELCOME_MSG];
-      const updatedMsgs = [...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }];
+      const updatedMsgs = trimMessages([...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }]);
       const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, activeTab), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
       // Track unread assistant messages for non-active dashboards
@@ -440,7 +455,7 @@ function appReducerCore(state, action) {
       const activeTab = state.claudeActiveTabMap[did] || 'default';
       const stashKey = did + ':' + activeTab;
       const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, activeTab) || [CLAUDE_WELCOME_MSG];
-      const updatedMsgs = action.updater(stashedMsgs);
+      const updatedMsgs = trimMessages(action.updater(stashedMsgs));
       const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, activeTab), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
       return { ...state, claudeTabStash: newTabStash };
@@ -473,8 +488,46 @@ function appReducerCore(state, action) {
       delete newDashNames[rid];
       const newUnread = { ...state.unreadChatCounts };
       delete newUnread[rid];
+      // Remove from dashboardList and auto-switch if this was the active dashboard
+      const newDashList = state.dashboardList.filter(id => id !== rid);
+      let switchState = {};
+      if (state.currentDashboardId === rid && newDashList.length > 0) {
+        const prevTabId = state.claudeActiveTabId;
+        const prevStashKey = rid + ':' + prevTabId;
+        const stashedTabStash = { ...newTabStash, [prevStashKey]: state.claudeMessages };
+        const stashedActiveTabMap = { ...newActiveTabMap, [rid]: prevTabId };
+        const stashedProcStash = { ...newProcStash2, [rid]: {
+          isProcessing: state.claudeIsProcessing,
+          status: state.claudeStatus,
+          pendingAttachments: state.claudePendingAttachments,
+          viewMode: state.claudeViewMode,
+          chatOpen: state.activeView === 'claude',
+          ideChatOpen: state.ideChatOpen,
+        }};
+        try { localStorage.setItem(claudeMessagesKey(rid, prevTabId), JSON.stringify(state.claudeMessages)); } catch (e) { /* */ }
+        const targetId = newDashList[0];
+        const targetTabId = stashedActiveTabMap[targetId] || 'default';
+        const targetStashKey = targetId + ':' + targetTabId;
+        const targetMessages = stashedTabStash[targetStashKey] || loadSavedMessages(targetId, targetTabId) || [CLAUDE_WELCOME_MSG];
+        const targetProc = stashedProcStash[targetId] || {};
+        const targetTabs2 = state.claudeTabs[targetId] || loadSavedTabs(targetId) || [{ ...DEFAULT_TAB }];
+        switchState = {
+          currentDashboardId: targetId,
+          claudeTabStash: stashedTabStash,
+          claudeActiveTabMap: stashedActiveTabMap,
+          claudeActiveTabId: targetTabId,
+          claudeTabs: { ...newTabs, [targetId]: targetTabs2 },
+          claudeProcessingStash: stashedProcStash,
+          claudeMessages: targetMessages,
+          claudeIsProcessing: targetProc.isProcessing || false,
+          claudeStatus: targetProc.status || 'Ready',
+          claudePendingAttachments: targetProc.pendingAttachments || [],
+          claudeDashboardId: targetId,
+        };
+      }
       return {
         ...state,
+        dashboardList: newDashList,
         dashboardStates: newDashStates,
         dashboardNames: newDashNames,
         allDashboardProgress: newAllProgress,
@@ -484,6 +537,7 @@ function appReducerCore(state, action) {
         claudeActiveTabMap: newActiveTabMap,
         claudeProcessingStash: newProcStash2,
         unreadChatCounts: newUnread,
+        ...switchState,
       };
     }
     case 'CLAUDE_STASH_SET_PROCESSING': {
@@ -510,47 +564,9 @@ function appReducerCore(state, action) {
       const dashboardNames = action.names
         ? { ...state.dashboardNames, ...action.names }
         : state.dashboardNames;
-      // If current dashboard doesn't exist in the list, switch to first available
-      // Must stash chat state first (same as SWITCH_DASHBOARD) to avoid losing messages
-      if (dashboardList.length > 0 && !dashboardList.includes(state.currentDashboardId)) {
-        const prevDid = state.currentDashboardId;
-        const prevTabId = state.claudeActiveTabId;
-        const prevStashKey = prevDid + ':' + prevTabId;
-        const newTabStash = { ...state.claudeTabStash, [prevStashKey]: state.claudeMessages };
-        const newActiveTabMap = { ...state.claudeActiveTabMap, [prevDid]: prevTabId };
-        const procStash = { ...state.claudeProcessingStash, [prevDid]: {
-          isProcessing: state.claudeIsProcessing,
-          status: state.claudeStatus,
-          pendingAttachments: state.claudePendingAttachments,
-          viewMode: state.claudeViewMode,
-          chatOpen: state.activeView === 'claude',
-          ideChatOpen: state.ideChatOpen,
-        }};
-        // Persist stashed messages immediately to avoid loss
-        try { localStorage.setItem(claudeMessagesKey(prevDid, prevTabId), JSON.stringify(state.claudeMessages)); } catch (e) { /* */ }
-        const targetId = dashboardList[0];
-        const targetTabId = newActiveTabMap[targetId] || 'default';
-        const targetStashKey = targetId + ':' + targetTabId;
-        const targetMessages = newTabStash[targetStashKey] || loadSavedMessages(targetId, targetTabId) || [CLAUDE_WELCOME_MSG];
-        const targetProc = procStash[targetId] || {};
-        const targetTabs = state.claudeTabs[targetId] || loadSavedTabs(targetId) || [{ ...DEFAULT_TAB }];
-        return {
-          ...state,
-          dashboardList,
-          dashboardNames,
-          currentDashboardId: targetId,
-          claudeTabStash: newTabStash,
-          claudeActiveTabMap: newActiveTabMap,
-          claudeActiveTabId: targetTabId,
-          claudeTabs: { ...state.claudeTabs, [targetId]: targetTabs },
-          claudeProcessingStash: procStash,
-          claudeMessages: targetMessages,
-          claudeIsProcessing: targetProc.isProcessing || false,
-          claudeStatus: targetProc.status || 'Ready',
-          claudePendingAttachments: targetProc.pendingAttachments || [],
-          claudeDashboardId: targetId,
-        };
-      }
+      // Never auto-switch dashboards here — list updates should not navigate.
+      // Dashboard switching is handled by SWITCH_DASHBOARD (user click),
+      // REMOVE_DASHBOARD (deletion), and workspace sync effects in IDEView.
       return { ...state, dashboardList, dashboardNames };
     }
     case 'SET_DASHBOARD_NAMES':
