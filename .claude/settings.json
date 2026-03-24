@@ -7,6 +7,19 @@
           {
             "type": "command",
             "command": ".claude/hooks/validate-master-write.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/validate-initialization-immutable.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/validate-worker-prompt.sh"
           }
         ]
       },
@@ -30,7 +43,28 @@
           },
           {
             "type": "command",
+            "command": ".claude/hooks/validate-progress-log-detail.sh"
+          },
+          {
+            "type": "command",
             "command": ".claude/hooks/mark-annotation-stale.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/validate-log-entry.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/validate-master-state.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/nudge-progress-update.sh"
           }
         ]
       }

@@ -16,6 +16,7 @@ const PUSH_CHANNELS = [
   'worker-output',
   'worker-complete',
   'worker-error',
+  'worker-permission-request',
   'swarm-state',
   'terminal-output',
   'terminal-exit',
@@ -135,6 +136,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   killWorker: (pid) => ipcRenderer.invoke('kill-worker', pid),
   killAllWorkers: () => ipcRenderer.invoke('kill-all-workers'),
   getActiveWorkers: () => ipcRenderer.invoke('get-active-workers'),
+  writeWorker: (pid, data) => ipcRenderer.invoke('write-worker', pid, data),
 
   // Terminals
   spawnTerminal: (opts) => ipcRenderer.invoke('spawn-terminal', opts),

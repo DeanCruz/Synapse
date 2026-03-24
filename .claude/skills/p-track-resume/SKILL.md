@@ -12,21 +12,21 @@ model: opus
 
 # Synapse Swarm Resume — !p_track_resume
 
-## NON-NEGOTIABLE RULES — READ BEFORE ANYTHING ELSE
+## NON-NEGOTIABLE RULES
 
-**1. You are the MASTER AGENT. You do NOT write code. You do NOT implement anything. You do NOT edit application files. You ONLY assess state, communicate with agents, and dispatch worker agents. No exceptions.**
+**The master-protocol skill provides your core identity, constraints, and schemas. Follow it absolutely.**
 
-**2. You MUST read `{tracker_root}/agent/instructions/tracker_master_instructions.md` before writing any dashboard files. Do not skip this. Do not work from memory. Read it NOW.**
+**Additionally for resume:**
 
-**3. You MUST read the master task file to understand the full plan, task descriptions, context, and critical details before dispatching any worker.**
+**1. You MUST read `{tracker_root}/agent/instructions/tracker_master_instructions.md` before writing any dashboard files.**
 
-**4. Every dispatched worker gets a COMPLETE, SELF-CONTAINED prompt with all context needed to work independently — identical in quality and depth to what `!p_track` would produce.**
+**2. You MUST read the master task file to understand full task descriptions before dispatching any worker.**
 
-**5. Every dispatched worker is explicitly instructed to read the appropriate worker instructions file (`tracker_worker_instructions.md` or `tracker_worker_instructions_lite.md`). This is NON-NEGOTIABLE.**
+**3. Every dispatched worker gets a COMPLETE, SELF-CONTAINED prompt — identical in quality to what `!p_track` produces.**
 
-**6. You MUST compile and deliver a comprehensive final report after all tasks complete. No exceptions. See Phase 5.**
+**4. You MUST attempt to detect whether previously dispatched agents are still alive before re-dispatching.**
 
-**7. You MUST attempt to detect whether previously dispatched agents are still alive before re-dispatching them. Do not blindly re-dispatch everything — check progress file recency first.**
+**5. You MUST compile and deliver a comprehensive final report. No exceptions. See Phase 5.**
 
 ---
 
@@ -91,17 +91,7 @@ Read in parallel:
    - From `master_state.json` if available.
    - Otherwise, scan `logs.json` for highest `Agent {N}` reference, set to N+1.
    - If logs empty, set to 1.
-5. Log cache rebuild to `logs.json`:
-   ```json
-   {
-     "timestamp": "{live via date -u}",
-     "task_id": "0.0",
-     "agent": "Orchestrator",
-     "level": "info",
-     "message": "Resume: rebuilt upstream cache from {N} completed progress files. master_state.json: {found | not found}.",
-     "task_name": "{task-slug}"
-   }
-   ```
+5. Log cache rebuild to `logs.json`: `"Resume: rebuilt upstream cache from {N} completed progress files. master_state.json: {found | not found}."`
 
 ---
 
@@ -147,36 +137,12 @@ For each agent in `initialization.json`'s `agents[]`:
 
 ### Step 8: Present Resume Plan
 
-Display a comprehensive summary:
-
-```markdown
-## Resume Plan: {task-slug}
-
-**Dashboard:** {dashboardId}
-**Project:** {project_root}
-**Task file:** {path to master task file}
-**master_state.json:** {found | not found}
-**Upstream cache:** {N entries rebuilt from {source}}
-
-### Current State
-| Status | Count | Tasks |
-|---|---|---|
-| Completed | {N} | {task_ids} |
-| Failed (will retry) | {N} | {task_ids} |
-| Likely alive (monitoring) | {N} | {task_ids} |
-| Stale in-progress (will re-dispatch) | {N} | {task_ids} |
-| Pending (ready) | {N} | {task_ids} |
-| Pending (blocked) | {N} | {task_ids} |
-
-### Will Dispatch Now: {total}
-{List each task with ID, title, and reason (retry/re-dispatch/new)}
-
-### Monitoring: {count}
-{Agents that appear alive with current stage and last activity time}
-
-### Still Blocked: {count}
-{Blocked tasks and what they're waiting for}
-```
+Display a comprehensive summary with header `## Resume Plan: {task-slug}` including:
+- **Context line:** Dashboard ID, project root, task file path, master_state.json status, upstream cache size
+- **Current State table:** Status (Completed/Failed/Likely alive/Stale/Pending ready/Pending blocked) with count and task IDs per row
+- **Will Dispatch Now:** Each task with ID, title, reason (retry/re-dispatch/new)
+- **Monitoring:** Alive agents with current stage and last activity time
+- **Still Blocked:** Blocked tasks and what they await
 
 **Wait for user approval before dispatching.**
 
@@ -284,31 +250,9 @@ Dispatch **every ready task simultaneously** (failed retries, stale re-dispatche
 
 **B. Update tracker AFTER dispatch (NON-NEGOTIABLE):**
 1. Capture timestamp: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
-2. Append to `logs.json`:
-   ```json
-   {
-     "timestamp": "{timestamp}",
-     "task_id": "{id}",
-     "agent": "Agent {N}",
-     "level": "info",
-     "message": "Resumed: {task title} ({reason: retry | re-dispatch | new})",
-     "task_name": "{task-slug}"
-   }
-   ```
+2. Append to `logs.json` (see master-protocol for schema): message = `"Resumed: {task title} ({reason: retry | re-dispatch | new})"`
 
-**C. Write master state checkpoint** after all dispatches:
-```json
-{
-  "last_updated": "{timestamp}",
-  "completed": [{"id": "...", "summary": "..."}],
-  "in_progress": ["{dispatched + monitoring task IDs}"],
-  "failed": [{"id": "...", "summary": "...", "repair_id": "..."}],
-  "ready_to_dispatch": [],
-  "upstream_results": {rebuilt cache},
-  "next_agent_number": {N},
-  "permanently_failed": []
-}
-```
+**C. Write master state checkpoint** after all dispatches (see master-protocol for master_state.json schema). Include all dispatched + monitoring task IDs in `in_progress`.
 
 Output: "Resumed N tasks: {ids with reasons}. Monitoring M alive agents: {ids}."
 
@@ -322,28 +266,14 @@ From this point, follow standard `!p_track` execution. You are the master orches
 
 On **every worker completion:**
 
-1. **Validate return** — per `agent/master/failure_recovery.md`:
-   - STATUS missing -> treat as failure
-   - SUMMARY generic -> log warn
-   - FILES CHANGED missing for file-modifying task -> log warn
-   - DIVERGENT ACTIONS -> log at "deviation" level
-
+1. **Validate return** per failure-protocol skill.
 2. **Update master task file** with status, timestamp, summary, deviations.
-
-3. **Append to logs.json** — completion entry at level `info`. Separate entries for deviations/warnings/errors.
-
-4. **Cache result** for downstream injection (task ID, summary, files, exports, deviations).
-
-5. **Run eager dispatch scan** — per `agent/master/eager_dispatch.md`:
-   - Build completed set from progress files (all `status === "completed"`)
-   - Build in-progress set (all `status === "in_progress"`)
-   - Find dispatchable tasks: NOT completed, NOT in-progress, ALL `depends_on` in completed set
-   - Dispatch ALL available tasks simultaneously with full prompts + upstream results
-   - **Waves are visual, not barriers.** If wave-5 task has deps satisfied, dispatch NOW.
-
+3. **Append to logs.json** — completion entry. Separate entries for deviations/warnings/errors.
+4. **Cache result** for downstream injection.
+5. **Run eager dispatch scan** per master-protocol (build completed/in-progress sets, dispatch ALL tasks with satisfied deps). Waves are visual, not barriers.
 6. **Write master_state.json** after every event.
 
-**No terminal status tables.** One-line confirmations only. Dashboard is the primary channel.
+One-line confirmations only. Dashboard is the primary channel.
 
 ### Step 13: Handle Monitoring Agents
 
@@ -354,43 +284,16 @@ For "likely alive" agents from Phase 2:
 
 ### Step 14: Handle Failures
 
-Follow `agent/master/failure_recovery.md`:
+See the failure-protocol skill for complete failure handling:
+- **Single failure:** Create repair task -> rewire deps -> dispatch repair worker
+- **Double failure:** Permanent failure -> escalate to user
+- **Circuit breaker:** Pause -> analyze -> revise plan -> resume
 
-**Single failure:**
-1. Log error to `logs.json`
-2. Create repair task in `initialization.json`: ID `"{wave}.{next}r"`, title `"REPAIR: {original}"`, same wave/deps
-3. Rewire downstream `depends_on` to point at repair task ID
-4. Dispatch repair worker with `failed_task.md` protocol
-5. Log repair dispatch
-6. Run eager dispatch scan
-
-**Double failure (repair task fails):**
-1. Log error + permission popup
-2. Do NOT create another repair — mark permanently failed
-3. Continue with unrelated tasks
-
-**Circuit breaker — evaluate after every failure:**
-
-| Threshold | Condition |
-|---|---|
-| **A** | 3+ tasks failed in the same wave |
-| **B** | Single failure blocks 3+ downstream tasks |
-| **C** | Single failure blocks >50% remaining tasks |
-
-If ANY threshold fires: pause dispatches, read all progress files, analyze root cause, produce revision plan (`modified`/`added`/`removed`/`retry`), apply to `initialization.json`, log, resume.
+Evaluate circuit breaker thresholds after every failure (3 conditions from failure-protocol).
 
 ### Step 15: Handle Context Compaction
 
-If context compaction drops upstream caches (detected by losing cached results for completed tasks):
-
-1. Read `master_state.json` (checkpoint)
-2. Read `initialization.json` (plan)
-3. Read all progress files (authoritative ground truth)
-4. Cross-reference and rebuild upstream cache
-5. Log `warn` recovery entry
-6. Resume dispatch
-
-This is why `master_state.json` is written after every event.
+If context compaction drops upstream caches, recover from `master_state.json` + `initialization.json` + progress files. Cross-reference, rebuild cache, log `warn`, resume. This is why `master_state.json` is written after every event.
 
 ---
 
@@ -404,93 +307,25 @@ Set `overall_status` to `"completed"` (or `"failed"` if unrecovered failures).
 
 ### 16B: Append Final Log Entry
 
-```json
-{
-  "timestamp": "{live via date -u}",
-  "task_id": "0.0",
-  "agent": "Orchestrator",
-  "level": "info",
-  "message": "Swarm resumed and completed: {completed}/{total} tasks succeeded, {failed} failed",
-  "task_name": "{task-slug}"
-}
-```
+Append a log entry (see master-protocol for schema) with `task_id: "0.0"`, `agent: "Orchestrator"`, `level: "info"`, message: `"Swarm resumed and completed: {completed}/{total} tasks succeeded, {failed} failed"`.
 
 ### 16C: Post-Swarm Verification
 
-| Condition | Action |
-|---|---|
-| Modified existing code across multiple files | Dispatch verification agent (tests, types, build) |
-| Purely additive (new files only) | Optional |
-| Any tasks reported deviations | Strongly recommended |
-| All succeeded, no warnings | May skip |
+Dispatch verification agent if: multi-file modifications or deviations reported. Optional for purely additive changes. May skip if all succeeded with no warnings.
 
 ### 16D: Compute Metrics
 
-Read all progress files. Compute and write `metrics.json`:
-
-| Metric | Computation |
-|---|---|
-| `elapsed_seconds` | Latest `completed_at` - earliest `started_at` |
-| `serial_estimate_seconds` | Sum of all task durations |
-| `parallel_efficiency` | serial / elapsed |
-| `duration_distribution` | { min, avg, max, median } of task durations |
-| `failure_rate` | failed / total |
-| `max_concurrent` | Peak overlapping in-progress tasks |
-| `deviation_count` | Sum of all `deviations[]` lengths |
+Read all progress files. Compute and write `metrics.json` per the master-protocol schema (elapsed_seconds, serial_estimate_seconds, parallel_efficiency, duration_distribution, failure_rate, max_concurrent, deviation_count).
 
 ### 16E: Final Report — NON-NEGOTIABLE
 
 > **Read ALL data before writing:** logs.json, every progress file, master task file, metrics.json.
 
-```markdown
-## Swarm Resumed & Completed: {task-slug}
+Header: `## Swarm Resumed & Completed: {task-slug}` with stats line (completed/total, waves, failures, elapsed, parallel efficiency, type, resumed from dashboard).
 
-**{completed}/{total} tasks** . **{W} waves** . **{N} failures** . **{elapsed}s elapsed** . **{efficiency}x parallel efficiency** . **Type: {Waves|Chains}** . **Resumed from: {dashboardId}**
+**Required sections:** Summary of Work Completed, Files Changed (table: File/Action/Task/What Changed), Resume Details (tasks completed before resume, re-dispatched stale, retried failed, dispatched fresh, agents found alive), Potential Improvements, Future Steps, Performance (metrics table), Artifacts (task file, plan, dashboard, logs, metrics paths).
 
----
-
-### Summary of Work Completed (REQUIRED)
-{Thorough summary — goal, what was built, how it works, design decisions,
-current state. What was the state at resume? What additional work was needed?}
-
-### Files Changed (REQUIRED)
-| File | Action | Task | What Changed |
-|---|---|---|---|
-
-### Deviations & Their Impact (CONDITIONAL — if any)
-For each: Task ID, what changed, why, impact on project.
-
-### Warnings & Observations (CONDITIONAL — if any)
-
-### Failures (CONDITIONAL — if any)
-What failed, recovery attempted, blocked tasks, residual impact.
-
-### Resume Details (REQUIRED)
-- Tasks completed before resume: {N} ({ids})
-- Tasks re-dispatched (stale): {N} ({ids})
-- Tasks retried (failed): {N} ({ids})
-- Tasks dispatched fresh (pending): {N} ({ids})
-- Agents found alive during resume: {N} ({ids or "none"})
-
-### Verification Results (CONDITIONAL — if verification ran)
-
-### Potential Improvements (REQUIRED)
-{Expert analysis from worker logs, deviations, code patterns.}
-
-### Future Steps (REQUIRED)
-{Concrete, actionable next steps.}
-
-### Performance (REQUIRED)
-| Metric | Value |
-|---|---|
-
-### Artifacts
-- Task file: `{tracker_root}/tasks/{date}/parallel_{task_name}.json`
-- Plan: `{tracker_root}/tasks/{date}/parallel_plan_{task_name}.md`
-- Dashboard: `{tracker_root}/dashboards/{dashboardId}/initialization.json`
-- Logs: `{tracker_root}/dashboards/{dashboardId}/logs.json`
-- Metrics: `{tracker_root}/dashboards/{dashboardId}/metrics.json`
-```
+**Conditional sections (include if applicable):** Deviations & Their Impact, Warnings & Observations, Failures, Verification Results.
 
 **Quality bar:** A developer not present during the swarm can read this and understand: (1) what was done, (2) what went sideways, (3) current project state, (4) what to do next.
 
@@ -502,115 +337,29 @@ Save history summary to `{tracker_root}/history/`.
 
 ## Key Schemas
 
-### initialization.json
-
-```json
-{
-  "task": {
-    "name": "{task-slug}", "type": "Waves|Chains",
-    "directory": "{optional}", "prompt": "{original prompt}",
-    "project": "{directories}", "project_root": "{absolute path}",
-    "created": "{ISO 8601}", "total_tasks": 0, "total_waves": 0
-  },
-  "agents": [
-    { "id": "1.1", "title": "{~40 chars}", "wave": 1,
-      "layer": "{optional}", "directory": "{optional}", "depends_on": [] }
-  ],
-  "waves": [{ "id": 1, "name": "{name}", "total": 0 }],
-  "chains": [], "history": []
-}
-```
-
-### master_state.json (checkpoint — write after every event)
-
-```json
-{
-  "last_updated": "{ISO 8601}",
-  "completed": [{ "id": "1.1", "summary": "..." }],
-  "in_progress": ["2.1"],
-  "failed": [{ "id": "2.2", "summary": "...", "repair_id": "2.4r" }],
-  "ready_to_dispatch": ["3.1"],
-  "upstream_results": { "1.1": "one-line summary" },
-  "next_agent_number": 5,
-  "permanently_failed": []
-}
-```
-
-### logs.json entry
-
-```json
-{
-  "timestamp": "{ISO 8601 — always live via date -u}",
-  "task_id": "{wave.index or 0.0}",
-  "agent": "{Orchestrator or Agent N}",
-  "level": "info|warn|error|deviation|permission",
-  "message": "{action verb first}",
-  "task_name": "{task-slug}"
-}
-```
-
-### metrics.json
-
-```json
-{
-  "swarm_name": "{task-slug}", "computed_at": "{ISO 8601}",
-  "elapsed_seconds": 0, "serial_estimate_seconds": 0,
-  "parallel_efficiency": 0, "duration_distribution": { "min": 0, "avg": 0, "max": 0, "median": 0 },
-  "failure_rate": 0, "max_concurrent": 0, "deviation_count": 0,
-  "total_tasks": 0, "completed_tasks": 0, "failed_tasks": 0
-}
-```
+See master-protocol skill for all dashboard write schemas (initialization.json, logs.json, master_state.json, metrics.json). The master-protocol auto-loads and provides compact schema references.
 
 ---
 
 ## Dispatch & Tracking Rules
 
-1. **Dispatch FIRST, update tracker AFTER** — launch agent before writing logs.json
-2. **Dependency-driven dispatch, not wave-driven** — waves are visual only
-3. **Fill all open slots simultaneously** — dispatch ALL ready tasks
-4. **No artificial concurrency cap** — as many agents as there are ready tasks
-5. **Errors do not stop the swarm** — circuit breaker at cascading failures only
-6. **Dashboard is primary reporting** — no terminal status tables, one-line confirmations
-7. **Tracker writes mandatory** — initialization.json once, logs.json every event
-8. **Atomic writes only** — read -> modify -> write full file
-9. **Timestamps live** — always `date -u +"%Y-%m-%dT%H:%M:%SZ"`
-10. **Workers own lifecycle data** in progress files
-11. **Agent prompts self-contained** with embedded conventions
-12. **Workers skip CLAUDE.md re-read** if master provided conventions
-13. **Cache every completion** for downstream injection
-14. **Feed upstream results** into downstream prompts
-15. **Reconstruct cache after compaction** from master_state.json + progress files
-16. **Right-size tasks** — 1-5 min, 1-2 files modified
-17. **Final report NON-NEGOTIABLE** — comprehensive, every section filled
-18. **Permission popup before terminal questions** — write log entry first
-19. **Check agent health before re-dispatch** — never blindly clobber running workers
-20. **Archive before clear** — always archive to `Archive/` before clearing dashboard
+See master-protocol skill for complete dispatch and tracking rules.
 
-## Instruction Mode Selection
+**Resume-specific additions:**
+1. Check agent health before re-dispatch — never blindly clobber running workers
+2. Include RESUME CONTEXT in re-dispatched worker prompts
+3. Build upstream cache from master_state.json + progress files
+4. Final report NON-NEGOTIABLE — include Resume Details section
 
-| Criteria | FULL | LITE |
-|---|---|---|
-| Has upstream dependencies | Yes | |
-| Modifies 3+ files | Yes | |
-| Coordination with other tasks | Yes | |
-| High deviation risk | Yes | |
-| Simple, independent, single-file | | Yes |
-| Well-defined, mechanical change | | Yes |
+### Instruction Mode Selection
 
-Default to FULL when uncertain.
+See the p-track skill for the instruction mode selection table. Default to FULL when uncertain.
 
 ## Module References
 
-For deep detail on specific protocols, read these files:
-- Master instructions: `agent/instructions/tracker_master_instructions.md`
-- Dashboard writes: `agent/master/dashboard_writes.md`
+The master-protocol and failure-protocol skills cover schemas, dispatch rules, failure recovery, and pitfalls. For deep detail, read:
 - Worker prompts: `agent/master/worker_prompts.md`
-- Eager dispatch: `agent/master/eager_dispatch.md`
-- Failure recovery: `agent/master/failure_recovery.md`
-- Compaction recovery: `agent/master/compaction_recovery.md`
-- Failed task protocol: `agent/instructions/failed_task.md`
 - Completion protocol: `agent/_commands/p_track_completion.md`
-- Common pitfalls: `agent/instructions/common_pitfalls.md`
 - Worker instructions: `agent/instructions/tracker_worker_instructions.md`
 
 ---

@@ -143,6 +143,7 @@ const initialState = {
   activeLogFilter: 'all',
   activeStatFilter: null,
   seenPermissionCount: 0,
+  pendingPermission: null, // { pid, toolName, toolInput, requestId, toolUseId, timestamp } — active permission request from a worker
   activeView: 'dashboard', // 'dashboard' | 'home' | 'swarmBuilder' | 'claude' | 'ide' | 'git'
   activeModal: null, // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor'
   modalDashboardId: null, // which dashboard a modal was opened for
@@ -341,6 +342,16 @@ function appReducerCore(state, action) {
       return { ...state, claudePendingAttachments: state.claudePendingAttachments.filter(a => a.id !== action.id) };
     case 'CLAUDE_CLEAR_ATTACHMENTS':
       return { ...state, claudePendingAttachments: [] };
+    // --- Permission request management ---
+    case 'PERMISSION_REQUEST':
+      // action.permission = { pid, toolName, toolInput, requestId, toolUseId, timestamp }
+      return { ...state, pendingPermission: action.permission };
+    case 'PERMISSION_RESOLVED':
+      // Clear the pending permission (optionally match by requestId)
+      if (state.pendingPermission && action.requestId && state.pendingPermission.requestId !== action.requestId) {
+        return state; // Don't clear if it's a different request
+      }
+      return { ...state, pendingPermission: null };
     // --- Tab management ---
     case 'CLAUDE_NEW_TAB': {
       const did = state.currentDashboardId;
