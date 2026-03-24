@@ -5986,6 +5986,78 @@ a:hover {
   font-weight: 500;
 }
 
+/* ----- Task event expandable box (task_progress, task_started, etc.) ----- */
+.claude-task-event {
+  align-self: stretch;
+  background: rgba(52, 211, 153, 0.08);
+  border: 1px solid rgba(52, 211, 153, 0.25);
+  border-radius: 8px;
+  margin: 4px 0;
+  font-size: 0.75rem;
+  overflow: hidden;
+}
+
+.claude-task-event-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.claude-task-event-header:hover {
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.claude-task-event-icon {
+  color: #34d399;
+  font-size: 0.7rem;
+  flex-shrink: 0;
+}
+
+.claude-task-event-label {
+  color: #34d399;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.claude-task-event-desc {
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.claude-task-event-details {
+  border-top: 1px solid rgba(52, 211, 153, 0.15);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.claude-task-event-row {
+  display: flex;
+  gap: 12px;
+  line-height: 1.5;
+}
+
+.claude-task-event-key {
+  color: rgba(52, 211, 153, 0.7);
+  min-width: 90px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.claude-task-event-value {
+  color: var(--text-secondary);
+  overflow-wrap: break-word;
+  word-break: break-all;
+  min-width: 0;
+}
+
 /* ----- Thinking bubble (extended thinking / processing indicator) ----- */
 @keyframes thinking-dot {
   0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }

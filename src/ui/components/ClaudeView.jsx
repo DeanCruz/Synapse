@@ -262,6 +262,80 @@ function AskUserQuestionBlock({ block, onSendAnswer }) {
   );
 }
 
+// Human-readable labels for task event fields
+const TASK_EVENT_LABELS = {
+  subtype: 'Event',
+  task_id: 'Task ID',
+  tool_use_id: 'Tool Use',
+  description: 'Description',
+  task_type: 'Task Type',
+  uuid: 'UUID',
+  session_id: 'Session',
+  total_tokens: 'Tokens',
+  tool_uses: 'Tool Uses',
+  duration_ms: 'Duration',
+  last_tool_name: 'Last Tool',
+};
+
+function formatTaskEventValue(key, value) {
+  if (key === 'duration_ms' && typeof value === 'number') {
+    return value >= 1000 ? `${(value / 1000).toFixed(1)}s` : `${value}ms`;
+  }
+  if (key === 'total_tokens' && typeof value === 'number') {
+    return value.toLocaleString();
+  }
+  if (key === 'subtype') {
+    return String(value).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+  return String(value);
+}
+
+function TaskEventMessage({ data }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const subtype = data.subtype || 'task_event';
+  const description = data.description || '';
+  const label = subtype === 'task_started' ? 'Task Started'
+    : subtype === 'task_progress' ? 'Task Progress'
+    : subtype.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  // Fields to show in the expanded details (exclude type and fields already shown in header)
+  const detailFields = Object.entries(data).filter(([k]) =>
+    k !== 'type' && k !== 'description' && k !== 'message'
+  );
+
+  // Flatten usage object into detail fields
+  const allDetails = [];
+  for (const [k, v] of detailFields) {
+    if (k === 'usage' && v && typeof v === 'object') {
+      for (const [uk, uv] of Object.entries(v)) {
+        allDetails.push([uk, uv]);
+      }
+    } else {
+      allDetails.push([k, v]);
+    }
+  }
+
+  return (
+    <div className="claude-task-event">
+      <div className="claude-task-event-header" onClick={() => setExpanded(!expanded)}>
+        <span className="claude-task-event-icon">{expanded ? '▾' : '▸'}</span>
+        <span className="claude-task-event-label">{label}</span>
+        {description && <span className="claude-task-event-desc">{description}</span>}
+      </div>
+      {expanded && (
+        <div className="claude-task-event-details">
+          {allDetails.map(([k, v]) => (
+            <div key={k} className="claude-task-event-row">
+              <span className="claude-task-event-key">{TASK_EVENT_LABELS[k] || k}</span>
+              <span className="claude-task-event-value">{formatTaskEventValue(k, v)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // A single conversation message
 function ConversationMessage({ msg, isLatestThinking, onSendAnswer }) {
   if (msg.type === 'thinking') {
@@ -298,6 +372,16 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer }) {
     return <ToolCallBlock block={msg.block || {}} />;
   }
   if (msg.type === 'system') {
+    if (msg.isTaskEvent && msg.taskEventData) {
+      return <TaskEventMessage data={msg.taskEventData} />;
+    }
+    // Catch legacy raw-JSON task events already stored in message history
+    if (msg.text && msg.text.startsWith('{') && /"subtype"\s*:\s*"task_(progress|started|completed|failed)"/.test(msg.text)) {
+      try {
+        const parsed = JSON.parse(msg.text);
+        return <TaskEventMessage data={parsed} />;
+      } catch (_) { /* fall through to default rendering */ }
+    }
     return (
       <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '') + (msg.isCompaction ? ' claude-compaction' : '')}>
         {msg.text}
@@ -1053,6 +1137,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
             type: 'system',
             text: `Connected — model: ${evt.model || '?'}, ${tools.length} tools available`,
           });
+        } else if (evt.subtype === 'task_progress' || evt.subtype === 'task_started' || evt.subtype === 'task_completed' || evt.subtype === 'task_failed') {
+          appendMsg({ type: 'system', isTaskEvent: true, taskEventData: evt, text: evt.description || evt.subtype });
         } else {
           const msg = evt.message || JSON.stringify(evt);
           const isCompaction = /compact|context.*(truncat|compress|summar)/i.test(msg)
