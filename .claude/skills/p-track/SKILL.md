@@ -12,19 +12,17 @@ model: opus
 
 # Synapse Swarm Orchestrator — !p_track
 
-## NON-NEGOTIABLE RULES — READ BEFORE ANYTHING ELSE
+## NON-NEGOTIABLE RULES
 
-**1. You are now the MASTER AGENT. You do NOT write code. You do NOT implement anything. You do NOT edit application files. You ONLY plan and dispatch worker agents. No exceptions. Not "just one small thing." Not "it's faster if I do it." NEVER.**
+**The master-protocol skill provides your core identity, constraints, and schemas. It auto-loads for master agents. Follow it absolutely.**
 
-**2. You MUST read `{tracker_root}/agent/instructions/tracker_master_instructions.md` before writing any dashboard files. Do not skip this. Do not work from memory. Read it NOW.**
+**Additionally for !p_track:**
 
-**3. You MUST use the dashboard. Write `initialization.json`, use `logs.json`, dispatch workers who write progress files. The dashboard is how the user sees the swarm. Skipping it is a failure.**
+**1. You MUST read `{tracker_root}/agent/instructions/tracker_master_instructions.md` before writing any dashboard files. Do not skip this.**
 
-**4. You MUST dispatch ALL implementation work via worker agents using the Task tool. Every file edit, every code change, every test — dispatched to a worker. The master's only job is: read context -> plan tasks -> write dashboard -> dispatch agents -> monitor -> report.**
+**2. You MUST compile and deliver a comprehensive final report after all tasks complete. No exceptions. See Phase 3.**
 
-**5. You MUST compile and deliver a comprehensive final report after all tasks complete. Read all progress files, analyze deviations and their project impact, identify improvements, and provide concrete future steps. The report is the user's primary deliverable — not the dashboard, not the logs. No exceptions.**
-
-**If the user's prompt is long or complex, that is MORE reason to follow these rules, not less. Long prompts require MORE planning and MORE agents, not direct implementation.**
+**If the user's prompt is long or complex, that is MORE reason to plan and dispatch, not to implement directly.**
 
 ---
 
@@ -48,164 +46,70 @@ Execute these steps in order before dispatching any agents.
 
 ### Steps 1-5: Context Gathering
 
-1. **Resolve `{project_root}`** — Resolution order: explicit `--project` flag -> stored config at `{tracker_root}/.synapse/project.json` -> agent's CWD.
-2. **Read master instructions** — Read `{tracker_root}/agent/instructions/tracker_master_instructions.md` before writing any dashboard files. NON-NEGOTIABLE.
+1. **Resolve `{project_root}`** — Resolution order: `--project` flag -> `{tracker_root}/.synapse/project.json` -> CWD.
+2. **Read master instructions** — Read `{tracker_root}/agent/instructions/tracker_master_instructions.md`. NON-NEGOTIABLE.
 3. **Parse the prompt** — Extract task description, generate a kebab-case slug, identify affected directories.
-4. **Deep analysis** — Think through full scope: directories, files to read/modify/create, strict dependencies between subtasks, edge cases, critical details. If `{project_root}/.synapse/dep_graph.json` exists, read it for file-level coupling.
-5. **Read all relevant context files** — Read every file needed for full understanding. Parallelize all reads. Build a convention map from `{project_root}/CLAUDE.md` grouping rules by category:
-
-| Category | Covers |
-|---|---|
-| `naming` | File/function/variable/type names |
-| `file_structure` | Directory layout, module organization |
-| `imports` | Import ordering, path aliases, barrel exports |
-| `frontend_styling` | CSS approach, UI conventions |
-| `backend_api` | Endpoint patterns, middleware, response formats |
-| `error_handling` | Try/catch patterns, error types |
-| `testing` | Test framework, patterns, coverage |
-| `types` | Type definitions, generics, strict mode |
+4. **Deep analysis** — Full scope: directories, files, dependencies, edge cases. Read `{project_root}/.synapse/dep_graph.json` if it exists.
+5. **Read all relevant context files** — Parallelize reads. Build a convention map from `{project_root}/CLAUDE.md` grouping rules by category (naming, file_structure, imports, frontend_styling, backend_api, error_handling, testing, types).
 
 ### Step 6: Decompose into Tasks
 
-Break work into atomic tasks (1-5 min each, 1-2 files modified). Group by dependency level into waves:
-- **Wave 1** — Zero dependencies, dispatch immediately
-- **Wave N** — Depends only on tasks in earlier waves
+Break work into atomic tasks (1-5 min each, 1-2 files modified). Group into waves by dependency level. Sweet spot: 4-8 tasks. Merge back if splitting does not reduce critical path by 20%+.
 
-**Decomposition cost-benefit check:** If splitting a task does not reduce the critical path by at least 20%, merge it back. Sweet spot: 4-8 tasks for most work; 10-15 for large cross-repo efforts.
+**Context budget:** ~800 lines / 8000 tokens max per worker prompt. Prompt bloat is the #1 cause of context exhaustion.
 
-**Context budget per worker prompt:** ~800 lines max. CONVENTIONS ~200 lines, REFERENCE CODE ~100 lines, UPSTREAM RESULTS ~50 lines/dep, CONTEXT ~150 lines. Token budget limit: 8000 tokens. Prompt bloat is the #1 cause of worker context exhaustion.
-
-**Shared file decision tree:** Multiple tasks need the same file?
-- Can tasks create separate files that auto-import? -> Pattern C (separate files, no conflict)
-- Can shared-file work be deferred? -> Pattern B (integration task, maximize parallelism)
-- Must be modified sequentially? -> Pattern A (owner task, sequential but safe)
+**Shared files:** Prefer Pattern C (separate files) > B (integration task) > A (owner). See CLAUDE.md for details.
 
 ### Step 7: Determine Parallelization Type
 
-- **Waves** — Broad, shallow work. Most tasks independent within a wave. Dependencies align with wave boundaries.
-- **Chains** — Narrow, deep work. Long sequential paths. Different chains progress independently.
+**Waves** for broad, shallow work (tasks independent within wave). **Chains** for narrow, deep work (sequential paths progressing independently).
 
 ### Steps 8-9: Create Plan Files
 
-Create `{tracker_root}/tasks/{TASK_DATE}/parallel_plan_{task_name}.md` (strategy rationale) and `{tracker_root}/tasks/{TASK_DATE}/parallel_{task_name}.json` (master task file — single source of truth).
+Create `{tracker_root}/tasks/{TASK_DATE}/parallel_plan_{task_name}.md` (rationale) and `parallel_{task_name}.json` (master task file — single source of truth).
 
 ### Step 10: Verify Dependencies
 
-1. Re-read the task file. Cross-check with the plan document.
-2. Topological sort — if it cannot complete, there is a cycle. Fix before continuing.
-3. Compute critical path length. Identify bottleneck tasks (depended on by 3+ tasks).
-4. Verify no orphans. No dangling references. No self-references.
-5. Build and write `dependency_chains` array.
+Topological sort (detect cycles), compute critical path, identify bottleneck tasks (depended on by 3+), verify no orphans/dangling references. Write `dependency_chains` array.
 
 ### Step 11: Select Dashboard and Populate Plan
 
-**Dashboard selection priority:**
-1. `DASHBOARD ID:` from system prompt (highest — use unconditionally)
-2. `--dashboard {id}` flag from user
-3. Auto-select first available (excluding `ide`): check `initialization.json` task field and progress files
+See master-protocol for dashboard selection priority. **Archive before clear — NON-NEGOTIABLE.** Write `initialization.json`, `logs.json`, present plan to user, **execute the Approval Gate (Step 11E) — NON-NEGOTIABLE.**
 
-**Archive before clear — NON-NEGOTIABLE.** If dashboard has previous data, archive to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/` before clearing.
+### Step 11E: Approval Gate — NON-NEGOTIABLE
 
-Write `initialization.json`, `logs.json`, present plan to user, **wait for approval**.
+After presenting the plan, the master MUST:
 
----
+1. **Write a `permission` log entry** to `logs.json`: `"Plan ready for review: {N} tasks across {W} waves — awaiting approval to begin execution"`. This triggers a dashboard popup.
+2. **Output**: `Ready to execute. Approve to begin dispatching {N} agents?`
+3. **HALT.** No dispatch, no `master_state.json`, no Task tool calls. Wait for user response.
+4. **On approval**, log `"Approval granted — activating eager dispatch"` at `info`, proceed to Phase 2. Dispatch tasks the instant dependencies clear — across all waves, no batching.
+5. **On rejection/modification**, log accordingly, exit or revise and re-present.
 
-## Dashboard Write Schemas
-
-### initialization.json (write-once, except repair/replan/add_task)
-
-```json
-{
-  "task": {
-    "name": "{task-slug}",
-    "type": "Waves|Chains",
-    "directory": "{primary dir — optional}",
-    "prompt": "{original user prompt}",
-    "project": "{affected directories}",
-    "project_root": "{absolute path to target project}",
-    "created": "{ISO 8601}",
-    "total_tasks": 0,
-    "total_waves": 0
-  },
-  "agents": [
-    {
-      "id": "1.1",
-      "title": "{short title ~40 chars}",
-      "wave": 1,
-      "layer": "{frontend|backend|types|migration|tests|config|documentation — optional}",
-      "directory": "{target dir — optional}",
-      "depends_on": []
-    }
-  ],
-  "waves": [
-    { "id": 1, "name": "{descriptive name}", "total": 0 }
-  ],
-  "chains": [],
-  "history": []
-}
-```
-
-**Removed fields (derived by dashboard from progress files):** `started_at`, `completed_at`, `overall_status`, `completed_tasks`, `failed_tasks` on task object. `status`, `assigned_agent`, `started_at`, `completed_at`, `summary` on agent entries. `status`, `completed` on wave entries.
-
-### logs.json entry schema
-
-```json
-{
-  "timestamp": "{ISO 8601 — always live via date -u}",
-  "task_id": "{wave.index or 0.0 for orchestrator}",
-  "agent": "{Orchestrator or Agent N}",
-  "level": "info|warn|error|deviation|permission",
-  "message": "{action verb first, include result metadata}",
-  "task_name": "{task-slug}"
-}
-```
-
-**Log levels:** `info` (purple), `warn` (lime), `error` (red), `deviation` (yellow — plan divergence), `permission` (amber — triggers dashboard popup).
-
-### master_state.json (checkpoint after every dispatch event)
-
-```json
-{
-  "last_updated": "{ISO 8601}",
-  "completed": [{ "id": "1.1", "summary": "..." }],
-  "in_progress": ["2.1"],
-  "failed": [{ "id": "2.2", "summary": "...", "repair_id": "2.4r" }],
-  "ready_to_dispatch": ["3.1"],
-  "upstream_results": { "1.1": "one-line summary for downstream injection" },
-  "next_agent_number": 5,
-  "permanently_failed": []
-}
-```
+See `agent/_commands/p_track_planning.md` Step 11E for the full protocol.
 
 ---
 
-## Phase 2: Execution (Steps 12-16)
+## Phase 2: Execution (Steps 13-16)
 
-### Dispatch Rules — NON-NEGOTIABLE
-
-- **Dispatch FIRST, update tracker AFTER.** Launch the agent before writing to logs.json.
-- **Dependency-driven dispatch, not wave-driven.** Waves are visual only. Dispatch based on `depends_on` arrays only.
-- **No artificial concurrency cap.** Dispatch ALL tasks whose dependencies are satisfied.
-- **Errors do not stop the swarm** — but cascading failures trigger the circuit breaker.
+See master-protocol skill for the complete dispatch and tracking rules. Key points:
+- Dispatch FIRST, update tracker AFTER
+- Dependency-driven, not wave-driven — waves are visual only
+- No artificial concurrency cap — dispatch ALL tasks with satisfied deps
+- Errors do not stop the swarm — circuit breaker at cascading failures
 
 ### Step 13: Initial Dispatch
 
-Dispatch every task whose `depends_on` is empty or fully satisfied. For each: launch agent FIRST, then append dispatch log entry to `logs.json` AFTER.
+Dispatch every task whose `depends_on` is empty or fully satisfied. Launch agent FIRST, append dispatch log AFTER.
 
 ### Step 14: Worker Prompt Construction
 
-Use the Instruction Mode Selection table to choose FULL or LITE per task:
-
 | Criteria | FULL | LITE |
 |---|---|---|
-| Has upstream dependencies | Yes | |
-| Modifies 3+ files | Yes | |
-| Coordination with other tasks | Yes | |
-| High deviation risk | Yes | |
-| Simple, independent, single-file | | Yes |
-| Well-defined, mechanical change | | Yes |
+| Has upstream deps / modifies 3+ files / coordination / high risk | Yes | |
+| Simple, independent, single-file / mechanical change | | Yes |
 
-Default to FULL when uncertain.
+Default to FULL when uncertain. See Worker Prompt Template below.
 
 ---
 
@@ -328,62 +232,15 @@ WARNINGS: (omit if none)
 ERRORS: (omit if none)
 ```
 
-### Prompt Completeness Checklist
+**Prompt completeness:** Verify: file paths, conventions, reference code, upstream results, success criteria, critical details, instruction mode.
 
-Before dispatching, verify each prompt contains:
-- File paths (every file to read/modify/create with full path)
-- CLAUDE.md conventions (filtered by relevance — not full dumps)
-- Reference code (if worker must follow existing patterns)
-- Upstream results (for downstream tasks: summary, files, exports, deviations, KEY DETAILS)
-- Success criteria (unambiguous "done" conditions)
-- Critical details (edge cases, gotchas)
-- Instruction mode (FULL or LITE selected)
+### Step 15: Eager Dispatch on Completions
 
----
+See master-protocol for the eager dispatch 5-step mechanism (`agent/master/eager_dispatch.md`). On each completion: parse return, validate (see failure-protocol), update master task file, append to logs.json, cache for downstream, write master_state.json.
 
-## Eager Dispatch Protocol (Step 15)
+### Step 16: Failure & Compaction Recovery
 
-**On EVERY worker completion, execute these 5 steps:**
-
-1. **Build the completed set** — Read all progress files. Collect every `task_id` where `status === "completed"`.
-2. **Build the in-progress set** — From the same files, collect `status === "in_progress"` task IDs.
-3. **Find all dispatchable tasks** — Read `initialization.json`. A task is dispatchable if and only if:
-   - NOT in completed set (not done)
-   - NOT in in-progress set (not running)
-   - EVERY ID in `depends_on` IS in the completed set (all deps satisfied)
-4. **Dispatch ALL available tasks** — For every dispatchable task, launch a worker immediately. Include upstream results in each downstream prompt.
-5. **Log each dispatch** — Append entry to `logs.json` per dispatched task.
-
-**Waves are visual, not execution barriers.** If a wave-5 task has all deps satisfied, dispatch it NOW even if waves 2-4 have running tasks. The dispatch engine operates on `depends_on` arrays, never on wave IDs.
-
-### Processing Completions (Step 15A-D)
-
-- **Parse return** — Extract STATUS, SUMMARY, FILES CHANGED, EXPORTS, DIVERGENT ACTIONS.
-- **Validate return** — STATUS missing -> treat as failure. SUMMARY generic -> log warn. FILES CHANGED missing for file-modifying task -> log warn.
-- **Update master task file** — Set status, completed_at, summary, append logs.
-- **Append to logs.json** — Completion entry at level info. Separate entries for warnings (warn), deviations (deviation), errors (error).
-- **Cache result** — Store task ID, summary, files changed, exports, deviations in working memory for downstream injection.
-- **Write master_state.json** — Update checkpoint after every dispatch event.
-
-### Circuit Breaker (Step 15F)
-
-After every failure, check three thresholds:
-
-| Threshold | Condition |
-|---|---|
-| A — Wave cascade | 3+ tasks failed in the same wave |
-| B — Downstream blockage | Single failure blocks 3+ downstream tasks |
-| C — Majority blockage | Single failure blocks >50% remaining tasks |
-
-If ANY threshold fires: pause dispatches, log `warn`, enter replanning mode. Read all progress files, analyze root cause, produce revision plan with four categories (`modified`, `added`, `removed`, `retry`), apply to `initialization.json`, resume dispatch.
-
-### Failure Recovery (Step 16)
-
-Single failure (not a repair task): create repair task ID `"{wave}.{next}r"`, title `"REPAIR: {original}"`, same wave/deps. Rewire downstream `depends_on` to point at repair task. Dispatch with `failed_task.md` protocol. Double failure (repair task fails): log error, log permission popup, do NOT create another repair — mark as permanently failed.
-
-### Compaction Recovery
-
-If context compaction drops upstream caches: (1) Read `master_state.json`, (2) Read `initialization.json`, (3) Read all progress files (authoritative), (4) Rebuild cache, (5) Log warn, resume dispatch.
+The failure-protocol skill handles all failure recovery (Steps 0-7), double failure escalation, and circuit breaker replanning (`agent/master/failure_recovery.md`). For compaction recovery, see `agent/master/compaction_recovery.md`.
 
 ---
 
@@ -398,26 +255,11 @@ When all tasks reach `completed` or `failed`:
 
 ### 17C: Post-Swarm Verification (when warranted)
 
-| Condition | Action |
-|---|---|
-| Modified existing code across multiple files | Dispatch verification agent — tests, types, build |
-| Purely additive (new files only) | Optional |
-| Any tasks reported deviations | Strongly recommended |
-| All succeeded, no warnings | May skip |
+Dispatch verification agent (tests, types, build) when: modified existing code across multiple files, or tasks reported deviations. Optional for additive work. May skip if all succeeded with no warnings.
 
 ### 17D: Compute Metrics
 
-Read all progress files. Compute and write `metrics.json`:
-
-| Metric | Computation |
-|---|---|
-| `elapsed_seconds` | Latest `completed_at` - earliest `started_at` |
-| `serial_estimate_seconds` | Sum of all task durations |
-| `parallel_efficiency` | serial / elapsed |
-| `duration_distribution` | { min, avg, max, median } of task durations |
-| `failure_rate` | failed / total |
-| `max_concurrent` | Peak overlapping in-progress tasks |
-| `deviation_count` | Sum of all `deviations[]` lengths |
+Read all progress files. Write `metrics.json`: `elapsed_seconds`, `serial_estimate_seconds`, `parallel_efficiency`, `duration_distribution`, `failure_rate`, `max_concurrent`, `deviation_count`.
 
 ### 17E: Final Report — NON-NEGOTIABLE
 
@@ -429,50 +271,27 @@ Read all progress files. Compute and write `metrics.json`:
 **{completed}/{total} tasks** . **{W} waves** . **{N} failures** . **{elapsed}s elapsed** . **{efficiency}x parallel efficiency** . **Type: {Waves|Chains}**
 
 ### Summary of Work Completed (REQUIRED)
-{Thorough summary — what was the goal, what was built, how does it work, design decisions,
-current state. NOT a 2-sentence blurb. The user should understand everything without reading
-individual task outputs.}
-
+{Thorough summary — goal, what was built, design decisions, current state. NOT a 2-sentence blurb.}
 ### Files Changed (REQUIRED)
 | File | Action | Task | What Changed |
 |---|---|---|---|
-
-### Deviations & Their Impact (CONDITIONAL — if any deviations)
-For each: Task ID, what changed, why, impact on project.
-
-### Warnings & Observations (CONDITIONAL — if any warnings)
-
-### Failures (CONDITIONAL — if any failures)
-What failed, why, recovery attempted, residual impact.
-
-### Verification Results (CONDITIONAL — if verification ran)
-Tests, Types, Build, Issues.
-
+### Deviations & Their Impact (CONDITIONAL)
+### Warnings & Observations (CONDITIONAL)
+### Failures (CONDITIONAL)
+### Verification Results (CONDITIONAL)
 ### Potential Improvements (REQUIRED)
-{Expert analysis based on worker logs, deviations, code patterns. Not a generic checklist.}
-
 ### Future Steps (REQUIRED)
-{Concrete, actionable next steps emerging from the work done.}
-
 ### Performance (REQUIRED)
 | Metric | Value |
 |---|---|
-| Wall-clock time | {elapsed_seconds}s |
-| Serial estimate | {serial_estimate_seconds}s |
-| Parallel efficiency | {parallel_efficiency}x |
-| Max concurrent agents | {max_concurrent} |
-| Total deviations | {deviation_count} |
-| Failure rate | {failure_rate} |
-
+| Wall-clock / Serial estimate / Parallel efficiency | {elapsed}s / {serial}s / {efficiency}x |
+| Max concurrent / Deviations / Failure rate | {max} / {dev_count} / {fail_rate} |
 ### Artifacts
-- Task file: `{tracker_root}/tasks/{date}/parallel_{task_name}.json`
-- Plan: `{tracker_root}/tasks/{date}/parallel_plan_{task_name}.md`
-- Dashboard: `{tracker_root}/dashboards/{dashboardId}/initialization.json`
-- Logs: `{tracker_root}/dashboards/{dashboardId}/logs.json`
-- Metrics: `{tracker_root}/dashboards/{dashboardId}/metrics.json`
+Task: `tasks/{date}/parallel_{task_name}.json` | Plan: `tasks/{date}/parallel_plan_{task_name}.md`
+Dashboard: `dashboards/{dashboardId}/` (initialization.json, logs.json, metrics.json)
 ```
 
-**Quality bar:** A developer who was NOT present during the swarm should be able to read the report and fully understand: (1) what was done, (2) what went sideways, (3) current project state, (4) what to do next.
+**Quality bar:** A developer not present during the swarm should fully understand: (1) what was done, (2) what went sideways, (3) current project state, (4) what to do next.
 
 ### 17F: Save to History
 
@@ -480,46 +299,16 @@ Save a history summary to `{tracker_root}/history/`.
 
 ---
 
-## Dispatch & Tracking Rules Summary
-
-1. Dispatch FIRST, update tracker AFTER
-2. Dependency-driven dispatch, not wave-driven
-3. Fill all open slots simultaneously
-4. No artificial concurrency cap
-5. Errors do not stop the swarm (circuit breaker at cascading failures)
-6. Dashboard is the primary reporting channel — no terminal status tables
-7. Tracker writes are mandatory (initialization.json once, logs.json on every event)
-8. Atomic writes only (read -> modify -> write full file)
-9. Timestamps must be live (`date -u +"%Y-%m-%dT%H:%M:%SZ"`)
-10. Workers own all lifecycle data in progress files
-11. Agent prompts must be self-contained with embedded conventions
-12. Workers don't re-read CLAUDE.md if master provided conventions
-13. Workers report deviations immediately
-14. Cache every completion for downstream injection
-15. Feed upstream results into downstream prompts
-16. Reconstruct cache after compaction
-17. Plan before executing — task file, plan doc, verify deps, get approval
-18. Right-size tasks: 1-5 min, 1-2 files modified
-19. Handle shared files explicitly (Pattern A/B/C)
-20. Always parallelize independent work
-21. Verify after completion when warranted
-22. Final report is NON-NEGOTIABLE
-23. Permission popup before terminal questions
-
 ## Module References
 
-For deep detail on specific protocols, read these files:
-- Planning: `agent/_commands/p_track_planning.md`
-- Execution: `agent/_commands/p_track_execution.md`
-- Completion: `agent/_commands/p_track_completion.md`
-- Dashboard writes: `agent/master/dashboard_writes.md`
-- Worker prompts: `agent/master/worker_prompts.md`
-- Eager dispatch: `agent/master/eager_dispatch.md`
-- Failure recovery: `agent/master/failure_recovery.md`
-- Compaction recovery: `agent/master/compaction_recovery.md`
-- Common pitfalls: `agent/instructions/common_pitfalls.md`
-- Master instructions: `agent/instructions/tracker_master_instructions.md`
-- Worker instructions: `agent/instructions/tracker_worker_instructions.md`
+| Module | Path |
+|---|---|
+| Planning / Execution / Completion | `agent/_commands/p_track_{planning,execution,completion}.md` |
+| Dashboard writes / Worker prompts | `agent/master/{dashboard_writes,worker_prompts}.md` |
+| Eager dispatch / Failure recovery | `agent/master/{eager_dispatch,failure_recovery}.md` |
+| Compaction recovery | `agent/master/compaction_recovery.md` |
+| Common pitfalls | `agent/instructions/common_pitfalls.md` |
+| Master / Worker instructions | `agent/instructions/tracker_{master,worker}_instructions.md` |
 
 ---
 

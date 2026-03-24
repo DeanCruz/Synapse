@@ -18,16 +18,19 @@ Fast parallel swarm with minimal dashboard overhead. The master plans, decompose
 
 | Condition | Command | Why |
 |---|---|---|
-| <5 tasks, focused scope | `!p` | Speed over visualization — lightweight writes |
-| 5+ tasks, long-running | `!p_track` | Full live tracking, progress files, metrics |
+| <3 tasks, single wave, focused scope | `!p` | Speed over visualization — lightweight writes |
+| 3+ tasks OR >1 wave | `!p_track` (recommended) | Full live tracking, progress files, metrics |
+| 5+ tasks, long-running | `!p_track` | Full planning, dependency tracking, live dashboard |
 | Need live dashboard monitoring | `!p_track` | Progress files drive the dashboard |
-| Quick parallel burst | `!p` | Minimal overhead, plan snapshot only |
+| Quick parallel burst (<3 tasks, 1 wave) | `!p` | Minimal overhead, plan snapshot only |
 
 **Key differences from `!p_track`:**
 - No worker progress files — no live task tracking
 - No `master_state.json` — no compaction recovery checkpoint
 - No `metrics.json` — no post-swarm performance data
 - Dashboard receives `initialization.json` (plan snapshot) + bookend `logs.json` entries only
+
+**Escalation recommendation:** If the plan has **3+ agents** or **more than 1 wave**, the master SHOULD recommend `!p_track` to the user before proceeding. The user can override and stay in `!p` mode — they explicitly chose speed over visibility.
 
 ## Dynamic Context
 

@@ -38,9 +38,13 @@ server.js watches files --> SSE pushes to browser --> Dashboard renders live
 
 **Parallel (`!p_track`):** 3+ independent subtasks across multiple files. Use when the work decomposes naturally. This is the primary swarm command with full dashboard tracking.
 
-**Lightweight Parallel (`!p`):** Same as parallel but without dashboard overhead. Good for simpler multi-task dispatches.
+**Lightweight Parallel (`!p`):** Same as parallel but without dashboard overhead. Good for simpler multi-task dispatches (<3 tasks, single wave only).
 
 **Auto-escalation:** If a task clearly decomposes into 3+ independent subtasks, proactively suggest parallel mode to the user rather than executing serially.
+
+### Full Dashboard Tracking — Mandatory Thresholds
+
+When a swarm has **3+ parallel agents** or **more than 1 wave**, the master MUST populate its designated dashboard with full tracking. This is non-negotiable for multi-wave swarms. Workers must be instructed to read `tracker_worker_instructions.md` and write progress files to the dashboard. The only exception is explicit `!p` invocation (lightweight by design, though escalation is recommended at these thresholds).
 
 ## Planning Guidance
 
@@ -112,6 +116,7 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | | `!master_plan_track` | Multi-stream orchestration across dashboards |
 | | `!add_task {prompt}` | Add tasks to an active swarm mid-flight |
 | | `!dispatch {id}` | Manually dispatch pending tasks |
+| | `!eager_dispatch` | Full eager dispatch round with complete worker prompts |
 | | `!retry {id}` | Re-dispatch a failed task |
 | | `!resume` | Resume a chat session after interruption |
 | | `!p_track_resume` | Resume a stalled/interrupted `!p_track` swarm |

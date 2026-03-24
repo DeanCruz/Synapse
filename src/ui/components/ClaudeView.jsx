@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { renderMarkdown } from '../utils/markdown.js';
 import { getDashboardProject, getDashboardAdditionalContext } from '../utils/dashboardProjects.js';
+import PermissionModal from './modals/PermissionModal.jsx';
 
 // Strip ANSI escape codes and terminal control characters from text
 function stripAnsi(str) {
@@ -721,6 +722,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const status = state.claudeStatus;
   const dashboardId = state.currentDashboardId;
   const pendingAttachments = state.claudePendingAttachments;
+  const pendingPermission = state.pendingPermission;
   const tabs = state.claudeTabs[dashboardId] || [{ id: 'default', name: 'Chat 1' }];
   const activeTabId = state.claudeActiveTabId;
   const [processingTabId, setProcessingTabId] = useState(null);
@@ -771,6 +773,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const finishRef = useRef(null);
   // Throttled preview dispatch timer for sidebar chat previews
   const previewFlushTimerRef = useRef(null);
+  // Session-scoped set of tool names the user has chosen to "always allow"
+  const allowedToolsRef = useRef(new Set());
 
   // Keep refs in sync for async operations
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -1411,19 +1415,35 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
 
   function handleChunk(data) {
     const chunk = data.chunk;
+    const pid = data.pid;
     const lines = chunk.split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
       try {
         const evt = JSON.parse(trimmed);
-        processEvent(evt, data.taskId);
+        processEvent(evt, data.taskId, pid);
       } catch (e) {
         // Non-JSON output from CLI — strip ANSI and skip progress/spinner lines
         const cleaned = stripAnsi(trimmed).trim();
         if (cleaned && /auto.?compact|compacting conversation/i.test(cleaned)) {
           flushText();
           appendMsg({ type: 'system', text: 'Context is being compacted — earlier messages may be summarized', isCompaction: true });
+        } else if (cleaned && /(?:allow|deny|permission|approve).*(?:tool|command|action)/i.test(cleaned)) {
+          // Fallback: detect non-JSON permission prompts from stderr
+          dispatch({
+            type: 'PERMISSION_REQUEST',
+            permission: {
+              pid: pid || null,
+              toolName: 'unknown',
+              toolInput: {},
+              requestId: null,
+              toolUseId: null,
+              timestamp: Date.now(),
+              rawMessage: cleaned,
+            },
+          });
+          appendMsg({ type: 'system', text: 'Permission requested — check the permission dialog', isPermission: true });
         } else if (cleaned && !isProgressBarLine(cleaned)) {
           appendTextContent(cleaned + '\n');
         }
@@ -1431,7 +1451,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     }
   }
 
-  function processEvent(evt, taskId) {
+  function processEvent(evt, taskId, pid) {
     if (!evt || !evt.type) return;
 
     switch (evt.type) {
@@ -1599,6 +1619,35 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       case 'rate_limit_event':
       case 'ping':
         break;
+
+      // --- Permission request from Claude CLI (--permission-prompt-tool stdio) ---
+      case 'control_request': {
+        const req = evt.request || {};
+        if (req.subtype === 'can_use_tool') {
+          const toolName = req.tool_name || 'unknown';
+          const toolInput = req.input || {};
+          const requestId = evt.request_id || null;
+          const toolUseId = req.tool_use_id || null;
+          dispatch({
+            type: 'PERMISSION_REQUEST',
+            permission: {
+              pid: pid || null,
+              toolName,
+              toolInput,
+              requestId,
+              toolUseId,
+              timestamp: Date.now(),
+            },
+          });
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: `Permission: ${toolName}` });
+          appendMsg({
+            type: 'system',
+            text: `Permission requested for tool: ${toolName}`,
+            isPermission: true,
+          });
+        }
+        break;
+      }
 
       default:
         console.log('[ClaudeView] unhandled event type:', evt.type, JSON.stringify(evt).substring(0, 200));
@@ -2244,6 +2293,62 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     appendMsg({ type: 'system', text: 'Agent stopped by user.' });
   }
 
+  // --- Permission relay handlers ---
+  function handlePermissionApprove() {
+    if (!pendingPermission || !api) return;
+    const { pid, requestId, toolName } = pendingPermission;
+    if (pid) {
+      const response = JSON.stringify({
+        type: 'control_response',
+        request_id: requestId,
+        response: { subtype: 'success', response: { behavior: 'allow' } },
+      }) + '\n';
+      api.writeWorker(pid, response);
+    }
+    dispatch({ type: 'PERMISSION_RESOLVED', requestId });
+    dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Running' });
+    appendMsg({ type: 'system', text: `Permission approved for: ${toolName}` });
+  }
+
+  function handlePermissionDeny() {
+    if (!pendingPermission || !api) return;
+    const { pid, requestId, toolName } = pendingPermission;
+    if (pid) {
+      const response = JSON.stringify({
+        type: 'control_response',
+        request_id: requestId,
+        response: { subtype: 'success', response: { behavior: 'deny', message: 'User denied this action' } },
+      }) + '\n';
+      api.writeWorker(pid, response);
+    }
+    dispatch({ type: 'PERMISSION_RESOLVED', requestId });
+    dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Running' });
+    appendMsg({ type: 'system', text: `Permission denied for: ${toolName}` });
+  }
+
+  function handleAlwaysAllow(toolName) {
+    if (toolName) allowedToolsRef.current.add(toolName);
+  }
+
+  // Auto-approve permission requests for tools the user has always-allowed this session
+  useEffect(() => {
+    if (!pendingPermission || !api) return;
+    if (allowedToolsRef.current.has(pendingPermission.toolName)) {
+      const { pid, requestId, toolName } = pendingPermission;
+      if (pid) {
+        const response = JSON.stringify({
+          type: 'control_response',
+          request_id: requestId,
+          response: { subtype: 'success', response: { behavior: 'allow' } },
+        }) + '\n';
+        api.writeWorker(pid, response);
+      }
+      dispatch({ type: 'PERMISSION_RESOLVED', requestId });
+      dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Running' });
+      appendMsg({ type: 'system', text: `Permission auto-approved for: ${toolName}` });
+    }
+  }, [pendingPermission]);
+
   async function loadHistoryConversation(conv) {
     if (isProcessing || !api) return;
     try {
@@ -2550,6 +2655,18 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           )}
         </div>
       </div>
+
+      {pendingPermission && !allowedToolsRef.current.has(pendingPermission.toolName) && (
+        <PermissionModal
+          interactive
+          toolName={pendingPermission.toolName}
+          toolInput={pendingPermission.toolInput}
+          onApprove={handlePermissionApprove}
+          onDeny={handlePermissionDeny}
+          onAlwaysAllow={handleAlwaysAllow}
+          onClose={handlePermissionDeny}
+        />
+      )}
     </div>
   );
 }

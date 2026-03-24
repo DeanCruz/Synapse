@@ -19,6 +19,12 @@
 > - `!p` — Fast, context-efficient. Best for focused tasks where you want speed over live visualization. Lightweight dashboard writes (plan snapshot + final results).
 > - `!p_track` — Full dashboard tracking with live visualization, progress files, event logs, and history. Best for large, long-running swarms where live monitoring matters.
 
+> **Escalation recommendation:** If the plan results in **3+ parallel agents** or **more than 1 wave**, the master SHOULD recommend escalating to `!p_track` for full dashboard visibility. Present the recommendation to the user:
+> ```
+> This swarm has {N} agents across {W} waves. For full live tracking, consider using !p_track instead. Proceed with lightweight !p mode?
+> ```
+> If the user confirms `!p`, proceed with lightweight mode. The user explicitly chose speed over visibility. However, the `initialization.json` plan snapshot is ALWAYS written regardless.
+
 ---
 
 ## Phase 1: Context & Planning

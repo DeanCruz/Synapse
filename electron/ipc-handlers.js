@@ -824,6 +824,10 @@ function registerIPCHandlers(getMainWindow) {
     return ClaudeCodeService.getActiveWorkers().concat(CodexService.getActiveWorkers());
   });
 
+  ipcMain.handle('write-worker', async (_event, pid, data) => {
+    return ClaudeCodeService.writeToWorker(pid, data);
+  });
+
   // --- Terminal handlers ---
   ipcMain.handle('spawn-terminal', async (_event, opts) => {
     try {

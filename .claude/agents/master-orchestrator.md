@@ -8,6 +8,8 @@ description: >
 skills:
   - p-track
   - worker-protocol
+  - master-protocol
+  - failure-protocol
 hooks:
   PreToolUse:
     - matcher: "Edit|Write"
