@@ -97,8 +97,12 @@ function createBroadcastFn(getMainWindow) {
     }
 
     const win = getMainWindow();
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(eventName, data);
+    if (win && !win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
+      try {
+        win.webContents.send(eventName, data);
+      } catch (err) {
+        console.warn('[IPC] broadcast failed for', eventName, ':', err.message);
+      }
     }
 
     // Feed progress updates to the SwarmOrchestrator for dispatch loop
@@ -106,7 +110,11 @@ function createBroadcastFn(getMainWindow) {
       try {
         const SwarmOrchestrator = require('./services/SwarmOrchestrator');
         SwarmOrchestrator.handleProgressUpdate(data.dashboardId, data.task_id, data);
-      } catch (e) { /* orchestrator not initialized yet */ }
+      } catch (e) {
+        if (e.code !== 'MODULE_NOT_FOUND') {
+          console.warn('[IPC] SwarmOrchestrator progress feed error:', e.message);
+        }
+      }
     }
   };
 }
@@ -243,6 +251,9 @@ function registerIPCHandlers(getMainWindow) {
   ensureDirectories();
 
   // --- 2. Register all ipcMain.handle() handlers ---
+
+  // IPC heartbeat — renderer polls to verify bridge is alive
+  ipcMain.handle('ipc-heartbeat', () => ({ alive: true, timestamp: Date.now() }));
 
   // GET /api/dashboards -> get-dashboards
   ipcMain.handle('get-dashboards', async () => {

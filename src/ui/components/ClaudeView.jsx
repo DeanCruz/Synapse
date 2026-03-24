@@ -766,6 +766,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const sawStreamingRef = useRef(false);
   // Track whether current task is a resumed session (history replay events should be ignored)
   const isResumedSessionRef = useRef(false);
+  // Health check consecutive failure counter — only hard-reset after 3 consecutive IPC failures
+  const healthFailCountRef = useRef(0);
   // Stable refs so IPC listeners always call latest functions
   const handleChunkRef = useRef(null);
   const finishRef = useRef(null);
@@ -1187,6 +1189,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       try {
         const remoteWorkers = await api.getActiveWorkers();
         const remotePids = new Set(remoteWorkers.map(w => w.pid));
+        // IPC succeeded — reset consecutive failure counter
+        healthFailCountRef.current = 0;
 
         // Check each locally tracked task
         const orphanedTasks = [];
@@ -1247,8 +1251,12 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           }
         }
       } catch (e) {
-        // getActiveWorkers failed — IPC itself may be broken, do a hard reset
-        if (activeTaskIdsRef.current.size > 0) {
+        // getActiveWorkers failed — IPC may be temporarily broken
+        healthFailCountRef.current += 1;
+        console.warn('[ClaudeView] Health check IPC failure:', e);
+        // Only do a hard reset after 3 consecutive failures to avoid
+        // wiping task tracking on a single transient IPC hiccup
+        if (healthFailCountRef.current >= 3 && activeTaskIdsRef.current.size > 0) {
           dispatch({
             type: 'CLAUDE_APPEND_MSG',
             msg: { type: 'system', text: '⚠ Connection lost — unable to reach the agent process. You can send a new message to continue.', isError: true }
@@ -1423,7 +1431,13 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         const cleaned = stripAnsi(trimmed).trim();
         if (cleaned && /auto.?compact|compacting conversation/i.test(cleaned)) {
           flushText();
+          flushThinking();
           appendMsg({ type: 'system', text: 'Context is being compacted — earlier messages may be summarized', isCompaction: true });
+          // Reset streaming state — compaction invalidates current message indices
+          currentTextIndexRef.current = null;
+          currentThinkingIndexRef.current = null;
+          toolCallIndexRef.current = {};
+          sawStreamingRef.current = false;
         } else if (cleaned && !isProgressBarLine(cleaned)) {
           appendTextContent(cleaned + '\n');
         }
@@ -1681,7 +1695,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   //   - Older messages: condensed (user prompts + assistant summaries only)
   //   - Very old messages (beyond OLDER_CAP): skipped entirely
   const RECENT_COUNT = 10;  // full detail for last N messages
-  const OLDER_CAP = 30;     // condensed for next N beyond recent
+  const OLDER_CAP = 15;     // condensed for next N beyond recent
+  const MAX_CONTEXT_CHARS = 4000; // hard cap on total conversation context size
 
   function buildConversationContext(currentMessages) {
     // Filter to meaningful messages (skip system, thinking)
@@ -1734,13 +1749,17 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           parts.push('[Tool Call]: ' + (msg.block?.name || '?') + (summary ? ' — ' + summary : ''));
           if (msg.block?._result) {
             const resultPreview = toolResultText(msg.block._result);
-            parts.push('[Tool Result]: ' + (resultPreview.length > 500 ? resultPreview.substring(0, 500) + '...' : resultPreview));
+            parts.push('[Tool Result]: ' + (resultPreview.length > 200 ? resultPreview.substring(0, 200) + '...' : resultPreview));
           }
         }
       }
     }
 
-    return parts.join('\n');
+    let result = parts.join('\n');
+    if (result.length > MAX_CONTEXT_CHARS) {
+      result = result.substring(0, MAX_CONTEXT_CHARS) + '\n[... conversation context truncated to ' + MAX_CONTEXT_CHARS + ' chars]';
+    }
+    return result;
   }
 
   async function handleFiles(files) {
@@ -1861,13 +1880,12 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir, dashboardId, additionalContextDirs);
 
       // Build conversation history context.
-      // For resumed sessions, the CLI already has full history — but we still inject
-      // recent messages as a lightweight refresher since context compaction may have
-      // dropped details. For fresh sessions with prior messages (e.g. loaded from
-      // history), this provides the full conversational thread.
+      // For resumed sessions, the CLI already has full history — injecting it again
+      // doubles the context and overloads the model. Only inject for fresh sessions
+      // with prior messages (e.g. loaded from history).
       let finalPrompt = text;
       const historyContext = buildConversationContext(currentMsgs);
-      if (historyContext) {
+      if (historyContext && !sessionIdRef.current) {
         finalPrompt =
           '<conversation_history>\n' +
           historyContext +

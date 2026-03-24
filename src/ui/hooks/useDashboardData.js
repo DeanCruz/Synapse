@@ -104,6 +104,7 @@ export function useDashboardData() {
   const listenersRef = useRef([]);
   const progressRef = useRef({});
   const initRef = useRef({});
+  const dashboardListRef = useRef([]);
 
   // Track current dashboard ID via ref to avoid stale closures in IPC push listeners
   const currentDashboardIdRef = useRef(state.currentDashboardId);
@@ -187,6 +188,7 @@ export function useDashboardData() {
     if (!api) return;
     api.getDashboards().then(result => {
       if (result && result.dashboards) {
+        dashboardListRef.current = result.dashboards;
         dispatch({ type: 'SET_DASHBOARDS_LIST', value: result.dashboards, names: result.names });
       }
     }).catch(() => {});
@@ -289,11 +291,19 @@ export function useDashboardData() {
     });
 
     addListener('dashboards_list', (data) => {
-      dispatch({ type: 'SET_DASHBOARDS_LIST', value: data.dashboards || [], names: data.names });
+      const newList = data.dashboards || [];
+      // Skip dispatch if the list hasn't actually changed — prevents unnecessary
+      // re-renders and avoids triggering the SET_DASHBOARDS_LIST auto-switch logic
+      if (JSON.stringify(newList) === JSON.stringify(dashboardListRef.current)) return;
+      dashboardListRef.current = newList;
+      dispatch({ type: 'SET_DASHBOARDS_LIST', value: newList, names: data.names });
     });
 
     addListener('dashboards_changed', (data) => {
-      dispatch({ type: 'SET_DASHBOARDS_LIST', value: data.dashboards || [], names: data.names });
+      const newList = data.dashboards || [];
+      if (JSON.stringify(newList) === JSON.stringify(dashboardListRef.current)) return;
+      dashboardListRef.current = newList;
+      dispatch({ type: 'SET_DASHBOARDS_LIST', value: newList, names: data.names });
     });
 
     addListener('init_state', (data) => {
