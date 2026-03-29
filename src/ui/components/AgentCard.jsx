@@ -77,6 +77,7 @@ export default function AgentCard({ agent, onClick }) {
     stage,
     message,
     deviations,
+    files_changed,
   } = agent;
 
   const dotColor = STATUS_COLORS[status] || STATUS_COLORS.pending;
@@ -165,6 +166,18 @@ export default function AgentCard({ agent, onClick }) {
         <div className="agent-card-meta" style={{ marginTop: '6px' }}>
           <span className="deviation-badge">
             ⚠ {deviationCount} deviation{deviationCount > 1 ? 's' : ''}
+          </span>
+        </div>
+      )}
+
+      {/* Files changed badge */}
+      {status === 'completed' && Array.isArray(files_changed) && files_changed.length > 0 && (
+        <div className="agent-card-meta" style={{ marginTop: '4px' }}>
+          <span className="files-changed-badge">
+            <svg viewBox="0 0 16 16" fill="currentColor">
+              <path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0113.25 16h-9.5A1.75 1.75 0 012 14.25Zm1.75-.25a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 00.25-.25V6h-2.75A1.75 1.75 0 019 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"/>
+            </svg>
+            {files_changed.length} file{files_changed.length !== 1 ? 's' : ''} changed
           </span>
         </div>
       )}

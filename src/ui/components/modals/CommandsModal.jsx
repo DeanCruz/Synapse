@@ -7,7 +7,7 @@ import Modal from './Modal.jsx';
 
 const COMMAND_TEMPLATE = '# `!command_name`\n\n**Purpose:** Describe what this command does.\n\n**Syntax:** `!command_name [options] {prompt}`\n\n---\n\n## Details\n\nAdd detailed instructions here.\n';
 
-function CommandFolder({ folder, commands, activeCommand, onSelect, onNewCommand, defaultOpen }) {
+function CommandFolder({ folder, commands, activeCommand, onSelect, onNewCommand, defaultOpen, readOnly }) {
   const [open, setOpen] = useState(defaultOpen || false);
   return (
     <div className="commands-folder">
@@ -20,11 +20,13 @@ function CommandFolder({ folder, commands, activeCommand, onSelect, onNewCommand
         </svg>
         <span className="commands-folder-name">{folder}</span>
         <span className="commands-folder-count">{commands.length}</span>
-        <button
-          className="commands-folder-add-btn"
-          title={'New command in ' + folder}
-          onClick={(e) => { e.stopPropagation(); onNewCommand(folder); }}
-        >+</button>
+        {!readOnly && onNewCommand && (
+          <button
+            className="commands-folder-add-btn"
+            title={'New command in ' + folder}
+            onClick={(e) => { e.stopPropagation(); onNewCommand(folder); }}
+          >+</button>
+        )}
       </button>
       {open && (
         <div className="commands-folder-items">
@@ -136,7 +138,10 @@ function CommandGenerator({ folder, onGenerated, onCancel }) {
     setGenerating(true);
     setError(null);
 
-    api.generateCommand(trimmedDesc, folder.folder, trimmedName).then(result => {
+    const generator = folder.isUser
+      ? api.generateUserCommand(trimmedDesc, folder.userFolder || '', trimmedName)
+      : api.generateCommand(trimmedDesc, folder.folder, trimmedName);
+    generator.then(result => {
       setGenerating(false);
       if (result && result.success) {
         onGenerated(result.name);
@@ -153,7 +158,7 @@ function CommandGenerator({ folder, onGenerated, onCancel }) {
     <>
       <div className="commands-viewer-header">
         <h2 className="commands-viewer-title">
-          New Command in {folder.folder}
+          New Command{folder.isUser && folder.userFolder ? ' in ' + folder.userFolder : folder.isUser ? '' : ' in ' + folder.folder}
         </h2>
       </div>
       <div className="commands-editor-field">
@@ -204,8 +209,11 @@ export default function CommandsModal({ onClose, projectDir }) {
 
   const [synapseGroups, setSynapseGroups] = useState([]);
   const [projectGroups, setProjectGroups] = useState([]);
+  const [userGroups, setUserGroups] = useState([]);
   const [activeCommand, setActiveCommand] = useState(null);
   const [activeCommandsDir, setActiveCommandsDir] = useState(null);
+  const [activeIsUser, setActiveIsUser] = useState(false);
+  const [activeUserFolder, setActiveUserFolder] = useState(null);
   const [viewerState, setViewerState] = useState('placeholder');
   const [newCommandFolder, setNewCommandFolder] = useState(null);
   const [showNewFolderInput, setShowNewFolderInput] = useState(false);
@@ -214,6 +222,7 @@ export default function CommandsModal({ onClose, projectDir }) {
   const loadCommands = useCallback(() => {
     if (!api) return;
     api.listCommands().then(groups => setSynapseGroups(groups || []));
+    api.listUserCommands().then(groups => setUserGroups(groups || []));
     if (projectDir) {
       api.listProjectCommands(projectDir).then(groups => setProjectGroups(groups || []));
     }
@@ -221,13 +230,22 @@ export default function CommandsModal({ onClose, projectDir }) {
 
   useEffect(() => { loadCommands(); }, [loadCommands]);
 
-  function selectCommand(cmd, commandsDir) {
+  function selectCommand(cmd, commandsDir, isUser, userFolder) {
     if (!api) return;
-    const getter = commandsDir ? api.getCommand(cmd.name, commandsDir) : api.getCommand(cmd.name);
+    let getter;
+    if (isUser) {
+      getter = api.getUserCommand(cmd.name, userFolder);
+    } else if (commandsDir) {
+      getter = api.getCommand(cmd.name, commandsDir);
+    } else {
+      getter = api.getCommand(cmd.name);
+    }
     getter.then(full => {
       if (!full) { setViewerState('placeholder'); setActiveCommand(null); return; }
       setActiveCommand(full);
       setActiveCommandsDir(commandsDir);
+      setActiveIsUser(!!isUser);
+      setActiveUserFolder(userFolder || null);
       setViewerState('view');
     });
   }
@@ -235,9 +253,14 @@ export default function CommandsModal({ onClose, projectDir }) {
   function handleDelete() {
     if (!activeCommand || !api) return;
     if (!confirm('Delete command "!' + activeCommand.name + '"?')) return;
-    const deleter = activeCommandsDir
-      ? api.deleteCommand(activeCommand.name, activeCommandsDir)
-      : api.deleteCommand(activeCommand.name);
+    let deleter;
+    if (activeIsUser) {
+      deleter = api.deleteUserCommand(activeCommand.name, activeUserFolder);
+    } else if (activeCommandsDir) {
+      deleter = api.deleteCommand(activeCommand.name, activeCommandsDir);
+    } else {
+      deleter = api.deleteCommand(activeCommand.name);
+    }
     deleter.then(() => {
       loadCommands();
       setActiveCommand(null);
@@ -247,12 +270,21 @@ export default function CommandsModal({ onClose, projectDir }) {
 
   function handleSave(name, content) {
     if (!api) return;
-    const saver = activeCommandsDir
-      ? api.saveCommand(name, content, activeCommandsDir)
-      : api.saveCommand(name, content);
+    let saver;
+    if (activeIsUser) {
+      saver = api.saveUserCommand(name, content, activeUserFolder);
+    } else if (activeCommandsDir) {
+      saver = api.saveCommand(name, content, activeCommandsDir);
+    } else {
+      saver = api.saveCommand(name, content);
+    }
     saver.then(() => {
       loadCommands();
-      selectCommand({ name }, activeCommandsDir);
+      if (activeIsUser) {
+        selectCommand({ name }, null, true, activeUserFolder);
+      } else {
+        selectCommand({ name }, activeCommandsDir);
+      }
     });
   }
 
@@ -269,27 +301,31 @@ export default function CommandsModal({ onClose, projectDir }) {
         setShowNewFolderInput(false);
         setNewFolderName('');
       } else if (result && result.error) {
-        // Show inline — alert may also be blocked
         setNewFolderName('');
       }
     });
   }
 
-  function handleNewCommandInFolder(folder, commandsDir) {
+  function handleNewUserCommand(folderName) {
     setActiveCommand(null);
-    setActiveCommandsDir(commandsDir);
+    setActiveCommandsDir(null);
+    setActiveIsUser(true);
+    setActiveUserFolder(folderName === 'General' ? null : folderName);
     setNewCommandFolder({
-      folder,
-      dir: commandsDir,
-      isProjectFolder: !!commandsDir,
+      folder: folderName,
+      isUser: true,
+      userFolder: folderName === 'General' ? null : folderName,
     });
     setViewerState('generate');
   }
 
   function handleGenerated(commandName) {
     loadCommands();
-    // Open the generated command
-    selectCommand({ name: commandName }, newCommandFolder?.isProjectFolder ? newCommandFolder.dir : null);
+    if (newCommandFolder?.isUser) {
+      selectCommand({ name: commandName }, null, true, newCommandFolder.userFolder);
+    } else {
+      selectCommand({ name: commandName }, newCommandFolder?.dir);
+    }
     setNewCommandFolder(null);
   }
 
@@ -298,10 +334,43 @@ export default function CommandsModal({ onClose, projectDir }) {
       <div className="commands-layout">
         <div className="commands-sidebar">
           <div className="commands-sidebar-header">
-            <span className="commands-section-title">Commands</span>
-            <button className="commands-add-btn" onClick={handleNewFolder}>+ Folder</button>
+            <span className="commands-section-title">Synapse</span>
           </div>
           <div className="commands-list">
+            {synapseGroups.map(group => (
+              <CommandFolder
+                key={group.folder}
+                folder={group.folder}
+                commands={group.commands}
+                activeCommand={activeCommand}
+                onSelect={cmd => selectCommand(cmd, null)}
+                readOnly
+              />
+            ))}
+            {projectGroups.length > 0 && (
+              <>
+                <div className="commands-sidebar-header commands-section-divider">
+                  <span className="commands-section-title">Project</span>
+                </div>
+                {projectGroups.map(group => (
+                  <CommandFolder
+                    key={'project-' + group.folder}
+                    folder={group.folder}
+                    commands={group.commands}
+                    activeCommand={activeCommand}
+                    onSelect={cmd => selectCommand(cmd, projectDir + '/_commands')}
+                    readOnly
+                  />
+                ))}
+              </>
+            )}
+            <div className="commands-sidebar-header commands-section-divider">
+              <span className="commands-section-title">User</span>
+              <div className="commands-user-actions">
+                <button className="commands-add-btn" onClick={() => handleNewUserCommand('General')} title="New command">+ Command</button>
+                <button className="commands-add-btn" onClick={handleNewFolder} title="New folder">+ Folder</button>
+              </div>
+            </div>
             {showNewFolderInput && (
               <div className="commands-new-folder-input">
                 <input
@@ -320,27 +389,21 @@ export default function CommandsModal({ onClose, projectDir }) {
                 <button className="commands-folder-add-btn" style={{ opacity: 1 }} onClick={() => setShowNewFolderInput(false)}>✕</button>
               </div>
             )}
-            {synapseGroups.map(group => (
+            {userGroups.map(group => (
               <CommandFolder
-                key={group.folder}
+                key={'user-' + group.folder}
                 folder={group.folder}
                 commands={group.commands}
                 activeCommand={activeCommand}
-                onSelect={cmd => selectCommand(cmd, null)}
-                onNewCommand={(folder) => handleNewCommandInFolder(folder, null)}
+                onSelect={cmd => selectCommand(cmd, null, true, group.folder === 'General' ? null : group.folder)}
+                onNewCommand={(folder) => handleNewUserCommand(folder)}
+                defaultOpen
               />
             ))}
-            {projectGroups.map(group => (
-              <CommandFolder
-                key={'project-' + group.folder}
-                folder={group.folder}
-                commands={group.commands}
-                activeCommand={activeCommand}
-                onSelect={cmd => selectCommand(cmd, projectDir + '/_commands')}
-                onNewCommand={(folder) => handleNewCommandInFolder(folder, projectDir + '/_commands')}
-              />
-            ))}
-            {synapseGroups.length === 0 && projectGroups.length === 0 && (
+            {userGroups.length === 0 && (
+              <div className="commands-empty commands-user-empty">No user commands yet</div>
+            )}
+            {synapseGroups.length === 0 && projectGroups.length === 0 && userGroups.length === 0 && (
               <div className="commands-empty">No commands found</div>
             )}
           </div>

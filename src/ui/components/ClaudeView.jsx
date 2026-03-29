@@ -5,10 +5,11 @@
 // Logs chat events to the active dashboard.
 // Allows sending follow-up messages while an agent is still running.
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { renderMarkdown } from '../utils/markdown.js';
 import { getDashboardProject, getDashboardAdditionalContext } from '../utils/dashboardProjects.js';
+import PermissionModal from './modals/PermissionModal.jsx';
 
 // Strip ANSI escape codes and terminal control characters from text
 function stripAnsi(str) {
@@ -62,6 +63,11 @@ function toolResultText(content) {
     try { return JSON.stringify(content, null, 2); } catch (e) { return String(content); }
   }
   return String(content);
+}
+
+// Tools whose summary is a file path (clickable to open)
+function toolHasFilePath(name) {
+  return name === 'Read' || name === 'Edit' || name === 'Write';
 }
 
 // Format tool input for display — show a compact summary for common tools
@@ -132,13 +138,285 @@ function ExpandablePre({ className, children }) {
   );
 }
 
+// Shorten absolute paths — keep last 3 segments
+function shortPath(p) {
+  if (!p || typeof p !== 'string') return p;
+  const parts = p.split('/').filter(Boolean);
+  if (parts.length <= 3) return p;
+  return '…/' + parts.slice(-3).join('/');
+}
+
+// Clickable file path — opens file in the IDE explorer
+function ClickablePath({ path, onOpenFile }) {
+  if (!path || !onOpenFile) {
+    return <span className="tool-field-value tool-field-path" title={path}>{shortPath(path)}</span>;
+  }
+  return (
+    <span
+      className="tool-field-value tool-field-path tool-field-path-link"
+      title={path + ' — click to open'}
+      onClick={(e) => { e.stopPropagation(); onOpenFile(path); }}
+    >{shortPath(path)}</span>
+  );
+}
+
+// Rich formatted body for each tool type
+function ToolInputFormatted({ name, input, onOpenFile }) {
+  if (!input) return null;
+
+  if (name === 'Read') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">File</span>
+          <ClickablePath path={input.file_path} onOpenFile={onOpenFile} />
+        </div>
+        {input.offset && (
+          <div className="tool-field">
+            <span className="tool-field-label">Lines</span>
+            <span className="tool-field-value">{input.offset}{input.limit ? `–${input.offset + input.limit}` : '+'}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Edit') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">File</span>
+          <ClickablePath path={input.file_path} onOpenFile={onOpenFile} />
+        </div>
+        {input.replace_all && (
+          <div className="tool-field">
+            <span className="tool-field-label">Mode</span>
+            <span className="tool-field-value tool-field-badge">Replace All</span>
+          </div>
+        )}
+        {input.old_string && (
+          <div className="tool-diff">
+            <div className="tool-diff-section tool-diff-remove">
+              <span className="tool-diff-marker">−</span>
+              <pre className="tool-diff-code">{input.old_string}</pre>
+            </div>
+            <div className="tool-diff-section tool-diff-add">
+              <span className="tool-diff-marker">+</span>
+              <pre className="tool-diff-code">{input.new_string}</pre>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Write') {
+    const preview = input.content && input.content.length > 500
+      ? input.content.substring(0, 500) + '\n… (truncated)'
+      : input.content;
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">File</span>
+          <ClickablePath path={input.file_path} onOpenFile={onOpenFile} />
+        </div>
+        {preview && (
+          <div className="tool-diff">
+            <div className="tool-diff-section tool-diff-add">
+              <span className="tool-diff-marker">+</span>
+              <pre className="tool-diff-code">{preview}</pre>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Bash') {
+    return (
+      <div className="tool-formatted">
+        {input.description && (
+          <div className="tool-field">
+            <span className="tool-field-label">Action</span>
+            <span className="tool-field-value">{input.description}</span>
+          </div>
+        )}
+        <div className="tool-bash-command">
+          <span className="tool-bash-prompt">$</span>
+          <code>{input.command}</code>
+        </div>
+        {input.timeout && (
+          <div className="tool-field">
+            <span className="tool-field-label">Timeout</span>
+            <span className="tool-field-value">{input.timeout >= 1000 ? `${(input.timeout / 1000).toFixed(0)}s` : `${input.timeout}ms`}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Grep') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">Pattern</span>
+          <code className="tool-field-value tool-field-code">/{input.pattern}/</code>
+        </div>
+        {input.path && (
+          <div className="tool-field">
+            <span className="tool-field-label">Path</span>
+            <ClickablePath path={input.path} onOpenFile={onOpenFile} />
+          </div>
+        )}
+        {input.glob && (
+          <div className="tool-field">
+            <span className="tool-field-label">Glob</span>
+            <span className="tool-field-value">{input.glob}</span>
+          </div>
+        )}
+        {input.output_mode && (
+          <div className="tool-field">
+            <span className="tool-field-label">Output</span>
+            <span className="tool-field-value">{input.output_mode}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Glob') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">Pattern</span>
+          <code className="tool-field-value tool-field-code">{input.pattern}</code>
+        </div>
+        {input.path && (
+          <div className="tool-field">
+            <span className="tool-field-label">Path</span>
+            <ClickablePath path={input.path} onOpenFile={onOpenFile} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'Task') {
+    return (
+      <div className="tool-formatted">
+        {input.description && (
+          <div className="tool-field">
+            <span className="tool-field-label">Task</span>
+            <span className="tool-field-value">{input.description}</span>
+          </div>
+        )}
+        {input.subagent_type && (
+          <div className="tool-field">
+            <span className="tool-field-label">Agent</span>
+            <span className="tool-field-value tool-field-badge">{input.subagent_type}</span>
+          </div>
+        )}
+        {input.prompt && (
+          <div className="tool-field-block">
+            <span className="tool-field-label">Prompt</span>
+            <ExpandablePre className="claude-tool-input">{input.prompt}</ExpandablePre>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'WebFetch') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">URL</span>
+          <span className="tool-field-value tool-field-path">{input.url}</span>
+        </div>
+        {input.prompt && (
+          <div className="tool-field">
+            <span className="tool-field-label">Prompt</span>
+            <span className="tool-field-value">{input.prompt}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (name === 'WebSearch') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">Query</span>
+          <span className="tool-field-value">{input.query}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (name === 'TodoWrite') {
+    const todos = input.todos || [];
+    if (todos.length === 0) return null;
+    const icons = { completed: '✓', in_progress: '◉', pending: '○' };
+    const colors = { completed: 'var(--color-completed)', in_progress: 'var(--color-in-progress)', pending: 'var(--text-tertiary)' };
+    return (
+      <div className="tool-formatted">
+        <div className="tool-todo-list">
+          {todos.map((t, i) => (
+            <div key={i} className={`tool-todo-item tool-todo-${t.status}`}>
+              <span className="tool-todo-icon" style={{ color: colors[t.status] }}>{icons[t.status] || '○'}</span>
+              <span className="tool-todo-text">{t.content}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (name === 'NotebookEdit') {
+    return (
+      <div className="tool-formatted">
+        <div className="tool-field">
+          <span className="tool-field-label">Notebook</span>
+          <ClickablePath path={input.notebook_path} onOpenFile={onOpenFile} />
+        </div>
+        {input.cell_type && (
+          <div className="tool-field">
+            <span className="tool-field-label">Cell</span>
+            <span className="tool-field-value tool-field-badge">{input.cell_type}</span>
+          </div>
+        )}
+        {input.edit_mode && (
+          <div className="tool-field">
+            <span className="tool-field-label">Mode</span>
+            <span className="tool-field-value">{input.edit_mode}</span>
+          </div>
+        )}
+        {input.new_source && (
+          <div className="tool-diff">
+            <div className="tool-diff-section tool-diff-add">
+              <span className="tool-diff-marker">+</span>
+              <pre className="tool-diff-code">{input.new_source.length > 500 ? input.new_source.substring(0, 500) + '\n… (truncated)' : input.new_source}</pre>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback: show raw JSON for unknown tools
+  const raw = typeof input === 'string' ? input : JSON.stringify(input, null, 2);
+  return (
+    <div className="tool-formatted">
+      <ExpandablePre className="claude-tool-input">{raw}</ExpandablePre>
+    </div>
+  );
+}
+
 // Single collapsible tool call block
-function ToolCallBlock({ block }) {
+function ToolCallBlock({ block, onOpenFile }) {
   const [expanded, setExpanded] = useState(false);
   const summary = toolInputSummary(block.name, block.input);
-  const inputStr = block.input
-    ? (typeof block.input === 'string' ? block.input : JSON.stringify(block.input, null, 2))
-    : null;
   const hasResult = block._result !== undefined && block._result !== null;
 
   return (
@@ -146,17 +424,22 @@ function ToolCallBlock({ block }) {
       <div className="claude-tool-header" onClick={() => setExpanded(e => !e)}>
         <span className="claude-tool-icon">{hasResult ? '✓' : '⚙'}</span>
         <span className="claude-tool-name">{block.name}</span>
-        {summary && <span className="claude-tool-summary">{summary}</span>}
+        {summary && (
+          toolHasFilePath(block.name) && onOpenFile ? (
+            <span
+              className="claude-tool-summary claude-tool-summary-link"
+              title={summary + ' — click to open'}
+              onClick={(e) => { e.stopPropagation(); onOpenFile(summary); }}
+            >{shortPath(summary)}</span>
+          ) : (
+            <span className="claude-tool-summary">{summary}</span>
+          )
+        )}
         <span className="claude-tool-toggle">{expanded ? '▼' : '▶'}</span>
       </div>
       {expanded && (
         <div className="claude-tool-body">
-          {inputStr && (
-            <>
-              <div className="claude-tool-label">Input:</div>
-              <ExpandablePre className="claude-tool-input">{inputStr}</ExpandablePre>
-            </>
-          )}
+          <ToolInputFormatted name={block.name} input={block.input} onOpenFile={onOpenFile} />
           {hasResult && (
             <>
               <div className="claude-tool-label claude-tool-result-label">Result:</div>
@@ -262,14 +545,110 @@ function AskUserQuestionBlock({ block, onSendAnswer }) {
   );
 }
 
+// Human-readable labels for task event fields
+const TASK_EVENT_LABELS = {
+  subtype: 'Event',
+  task_id: 'Task ID',
+  tool_use_id: 'Tool Use',
+  description: 'Description',
+  task_type: 'Task Type',
+  uuid: 'UUID',
+  session_id: 'Session',
+  total_tokens: 'Tokens',
+  tool_uses: 'Tool Uses',
+  duration_ms: 'Duration',
+  last_tool_name: 'Last Tool',
+};
+
+function formatTaskEventValue(key, value) {
+  if (key === 'duration_ms' && typeof value === 'number') {
+    return value >= 1000 ? `${(value / 1000).toFixed(1)}s` : `${value}ms`;
+  }
+  if (key === 'total_tokens' && typeof value === 'number') {
+    return value.toLocaleString();
+  }
+  if (key === 'subtype') {
+    return String(value).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+  return String(value);
+}
+
+function TaskEventMessage({ data }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const subtype = data.subtype || 'task_event';
+  const description = data.description || '';
+  const label = subtype === 'task_started' ? 'Task Started'
+    : subtype === 'task_progress' ? 'Task Progress'
+    : subtype.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  // Fields to show in the expanded details (exclude type and fields already shown in header)
+  const detailFields = Object.entries(data).filter(([k]) =>
+    k !== 'type' && k !== 'description' && k !== 'message'
+  );
+
+  // Flatten usage object into detail fields
+  const allDetails = [];
+  for (const [k, v] of detailFields) {
+    if (k === 'usage' && v && typeof v === 'object') {
+      for (const [uk, uv] of Object.entries(v)) {
+        allDetails.push([uk, uv]);
+      }
+    } else {
+      allDetails.push([k, v]);
+    }
+  }
+
+  return (
+    <div className="claude-task-event">
+      <div className="claude-task-event-header" onClick={() => setExpanded(!expanded)}>
+        <span className="claude-task-event-icon">{expanded ? '▾' : '▸'}</span>
+        <span className="claude-task-event-label">{label}</span>
+        {description && <span className="claude-task-event-desc">{description}</span>}
+      </div>
+      {expanded && (
+        <div className="claude-task-event-details">
+          {allDetails.map(([k, v]) => (
+            <div key={k} className="claude-task-event-row">
+              <span className="claude-task-event-key">{TASK_EVENT_LABELS[k] || k}</span>
+              <span className="claude-task-event-value">{formatTaskEventValue(k, v)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Copy-to-clipboard button shown on hover over chat bubbles
+function CopyBubbleButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = useCallback((e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }, [text]);
+  return (
+    <button className="claude-bubble-copy" onClick={handleCopy} title="Copy message">
+      {copied ? (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+      ) : (
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" /><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" /></svg>
+      )}
+    </button>
+  );
+}
+
 // A single conversation message
-function ConversationMessage({ msg, isLatestThinking, onSendAnswer }) {
+function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }) {
   if (msg.type === 'thinking') {
     return <ThinkingBubble msg={msg} isLatest={isLatestThinking} />;
   }
   if (msg.type === 'user') {
     return (
       <div className="claude-message claude-user">
+        <CopyBubbleButton text={msg.text} />
         {msg.attachments && msg.attachments.length > 0 && (
           <div className="claude-message-attachments">
             {msg.attachments.map((a, i) => (
@@ -284,6 +663,7 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer }) {
   if (msg.type === 'assistant') {
     return (
       <div className="claude-message claude-assistant">
+        <CopyBubbleButton text={msg.text} />
         <div
           className="claude-message-text"
           dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }}
@@ -295,9 +675,19 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer }) {
     if (msg.block?.name === 'AskUserQuestion') {
       return <AskUserQuestionBlock block={msg.block} onSendAnswer={onSendAnswer} />;
     }
-    return <ToolCallBlock block={msg.block || {}} />;
+    return <ToolCallBlock block={msg.block || {}} onOpenFile={onOpenFile} />;
   }
   if (msg.type === 'system') {
+    if (msg.isTaskEvent && msg.taskEventData) {
+      return <TaskEventMessage data={msg.taskEventData} />;
+    }
+    // Catch legacy raw-JSON task events already stored in message history
+    if (msg.text && msg.text.startsWith('{') && /"subtype"\s*:\s*"task_(progress|started|completed|failed)"/.test(msg.text)) {
+      try {
+        const parsed = JSON.parse(msg.text);
+        return <TaskEventMessage data={parsed} />;
+      } catch (_) { /* fall through to default rendering */ }
+    }
     return (
       <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '') + (msg.isCompaction ? ' claude-compaction' : '')}>
         {msg.text}
@@ -333,6 +723,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const dashboardId = state.currentDashboardId;
   if (!dashboardId) return <div className="claude-view-empty">Select a dashboard to begin</div>;
   const pendingAttachments = state.claudePendingAttachments;
+  const pendingPermission = state.pendingPermission;
   const tabs = state.claudeTabs[dashboardId] || [{ id: 'default', name: 'Chat 1' }];
   const activeTabId = state.claudeActiveTabId;
   const [processingTabId, setProcessingTabId] = useState(null);
@@ -378,11 +769,15 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const sawStreamingRef = useRef(false);
   // Track whether current task is a resumed session (history replay events should be ignored)
   const isResumedSessionRef = useRef(false);
+  // Health check consecutive failure counter — only hard-reset after 3 consecutive IPC failures
+  const healthFailCountRef = useRef(0);
   // Stable refs so IPC listeners always call latest functions
   const handleChunkRef = useRef(null);
   const finishRef = useRef(null);
   // Throttled preview dispatch timer for sidebar chat previews
   const previewFlushTimerRef = useRef(null);
+  // Session-scoped set of tool names the user has chosen to "always allow"
+  const allowedToolsRef = useRef(new Set());
 
   // Keep refs in sync for async operations
   useEffect(() => { messagesRef.current = messages; }, [messages]);
@@ -732,11 +1127,157 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       }
     });
 
+    // Listen for worker-error events (process spawn failures, etc.)
+    const errorListener = api.on('worker-error', (data) => {
+      if (!isKnownTask(data.taskId)) return;
+
+      if (isCurrentDashboardTask(data.taskId)) {
+        const taskTab = taskTabMapRef.current[data.taskId];
+        const isActiveTab = !taskTab || taskTab === activeTabRef.current;
+
+        if (isActiveTab) {
+          dispatch({
+            type: 'CLAUDE_APPEND_MSG',
+            msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly' + (data.error ? ': ' + data.error : '.'), isError: true }
+          });
+          if (finishRef.current) finishRef.current(data.taskId);
+        } else {
+          dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: taskTab, msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly.', isError: true } });
+          activeTaskIdsRef.current.delete(data.taskId);
+          delete taskDashboardMapRef.current[data.taskId];
+          delete taskTabMapRef.current[data.taskId];
+          delete taskPidMapRef.current[data.taskId];
+          if (activeTaskIdsRef.current.size === 0) {
+            dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+            dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+            setProcessingTabId(null);
+          }
+        }
+      } else {
+        const targetDash = getStashedDashboard(data.taskId);
+        if (targetDash) {
+          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly.', isError: true } });
+          const stashedSet = activeTaskStashRef.current[targetDash];
+          if (stashedSet) {
+            stashedSet.delete(data.taskId);
+            if (stashedSet.size === 0) {
+              dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', dashboardId: targetDash, value: false, status: 'Ready' });
+            }
+          }
+          delete taskDashboardMapRef.current[data.taskId];
+          delete taskTabMapRef.current[data.taskId];
+          delete taskPidMapRef.current[data.taskId];
+        }
+      }
+    });
+
     return () => {
       if (workerListener) workerListener();
       if (completeListener) completeListener();
+      if (errorListener) errorListener();
       if (previewFlushTimerRef.current) clearTimeout(previewFlushTimerRef.current);
     };
+  }, [api, dispatch]);
+
+  // --- Process health check: detect orphaned tasks where the subprocess died silently ---
+  // Polls getActiveWorkers() every 8s and compares against locally tracked tasks.
+  // If a tracked task's PID is no longer in the active workers list, it means the
+  // process exited but we never received the worker-complete/worker-error event.
+  useEffect(() => {
+    if (!api || !api.getActiveWorkers) return;
+    const HEALTH_CHECK_INTERVAL = 8000;
+
+    const healthTimer = setInterval(async () => {
+      // Only check if we think we have active tasks
+      if (activeTaskIdsRef.current.size === 0) return;
+
+      try {
+        const remoteWorkers = await api.getActiveWorkers();
+        const remotePids = new Set(remoteWorkers.map(w => w.pid));
+        // IPC succeeded — reset consecutive failure counter
+        healthFailCountRef.current = 0;
+
+        // Check each locally tracked task
+        const orphanedTasks = [];
+        for (const taskId of activeTaskIdsRef.current) {
+          const pid = taskPidMapRef.current[taskId];
+          // If we have a PID and it's not in the remote active list, the process is gone
+          if (pid && !remotePids.has(pid)) {
+            orphanedTasks.push(taskId);
+          }
+        }
+
+        // Clean up orphaned tasks
+        for (const taskId of orphanedTasks) {
+          const taskTab = taskTabMapRef.current[taskId];
+          const isActiveTab = !taskTab || taskTab === activeTabRef.current;
+
+          if (isActiveTab) {
+            dispatch({
+              type: 'CLAUDE_APPEND_MSG',
+              msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly. You can send a new message to continue.', isError: true }
+            });
+          } else {
+            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: taskTab, msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly.', isError: true } });
+          }
+
+          activeTaskIdsRef.current.delete(taskId);
+          codexStreamedTaskIdsRef.current.delete(taskId);
+          delete taskDashboardMapRef.current[taskId];
+          delete taskTabMapRef.current[taskId];
+          delete taskPidMapRef.current[taskId];
+        }
+
+        if (orphanedTasks.length > 0 && activeTaskIdsRef.current.size === 0) {
+          dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+          setProcessingTabId(null);
+        }
+
+        // Also check stashed dashboard tasks
+        for (const [dashId, stashedSet] of Object.entries(activeTaskStashRef.current)) {
+          if (!stashedSet || stashedSet.size === 0) continue;
+          const stashedOrphans = [];
+          for (const taskId of stashedSet) {
+            const pid = taskPidMapRef.current[taskId];
+            if (pid && !remotePids.has(pid)) {
+              stashedOrphans.push(taskId);
+            }
+          }
+          for (const taskId of stashedOrphans) {
+            dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: dashId, msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly.', isError: true } });
+            stashedSet.delete(taskId);
+            delete taskDashboardMapRef.current[taskId];
+            delete taskTabMapRef.current[taskId];
+            delete taskPidMapRef.current[taskId];
+          }
+          if (stashedOrphans.length > 0 && stashedSet.size === 0) {
+            dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', dashboardId: dashId, value: false, status: 'Ready' });
+          }
+        }
+      } catch (e) {
+        // getActiveWorkers failed — IPC may be temporarily broken
+        healthFailCountRef.current += 1;
+        console.warn('[ClaudeView] Health check IPC failure:', e);
+        // Only do a hard reset after 3 consecutive failures to avoid
+        // wiping task tracking on a single transient IPC hiccup
+        if (healthFailCountRef.current >= 3 && activeTaskIdsRef.current.size > 0) {
+          dispatch({
+            type: 'CLAUDE_APPEND_MSG',
+            msg: { type: 'system', text: '⚠ Connection lost — unable to reach the agent process. You can send a new message to continue.', isError: true }
+          });
+          activeTaskIdsRef.current.clear();
+          taskPidMapRef.current = {};
+          taskDashboardMapRef.current = {};
+          taskTabMapRef.current = {};
+          dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+          setProcessingTabId(null);
+        }
+      }
+    }, HEALTH_CHECK_INTERVAL);
+
+    return () => clearInterval(healthTimer);
   }, [api, dispatch]);
 
   // --- State mutation helpers using functional updater (avoids stale closures) ---
@@ -883,19 +1424,26 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
 
   function handleChunk(data) {
     const chunk = data.chunk;
+    const pid = data.pid;
     const lines = chunk.split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
       try {
         const evt = JSON.parse(trimmed);
-        processEvent(evt, data.taskId);
+        processEvent(evt, data.taskId, pid);
       } catch (e) {
         // Non-JSON output from CLI — strip ANSI and skip progress/spinner lines
         const cleaned = stripAnsi(trimmed).trim();
         if (cleaned && /auto.?compact|compacting conversation/i.test(cleaned)) {
           flushText();
+          flushThinking();
           appendMsg({ type: 'system', text: 'Context is being compacted — earlier messages may be summarized', isCompaction: true });
+          // Reset streaming state — compaction invalidates current message indices
+          currentTextIndexRef.current = null;
+          currentThinkingIndexRef.current = null;
+          toolCallIndexRef.current = {};
+          sawStreamingRef.current = false;
         } else if (cleaned && !isProgressBarLine(cleaned)) {
           appendTextContent(cleaned + '\n');
         }
@@ -903,7 +1451,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     }
   }
 
-  function processEvent(evt, taskId) {
+  function processEvent(evt, taskId, pid) {
     if (!evt || !evt.type) return;
 
     switch (evt.type) {
@@ -914,6 +1462,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
             type: 'system',
             text: `Connected — model: ${evt.model || '?'}, ${tools.length} tools available`,
           });
+        } else if (evt.subtype === 'task_progress' || evt.subtype === 'task_started' || evt.subtype === 'task_completed' || evt.subtype === 'task_failed') {
+          appendMsg({ type: 'system', isTaskEvent: true, taskEventData: evt, text: evt.description || evt.subtype });
         } else {
           const msg = evt.message || JSON.stringify(evt);
           const isCompaction = /compact|context.*(truncat|compress|summar)/i.test(msg)
@@ -1070,6 +1620,35 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       case 'ping':
         break;
 
+      // --- Permission request from Claude CLI (--permission-prompt-tool stdio) ---
+      case 'control_request': {
+        const req = evt.request || {};
+        if (req.subtype === 'can_use_tool') {
+          const toolName = req.tool_name || 'unknown';
+          const toolInput = req.input || {};
+          const requestId = evt.request_id || null;
+          const toolUseId = req.tool_use_id || null;
+          dispatch({
+            type: 'PERMISSION_REQUEST',
+            permission: {
+              pid: pid || null,
+              toolName,
+              toolInput,
+              requestId,
+              toolUseId,
+              timestamp: Date.now(),
+            },
+          });
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: `Permission: ${toolName}` });
+          appendMsg({
+            type: 'system',
+            text: `Permission requested for tool: ${toolName}`,
+            isPermission: true,
+          });
+        }
+        break;
+      }
+
       default:
         console.log('[ClaudeView] unhandled event type:', evt.type, JSON.stringify(evt).substring(0, 200));
         break;
@@ -1157,7 +1736,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   //   - Older messages: condensed (user prompts + assistant summaries only)
   //   - Very old messages (beyond OLDER_CAP): skipped entirely
   const RECENT_COUNT = 10;  // full detail for last N messages
-  const OLDER_CAP = 30;     // condensed for next N beyond recent
+  const OLDER_CAP = 15;     // condensed for next N beyond recent
+  const MAX_CONTEXT_CHARS = 4000; // hard cap on total conversation context size
 
   function buildConversationContext(currentMessages) {
     // Filter to meaningful messages (skip system, thinking)
@@ -1210,13 +1790,17 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           parts.push('[Tool Call]: ' + (msg.block?.name || '?') + (summary ? ' — ' + summary : ''));
           if (msg.block?._result) {
             const resultPreview = toolResultText(msg.block._result);
-            parts.push('[Tool Result]: ' + (resultPreview.length > 500 ? resultPreview.substring(0, 500) + '...' : resultPreview));
+            parts.push('[Tool Result]: ' + (resultPreview.length > 200 ? resultPreview.substring(0, 200) + '...' : resultPreview));
           }
         }
       }
     }
 
-    return parts.join('\n');
+    let result = parts.join('\n');
+    if (result.length > MAX_CONTEXT_CHARS) {
+      result = result.substring(0, MAX_CONTEXT_CHARS) + '\n[... conversation context truncated to ' + MAX_CONTEXT_CHARS + ' chars]';
+    }
+    return result;
   }
 
   async function handleFiles(files) {
@@ -1283,6 +1867,19 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     }
   }
 
+  // Open a file in the IDE code explorer by path
+  const handleOpenFile = useCallback((filePath) => {
+    if (!filePath) return;
+    const wsId = state.ideActiveWorkspaceId;
+    if (!wsId) return;
+    const name = filePath.split('/').filter(Boolean).pop() || filePath;
+    dispatch({ type: 'IDE_OPEN_FILE', workspaceId: wsId, file: { path: filePath, name } });
+    // Switch to IDE view if not already there
+    if (state.activeView !== 'ide') {
+      dispatch({ type: 'SET_VIEW', view: 'ide' });
+    }
+  }, [state.ideActiveWorkspaceId, state.activeView, dispatch]);
+
   async function sendText(text, attachments = []) {
     if (!text || !api) return;
 
@@ -1324,13 +1921,12 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir, dashboardId, additionalContextDirs);
 
       // Build conversation history context.
-      // For resumed sessions, the CLI already has full history — but we still inject
-      // recent messages as a lightweight refresher since context compaction may have
-      // dropped details. For fresh sessions with prior messages (e.g. loaded from
-      // history), this provides the full conversational thread.
+      // For resumed sessions, the CLI already has full history — injecting it again
+      // doubles the context and overloads the model. Only inject for fresh sessions
+      // with prior messages (e.g. loaded from history).
       let finalPrompt = text;
       const historyContext = buildConversationContext(currentMsgs);
-      if (historyContext) {
+      if (historyContext && !sessionIdRef.current) {
         finalPrompt =
           '<conversation_history>\n' +
           historyContext +
@@ -1426,6 +2022,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       { label: '!deps', command: '!deps', autoSend: true },
       { label: '!retry', command: '!retry ', autoSend: false },
       { label: '!resume', command: '!resume', autoSend: true },
+      { label: '!track_resume', command: '!track_resume', autoSend: true },
       { label: '!cancel', command: '!cancel', autoSend: true },
       { label: '!cancel-safe', command: '!cancel-safe', autoSend: true },
       { label: '!reset', command: '!reset', autoSend: false },
@@ -1706,6 +2303,62 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     appendMsg({ type: 'system', text: 'Agent stopped by user.' });
   }
 
+  // --- Permission relay handlers ---
+  function handlePermissionApprove() {
+    if (!pendingPermission || !api) return;
+    const { pid, requestId, toolName } = pendingPermission;
+    if (pid) {
+      const response = JSON.stringify({
+        type: 'control_response',
+        request_id: requestId,
+        response: { subtype: 'success', response: { behavior: 'allow' } },
+      }) + '\n';
+      api.writeWorker(pid, response);
+    }
+    dispatch({ type: 'PERMISSION_RESOLVED', requestId });
+    dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Running' });
+    appendMsg({ type: 'system', text: `Permission approved for: ${toolName}` });
+  }
+
+  function handlePermissionDeny() {
+    if (!pendingPermission || !api) return;
+    const { pid, requestId, toolName } = pendingPermission;
+    if (pid) {
+      const response = JSON.stringify({
+        type: 'control_response',
+        request_id: requestId,
+        response: { subtype: 'success', response: { behavior: 'deny', message: 'User denied this action' } },
+      }) + '\n';
+      api.writeWorker(pid, response);
+    }
+    dispatch({ type: 'PERMISSION_RESOLVED', requestId });
+    dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Running' });
+    appendMsg({ type: 'system', text: `Permission denied for: ${toolName}` });
+  }
+
+  function handleAlwaysAllow(toolName) {
+    if (toolName) allowedToolsRef.current.add(toolName);
+  }
+
+  // Auto-approve permission requests for tools the user has always-allowed this session
+  useEffect(() => {
+    if (!pendingPermission || !api) return;
+    if (allowedToolsRef.current.has(pendingPermission.toolName)) {
+      const { pid, requestId, toolName } = pendingPermission;
+      if (pid) {
+        const response = JSON.stringify({
+          type: 'control_response',
+          request_id: requestId,
+          response: { subtype: 'success', response: { behavior: 'allow' } },
+        }) + '\n';
+        api.writeWorker(pid, response);
+      }
+      dispatch({ type: 'PERMISSION_RESOLVED', requestId });
+      dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Running' });
+      appendMsg({ type: 'system', text: `Permission auto-approved for: ${toolName}` });
+    }
+  }, [pendingPermission]);
+
   async function loadHistoryConversation(conv) {
     if (isProcessing || !api) return;
     try {
@@ -1856,6 +2509,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
                 msg={msg}
                 isLatestThinking={msg.type === 'thinking' && idx === lastThinkingIdx && isProcessing}
                 onSendAnswer={sendText}
+                onOpenFile={handleOpenFile}
               />
             ));
           })()}
@@ -2011,6 +2665,18 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           )}
         </div>
       </div>
+
+      {pendingPermission && !allowedToolsRef.current.has(pendingPermission.toolName) && (
+        <PermissionModal
+          interactive
+          toolName={pendingPermission.toolName}
+          toolInput={pendingPermission.toolInput}
+          onApprove={handlePermissionApprove}
+          onDeny={handlePermissionDeny}
+          onAlwaysAllow={handleAlwaysAllow}
+          onClose={handlePermissionDeny}
+        />
+      )}
     </div>
   );
 }

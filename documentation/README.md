@@ -79,7 +79,7 @@ The `!command` system that drives all Synapse operations, from swarm dispatch to
 | Document | Description |
 |---|---|
 | [Overview](commands/overview.md) | Command resolution hierarchy, syntax, and how commands are discovered |
-| [Swarm Commands](commands/swarm-commands.md) | All swarm lifecycle commands: `!p_track`, `!p`, `!dispatch`, `!retry`, `!resume`, `!cancel`, and more |
+| [Swarm Commands](commands/swarm-commands.md) | All swarm lifecycle commands: `!p_track`, `!p`, `!dispatch`, `!retry`, `!resume`, `!track_resume`, `!cancel`, and more |
 | [Project Commands](commands/project-commands.md) | Project analysis commands: `!context`, `!review`, `!health`, `!scope`, `!trace`, `!contracts`, `!env_check` |
 | [Creating Commands](commands/creating-commands.md) | How to create custom commands and profiles, including duplicate detection and file structure |
 

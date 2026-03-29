@@ -20,7 +20,18 @@ DESCRIPTION:
 {detailed description from task file "description" field}
 
 CONTEXT:
-{all context from task file "context" field}
+{all context from task file "context" field
+
+PKI-sourced relationships (optional — append when PKI annotations include relationship
+data for files in this task's READ/MODIFY list): If annotations list depends_on,
+depended_by, or related relationships, append them here so the worker understands the
+file's architectural connections without rediscovering them:
+
+  [PKI] Known file relationships:
+  - {file_path} depends on {related_path} — {description}
+  - {file_path} is consumed by {related_path} — {description}
+
+Omit if no PKI or no relationship data exists for task files.}
 
 PROJECT ROOT: {project_root}
 TRACKER ROOT: {tracker_root}
@@ -32,7 +43,30 @@ gets `backend_api`, `error_handling`, `naming`, and `types` — but NOT `fronten
 or `testing` (unless the task includes tests).
 Quote directly from the CLAUDE.md for included categories — do not paraphrase.
 For large CLAUDE.md files (500+ lines), summarize each category as 2-3 bullet points.
-Omit section entirely if no CLAUDE.md exists.}
+Omit section entirely if no CLAUDE.md exists.
+
+PKI-sourced conventions (optional — append when a Project Knowledge Index exists):
+If a PKI exists at {project_root}/.synapse/knowledge/ and the manifest contains entries
+for files in this task's READ/MODIFY/CREATE list, append file-specific gotchas, patterns,
+and conventions from PKI annotations after the CLAUDE.md conventions. This gives the worker
+institutional knowledge about the files it will touch. Format:
+
+  [PKI] File-specific knowledge from previous sessions:
+
+  {relative_file_path}:
+    GOTCHAS:
+      - {gotcha from annotation}
+    PATTERNS:
+      - {pattern from annotation}
+    CONVENTIONS:
+      - {convention from annotation}
+
+Include only non-empty categories per file. When the combined CLAUDE.md + PKI content
+would exceed the ~200 line budget, prioritize in this order: gotchas > patterns >
+relationships > conventions. Gotchas prevent bugs; patterns guide structure; the rest
+is supplementary. See the PKI Context Injection Guidelines section below for the full
+lookup procedure. Omit PKI content if no PKI exists, no files match, or all matched
+annotations are stale.}
 
 REFERENCE CODE:
 {Working examples from the codebase that the worker should follow as patterns.
@@ -235,7 +269,7 @@ Default to FULL when uncertain. LITE is an optimization for simple tasks — nev
 
 | Section | Max Lines | Notes |
 |---|---|---|
-| CONVENTIONS | ~200 lines | Extract only sections relevant to THIS task from CLAUDE.md. Do not dump the entire file. |
+| CONVENTIONS | ~200 lines | Extract relevant CLAUDE.md sections + PKI-sourced file-specific knowledge (if PKI exists). PKI content shares this budget — when combined CLAUDE.md + PKI content approaches 200 lines, cap PKI at 5 files and prioritize MODIFY files over READ files. |
 | REFERENCE CODE | ~100 lines | Include one complete, representative example. If more patterns are needed, summarize the rest. |
 | UPSTREAM RESULTS | ~50 lines per dependency | Summarize to key facts: what was built, what files changed, what new exports exist. Do not paste raw summaries. |
 | CONTEXT | ~150 lines | Focus on architectural decisions and current file state. Link to files rather than inlining large blocks. |
@@ -258,7 +292,7 @@ After constructing each worker's dispatch prompt, the master should estimate the
 |---|---|---|
 | Task description | What the worker must do | 200-500 tokens |
 | File context | Code snippets the worker needs to see | 500-2000 tokens |
-| Conventions | Extracted CLAUDE.md sections | 300-800 tokens |
+| Conventions | Extracted CLAUDE.md sections + PKI-sourced gotchas, patterns, conventions (if PKI exists) | 300-1000 tokens |
 | Upstream results | Summaries from completed dependency tasks | 200-600 tokens |
 | Critical details | Edge cases, gotchas, constraints | 200-400 tokens |
 | Instructions | Worker protocol, progress file path, return format | 400-600 tokens |
@@ -324,6 +358,7 @@ Before extracting CLAUDE.md content for a worker prompt, use the convention_map 
 | `backend_api` | Task creates or modifies API endpoints | Task doesn't touch APIs |
 | `frontend_styling` | Task involves UI/CSS/component styling | Task is backend-only |
 | `types` | Task creates or modifies type definitions | Task doesn't touch types |
+| `pki_context` | PKI exists and manifest has non-stale entries for files in the task's READ/MODIFY list — append PKI-sourced gotchas, patterns, and conventions to CONVENTIONS section per the PKI Context Injection Guidelines | No PKI exists, or no task files appear in the PKI manifest, or all matched annotations are stale |
 
 ### Rules
 
@@ -337,6 +372,95 @@ This filtering should be applied per-worker, not globally — different tasks ne
 
 ---
 
+## PKI Context Injection Guidelines
+
+When a Project Knowledge Index (PKI) exists at `{project_root}/.synapse/knowledge/`, the master should inject file-specific annotations into the worker prompt's existing CONVENTIONS and CONTEXT sections. This gives workers institutional knowledge about the files they will touch — gotchas to avoid, patterns to follow, and conventions to respect — without requiring each worker to rediscover this information. PKI data is **merged into existing sections**, not added as a separate section.
+
+### Lookup Procedure
+
+1. **Check for PKI existence.** Read `{project_root}/.synapse/knowledge/manifest.json`. If the file does not exist, skip PKI injection entirely — the prompt works without it.
+2. **Match task files against the manifest.** For each file in the worker's READ/MODIFY/CREATE list, check if it appears as a key in `manifest.files`. Collect matched entries.
+3. **Filter out stale annotations.** For each matched entry, check the `stale` field. If `stale: true`, exclude it — stale annotations may contain outdated information that misleads the worker.
+4. **Read annotations for matched files.** For each non-stale match, use the `hash` field to locate the annotation file at `{project_root}/.synapse/knowledge/annotations/{hash}.json`. Extract `gotchas`, `patterns`, `conventions`, and `relationships` arrays.
+5. **Prioritize and cap.** Prioritize MODIFY files over READ files (workers need the most context for files they will change). Cap at **5 files**. The combined CLAUDE.md + PKI content must fit within the ~200 line CONVENTIONS budget. When trimming is needed, apply the **priority order**: gotchas > patterns > relationships > conventions. Gotchas prevent bugs and are never cut. Conventions from PKI (as opposed to CLAUDE.md conventions) are the first to go.
+6. **Inject into existing sections.** Append gotchas, patterns, and conventions to the CONVENTIONS section under a `[PKI]` label. Append relationships to the CONTEXT section under a `[PKI]` label. See format examples below.
+
+### Priority Order for Budget-Constrained Prompts
+
+When PKI data would push the CONVENTIONS section over ~200 lines, trim PKI content in this order (cut from bottom first):
+
+| Priority | Category | Rationale | Cut when... |
+|---|---|---|---|
+| 1 (keep) | Gotchas | Prevent bugs and foot-guns — highest ROI per token | Never cut unless budget is catastrophically tight |
+| 2 | Patterns | Guide structural decisions — important for CREATE tasks | Budget < 20 lines remaining for PKI |
+| 3 | Relationships | Provide architectural context — useful but available via CONTEXT section | Budget < 40 lines remaining for PKI |
+| 4 (cut first) | Conventions | Often overlap with CLAUDE.md conventions already included | Budget < 60 lines remaining for PKI |
+
+### When to Skip PKI Injection
+
+Omit PKI content from the prompt entirely when any of these conditions apply:
+
+- No PKI exists (no `manifest.json` at the expected path)
+- No files in the task's READ/MODIFY/CREATE list appear in the PKI manifest
+- All matched annotations are stale (`stale: true` on every matched entry)
+- The task is a pure CREATE task with no existing files to look up
+- The CONVENTIONS section is already at the ~200 line budget from CLAUDE.md content alone — do not exceed the budget to include PKI
+
+### Injection Example: CONVENTIONS Section
+
+After the CLAUDE.md conventions, append PKI-sourced file knowledge under a `[PKI]` label:
+
+```
+CONVENTIONS:
+{... CLAUDE.md conventions from convention_map ...}
+
+[PKI] File-specific knowledge from previous sessions:
+
+src/server/index.js:
+  GOTCHAS:
+    - SSE connections are not authenticated — any client on the network can subscribe
+    - Port defaults to 4000 but can be overridden via PORT env var — Electron app hardcodes 4000
+  PATTERNS:
+    - event-driven-architecture
+    - singleton-service
+  CONVENTIONS:
+    - All routes registered in a single setup function rather than separate route files
+    - Error responses use { error: string } shape consistently
+
+src/server/services/WatcherService.js:
+  GOTCHAS:
+    - The reconciliation interval (5s) means brief delay between file write and dashboard update
+  PATTERNS:
+    - event-driven-architecture
+```
+
+### Injection Example: CONTEXT Section
+
+After the task context, append PKI-sourced relationship data under a `[PKI]` label:
+
+```
+CONTEXT:
+{... task context from plan ...}
+
+[PKI] Known file relationships:
+- src/server/index.js consumes src/server/services/WatcherService.js — receives file change events and broadcasts as SSE
+- src/server/index.js serves src/ui/hooks/useDashboardData.js — provides SSE stream for React dashboard
+- src/server/index.js is configured by electron/main.js — Electron spawns server as child process on port 4000
+```
+
+### Collecting Worker Annotations Post-Completion
+
+The PKI is not just consumed by workers — it is also **produced** by them. When a worker completes a task, it may return an `ANNOTATIONS` section in its return format (see `agent/worker/return_format.md`) containing gotchas, patterns, and conventions discovered during execution. The master should:
+
+1. **Read the ANNOTATIONS section** from the completed worker's return (if present).
+2. **Read the `annotations` field** from the worker's progress file (if populated).
+3. **Merge new annotations into the PKI** by updating or creating annotation files in `{project_root}/.synapse/knowledge/annotations/` and refreshing the manifest. If a `!learn_update` command exists, prefer delegating this to the command rather than writing PKI files directly.
+4. **Feed forward.** Newly merged annotations become available for subsequent worker prompts in the same swarm — each wave of workers benefits from the annotations of previous waves.
+
+This creates a feedback loop: workers consume PKI annotations via the `[PKI]`-labeled content in their CONVENTIONS and CONTEXT sections, and produce new annotations via their return format, progressively enriching the project's knowledge index across swarms.
+
+---
+
 ## Prompt Completeness Checklist
 
 Before dispatching each agent, verify the prompt contains all of these. A missing item is the #1 cause of worker confusion:
@@ -346,6 +470,7 @@ Before dispatching each agent, verify the prompt contains all of these. A missin
 | **File paths** | Every file to read/modify/create is listed with its full relative path |
 | **CLAUDE.md conventions** | Relevant sections quoted directly (not paraphrased) from the target repo's CLAUDE.md |
 | **Conventions filtered by relevance** | Only convention categories relevant to this specific task are included (per the Convention Relevance Checklist and convention_map) — no full CLAUDE.md dumps |
+| **PKI context** | If a PKI exists at `{project_root}/.synapse/knowledge/`, relevant annotations for task files are merged into CONVENTIONS (gotchas, patterns, conventions) and CONTEXT (relationships) sections under `[PKI]` labels (per the PKI Context Injection Guidelines). Omitted if no PKI or no matching files. |
 | **Reference code** | If the worker must follow an existing pattern, a working example is included |
 | **Upstream results** | For downstream tasks: summary, files changed, new exports, and deviations from each dependency |
 | **Sibling tasks** | (Optional) For same-wave tasks with related file areas: sibling IDs, titles, and file lists included so the worker can avoid conflicts |

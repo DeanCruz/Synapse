@@ -308,7 +308,9 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
         </div>
 
         <div className="settings-app-row project-settings-row" style={{ marginTop: '8px' }}>
-          <label className="settings-app-label">Skip Permissions</label>
+          <label className="settings-app-label" title={skipPermissions ? 'All tool calls are auto-approved without prompting' : 'Permission requests appear in the UI for manual approval'}>
+            {skipPermissions ? 'Bypass All Permissions' : 'Interactive Permissions'}
+          </label>
           <input
             type="checkbox"
             className="settings-app-input project-settings-checkbox"
@@ -316,6 +318,9 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
             checked={skipPermissions}
             onChange={handleSkipPermissionsChange}
           />
+          <span className="settings-app-hint" style={{ marginLeft: '8px', fontSize: '11px', opacity: 0.6 }}>
+            {skipPermissions ? 'All tool calls run without approval' : 'You approve or deny each tool call'}
+          </span>
         </div>
       </div>
     </Modal>

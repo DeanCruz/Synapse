@@ -1,4 +1,0 @@
-interface:
-  display_name: "Synapse Swarm Orchestrator"
-  short_description: "Plan and run Synapse swarms"
-  default_prompt: "Use $synapse-swarm-orchestrator to plan and run a Synapse swarm for this task."

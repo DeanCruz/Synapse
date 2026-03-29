@@ -6,6 +6,7 @@ const { ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { execFile } = require('child_process');
+const vm = require('vm');
 
 // Import existing services (CommonJS — paths resolve relative to the required file)
 const {
@@ -96,8 +97,12 @@ function createBroadcastFn(getMainWindow) {
     }
 
     const win = getMainWindow();
-    if (win && !win.isDestroyed()) {
-      win.webContents.send(eventName, data);
+    if (win && !win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
+      try {
+        win.webContents.send(eventName, data);
+      } catch (err) {
+        console.warn('[IPC] broadcast failed for', eventName, ':', err.message);
+      }
     }
 
     // Feed progress updates to the SwarmOrchestrator for dispatch loop
@@ -105,7 +110,11 @@ function createBroadcastFn(getMainWindow) {
       try {
         const SwarmOrchestrator = require('./services/SwarmOrchestrator');
         SwarmOrchestrator.handleProgressUpdate(data.dashboardId, data.task_id, data);
-      } catch (e) { /* orchestrator not initialized yet */ }
+      } catch (e) {
+        if (e.code !== 'MODULE_NOT_FOUND') {
+          console.warn('[IPC] SwarmOrchestrator progress feed error:', e.message);
+        }
+      }
     }
   };
 }
@@ -242,6 +251,9 @@ function registerIPCHandlers(getMainWindow) {
   ensureDirectories();
 
   // --- 2. Register all ipcMain.handle() handlers ---
+
+  // IPC heartbeat — renderer polls to verify bridge is alive
+  ipcMain.handle('ipc-heartbeat', () => ({ alive: true, timestamp: Date.now() }));
 
   // GET /api/dashboards -> get-dashboards
   ipcMain.handle('get-dashboards', async () => {
@@ -832,6 +844,10 @@ function registerIPCHandlers(getMainWindow) {
     return ClaudeCodeService.getActiveWorkers().concat(CodexService.getActiveWorkers());
   });
 
+  ipcMain.handle('write-worker', async (_event, pid, data) => {
+    return ClaudeCodeService.writeToWorker(pid, data);
+  });
+
   // --- Terminal handlers ---
   ipcMain.handle('spawn-terminal', async (_event, opts) => {
     try {
@@ -900,6 +916,26 @@ function registerIPCHandlers(getMainWindow) {
 
   ipcMain.handle('list-project-commands', async (_event, projectDir) => {
     return CommandsService.listProjectCommands(projectDir);
+  });
+
+  ipcMain.handle('list-user-commands', async () => {
+    return CommandsService.listUserCommands();
+  });
+
+  ipcMain.handle('get-user-command', async (_event, name, folderName) => {
+    return CommandsService.getUserCommand(name, folderName || undefined);
+  });
+
+  ipcMain.handle('save-user-command', async (_event, name, content, folderName) => {
+    return CommandsService.saveUserCommand(name, content, folderName || undefined);
+  });
+
+  ipcMain.handle('delete-user-command', async (_event, name, folderName) => {
+    return CommandsService.deleteUserCommand(name, folderName || undefined);
+  });
+
+  ipcMain.handle('generate-user-command', async (_event, description, folderName, commandName, opts) => {
+    return CommandsService.generateUserCommand(description, folderName, commandName, opts || {});
   });
 
   // --- Orchestration handlers ---
@@ -1279,6 +1315,452 @@ function registerIPCHandlers(getMainWindow) {
   });
 
 
+
+  // ---------------------------------------------------------------------------
+  // IDE Diagnostics — Syntax checking for JSON, JS/JSX, CSS
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Map file extension to a language identifier.
+   */
+  function ideDiagLanguage(filePath) {
+    const ext = path.extname(filePath).toLowerCase();
+    switch (ext) {
+      case '.json': return 'json';
+      case '.js': case '.jsx': case '.mjs': case '.cjs': return 'javascript';
+      case '.ts': case '.tsx': case '.mts': case '.cts': return 'typescript';
+      case '.css': return 'css';
+      default: return null;
+    }
+  }
+
+  /**
+   * Check JSON syntax. Returns diagnostics array.
+   */
+  function ideDiagJSON(content, filePath) {
+    try {
+      JSON.parse(content);
+      return [];
+    } catch (err) {
+      const msg = err.message || 'Invalid JSON';
+      // JSON.parse errors include "at position N" — derive line/col from that
+      let line = 1;
+      let column = 1;
+      const posMatch = msg.match(/position\s+(\d+)/i);
+      if (posMatch) {
+        const pos = parseInt(posMatch[1], 10);
+        let offset = 0;
+        const lines = content.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          if (offset + lines[i].length + 1 > pos) {
+            line = i + 1;
+            column = pos - offset + 1;
+            break;
+          }
+          offset += lines[i].length + 1; // +1 for newline
+        }
+      } else {
+        // Some environments use "at line N column M"
+        const lineMatch = msg.match(/line\s+(\d+)/i);
+        const colMatch = msg.match(/column\s+(\d+)/i);
+        if (lineMatch) line = parseInt(lineMatch[1], 10);
+        if (colMatch) column = parseInt(colMatch[1], 10);
+      }
+      return [{
+        file: filePath,
+        line,
+        column,
+        endLine: line,
+        endColumn: column + 1,
+        message: msg.replace(/^JSON\.parse:\s*/i, '').replace(/\n.*/s, ''),
+        severity: 'error',
+        source: 'json',
+      }];
+    }
+  }
+
+  /**
+   * Check JavaScript/JSX syntax using Node.js vm module. Returns diagnostics array.
+   */
+  function ideDiagJS(content, filePath) {
+    try {
+      // Use vm.compileFunction which gives better error reporting than new vm.Script
+      vm.compileFunction(content, [], { filename: filePath });
+      return [];
+    } catch (err) {
+      const msg = err.message || 'Syntax error';
+      // V8 SyntaxError format: "filename:line\n<code>\n<pointer>\n\nSyntaxError: message"
+      // or the err object has .lineNumber and .columnNumber in some versions
+      let line = 1;
+      let column = 1;
+
+      // Try the stack trace first — it often has the line info
+      if (err.stack) {
+        // Pattern: "filename:LINE\n" at the start
+        const stackMatch = err.stack.match(/:(\d+)\n/);
+        if (stackMatch) {
+          line = parseInt(stackMatch[1], 10);
+        }
+      }
+
+      // Some V8 errors include a pointer line with caret
+      if (err.stack) {
+        const lines = err.stack.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].trim().startsWith('^')) {
+            // The caret position indicates the column
+            column = lines[i].indexOf('^') + 1;
+            break;
+          }
+        }
+      }
+
+      // Clean the message — extract just the SyntaxError description
+      let cleanMsg = msg;
+      const syntaxMatch = msg.match(/SyntaxError:\s*(.+)/);
+      if (syntaxMatch) cleanMsg = syntaxMatch[1];
+      // Remove trailing context lines
+      cleanMsg = cleanMsg.split('\n')[0].trim();
+
+      return [{
+        file: filePath,
+        line,
+        column,
+        endLine: line,
+        endColumn: column + 1,
+        message: cleanMsg || 'Syntax error',
+        severity: 'error',
+        source: 'javascript',
+      }];
+    }
+  }
+
+  /**
+   * Check CSS syntax (basic bracket/brace/string matching). Returns diagnostics array.
+   */
+  function ideDiagCSS(content, filePath) {
+    const diagnostics = [];
+    const stack = []; // track open brackets/braces/parens
+    let inString = false;
+    let stringChar = '';
+    let inComment = false;
+    let inLineComment = false;
+    let line = 1;
+    let col = 1;
+
+    for (let i = 0; i < content.length; i++) {
+      const ch = content[i];
+      const next = content[i + 1];
+
+      if (ch === '\n') {
+        if (inLineComment) inLineComment = false;
+        line++;
+        col = 1;
+        continue;
+      }
+
+      // Handle comments
+      if (!inString && !inComment && !inLineComment && ch === '/' && next === '*') {
+        inComment = true;
+        i++; col += 2;
+        continue;
+      }
+      if (inComment && ch === '*' && next === '/') {
+        inComment = false;
+        i++; col += 2;
+        continue;
+      }
+      if (inComment || inLineComment) {
+        col++;
+        continue;
+      }
+
+      // Handle strings
+      if (inString) {
+        if (ch === '\\') {
+          i++; col += 2; // skip escaped char
+          continue;
+        }
+        if (ch === stringChar) {
+          inString = false;
+        }
+        col++;
+        continue;
+      }
+      if (ch === '"' || ch === "'") {
+        inString = true;
+        stringChar = ch;
+        col++;
+        continue;
+      }
+
+      // Track brackets
+      if (ch === '{' || ch === '(' || ch === '[') {
+        stack.push({ ch, line, col });
+      } else if (ch === '}' || ch === ')' || ch === ']') {
+        const expected = ch === '}' ? '{' : ch === ')' ? '(' : '[';
+        if (stack.length === 0) {
+          diagnostics.push({
+            file: filePath,
+            line,
+            column: col,
+            endLine: line,
+            endColumn: col + 1,
+            message: `Unexpected '${ch}' — no matching opening bracket`,
+            severity: 'error',
+            source: 'css',
+          });
+        } else {
+          const top = stack[stack.length - 1];
+          if (top.ch !== expected) {
+            diagnostics.push({
+              file: filePath,
+              line,
+              column: col,
+              endLine: line,
+              endColumn: col + 1,
+              message: `Mismatched bracket: expected closing for '${top.ch}' (opened at line ${top.line}:${top.col}) but found '${ch}'`,
+              severity: 'error',
+              source: 'css',
+            });
+          }
+          stack.pop();
+        }
+      }
+
+      col++;
+    }
+
+    // Check unclosed brackets
+    for (const open of stack) {
+      const closeChar = open.ch === '{' ? '}' : open.ch === '(' ? ')' : ']';
+      diagnostics.push({
+        file: filePath,
+        line: open.line,
+        column: open.col,
+        endLine: open.line,
+        endColumn: open.col + 1,
+        message: `Unclosed '${open.ch}' — expected '${closeChar}'`,
+        severity: 'error',
+        source: 'css',
+      });
+    }
+
+    // Check unclosed strings
+    if (inString) {
+      diagnostics.push({
+        file: filePath,
+        line,
+        column: col,
+        endLine: line,
+        endColumn: col + 1,
+        message: `Unclosed string (started with ${stringChar})`,
+        severity: 'error',
+        source: 'css',
+      });
+    }
+
+    // Check unclosed comments
+    if (inComment) {
+      diagnostics.push({
+        file: filePath,
+        line,
+        column: col,
+        endLine: line,
+        endColumn: col + 1,
+        message: 'Unclosed block comment (missing */)',
+        severity: 'warning',
+        source: 'css',
+      });
+    }
+
+    return diagnostics;
+  }
+
+  /**
+   * Run diagnostics on a single file's content.
+   * Returns an array of diagnostics objects.
+   */
+  function ideDiagCheck(content, filePath) {
+    const lang = ideDiagLanguage(filePath);
+    switch (lang) {
+      case 'json':       return ideDiagJSON(content, filePath);
+      case 'javascript': return ideDiagJS(content, filePath);
+      case 'typescript': return ideDiagJS(content, filePath); // vm.compileFunction catches basic syntax errors
+      case 'css':        return ideDiagCSS(content, filePath);
+      default:           return [];
+    }
+  }
+
+  // --- ide-check-syntax: Check syntax of a single file ---
+  ipcMain.handle('ide-check-syntax', async (_event, filePath, workspaceRoot) => {
+    try {
+      if (workspaceRoot) ideValidatePath(filePath, workspaceRoot);
+      const content = await fsPromises.readFile(filePath, 'utf-8');
+      const diagnostics = ideDiagCheck(content, filePath);
+      return { success: true, diagnostics };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-check-syntax-batch: Check syntax of multiple files ---
+  ipcMain.handle('ide-check-syntax-batch', async (_event, filePaths, workspaceRoot) => {
+    try {
+      if (!Array.isArray(filePaths)) {
+        return { success: false, error: 'filePaths must be an array' };
+      }
+      const results = {};
+      // Process all files concurrently
+      await Promise.all(filePaths.map(async (filePath) => {
+        try {
+          if (workspaceRoot) ideValidatePath(filePath, workspaceRoot);
+          const content = await fsPromises.readFile(filePath, 'utf-8');
+          results[filePath] = ideDiagCheck(content, filePath);
+        } catch (err) {
+          results[filePath] = [{
+            file: filePath,
+            line: 1,
+            column: 1,
+            endLine: 1,
+            endColumn: 1,
+            message: err.message,
+            severity: 'error',
+            source: 'system',
+          }];
+        }
+      }));
+      return { success: true, results };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+
+
+  // ---------------------------------------------------------------------------
+  // Debug Service — Node.js debugging via Chrome DevTools Protocol
+  // ---------------------------------------------------------------------------
+
+  const DebugService = require('./services/DebugService');
+  DebugService.init(broadcastFn);
+
+  // --- debug-launch: Start a debug session for a Node.js script ---
+  ipcMain.handle('debug-launch', async (_event, opts) => {
+    try {
+      return await DebugService.launch(opts);
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-stop: Stop the active debug session ---
+  ipcMain.handle('debug-stop', async () => {
+    try {
+      return DebugService.stop();
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-set-breakpoint: Set a breakpoint at a file:line ---
+  ipcMain.handle('debug-set-breakpoint', async (_event, filePath, lineNumber, condition) => {
+    try {
+      return await DebugService.setBreakpoint(filePath, lineNumber, condition);
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-remove-breakpoint: Remove a breakpoint by ID ---
+  ipcMain.handle('debug-remove-breakpoint', async (_event, breakpointId) => {
+    try {
+      return await DebugService.removeBreakpoint(breakpointId);
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-continue: Resume execution ---
+  ipcMain.handle('debug-continue', async () => {
+    try {
+      return await DebugService.resume();
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-pause: Pause execution ---
+  ipcMain.handle('debug-pause', async () => {
+    try {
+      return await DebugService.pause();
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-step-over: Step over the current statement ---
+  ipcMain.handle('debug-step-over', async () => {
+    try {
+      return await DebugService.stepOver();
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-step-into: Step into the next function call ---
+  ipcMain.handle('debug-step-into', async () => {
+    try {
+      return await DebugService.stepInto();
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-step-out: Step out of the current function ---
+  ipcMain.handle('debug-step-out', async () => {
+    try {
+      return await DebugService.stepOut();
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-evaluate: Evaluate an expression in the debug context ---
+  ipcMain.handle('debug-evaluate', async (_event, expression, callFrameId) => {
+    try {
+      return await DebugService.evaluate(expression, callFrameId);
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-get-variables: Get variables for a scope/object ---
+  ipcMain.handle('debug-get-variables', async (_event, objectId) => {
+    try {
+      return await DebugService.getVariables(objectId);
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-get-scopes: Get scopes for the current paused state ---
+  ipcMain.handle('debug-get-scopes', async (_event, callFrameId) => {
+    try {
+      return await DebugService.getScopes(callFrameId);
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- debug-session-info: Get current debug session info ---
+  ipcMain.handle('debug-session-info', async () => {
+    try {
+      return { success: true, ...DebugService.getSessionInfo() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
 
   // ---------------------------------------------------------------------------
   // Git Operations — IPC handlers using execFile for security

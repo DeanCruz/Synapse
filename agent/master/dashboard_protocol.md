@@ -176,13 +176,31 @@ Workers still return structured results (STATUS, SUMMARY, FILES CHANGED, etc.) t
 
 ## Automatic Parallel Mode
 
-When the master agent decides to parallelize automatically (without the user invoking `!p` or `!p_track`), it follows the same protocol as `!p` — lightweight dashboard writes.
+When the master agent decides to parallelize automatically (without the user invoking `!p` or `!p_track`), it evaluates the **full tracking thresholds** to determine which dashboard mode to use:
 
-- Same data writes as `!p` mode
+### Full Tracking Thresholds (auto-escalation to `!p_track` mode)
+
+| Condition | Tracking Level | Non-Negotiable? |
+|---|---|---|
+| **3+ parallel agents** | Full `!p_track` tracking | Yes |
+| **More than 1 wave** | Full `!p_track` tracking | **Absolutely non-negotiable** |
+| <3 agents AND 1 wave | Lightweight `!p` tracking | — |
+
+**When thresholds are met (3+ agents OR >1 wave):**
+- Master writes `initialization.json`, continuous `logs.json`, `master_state.json`, and `metrics.json`
+- Workers write progress files to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`
+- Worker prompts include `INSTRUCTION MODE: FULL | LITE` and the path to `tracker_worker_instructions.md` or `tracker_worker_instructions_lite.md`
+- Full live dashboard with real-time stage badges, milestones, elapsed timers
+- Master informs the user: "Swarm has {N} agents across {W} waves — using full dashboard tracking."
+
+**When thresholds are NOT met (<3 agents AND 1 wave):**
+- Same data writes as `!p` mode (lightweight)
 - Master writes `initialization.json` before dispatch and `logs.json` entries at init + completion
 - Workers do NOT write progress files
 - No `master_state.json` or `metrics.json`
 - Master informs the user before entering parallel mode
+
+> **The >1 wave threshold is absolutely non-negotiable.** Multi-wave swarms have dependency chains, sequential phases, and longer execution times — the user MUST have full dashboard visibility. Even a 2-task swarm with 2 waves gets full tracking.
 
 ---
 
@@ -252,15 +270,24 @@ Is it !p? ----------YES----> LIGHTWEIGHT MODE
        |                      - Master writes init + final log entries only
        v                      - Dashboard shows plan + final results
 Does master decide
-to parallelize? ----YES----> AUTO-PARALLEL (same as lightweight)
-       |                      - Same writes as !p
-       NO                     - Inform user first
-       |
-       v
-SERIAL MODE
-No dashboard writes
-Execute directly
+to parallelize? ----YES----> CHECK THRESHOLDS
+       |                      |
+       NO                     v
+       |              3+ agents OR >1 wave?
+       v                |             |
+SERIAL MODE            YES            NO
+No dashboard writes     |             |
+Execute directly        v             v
+                  FULL TRACKING    LIGHTWEIGHT
+                  (same as         (same as !p)
+                   !p_track)       - Plan snapshot
+                  - Workers write  - No progress files
+                    progress files
+                  - Full live
+                    dashboard
 ```
+
+> **Critical:** The `>1 wave` threshold is non-negotiable. Multi-wave swarms ALWAYS get full dashboard tracking regardless of agent count. The `3+ agents` threshold applies even for single-wave swarms.
 
 ---
 
@@ -268,11 +295,72 @@ Execute directly
 
 1. **Always write initialization.json before dispatching** — in all parallel modes. The dashboard must show the plan before workers start.
 2. **Always archive before clearing** — if a dashboard has previous data, archive it before writing new plan data. This applies to all modes.
-3. **Workers only write progress files in `!p_track` mode** — in `!p` and auto-parallel, workers execute and return without any dashboard interaction.
+3. **Workers write progress files in full tracking mode** — in `!p_track` and in auto-parallel that meets the full tracking thresholds (3+ agents OR >1 wave), workers write progress files. In `!p` mode and sub-threshold auto-parallel, workers do NOT write progress files.
 4. **logs.json is always written** — even in lightweight mode, initialization and completion entries are logged so the dashboard has a record.
 5. **initialization.json is write-once** — the only exceptions are repair task creation and circuit breaker replanning (both only in `!p_track` mode).
 6. **Clear progress/ before writing initialization.json** — in all modes, ensure the progress directory is empty before writing the new plan.
 7. **Use the correct worker template** — `p_track_v2` for full tracking (includes progress instructions), `p_v2` for lightweight (omits progress instructions).
+8. **Master writes progress files in lightweight/serial mode** — When workers do NOT write their own progress files (`!p` mode, sub-threshold auto-parallel, or serial dispatch), the master MUST create a minimal progress file for each completed task using the worker's return data. This ensures the dashboard always shows file changes, summaries, and completion status. See **Master-Written Progress Files** below.
+
+---
+
+## Master-Written Progress Files (Lightweight/Serial Mode)
+
+When workers don't write their own progress files, the master bridges the gap by creating a progress file from each worker's return. This is **mandatory** — without it, the dashboard has no file change tracking or per-task detail for lightweight dispatches.
+
+### When This Applies
+
+- `!p` mode (all workers)
+- Sub-threshold auto-parallel (<3 agents AND single wave)
+- Serial dispatch (single worker, no dashboard) — skip if no dashboard is active
+
+### What to Write
+
+After each worker returns, the master writes:
+
+```
+{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json
+```
+
+### Minimal Progress File Schema
+
+```json
+{
+  "task_id": "{task_id}",
+  "dashboard_id": "{dashboardId}",
+  "status": "completed",
+  "started_at": "{dispatch_timestamp}",
+  "completed_at": "{completion_timestamp}",
+  "summary": "{from worker STATUS/SUMMARY return}",
+  "assigned_agent": "Agent {N}",
+  "stage": "completed",
+  "message": "Task complete",
+  "milestones": [],
+  "deviations": [],
+  "logs": [
+    { "at": "{dispatch_timestamp}", "level": "info", "msg": "Task dispatched in lightweight mode" },
+    { "at": "{completion_timestamp}", "level": "info", "msg": "{worker summary}" }
+  ],
+  "files_changed": [
+    { "path": "relative/path/to/file", "action": "created|modified|deleted" }
+  ]
+}
+```
+
+### How to Populate `files_changed`
+
+Parse the worker's `FILES CHANGED:` return section. Each line has a prefix (`created`, `modified`, `deleted`) and a path. Convert to the JSON format:
+
+```
+Worker returns:         →  files_changed entry:
+created src/auth.ts     →  { "path": "src/auth.ts", "action": "created" }
+modified src/index.ts   →  { "path": "src/index.ts", "action": "modified" }
+deleted src/old.ts      →  { "path": "src/old.ts", "action": "deleted" }
+```
+
+### For Failed Workers
+
+If a worker returns `STATUS: failed`, write the progress file with `status: "failed"`, `stage: "failed"`, and extract the ERRORS section into a log entry at level `"error"`.
 
 ---
 

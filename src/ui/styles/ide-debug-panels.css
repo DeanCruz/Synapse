@@ -1,0 +1,525 @@
+/* ============================================================
+   IDE Debug Panels — Variables, Call Stack, Breakpoints, Watch
+   Dark theme: bg #1e1e1e, text #cccccc, borders #333, highlights #264f78
+   ============================================================ */
+
+/* ----- Panel Container ----- */
+.debug-panels {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  height: 100%;
+  background: var(--bg, #1e1e1e);
+  font-family: var(--sans, 'DM Sans', sans-serif);
+  font-size: 0.78rem;
+  color: var(--text-secondary, #cccccc);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+
+.debug-panels::-webkit-scrollbar {
+  width: 6px;
+}
+
+.debug-panels::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.debug-panels::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1);
+  border-radius: 3px;
+}
+
+/* ----- Collapsible Panel Section ----- */
+.debug-panel-section {
+  border-bottom: 1px solid var(--border, #333);
+}
+
+.debug-panel-section-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--surface, rgba(255,255,255,0.03));
+  transition: background 0.12s;
+}
+
+.debug-panel-section-header:hover {
+  background: var(--surface-hover, rgba(255,255,255,0.06));
+}
+
+.debug-panel-section-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary, #cccccc);
+  flex: 1;
+}
+
+.debug-panel-section-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* Chevron for section collapse/expand */
+.debug-panel-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+  transform: rotate(0deg);
+  color: var(--text-tertiary, rgba(255,255,255,0.35));
+}
+
+.debug-panel-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.debug-panel-chevron svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Section body */
+.debug-panel-section-body {
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.08) transparent;
+}
+
+.debug-panel-section-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.debug-panel-section-body::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 2px;
+}
+
+/* Action buttons in section headers */
+.debug-panel-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-tertiary, rgba(255,255,255,0.35));
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+
+.debug-panel-action-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.debug-panel-action-btn:hover {
+  color: var(--text, #F5F5F7);
+  background: rgba(255,255,255,0.08);
+}
+
+/* ----- Empty State ----- */
+.debug-panel-empty {
+  padding: 12px 16px;
+  color: var(--text-tertiary, rgba(255,255,255,0.3));
+  font-size: 0.72rem;
+  font-style: italic;
+}
+
+.debug-panel-empty-inline {
+  padding: 4px 12px 8px;
+  color: var(--text-tertiary, rgba(255,255,255,0.25));
+  font-size: 0.7rem;
+  font-style: italic;
+}
+
+/* ============================================================
+   Variables Panel — Tree View
+   ============================================================ */
+
+.debug-variables-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Scope group header */
+.debug-scope-group {
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.debug-scope-group:last-child {
+  border-bottom: none;
+}
+
+.debug-scope-header {
+  padding: 4px 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-tertiary, rgba(255,255,255,0.4));
+  background: rgba(255,255,255,0.02);
+}
+
+/* Variable row */
+.debug-var-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 12px;
+  min-height: 22px;
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 0.72rem;
+  line-height: 1.4;
+  transition: background 0.08s;
+}
+
+.debug-var-row.expandable {
+  cursor: pointer;
+}
+
+.debug-var-row:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+/* Chevron for variable expansion */
+.debug-var-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  transition: transform 0.12s ease;
+  transform: rotate(0deg);
+  color: var(--text-tertiary, rgba(255,255,255,0.35));
+}
+
+.debug-var-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.debug-var-chevron svg {
+  width: 10px;
+  height: 10px;
+}
+
+.debug-var-chevron-spacer {
+  width: 14px;
+  flex-shrink: 0;
+}
+
+/* Loading spinner for variable expansion */
+.debug-var-spinner {
+  width: 10px;
+  height: 10px;
+  animation: debug-spin 0.8s linear infinite;
+}
+
+@keyframes debug-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Variable name */
+.debug-var-name {
+  color: var(--text, #cccccc);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.debug-var-separator {
+  color: var(--text-tertiary, rgba(255,255,255,0.3));
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+/* Variable value with type coloring */
+.debug-var-value {
+  color: var(--text-secondary, #cccccc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.debug-var-value.type-string {
+  color: #ce9178;
+}
+
+.debug-var-value.type-number {
+  color: #b5cea8;
+}
+
+.debug-var-value.type-boolean {
+  color: #569cd6;
+}
+
+.debug-var-value.type-null {
+  color: #569cd6;
+  font-style: italic;
+}
+
+.debug-var-value.type-function {
+  color: #dcdcaa;
+  font-style: italic;
+}
+
+.debug-var-value.type-object {
+  color: #4ec9b0;
+}
+
+/* ============================================================
+   Call Stack Panel
+   ============================================================ */
+
+.debug-callstack-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.debug-callstack-frame {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  min-height: 24px;
+  cursor: pointer;
+  transition: background 0.08s;
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 0.72rem;
+}
+
+.debug-callstack-frame:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.debug-callstack-frame.current {
+  background: var(--color-highlight, rgba(38, 79, 120, 0.45));
+  border-left: 2px solid var(--color-warning, #f59e0b);
+}
+
+.debug-callstack-name {
+  color: var(--text, #cccccc);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.debug-callstack-location {
+  color: var(--text-tertiary, rgba(255,255,255,0.4));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-left: auto;
+  font-size: 0.68rem;
+}
+
+/* ============================================================
+   Breakpoints Panel
+   ============================================================ */
+
+.debug-breakpoints-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.debug-bp-file-group {
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+
+.debug-bp-file-group:last-child {
+  border-bottom: none;
+}
+
+.debug-bp-file-header {
+  padding: 4px 12px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-tertiary, rgba(255,255,255,0.45));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.debug-bp-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px 3px 20px;
+  min-height: 22px;
+  cursor: pointer;
+  transition: background 0.08s;
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 0.72rem;
+}
+
+.debug-bp-item:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.debug-bp-checkbox {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  cursor: pointer;
+  accent-color: var(--color-failed, #FF6B6B);
+}
+
+.debug-bp-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-failed, #FF6B6B);
+  box-shadow: 0 0 4px rgba(255, 107, 107, 0.4);
+  flex-shrink: 0;
+}
+
+.debug-bp-location {
+  color: var(--text-secondary, #cccccc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================
+   Watch Expressions Panel
+   ============================================================ */
+
+.debug-watch-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.debug-watch-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 12px;
+  min-height: 24px;
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 0.72rem;
+  transition: background 0.08s;
+}
+
+.debug-watch-item:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.debug-watch-expr {
+  color: var(--text, #cccccc);
+  white-space: nowrap;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.debug-watch-separator {
+  color: var(--text-tertiary, rgba(255,255,255,0.3));
+  flex-shrink: 0;
+}
+
+.debug-watch-value {
+  color: var(--text-secondary, #cccccc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.debug-watch-error {
+  color: var(--color-failed, #FF6B6B);
+  font-style: italic;
+}
+
+.debug-watch-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-tertiary, rgba(255,255,255,0.3));
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.1s, color 0.1s, background 0.1s;
+  flex-shrink: 0;
+}
+
+.debug-watch-item:hover .debug-watch-remove-btn {
+  opacity: 1;
+}
+
+.debug-watch-remove-btn:hover {
+  color: var(--color-failed, #FF6B6B);
+  background: rgba(255, 107, 107, 0.12);
+}
+
+.debug-watch-remove-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* Add expression input */
+.debug-watch-add-row {
+  padding: 4px 8px;
+}
+
+.debug-watch-input {
+  width: 100%;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--border, #333);
+  border-radius: 3px;
+  background: var(--bg, #1e1e1e);
+  color: var(--text, #cccccc);
+  font-family: var(--mono, 'JetBrains Mono', monospace);
+  font-size: 0.72rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.debug-watch-input::placeholder {
+  color: var(--text-tertiary, rgba(255,255,255,0.25));
+}
+
+.debug-watch-input:focus {
+  border-color: var(--color-in-progress, #9B7CF0);
+}
+
+/* Add expression placeholder row */
+.debug-watch-add-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--text-tertiary, rgba(255,255,255,0.3));
+  font-size: 0.72rem;
+  transition: color 0.12s, background 0.12s;
+}
+
+.debug-watch-add-placeholder:hover {
+  color: var(--text-secondary, #cccccc);
+  background: rgba(255,255,255,0.04);
+}
+
+.debug-watch-add-placeholder svg {
+  width: 12px;
+  height: 12px;
+}

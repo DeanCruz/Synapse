@@ -3,9 +3,12 @@
 // sub-tabs within the Terminal view. Drag-to-resize from top edge.
 // Can be embedded (IDE) or overlay (dashboard).
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useAppState } from '../context/AppContext.jsx';
 import LogPanel from './LogPanel.jsx';
 import TerminalView from './TerminalView.jsx';
+import ProblemsPanel from './ide/ProblemsPanel.jsx';
+import DebugConsolePanel from './ide/DebugConsolePanel.jsx';
 
 const PANEL_TABS = [
   { id: 'terminal', label: 'TERMINAL' },
@@ -25,12 +28,30 @@ const HEADER_HEIGHT = 35;
  * @param {string}   props.activeFilter  - current filter level ('all' | level string)
  * @param {Function} props.onFilterChange - callback(level) when a filter button is clicked
  * @param {string}   props.projectDir    - working directory for the terminal
+ * @param {Function} props.onNavigate    - callback(filePath, line, column) for navigating to diagnostic locations
  * @param {boolean}  props.embedded      - true for IDE (flex child), false for dashboard (fixed overlay)
  */
-export default function BottomPanel({ logs, activeFilter, onFilterChange, projectDir, embedded = false }) {
+export default function BottomPanel({ logs, activeFilter, onFilterChange, projectDir, onNavigate, embedded = false }) {
+  const appState = useAppState();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('terminal');
   const [panelHeight, setPanelHeight] = useState(DEFAULT_PANEL_HEIGHT);
+
+  // Compute diagnostics counts for the Problems tab badge
+  const diagnosticsCounts = useMemo(() => {
+    const diagnostics = appState.diagnostics || {};
+    let errors = 0;
+    let warnings = 0;
+    for (const filePath of Object.keys(diagnostics)) {
+      const items = diagnostics[filePath];
+      if (!Array.isArray(items)) continue;
+      for (const d of items) {
+        if (d.severity === 'error') errors++;
+        else if (d.severity === 'warning') warnings++;
+      }
+    }
+    return { errors, warnings, total: errors + warnings };
+  }, [appState.diagnostics]);
 
   // Multi-terminal sub-tabs
   const [termTabs, setTermTabs] = useState([{ id: 1, label: 'Terminal 1' }]);
@@ -156,6 +177,11 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
               {tab.id === 'output' && entries.length > 0 && (
                 <span className="bottom-panel-tab-badge">{entries.length}</span>
               )}
+              {tab.id === 'problems' && diagnosticsCounts.total > 0 && (
+                <span className={`bottom-panel-tab-badge${diagnosticsCounts.errors > 0 ? ' bottom-panel-tab-badge--error' : ' bottom-panel-tab-badge--warning'}`}>
+                  {diagnosticsCounts.total}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -178,13 +204,7 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
       <div className="bottom-panel-content" style={{ display: isOpen ? 'flex' : 'none' }}>
         {/* PROBLEMS */}
         <div className="bottom-panel-pane" style={{ display: activeTab === 'problems' ? 'flex' : 'none' }}>
-          <div className="bottom-panel-placeholder">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
-              <path d="M5.5 8l1.5 1.5 3.5-3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span>No problems detected</span>
-          </div>
+          <ProblemsPanel onNavigate={onNavigate} />
         </div>
 
         {/* OUTPUT (Logs) */}
@@ -198,14 +218,7 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
 
         {/* DEBUG CONSOLE */}
         <div className="bottom-panel-pane" style={{ display: activeTab === 'debug-console' ? 'flex' : 'none' }}>
-          <div className="bottom-panel-placeholder">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="2" y="2" width="12" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.2"/>
-              <path d="M5 6l2.5 2.5L5 11" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M9 11h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
-            </svg>
-            <span>Debug console</span>
-          </div>
+          <DebugConsolePanel />
         </div>
 
         {/* TERMINAL */}

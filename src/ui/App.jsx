@@ -186,6 +186,7 @@ function DashboardContent() {
           progressData={currentProgress}
           findAgentFn={findAgent}
           onClose={() => setSelectedAgent(null)}
+          projectRoot={projectPath}
         />
       )}
     </>

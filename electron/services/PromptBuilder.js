@@ -35,6 +35,7 @@ function buildSystemPrompt(opts) {
   parts.push('## Your Dispatch Context\n');
   parts.push('- **tracker_root:** `' + opts.trackerRoot + '`');
   parts.push('- **dashboardId:** `' + opts.dashboardId + '`');
+  parts.push('- **dashboard_id:** `' + opts.dashboardId + '` — include this value as `"dashboard_id"` in every progress file write');
   parts.push('- **task_id:** `' + opts.taskId + '`');
   parts.push('- **progress_file:** `' + opts.trackerRoot + '/dashboards/' + opts.dashboardId + '/progress/' + opts.taskId + '.json`');
   parts.push('- **ide_dashboard:** `ide` (reserved — always exists, never use for swarms)');

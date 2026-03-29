@@ -374,6 +374,26 @@ If validation reveals issues, fix them before proceeding to Step 11. Do not writ
 
 ---
 
+### Step 10B: Verify Full Dashboard Tracking Thresholds
+
+After verifying dependencies, check the full dashboard tracking thresholds:
+
+| Condition | Result |
+|---|---|
+| **3+ agents in the plan** | Full dashboard tracking REQUIRED — workers must write progress files |
+| **More than 1 wave** | Full dashboard tracking REQUIRED — **NON-NEGOTIABLE** |
+| <3 agents AND 1 wave | Full dashboard tracking still applies (this is `!p_track`, not `!p`) |
+
+Since this is `!p_track`, full tracking is always enforced. This step serves as a confirmation checkpoint — if the plan has 3+ agents or >1 wave, the master MUST ensure every dispatched worker prompt includes:
+- `INSTRUCTION MODE: FULL | LITE` (selected per task)
+- Path to `tracker_worker_instructions.md` or `tracker_worker_instructions_lite.md`
+- `YOUR PROGRESS FILE: {tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`
+- `YOUR TASK ID` and `YOUR AGENT LABEL`
+
+If the plan has <3 agents and 1 wave, these are still included for `!p_track` — but the threshold check ensures the master never accidentally skips dashboard population for larger swarms when auto-escalating from other modes.
+
+---
+
 ### Step 11: Select a dashboard and populate the plan
 
 #### 11-PRE. Select a dashboard
@@ -584,4 +604,66 @@ The dashboard is now live with the full plan — all tasks visible as pending ca
 **Plan:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
 ```
 
-**Wait for user approval before proceeding to Phase 2.**
+#### 11E. Approval Gate — NON-NEGOTIABLE
+
+After presenting the plan (Step 11D), the master MUST halt and wait for explicit user approval before dispatching ANY agents. This gate is absolute — no exceptions, no shortcuts, no "the plan is simple enough to skip approval."
+
+**Step 1 — Write a permission log entry to trigger the dashboard popup:**
+
+Append to `{tracker_root}/dashboards/{dashboardId}/logs.json`:
+```json
+{
+  "timestamp": "{ISO 8601 via date -u}",
+  "task_id": "0.0",
+  "agent": "Orchestrator",
+  "level": "permission",
+  "message": "Plan ready for review: {total_tasks} tasks across {total_waves} waves — awaiting approval to begin execution",
+  "task_name": "{task-slug}"
+}
+```
+
+Write back. The `permission` level triggers a dashboard popup, providing a visual signal alongside the terminal prompt.
+
+**Step 2 — Present the approval prompt to the user:**
+
+After the plan summary, output exactly:
+
+```
+Ready to execute. Approve to begin dispatching {N} agents?
+```
+
+**Step 3 — HALT. Do not proceed.**
+
+Do NOT dispatch any agents. Do NOT begin Phase 2. Do NOT write `master_state.json`. Do NOT launch Task tool calls for workers. Wait for the user's response in the conversation.
+
+The ONLY acceptable triggers to proceed:
+- User explicitly approves (e.g., "yes", "go", "approved", "proceed", "do it", "lgtm", "looks good")
+- User approves with modifications (e.g., "yes but change X" — apply the modification, update the plan files, then proceed)
+
+If the user requests changes to the plan:
+1. Apply the requested changes to `initialization.json` and the master task file
+2. Re-present the updated plan summary
+3. Return to Step 2 — request approval again
+
+If the user cancels (e.g., "no", "cancel", "stop"):
+1. Log an `info` entry: `"User declined plan — swarm cancelled before dispatch"`
+2. Do NOT dispatch any agents
+3. Exit the swarm flow
+
+**Step 4 — On approval, log the transition and activate eager dispatch:**
+
+When the user approves, BEFORE dispatching any agents:
+
+Append to `{tracker_root}/dashboards/{dashboardId}/logs.json`:
+```json
+{
+  "timestamp": "{ISO 8601 via date -u}",
+  "task_id": "0.0",
+  "agent": "Orchestrator",
+  "level": "info",
+  "message": "Approval granted — activating eager dispatch",
+  "task_name": "{task-slug}"
+}
+```
+
+Write back. Now proceed to Phase 2 (Step 12). From this point forward, the master operates in **eager dispatch mode** — dispatching tasks the instant their dependencies clear, across all waves, with no artificial delays or batching.

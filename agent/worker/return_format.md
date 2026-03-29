@@ -13,6 +13,7 @@ STATUS: completed | failed
 SUMMARY: {one-line description of what was accomplished or why it failed}
 FILES CHANGED: {list of files created, modified, or deleted}
 EXPORTS: {list of new public exports — omit section entirely if none}
+ANNOTATIONS: {operational knowledge about files read — omit section entirely if none}
 WARNINGS: {optional — any non-blocking issues the master should know about}
 ERRORS: {if failed — what went wrong and why}
 DIVERGENT ACTIONS: {any deviations from the original plan}
@@ -24,8 +25,9 @@ DIVERGENT ACTIONS: {any deviations from the original plan}
 |---|---|---|
 | `STATUS` | Always | Either `completed` or `failed`. Use `completed` even for partial completion (80%+ done). |
 | `SUMMARY` | Always | One-line description. Be specific: "Created auth middleware with rate limiting — 3 endpoints" not "Done". |
-| `FILES CHANGED` | Always | List every file created, modified, or deleted. One per line, with action prefix (`created`, `modified`, `deleted`). |
+| `FILES CHANGED` | Always | List every file created, modified, or deleted. One per line, with action prefix (`created`, `modified`, `deleted`). Workers should also write this data to the `files_changed` array in their progress file during finalization (see progress file schema). |
 | `EXPORTS` | Only if new exports exist | New public functions, types, interfaces, endpoints, constants, or files that downstream tasks may depend on. |
+| `ANNOTATIONS` | Only if annotations exist | Operational knowledge (gotchas, patterns, conventions) about files the worker read deeply during execution. The master merges these into the PKI. |
 | `WARNINGS` | Optional | Non-blocking issues, unexpected findings, or things the master should review. |
 | `ERRORS` | Only if failed | What went wrong, what was attempted, and why recovery was not possible. |
 | `DIVERGENT ACTIONS` | Only if deviations occurred | Any divergence from the planned task — different approach, extra files, skipped steps, changed scope. |
@@ -89,6 +91,51 @@ EXPORTS:
 
 ---
 
+## ANNOTATIONS Field
+
+When your task involved reading and deeply understanding source files (not just the files you changed), include an `ANNOTATIONS:` section in your return format. This captures operational knowledge -- gotchas, patterns, and conventions -- that the master merges into the Project Knowledge Index (PKI).
+
+### What Qualifies as an Annotation
+
+- Non-obvious behaviors or edge cases discovered while reading a file (gotchas)
+- Design or coding patterns observed in a file (patterns)
+- Project-specific conventions a file follows (conventions)
+
+Only annotate files you studied deeply enough to gain real insight. Superficial reads do not qualify.
+
+### Format
+
+```
+ANNOTATIONS:
+  - {relative_file_path}
+    gotchas: {list of gotchas}
+    patterns: {list of patterns}
+    conventions: {list of conventions}
+```
+
+Each file entry can include any combination of gotchas, patterns, and conventions -- include only what was discovered.
+
+### Example
+
+```
+ANNOTATIONS:
+  - src/auth/login.ts
+    gotchas: Refresh token rotation requires invalidating old token first; Session cookie httpOnly flag is set conditionally based on NODE_ENV
+    patterns: asyncHandler wrapper for all async routes; try-catch at controller boundary
+    conventions: Error shape: { error: string, code: number }
+  - src/models/User.ts
+    gotchas: findByEmail returns null not undefined when not found
+```
+
+### Rules for ANNOTATIONS
+
+- Omit the ANNOTATIONS section entirely if no annotations were discovered
+- Only annotate files you READ deeply -- not files you changed (those are in FILES CHANGED)
+- The master uses ANNOTATIONS to build and update the PKI after task completion
+- The annotations in your return format should match the `annotations` field in your progress file
+
+---
+
 ## Complete Return Examples
 
 ### Successful completion with exports
@@ -107,6 +154,11 @@ EXPORTS:
   - function deleteUser — soft-deletes user by setting deletedAt
   - type UserProfile — { id: string; name: string; email: string; role: Role }
   - interface CreateUserInput — { name: string; email: string; password: string }
+ANNOTATIONS:
+  - src/models/BaseModel.ts
+    gotchas: All models inherit soft-delete from BaseModel -- deletedAt is set automatically by delete()
+    patterns: Repository pattern with static factory methods (create, findById, findAll)
+    conventions: All model files export both the class and a TypeScript interface for the model shape
 DIVERGENT ACTIONS:
   - Added soft-delete instead of hard delete — existing model pattern requires deletedAt field (severity: MODERATE)
 ```

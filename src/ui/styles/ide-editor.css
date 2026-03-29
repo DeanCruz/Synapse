@@ -191,3 +191,107 @@
   70%  { opacity: 1; }
   100% { opacity: 0; }
 }
+
+/* --- Breakpoint Glyph Margin --- */
+.breakpoint-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.breakpoint-glyph::after {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-failed, #FF6B6B);
+  box-shadow: 0 0 4px rgba(255, 107, 107, 0.5);
+  margin-left: 4px;
+}
+
+/* Ensure the glyph margin column has room for the dot */
+.code-editor-monaco .margin-view-overlays .cgmr {
+  cursor: pointer;
+}
+
+/* --- Diagnostic Gutter Icons --- */
+.diagnostic-error-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.diagnostic-error-glyph::after {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-failed, #FF6B6B);
+  box-shadow: 0 0 4px rgba(255, 107, 107, 0.5);
+  margin-left: 4px;
+}
+
+.diagnostic-warning-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.diagnostic-warning-glyph::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 5.5px solid transparent;
+  border-right: 5.5px solid transparent;
+  border-bottom: 10px solid var(--color-warning, #FFD93D);
+  filter: drop-shadow(0 0 3px rgba(255, 217, 61, 0.5));
+  margin-left: 4px;
+}
+
+.diagnostic-info-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+
+.diagnostic-info-glyph::after {
+  content: '';
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-in-progress, #9B7CF0);
+  box-shadow: 0 0 4px rgba(155, 124, 240, 0.5);
+  margin-left: 4px;
+}
+
+/* --- Debug Current Line Highlight --- */
+.debug-current-line {
+  background: rgba(255, 230, 0, 0.12) !important;
+  border-left: 2px solid rgba(255, 200, 0, 0.6);
+}
+
+.debug-current-line-glyph {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.debug-current-line-glyph::after {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid var(--color-warning, #FFD93D);
+  filter: drop-shadow(0 0 2px rgba(255, 217, 61, 0.5));
+  margin-left: 4px;
+}

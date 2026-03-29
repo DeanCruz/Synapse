@@ -10,6 +10,10 @@
 >
 > **3. THE DASHBOARD IS MANDATORY.** The master MUST write `initialization.json` with the full plan, log events to `logs.json`, and dispatch workers who write progress files. The dashboard is the user's primary visibility into the swarm. Without it, the user is blind. Skipping the dashboard is a critical failure.
 >
+> **3A. FULL DASHBOARD TRACKING THRESHOLDS.** When a swarm has **3+ parallel agents** OR **more than 1 wave** (multi-wave is NON-NEGOTIABLE), the master MUST use full dashboard tracking — workers write progress files, the master writes `master_state.json`, and `metrics.json` is computed at completion. The ONLY exception is when the user explicitly invoked `!p` (lightweight mode). For auto-parallel and all other swarm modes, these thresholds trigger automatic escalation to `!p_track`-level tracking. Workers must be prompted to read `tracker_worker_instructions.md` (FULL or LITE) and write progress to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`.
+>
+> **3B. MASTER WRITES PROGRESS IN LIGHTWEIGHT MODE.** When workers do NOT write their own progress files (`!p` mode, sub-threshold auto-parallel, or serial dispatch), the master MUST create a minimal progress file for each completed worker using the worker's return data — including `files_changed`, `summary`, and completion logs. This ensures the dashboard always shows per-task file changes and status. See `agent/master/dashboard_protocol.md` — "Master-Written Progress Files".
+>
 > **4. LONG OR COMPLEX PROMPTS ARE NOT AN EXCUSE.** When the user's prompt is long, that means MORE planning and MORE agents are needed — not that the master should "just do the work directly." The longer the prompt, the more important it is to decompose, plan, and dispatch. Never let prompt length cause you to forget your role.
 >
 > **5. READ THE COMMAND FILE EVERY TIME.** When `!p_track` is invoked, read `{tracker_root}/_commands/Synapse/p_track.md` in full. When `!p` is invoked, read `{tracker_root}/_commands/Synapse/p.md`. Do not work from memory. Follow the steps exactly as written.
@@ -73,6 +77,16 @@ Every worker receives a self-contained prompt with all context needed to work in
 
 ---
 
+## PKI Integration — Knowledge-Augmented Planning
+
+When a Project Knowledge Index (PKI) exists at `{project_root}/.synapse/knowledge/`, the master reads `manifest.json` before decomposing tasks. It extracts relevant domains and tags from the user's prompt, looks up files via the manifest's reverse indexes (`domain_index`, `tag_index`, `concept_map`), and reads annotations for matched files. Gotchas, patterns, and conventions from annotations are injected into each worker's CONVENTIONS section — filtered per-worker based on that worker's specific files. The PKI supplements but never replaces the CLAUDE.md convention map.
+
+If no PKI exists, the master proceeds with standard planning — the PKI is an enhancement, not a requirement. Stale annotations are included with caveats. The master caps annotation reads at 8-10 files and limits PKI knowledge to ~100 lines per worker prompt.
+
+**Read:** `agent/master/pki_integration.md` before task decomposition — covers the full 6-step pre-planning flow, manifest lookup queries, annotation extraction, prompt injection format, fallback behavior, and context budget rules.
+
+---
+
 ## Dashboard Writes
 
 The master writes to exactly four dashboard files: `initialization.json` (write-once static plan), `logs.json` (append-only event log), `master_state.json` (state checkpoint after every event), and `metrics.json` (once at swarm end). All writes must be atomic — read full file, modify in memory, write full file. Never write partial JSON.
@@ -116,6 +130,7 @@ After all tasks complete, compute `metrics.json` with elapsed time, parallel eff
 │       ├── eager_dispatch.md
 │       ├── failure_recovery.md
 │       ├── worker_prompts.md
+│       ├── pki_integration.md
 │       └── compaction_recovery.md
 ├── dashboards/
 │   ├── ide/                                  ← Reserved (IDE agent, never for swarms)

@@ -245,14 +245,14 @@ export default function FileExplorer() {
   const [loadingPaths, setLoadingPaths] = useState(new Set());
   const [initialLoading, setInitialLoading] = useState(false);
 
-  // Load root level when workspace changes
+  // Load root level on mount and when workspace changes (always fetch fresh data)
   useEffect(() => {
     if (!workspaceId || !workspace) return;
-    if (tree) return;
 
     let cancelled = false;
     async function loadRoot() {
-      setInitialLoading(true);
+      // Only show loading spinner if no tree exists yet (avoids flash on refresh)
+      if (!tree) setInitialLoading(true);
       try {
         const api = window.electronAPI;
         if (!api || !api.ideListDir) return;
@@ -272,7 +272,8 @@ export default function FileExplorer() {
               children: result.entries,
             },
           });
-          setExpandedPaths(new Set([workspace.path]));
+          // Only set initial expanded paths when there's no existing tree
+          setExpandedPaths(prev => prev.size === 0 ? new Set([workspace.path]) : prev);
         }
       } catch (err) {
         console.error('FileExplorer: failed to load root', err);
@@ -283,7 +284,36 @@ export default function FileExplorer() {
 
     loadRoot();
     return () => { cancelled = true; };
-  }, [workspaceId, workspace, tree, dispatch]);
+  }, [workspaceId, workspace, dispatch]); // removed `tree` dep — always refresh on mount
+
+  // Poll root directory for changes every 10 seconds
+  useEffect(() => {
+    if (!workspaceId || !workspace) return;
+
+    const interval = setInterval(async () => {
+      const api = window.electronAPI;
+      if (!api || !api.ideListDir) return;
+
+      try {
+        const result = await api.ideListDir(workspace.path);
+        if (result && result.success) {
+          const rootName = workspace.path.split('/').pop() || workspace.name;
+          dispatch({
+            type: 'IDE_SET_FILE_TREE',
+            workspaceId,
+            tree: {
+              name: rootName,
+              path: workspace.path,
+              type: 'directory',
+              children: result.entries,
+            },
+          });
+        }
+      } catch (_) {}
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [workspaceId, workspace, dispatch]);
 
   // Lazy-load a directory's children
   const loadChildren = useCallback(async (dirPath) => {

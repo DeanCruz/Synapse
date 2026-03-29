@@ -16,6 +16,7 @@ const PUSH_CHANNELS = [
   'worker-output',
   'worker-complete',
   'worker-error',
+  'worker-permission-request',
   'swarm-state',
   'terminal-output',
   'terminal-exit',
@@ -23,6 +24,10 @@ const PUSH_CHANNELS = [
   'heartbeat',
   'init_state',
   'tasks_unblocked',
+  'debug-paused',
+  'debug-resumed',
+  'debug-stopped',
+  'debug-output',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -41,6 +46,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   // --- Pull requests (renderer → main) ---
+
+  // IPC heartbeat — verify the bridge is alive
+  ipcHeartbeat: () => ipcRenderer.invoke('ipc-heartbeat'),
 
   // Dashboards
   getDashboards: () => ipcRenderer.invoke('get-dashboards'),
@@ -110,6 +118,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   generateCommand: (description, folderName, commandName, opts) => ipcRenderer.invoke('generate-command', description, folderName, commandName, opts),
   loadProjectClaudeMd: (projectDir) => ipcRenderer.invoke('load-project-claude-md', projectDir),
   listProjectCommands: (projectDir) => ipcRenderer.invoke('list-project-commands', projectDir),
+  listUserCommands: () => ipcRenderer.invoke('list-user-commands'),
+  getUserCommand: (name, folderName) => ipcRenderer.invoke('get-user-command', name, folderName),
+  saveUserCommand: (name, content, folderName) => ipcRenderer.invoke('save-user-command', name, content, folderName),
+  deleteUserCommand: (name, folderName) => ipcRenderer.invoke('delete-user-command', name, folderName),
+  generateUserCommand: (description, folderName, commandName, opts) => ipcRenderer.invoke('generate-user-command', description, folderName, commandName, opts),
 
   // Chat context
   getChatSystemPrompt: (projectDir, dashboardId, additionalContextDirs) => ipcRenderer.invoke('get-chat-system-prompt', projectDir, dashboardId, additionalContextDirs),
@@ -123,6 +136,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   killWorker: (pid) => ipcRenderer.invoke('kill-worker', pid),
   killAllWorkers: () => ipcRenderer.invoke('kill-all-workers'),
   getActiveWorkers: () => ipcRenderer.invoke('get-active-workers'),
+  writeWorker: (pid, data) => ipcRenderer.invoke('write-worker', pid, data),
 
   // Terminals
   spawnTerminal: (opts) => ipcRenderer.invoke('spawn-terminal', opts),
@@ -163,6 +177,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ideRename: (oldPath, newPath, workspaceRoot) => ipcRenderer.invoke('ide-rename', oldPath, newPath, workspaceRoot),
   ideDelete: (targetPath, workspaceRoot) => ipcRenderer.invoke('ide-delete', targetPath, workspaceRoot),
   ideSelectFolder: () => ipcRenderer.invoke('ide-select-folder'),
+  ideCheckSyntax: (filePath, workspaceRoot) => ipcRenderer.invoke('ide-check-syntax', filePath, workspaceRoot),
+  ideCheckSyntaxBatch: (filePaths, workspaceRoot) => ipcRenderer.invoke('ide-check-syntax-batch', filePaths, workspaceRoot),
+
+  // Debug Service
+  debugLaunch: (opts) => ipcRenderer.invoke('debug-launch', opts),
+  debugStop: () => ipcRenderer.invoke('debug-stop'),
+  debugSetBreakpoint: (filePath, lineNumber, condition) => ipcRenderer.invoke('debug-set-breakpoint', filePath, lineNumber, condition),
+  debugRemoveBreakpoint: (breakpointId) => ipcRenderer.invoke('debug-remove-breakpoint', breakpointId),
+  debugContinue: () => ipcRenderer.invoke('debug-continue'),
+  debugPause: () => ipcRenderer.invoke('debug-pause'),
+  debugStepOver: () => ipcRenderer.invoke('debug-step-over'),
+  debugStepInto: () => ipcRenderer.invoke('debug-step-into'),
+  debugStepOut: () => ipcRenderer.invoke('debug-step-out'),
+  debugEvaluate: (expression, callFrameId) => ipcRenderer.invoke('debug-evaluate', expression, callFrameId),
+  debugGetVariables: (objectId) => ipcRenderer.invoke('debug-get-variables', objectId),
+  debugGetScopes: (callFrameId) => ipcRenderer.invoke('debug-get-scopes', callFrameId),
+  debugSessionInfo: () => ipcRenderer.invoke('debug-session-info'),
 
   // Git Operations
   gitIsRepo: (repoPath) => ipcRenderer.invoke('git-is-repo', repoPath),

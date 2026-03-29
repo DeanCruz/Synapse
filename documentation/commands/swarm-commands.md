@@ -142,17 +142,34 @@ WORKER AGENTS (many per stream)
 
 ### `!resume`
 
+**Purpose:** Resume a chat session after the agent process was interrupted, crashed, or the connection was lost. Reviews conversation history, reconstructs context, and picks up where the agent left off.
+
+**Syntax:**
+```
+!resume
+```
+
+**Key Behavior:**
+- Reviews full conversation history to understand the original task and progress made
+- Checks current file state and git status to verify what was actually completed
+- Presents a status summary before continuing work
+- Picks up exactly where the agent left off
+
+---
+
+### `!track_resume`
+
 **Purpose:** Resume a stalled or interrupted swarm. Inspects dashboard state, identifies all incomplete tasks, and re-dispatches them with full context.
 
 **Syntax:**
 ```
-!resume [dashboardId]
+!track_resume [dashboardId]
 ```
 
 **Key Behavior:**
 - Assesses the full swarm state by reading `initialization.json`, all progress files, and `logs.json`
 - Classifies every task: completed (skip), failed (retry with failure context), stale in-progress (re-dispatch with partial progress context), pending ready (dispatch), pending blocked (wait)
-- Treats all `in_progress` tasks as stale (if the master is running `!resume`, the previous session is dead)
+- Treats all `in_progress` tasks as stale (if the master is running `!track_resume`, the previous session is dead)
 - Presents a resume plan for user approval
 - Cleans up stale progress files and dispatches all ready tasks simultaneously
 - Continues the standard execution loop: process completions, dispatch newly unblocked tasks
@@ -161,7 +178,7 @@ WORKER AGENTS (many per stream)
 **Comparison:**
 | Command | Scope |
 |---------|-------|
-| `!resume` | Entire swarm -- full assessment + re-dispatch ALL incomplete tasks |
+| `!track_resume` | Entire swarm -- full assessment + re-dispatch ALL incomplete tasks |
 | `!dispatch --ready` | Pending only -- dispatches unblocked tasks, does not retry failed |
 | `!retry {id}` | Single task -- re-dispatches one specific failed task |
 

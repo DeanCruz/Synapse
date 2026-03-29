@@ -45,6 +45,10 @@ function spawnWorker(opts) {
 
   if (opts.dangerouslySkipPermissions) {
     args.push('--dangerously-skip-permissions');
+  } else {
+    // Non-bypass mode: relay permission prompts via stdin/stdout JSON
+    args.push('--permission-prompt-tool', 'stdio');
+    args.push('--input-format', 'stream-json');
   }
 
   if (opts.resumeSessionId) {
@@ -94,9 +98,18 @@ function spawnWorker(opts) {
 
   console.log('[ClaudeCodeService] Process spawned, PID:', proc.pid);
 
-  // Write prompt via stdin then close — avoids arg parsing issues with flags
-  proc.stdin.write(promptText);
-  proc.stdin.end();
+  // Write prompt via stdin — avoids arg parsing issues with flags
+  // When keepStdinOpen is true (non-bypass mode), leave stdin open for permission relay
+  var keepStdinOpen = opts.keepStdinOpen != null ? opts.keepStdinOpen : !opts.dangerouslySkipPermissions;
+  if (keepStdinOpen) {
+    // stream-json mode: wrap prompt in NDJSON user message envelope
+    var userMsg = JSON.stringify({ type: 'user', message: { role: 'user', content: promptText } });
+    proc.stdin.write(userMsg + '\n');
+  } else {
+    // Bypass mode: plain text prompt
+    proc.stdin.write(promptText);
+    proc.stdin.end();
+  }
 
   // Safety timeout: if no stdout within 10s, log a warning
   var gotOutput = false;
@@ -264,6 +277,24 @@ function getActiveCountForDashboard(dashboardId) {
   return count;
 }
 
+/**
+ * Write data to a worker's stdin (for permission relay).
+ * @param {number} pid — worker process PID
+ * @param {string} data — data to write to stdin
+ * @returns {boolean}
+ */
+function writeToWorker(pid, data) {
+  var worker = activeWorkers[pid];
+  if (!worker) return false;
+  try {
+    worker.process.stdin.write(data);
+    return true;
+  } catch (e) {
+    console.error('[ClaudeCodeService] writeToWorker error, pid:', pid, 'error:', e.message);
+    return false;
+  }
+}
+
 module.exports = {
   init,
   spawnWorker,
@@ -271,6 +302,7 @@ module.exports = {
   killAllWorkers,
   getActiveWorkers,
   getActiveCountForDashboard,
+  writeToWorker,
 };
 
 function buildArgs(opts) {

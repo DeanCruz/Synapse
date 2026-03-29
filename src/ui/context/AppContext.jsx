@@ -10,6 +10,7 @@ const CLAUDE_MESSAGES_KEY_PREFIX = 'synapse-claude-messages-';
 const CLAUDE_TABS_KEY_PREFIX = 'synapse-claude-tabs-';
 const CLAUDE_WELCOME_MSG = { id: 'welcome', type: 'system', text: 'Agent chat is ready. Type a message below to start.' };
 const DEFAULT_TAB = { id: 'default', name: 'Chat 1' };
+const MAX_CHAT_MESSAGES = 200; // Hard cap on in-memory message count per tab
 
 const IDE_WORKSPACES_KEY = 'synapse-ide-workspaces';
 const GIT_REPOS_KEY = 'synapse-git-repos';
@@ -24,6 +25,20 @@ function updateTreeNode(node, targetPath, children) {
     ...node,
     children: node.children.map(child => updateTreeNode(child, targetPath, children)),
   };
+}
+
+// Trim a messages array to MAX_CHAT_MESSAGES, preserving the first system
+// message (e.g. "Connected" / welcome) and inserting a trim notice.
+function trimMessages(msgs) {
+  if (msgs.length <= MAX_CHAT_MESSAGES) return msgs;
+  const trimCount = msgs.length - MAX_CHAT_MESSAGES;
+  const first = msgs[0]?.type === 'system' ? [msgs[0]] : [];
+  const trimNotice = { id: 'trim-notice-' + Date.now(), type: 'system', text: `[${trimCount} older messages trimmed]` };
+  // Keep: first system message (if any) + trim notice + last (MAX - first.length - 1) messages
+  return first.concat(
+    [trimNotice],
+    msgs.slice(msgs.length - MAX_CHAT_MESSAGES + first.length + 1)
+  );
 }
 
 function claudeMessagesKey(dashboardId, tabId) {
@@ -128,6 +143,7 @@ const initialState = {
   activeLogFilter: 'all',
   activeStatFilter: null,
   seenPermissionCount: 0,
+  pendingPermission: null, // { pid, toolName, toolInput, requestId, toolUseId, timestamp } — active permission request from a worker
   activeView: 'dashboard', // 'dashboard' | 'home' | 'swarmBuilder' | 'claude' | 'ide' | 'git'
   activeModal: null, // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor'
   modalDashboardId: null, // which dashboard a modal was opened for
@@ -159,6 +175,15 @@ const initialState = {
   ideFileTrees: {}, // { [workspaceId]: treeData }
   ideSidebarView: 'explorer', // which sidebar panel is shown in IDE
   ideChatOpen: false, // whether IDE inline chat is open
+  // Debug state — breakpoints, session, call stack, variables, scopes, watch expressions
+  debugBreakpoints: {}, // { [filePath]: [lineNumber, ...] }
+  debugSession: { status: 'idle', pausedFile: null, pausedLine: null, threadId: null }, // debug session state
+  debugCallStack: [], // [{ id, name, source, line, column }]
+  debugVariables: {}, // { [scopeId]: [{ name, value, type, variablesReference }] }
+  debugScopes: [], // [{ name, variablesReference, expensive }]
+  debugWatchExpressions: [], // [{ id, expression, value, error }]
+  // Diagnostics state — per-file syntax errors, warnings, info
+  diagnostics: {}, // { [filePath]: [{ line, column, endLine, endColumn, message, severity, source }] }
   // Git Manager state — open repos, active repo, git data, loading states
   gitRepos: savedGitRepos, // [{ id, path, name }]
   gitActiveRepoId: savedGitRepos.length > 0 ? savedGitRepos[0].id : null,
@@ -235,12 +260,17 @@ function appReducerCore(state, action) {
       const switchUnread = targetActiveView === 'claude'
         ? (({ [action.id]: _, ...rest }) => rest)(state.unreadChatCounts)
         : state.unreadChatCounts;
+      // Use cached data from allDashboardProgress/allDashboardLogs instead of
+      // resetting to empty — prevents tasks from flickering to "pending" during
+      // the async re-fetch window.
+      const cachedProgress = state.allDashboardProgress[action.id] || {};
+      const cachedLogs = state.allDashboardLogs[action.id] || null;
       return {
         ...state,
         currentDashboardId: action.id,
         currentInit: null,
-        currentProgress: {},
-        currentLogs: null,
+        currentProgress: cachedProgress,
+        currentLogs: cachedLogs,
         currentStatus: null,
         activeLogFilter: 'all',
         seenPermissionCount: 0,
@@ -286,7 +316,7 @@ function appReducerCore(state, action) {
     case 'CLAUDE_SET_MESSAGES':
       return { ...state, claudeMessages: action.messages };
     case 'CLAUDE_APPEND_MSG': {
-      const newMessages = [...state.claudeMessages, { id: Date.now() + Math.random(), ...action.msg }];
+      const newMessages = trimMessages([...state.claudeMessages, { id: Date.now() + Math.random(), ...action.msg }]);
       // Track unread if user isn't viewing this dashboard's chat
       const shouldTrackUnread = action.msg.type === 'assistant' && state.activeView !== 'claude';
       const updatedUnread = (shouldTrackUnread && state.currentDashboardId)
@@ -296,7 +326,7 @@ function appReducerCore(state, action) {
     }
     case 'CLAUDE_UPDATE_MESSAGES':
       // Functional update: action.updater(prevMessages) => newMessages
-      return { ...state, claudeMessages: action.updater(state.claudeMessages) };
+      return { ...state, claudeMessages: trimMessages(action.updater(state.claudeMessages)) };
     case 'CLAUDE_CLEAR_MESSAGES':
       if (!state.currentDashboardId) return state;
       try { localStorage.removeItem(claudeMessagesKey(state.currentDashboardId, state.claudeActiveTabId)); } catch (e) { /* unavailable */ }
@@ -317,6 +347,16 @@ function appReducerCore(state, action) {
       return { ...state, claudePendingAttachments: state.claudePendingAttachments.filter(a => a.id !== action.id) };
     case 'CLAUDE_CLEAR_ATTACHMENTS':
       return { ...state, claudePendingAttachments: [] };
+    // --- Permission request management ---
+    case 'PERMISSION_REQUEST':
+      // action.permission = { pid, toolName, toolInput, requestId, toolUseId, timestamp }
+      return { ...state, pendingPermission: action.permission };
+    case 'PERMISSION_RESOLVED':
+      // Clear the pending permission (optionally match by requestId)
+      if (state.pendingPermission && action.requestId && state.pendingPermission.requestId !== action.requestId) {
+        return state; // Don't clear if it's a different request
+      }
+      return { ...state, pendingPermission: null };
     // --- Tab management ---
     case 'CLAUDE_NEW_TAB': {
       if (!state.currentDashboardId) return state;
@@ -400,7 +440,7 @@ function appReducerCore(state, action) {
       const did = state.currentDashboardId;
       const stashKey = did + ':' + action.tabId;
       const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
-      const updatedMsgs = [...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }];
+      const updatedMsgs = trimMessages([...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }]);
       const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, action.tabId), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
       return { ...state, claudeTabStash: newTabStash };
@@ -411,7 +451,7 @@ function appReducerCore(state, action) {
       const activeTab = state.claudeActiveTabMap[did] || 'default';
       const stashKey = did + ':' + activeTab;
       const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, activeTab) || [CLAUDE_WELCOME_MSG];
-      const updatedMsgs = [...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }];
+      const updatedMsgs = trimMessages([...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }]);
       const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, activeTab), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
       // Track unread assistant messages for non-active dashboards
@@ -425,7 +465,7 @@ function appReducerCore(state, action) {
       const activeTab = state.claudeActiveTabMap[did] || 'default';
       const stashKey = did + ':' + activeTab;
       const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, activeTab) || [CLAUDE_WELCOME_MSG];
-      const updatedMsgs = action.updater(stashedMsgs);
+      const updatedMsgs = trimMessages(action.updater(stashedMsgs));
       const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, activeTab), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
       return { ...state, claudeTabStash: newTabStash };
@@ -458,8 +498,46 @@ function appReducerCore(state, action) {
       delete newDashNames[rid];
       const newUnread = { ...state.unreadChatCounts };
       delete newUnread[rid];
+      // Remove from dashboardList and auto-switch if this was the active dashboard
+      const newDashList = state.dashboardList.filter(id => id !== rid);
+      let switchState = {};
+      if (state.currentDashboardId === rid && newDashList.length > 0) {
+        const prevTabId = state.claudeActiveTabId;
+        const prevStashKey = rid + ':' + prevTabId;
+        const stashedTabStash = { ...newTabStash, [prevStashKey]: state.claudeMessages };
+        const stashedActiveTabMap = { ...newActiveTabMap, [rid]: prevTabId };
+        const stashedProcStash = { ...newProcStash2, [rid]: {
+          isProcessing: state.claudeIsProcessing,
+          status: state.claudeStatus,
+          pendingAttachments: state.claudePendingAttachments,
+          viewMode: state.claudeViewMode,
+          chatOpen: state.activeView === 'claude',
+          ideChatOpen: state.ideChatOpen,
+        }};
+        try { localStorage.setItem(claudeMessagesKey(rid, prevTabId), JSON.stringify(state.claudeMessages)); } catch (e) { /* */ }
+        const targetId = newDashList[0];
+        const targetTabId = stashedActiveTabMap[targetId] || 'default';
+        const targetStashKey = targetId + ':' + targetTabId;
+        const targetMessages = stashedTabStash[targetStashKey] || loadSavedMessages(targetId, targetTabId) || [CLAUDE_WELCOME_MSG];
+        const targetProc = stashedProcStash[targetId] || {};
+        const targetTabs2 = state.claudeTabs[targetId] || loadSavedTabs(targetId) || [{ ...DEFAULT_TAB }];
+        switchState = {
+          currentDashboardId: targetId,
+          claudeTabStash: stashedTabStash,
+          claudeActiveTabMap: stashedActiveTabMap,
+          claudeActiveTabId: targetTabId,
+          claudeTabs: { ...newTabs, [targetId]: targetTabs2 },
+          claudeProcessingStash: stashedProcStash,
+          claudeMessages: targetMessages,
+          claudeIsProcessing: targetProc.isProcessing || false,
+          claudeStatus: targetProc.status || 'Ready',
+          claudePendingAttachments: targetProc.pendingAttachments || [],
+          claudeDashboardId: targetId,
+        };
+      }
       return {
         ...state,
+        dashboardList: newDashList,
         dashboardStates: newDashStates,
         dashboardNames: newDashNames,
         allDashboardProgress: newAllProgress,
@@ -469,6 +547,7 @@ function appReducerCore(state, action) {
         claudeActiveTabMap: newActiveTabMap,
         claudeProcessingStash: newProcStash2,
         unreadChatCounts: newUnread,
+        ...switchState,
       };
     }
     case 'CLAUDE_STASH_SET_PROCESSING': {
@@ -495,10 +574,9 @@ function appReducerCore(state, action) {
       const dashboardNames = action.names
         ? { ...state.dashboardNames, ...action.names }
         : state.dashboardNames;
-      // If current dashboard doesn't exist in the list, switch to first available
-      if (dashboardList.length > 0 && !dashboardList.includes(state.currentDashboardId)) {
-        return { ...state, dashboardList, dashboardNames, currentDashboardId: dashboardList[0] };
-      }
+      // Never auto-switch dashboards here — list updates should not navigate.
+      // Dashboard switching is handled by SWITCH_DASHBOARD (user click),
+      // REMOVE_DASHBOARD (deletion), and workspace sync effects in IDEView.
       return { ...state, dashboardList, dashboardNames };
     }
     case 'SET_DASHBOARD_NAMES':
@@ -736,6 +814,97 @@ function appReducerCore(state, action) {
       return { ...state, gitError: action.error };
     case 'GIT_SET_SELECTED_FILE':
       return { ...state, gitSelectedFile: action.filePath };
+    case 'GIT_NAVIGATE_TO_FILE': {
+      // Opens (or selects) the repo at action.projectRoot, switches to git view,
+      // and highlights action.filePath in the Changes panel.
+      const navPath = action.projectRoot;
+      const navFile = action.filePath;
+      if (!navPath) return { ...state, activeView: 'git' };
+
+      // Check if this repo is already open
+      const existingNavRepo = state.gitRepos.find(r => r.path === navPath);
+      if (existingNavRepo) {
+        return {
+          ...state,
+          activeView: 'git',
+          gitActiveRepoId: existingNavRepo.id,
+          gitSelectedFile: navFile || null,
+        };
+      }
+
+      // Open the repo as a new tab
+      const navRepoId = String(Date.now());
+      const navRepoName = navPath.replace(/\/+$/, '').split('/').pop();
+      const newNavRepo = { id: navRepoId, path: navPath, name: navRepoName };
+      const updatedNavRepos = [...state.gitRepos, newNavRepo];
+      saveGitRepos(updatedNavRepos);
+      return {
+        ...state,
+        activeView: 'git',
+        gitRepos: updatedNavRepos,
+        gitActiveRepoId: navRepoId,
+        gitStatus: null,
+        gitBranches: [],
+        gitCurrentBranch: null,
+        gitLog: [],
+        gitDiff: null,
+        gitRemotes: [],
+        gitError: null,
+        gitSelectedFile: navFile || null,
+      };
+    }
+    // --- Debug state management ---
+    case 'DEBUG_SET_SESSION': {
+      const newSession = { ...state.debugSession, ...action.session };
+      return { ...state, debugSession: newSession };
+    }
+    case 'DEBUG_TOGGLE_BREAKPOINT': {
+      const filePath = action.filePath;
+      const line = action.line;
+      const currentBps = state.debugBreakpoints[filePath] || [];
+      const idx = currentBps.indexOf(line);
+      const newBps = idx === -1
+        ? [...currentBps, line].sort((a, b) => a - b)
+        : currentBps.filter(l => l !== line);
+      const newBreakpoints = { ...state.debugBreakpoints, [filePath]: newBps };
+      // Clean up empty arrays
+      if (newBps.length === 0) {
+        delete newBreakpoints[filePath];
+      }
+      return { ...state, debugBreakpoints: newBreakpoints };
+    }
+    case 'DEBUG_SET_BREAKPOINTS': {
+      const newBreakpoints = { ...state.debugBreakpoints, [action.filePath]: action.breakpoints };
+      return { ...state, debugBreakpoints: newBreakpoints };
+    }
+    case 'DEBUG_SET_CALL_STACK':
+      return { ...state, debugCallStack: action.callStack };
+    case 'DEBUG_SET_VARIABLES': {
+      const newVars = { ...state.debugVariables, [action.scopeId]: action.variables };
+      return { ...state, debugVariables: newVars };
+    }
+    case 'DEBUG_SET_SCOPES':
+      return { ...state, debugScopes: action.scopes };
+    case 'DEBUG_CLEAR_SESSION':
+      return {
+        ...state,
+        debugSession: { status: 'idle', pausedFile: null, pausedLine: null, threadId: null },
+        debugCallStack: [],
+        debugVariables: {},
+        debugScopes: [],
+      };
+    // --- Diagnostics state management ---
+    case 'DIAGNOSTICS_SET': {
+      const newDiagnostics = { ...state.diagnostics, [action.filePath]: action.diagnostics };
+      return { ...state, diagnostics: newDiagnostics };
+    }
+    case 'DIAGNOSTICS_CLEAR':
+      return { ...state, diagnostics: {} };
+    case 'DIAGNOSTICS_CLEAR_FILE': {
+      const newDiagnostics = { ...state.diagnostics };
+      delete newDiagnostics[action.filePath];
+      return { ...state, diagnostics: newDiagnostics };
+    }
     default:
       return state;
   }

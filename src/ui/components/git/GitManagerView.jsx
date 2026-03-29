@@ -43,6 +43,7 @@ export default function GitManagerView() {
   const [checkingRepo, setCheckingRepo] = useState(false);
   const [contentTab, setContentTab] = useState('changes');
   const dragRef = useRef({ startX: 0, startWidth: 0 });
+  const autoFetchedFileRef = useRef(null);
 
   // Derive current repo
   const activeRepo = gitRepos.find(r => r.id === gitActiveRepoId) || null;
@@ -174,6 +175,28 @@ export default function GitManagerView() {
       console.error('GitManagerView: refreshGitData failed', err);
     }
   }, [activeRepo, isGitRepo, dispatch]);
+
+  // Auto-fetch diff when a file is pre-selected (e.g. via GIT_NAVIGATE_TO_FILE)
+  // Only fires once per selected file — manual clicks in ChangesPanel handle their own diff fetch.
+  useEffect(() => {
+    if (!gitSelectedFile || !gitStatus || !activeRepo) return;
+    if (autoFetchedFileRef.current === gitSelectedFile) return;
+
+    autoFetchedFileRef.current = gitSelectedFile;
+    const api = window.electronAPI;
+    if (!api || !api.gitDiffFile) return;
+
+    const isStaged = gitStatus.staged?.some(f => f.path === gitSelectedFile);
+
+    (async () => {
+      try {
+        const result = await api.gitDiffFile(activeRepo.path, gitSelectedFile, isStaged);
+        if (result && result.success) {
+          dispatch({ type: 'GIT_SET_DIFF', diff: result.data });
+        }
+      } catch (_) {}
+    })();
+  }, [gitSelectedFile, gitStatus, activeRepo, dispatch]);
 
   // Poll git status every 3 seconds while the view is active
   useEffect(() => {

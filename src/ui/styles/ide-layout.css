@@ -233,6 +233,35 @@
   flex-direction: column;
 }
 
+/* ----- Editor + Debug Sidebar Split ----- */
+.ide-editor-and-debug {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ide-editor-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ----- Debug Sidebar (right side) ----- */
+.ide-debug-sidebar {
+  width: 280px;
+  min-width: 220px;
+  max-width: 350px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--surface, rgba(255,255,255,0.02));
+  border-left: 1px solid var(--border, rgba(255,255,255,0.08));
+}
+
 /* ============================================================
    IDE Chat — floating popup (same as dashboard view)
    ============================================================ */
