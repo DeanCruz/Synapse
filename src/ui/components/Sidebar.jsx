@@ -342,7 +342,8 @@ export default function Sidebar() {
   // Determine which sidebar tab is active
   const isIdeActive = activeView === 'ide';
   const isGitActive = activeView === 'git';
-  const isDashboardActive = !isIdeActive && !isGitActive;
+  const isPreviewActive = activeView === 'preview';
+  const isDashboardActive = !isIdeActive && !isGitActive && !isPreviewActive;
 
   return (
     <aside className={`dashboard-sidebar${collapsed ? ' collapsed' : ''}`}>
@@ -429,6 +430,22 @@ export default function Sidebar() {
               </svg>
             </span>
             <span className="sidebar-tab-label">Git Manager</span>
+          </button>
+        </div>
+        <div className="sidebar-tab-row">
+          <button
+            className={`sidebar-tab${isPreviewActive ? ' active' : ''}`}
+            title="Preview"
+            aria-label="Preview"
+            onClick={() => dispatch({ type: 'SET_VIEW', view: 'preview' })}
+          >
+            <span className="sidebar-tab-icon">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
+                <path d="M1 8s3-5.5 7-5.5S15 8 15 8s-3 5.5-7 5.5S1 8 1 8z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                <circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.3"/>
+              </svg>
+            </span>
+            <span className="sidebar-tab-label">Preview</span>
           </button>
         </div>
       </div>
