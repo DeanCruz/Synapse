@@ -895,7 +895,6 @@ body {
   padding-top: 20px;
   padding-bottom: 60px;
   overflow-x: auto;
-  overflow-y: visible;
 }
 
 /* Clean horizontal scrollbar for chain pipeline */
@@ -2272,6 +2271,33 @@ a:hover {
   position: relative;
   height: calc(100vh - 53px);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Smooth scrollbar for the main pipeline area */
+.dashboard-scroll-area::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-scroll-area::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.15);
+  border-radius: 3px;
+}
+
+.dashboard-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.25);
 }
 
 /* ============================================================

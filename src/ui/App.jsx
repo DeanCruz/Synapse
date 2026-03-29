@@ -152,17 +152,19 @@ function DashboardContent() {
       <ReplanningBanner visible={task?.overall_status === 'replanning'} />
 
 
-      {hasTask ? (
-        <>
-          {taskType === 'Chains'
-            ? <ChainPipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} />
-            : <WavePipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} progressData={currentProgress} />
-          }
-          <ClearDashboardSection visible={showClear} onClear={handleClear} taskName={task?.name} />
-        </>
-      ) : (
-        <EmptyState />
-      )}
+      <div className="dashboard-scroll-area">
+        {hasTask ? (
+          <>
+            {taskType === 'Chains'
+              ? <ChainPipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} />
+              : <WavePipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} progressData={currentProgress} />
+            }
+            <ClearDashboardSection visible={showClear} onClear={handleClear} taskName={task?.name} />
+          </>
+        ) : (
+          <EmptyState />
+        )}
+      </div>
 
       <TimelinePanel
         status={currentStatus}
