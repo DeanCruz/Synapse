@@ -28,6 +28,7 @@ const PUSH_CHANNELS = [
   'debug-resumed',
   'debug-stopped',
   'debug-output',
+  'preview-edit-request',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -224,4 +225,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   gitAheadBehind: (repoPath, branch) => ipcRenderer.invoke('git-ahead-behind', repoPath, branch),
   gitDiscardFile: (repoPath, filePath) => ipcRenderer.invoke('git-discard-file', repoPath, filePath),
   gitGraph: (repoPath, maxCount) => ipcRenderer.invoke('git-graph', repoPath, maxCount),
+
+  // Preview
+  previewScanLabels: (projectPath) => ipcRenderer.invoke('preview-scan-labels', projectPath),
+  previewUpdateText: (projectPath, label, newText, routePath) => ipcRenderer.invoke('preview-update-text', projectPath, label, newText, routePath || ''),
+  previewGetLabelMap: (projectPath) => ipcRenderer.invoke('preview-get-label-map', projectPath),
+  previewDetectDevServer: (projectPath) => ipcRenderer.invoke('preview-detect-dev-server', projectPath),
 });

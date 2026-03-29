@@ -27,6 +27,7 @@ import AgentDetails from './components/modals/AgentDetails.jsx';
 import { getDashboardProject } from './utils/dashboardProjects.js';
 
 import GitManagerView from './components/git/GitManagerView.jsx';
+import PreviewView from './components/preview/PreviewView.jsx';
 
 // ── ClearDashboardSection ────────────────────────────────────────────────────
 function ClearDashboardSection({ visible, onClear, taskName }) {
@@ -295,6 +296,8 @@ export default function App() {
         return <DashboardContent />;
       case 'git':
         return GitManagerView ? <GitManagerView /> : <div>Loading Git Manager...</div>;
+      case 'preview':
+        return PreviewView ? <PreviewView /> : <div>Loading Preview...</div>;
       case 'ide':
         return <IDEView />;
       case 'dashboard':
@@ -313,7 +316,7 @@ export default function App() {
         </div>
         {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
         <ClaudeFloatingPanel
-          isVisible={activeView !== 'git'}
+          isVisible={activeView !== 'git' && activeView !== 'preview'}
           dashboardId={claudeDashboardId}
           viewMode={ideChatActive ? claudeViewMode : (showClaudeFloat ? claudeViewMode : 'minimized')}
           onOpen={() => {

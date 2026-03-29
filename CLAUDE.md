@@ -93,7 +93,12 @@ Synapse/                         <-- {tracker_root}
 |-- tasks/{date}/                <-- Per-swarm task + plan files
 |-- Archive/                     <-- Archived swarm snapshots
 |-- src/server/ + src/ui/        <-- SSE server + React dashboard
+|-- src/ui/components/preview/  <-- Live Preview tab (PreviewView)
+|-- src/ui/preview/             <-- Webview injection script (inject-overlay.js)
 +-- electron/                    <-- Desktop app
+    |-- services/PreviewService.js     <-- Label-to-source mapper
+    |-- services/PreviewTextWriter.js  <-- Text update writer
+    +-- services/InstrumentService.js  <-- Project instrumentation
 ```
 
 ## Project Knowledge Index (PKI)
@@ -111,6 +116,7 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | | `!create_claude` | Create or update an opinionated CLAUDE.md |
 | | `!learn` | Bootstrap the Project Knowledge Index (PKI) from scratch |
 | | `!learn_update` | Incrementally refresh the PKI (stale/new files only) |
+| | `!instrument` | Add `data-synapse-label` attributes to project files for Live Preview |
 | **Swarm** | `!p_track {prompt}` | **Primary.** Full parallel swarm with live dashboard |
 | | `!p {prompt}` | Lightweight parallel dispatch |
 | | `!master_plan_track` | Multi-stream orchestration across dashboards |
@@ -146,3 +152,19 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | **Server** | `!start` | Start the dashboard server |
 | | `!stop` | Stop the dashboard server |
 | | `!reset` | Clear all tracker data |
+
+## Live Preview
+
+Synapse includes a Live Preview tab that embeds your running web app and enables inline text editing. Double-click any labeled text element to edit it directly — changes are written back to your source code automatically.
+
+### Setup
+1. Run `!instrument` on your project to add `data-synapse-label` attributes to text elements
+2. Start your dev server (`npm run dev`, `vite`, etc.)
+3. Click the Preview tab in the sidebar and enter your dev server URL
+4. Double-click any text to edit it inline
+
+### How It Works
+- `!instrument` scans JSX/TSX/HTML files and adds `data-synapse-label` attributes to headings, paragraphs, buttons, links, and other text-bearing elements
+- The Preview tab loads your app in an embedded webview with an overlay script that detects labeled elements
+- When you double-click and edit text, the change is mapped back to the source file and written automatically
+- Supports React, Next.js, Vite, and any HTML/JS project
