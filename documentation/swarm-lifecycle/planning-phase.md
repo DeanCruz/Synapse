@@ -122,6 +122,10 @@ From the user's prompt, the master extracts:
 - **A task name** -- A short kebab-case slug (e.g., `refactor-auth-flow`, `add-rate-limiting`).
 - **Affected directories** -- Which areas of the codebase the work touches.
 
+### Dependency Graph Consultation
+
+If `{project_root}/.synapse/dep_graph.json` exists, the master reads it for file-level dependency information. The dep graph maps import relationships between files -- which files import from which other files. It is used to detect hidden coupling that task-level analysis may miss, identify all consumers of a file that will be modified (blast radius), and validate that task boundaries align with module boundaries.
+
 ### Deep Analysis
 
 Before decomposing into tasks, the master thinks through the full scope:
@@ -343,6 +347,10 @@ Before populating the dashboard, the master validates the dependency graph using
 
 If any validation check fails, the master stops and fixes the issue before writing to the dashboard.
 
+### Full Dashboard Tracking Threshold Verification
+
+After validating dependencies, the master confirms that full dashboard tracking thresholds are met. When a swarm has 3+ parallel agents or more than 1 wave, the master MUST populate its designated dashboard with full tracking. This is non-negotiable for multi-wave swarms. Workers must be instructed to read `tracker_worker_instructions.md` and write progress files to the dashboard.
+
 ---
 
 ## Step 7: Prompt Construction
@@ -380,6 +388,40 @@ Every worker prompt includes these sections:
 | **Total prompt** | **~800 lines** | If exceeded, split the task or summarize further |
 
 When a prompt exceeds the budget: summarize instead of pasting, split the task if context is genuinely needed, prioritize success criteria and critical details over reference code, and use READ file lists instead of inlining large files.
+
+### Token Budget Estimate
+
+After constructing each worker's dispatch prompt, the master estimates the token budget by section:
+
+| Section | Typical Range |
+|---|---|
+| Task description | 200-500 tokens |
+| File context | 500-2000 tokens |
+| Conventions | 300-800 tokens |
+| Upstream results | 200-600 tokens |
+| Critical details | 200-400 tokens |
+| Instructions | 400-600 tokens |
+
+**Budget limit: 8000 tokens (~32KB of text).** If a prompt exceeds this estimate, the master splits the task, summarizes conventions to 3-5 bullet points, trims reference code to specific functions/types, and condenses upstream results to one-line summaries.
+
+Prompt bloat is the number one cause of worker context exhaustion. A worker that receives a 15,000-token prompt has already consumed 15% of its context window before writing a single line of code.
+
+### Convention Relevance Filtering
+
+Before extracting CLAUDE.md content for a worker prompt, the master uses the convention map (built during context gathering) to select only categories relevant to each specific task:
+
+| Category | Include when... | Skip when... |
+|---|---|---|
+| `naming` | Task creates new files, functions, variables, or types | Task only modifies existing code |
+| `file_structure` | Task creates new files or moves files | Task modifies existing files in-place |
+| `imports` | Task adds new imports or creates new modules | Task does not touch imports |
+| `testing` | Task involves writing or modifying tests | Task has no test component |
+| `error_handling` | Task involves error paths, try/catch, or validation | Task is purely additive/cosmetic |
+| `backend_api` | Task creates or modifies API endpoints | Task does not touch APIs |
+| `frontend_styling` | Task involves UI/CSS/component styling | Task is backend-only |
+| `types` | Task creates or modifies type definitions | Task does not touch types |
+
+This filtering is applied per-worker, not globally -- different tasks need different convention subsets. If the project CLAUDE.md exceeds 500 lines, always summarize rather than quote.
 
 ### Instruction Mode Selection
 
@@ -427,16 +469,18 @@ Dashboards are selected via a priority chain:
 1. Pre-assigned from chat context (DASHBOARD ID: directive in system prompt)
        |
        v (not present)
-2. Explicit --dashboard dashboardN flag
+2. Explicit --dashboard {id} flag
        |
        v (not provided)
-3. Auto-selection: scan dashboard1 through dashboard5 for first available slot
+3. Auto-selection: scan all dashboards (excluding ide) for first available slot
        |
        v (all in use)
 4. Display summary table, ask user to choose or clear a dashboard
 ```
 
-A dashboard is "available" if its `initialization.json` has `task: null`, or if all its progress files show terminal status (completed or failed).
+Dashboard IDs are 6-character hex strings (e.g., `a3f7k2`). The `ide` dashboard is permanently reserved for the IDE agent and is always excluded from auto-selection.
+
+A dashboard is "available" if its `initialization.json` has `task: null`, if no progress files exist (stale claim), or if all its progress files show terminal status (completed or failed).
 
 ### Archive Before Clear
 

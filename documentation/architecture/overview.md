@@ -86,6 +86,8 @@ An Electron application that wraps the React dashboard in a native desktop windo
 | CommandsService | `services/CommandsService.js` | Command file CRUD and generation |
 | TaskEditorService | `services/TaskEditorService.js` | Swarm and task creation/editing |
 | ConversationService | `services/ConversationService.js` | Chat conversation persistence |
+| DebugService | `services/DebugService.js` | IDE debug session management and breakpoint handling |
+| TerminalService | `services/TerminalService.js` | Integrated terminal (PTY) process management |
 
 The Electron app uses a custom `app://synapse/` protocol to serve the Vite-built React app from disk. The main process registers IPC handlers that reuse the same service layer as the Node.js server, ensuring consistent behavior across both modes.
 
@@ -105,7 +107,7 @@ A React frontend that provides real-time visualization of swarm progress. It can
 | **Client-Side Merge** | `mergeState()` function combines static `initialization.json` data with dynamic progress file data to produce the renderable view |
 | **Electron Fetch Shim** | `main.jsx` patches `window.fetch` to intercept `/api/*` calls and route them to IPC in Electron mode |
 
-**Major UI components:**
+**Major UI components (54 total across 4 directories):**
 
 | Component | Purpose |
 |---|---|
@@ -118,6 +120,17 @@ A React frontend that provides real-time visualization of swarm progress. It can
 | `ClaudeView` | In-app agent chat interface |
 | `SwarmBuilder` | Visual swarm plan creation tool |
 | `Header` | Top navigation bar with view switching |
+| `TerminalView` | Integrated terminal emulator (xterm.js) |
+| `BottomPanel` | Resizable bottom panel container (terminal, metrics, timeline) |
+| `MetricsPanel` | Swarm performance metrics display |
+| `TimelinePanel` | Task timeline visualization |
+| `HomeView` | Overview/home dashboard |
+
+**IDE components** (`components/ide/`, 10 files): Full code editor and debugger — `IDEView`, `CodeEditor` (Monaco-based), `FileExplorer`, `DebugToolbar`, `DebugPanels`, `DebugConsolePanel`, `ProblemsPanel`, `EditorTabs`, `WorkspaceTabs`, `IDEWelcome`.
+
+**Git components** (`components/git/`, 12 files): Integrated Git management — `GitManagerView`, `BranchPanel`, `ChangesPanel`, `CommitPanel`, `DiffViewer`, `HistoryPanel`, `RemotePanel`, `QuickActions`, `RepoTabs`, `InitFlow`, `SafetyDialogs`, `GitWelcome`.
+
+**Modal components** (`components/modals/`, 14 files): `AgentDetails`, `ArchiveModal`, `CommandsModal`, `ConfirmModal`, `ErrorModal`, `HistoryModal`, `Modal`, `PermissionModal`, `PlanningModal`, `ProjectModal`, `SettingsModal`, `TaskDetails`, `TaskEditorModal`, `WorkerTerminal`.
 
 ---
 
@@ -182,20 +195,19 @@ The Electron fetch shim ensures that components written for browser mode work id
 
 ## Multi-Dashboard Support
 
-Synapse supports up to 5 concurrent dashboard instances, each representing an independent swarm:
+Synapse supports multiple concurrent dashboard instances (7+), each identified by a 6-character hex ID and representing an independent swarm:
 
 ```
 dashboards/
-  dashboard1/        <- Swarm A (project X)
+  2d84ac/            <- Swarm A (project X)
     initialization.json
     logs.json
     progress/
-  dashboard2/        <- Swarm B (project Y)
+  356dc5/            <- Swarm B (project Y)
     initialization.json
     logs.json
     progress/
   ...
-  dashboard5/
 ```
 
 Each dashboard is fully independent:
@@ -203,6 +215,8 @@ Each dashboard is fully independent:
 - Can serve a different project (identified by `task.project_root` in `initialization.json`)
 - Has its own set of file watchers
 - Has its own chat conversation context in the Claude view
+
+Dashboard IDs are generated as 6-character hexadecimal strings (e.g., `71894a`, `da7091`), replacing the previous sequential `dashboard1`-`dashboard5` scheme. There is no fixed upper limit on the number of concurrent dashboards.
 
 The sidebar in the dashboard UI shows all active dashboards with status indicators. Users can switch between dashboards to monitor different swarms simultaneously.
 
@@ -270,7 +284,9 @@ Synapse follows Electron security best practices:
 | Desktop Shell | Electron | Custom protocol, IPC bridge, native dialogs |
 | Build Tool | Vite | Fast HMR in development, optimized production builds |
 | Frontend | React 19 | Functional components, hooks, useReducer for state |
-| Styling | CSS | Single 5,973-line stylesheet, no CSS framework |
+| Styling | CSS | 10 CSS files totaling ~13,778 lines, no CSS framework |
+| Code Editor | Monaco Editor | Integrated IDE with syntax highlighting, IntelliSense |
+| Terminal | xterm.js + node-pty | Integrated terminal emulator with PTY support |
 | Backend | Node.js | Zero npm dependencies for the server |
 | Data Store | JSON files on disk | No database, watched by fs.watch/fs.watchFile |
 | Agent Runtime | Claude Code CLI / Codex CLI | Workers spawned as child processes |

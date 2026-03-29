@@ -484,6 +484,7 @@ function ClaudeFloatingHeader({ dashboardId, viewMode, onSetMode }) {
       <span className={'claude-view-status' + (state.claudeIsProcessing ? ' active' : '')}>
         {state.claudeStatus}
       </span>
+      {dashboardId && <span className="claude-view-dashboard-id">{dashboardId}</span>}
 
       <div className="claude-view-controls">
         <button className="claude-view-ctrl-btn" title="Minimize" onClick={(e) => { e.stopPropagation(); onSetMode('minimized'); }}>

@@ -6,7 +6,7 @@ The Synapse swarm lifecycle is the complete end-to-end process of decomposing a 
 
 ## The Full Lifecycle at a Glance
 
-A swarm progresses through twelve distinct stages, from the moment the user types a command to the moment the master agent delivers its final report.
+A swarm progresses through thirteen distinct stages, from the moment the user types a command to the moment the master agent delivers its final report.
 
 ```
 User invokes !p_track {prompt}
@@ -52,12 +52,16 @@ User invokes !p_track {prompt}
     Optional verification agent for cross-file integration
         |
         v
-11. FINAL REPORT
-    Compile summary, update task file, write final log entries
+11. METRICS
+    Compute swarm performance metrics, write metrics.json
         |
         v
-12. POST-SWARM
-    TOC update, history save, master resumes normal behavior
+12. FINAL REPORT
+    Read all data, compile comprehensive report with required sections
+        |
+        v
+13. POST-SWARM
+    History save, master resumes normal behavior
 ```
 
 ---
@@ -78,12 +82,14 @@ The master agent has exactly five responsibilities:
 4. **Status** -- Log events to `logs.json`, update the master task file on completions and failures, and maintain awareness of the swarm's state.
 5. **Report** -- Compile a final summary when all workers have finished, including verification results, deviations, and recommendations.
 
-The master writes to exactly four categories of files during a swarm, and no others:
+The master writes to exactly six categories of files during a swarm, and no others:
 
 | File | Purpose |
 |---|---|
 | `dashboards/{dashboardId}/initialization.json` | Static plan data (written once during planning) |
 | `dashboards/{dashboardId}/logs.json` | Timestamped event log for the dashboard |
+| `dashboards/{dashboardId}/master_state.json` | Master's execution state checkpoint (dispatch tracking, upstream result cache) |
+| `dashboards/{dashboardId}/metrics.json` | Post-swarm performance metrics (written once at completion) |
 | `tasks/{date}/parallel_{name}.json` | Master task record (plan, status, summaries) |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
@@ -116,6 +122,8 @@ The swarm lifecycle revolves around four categories of data files. Understanding
 | `initialization.json` | Master (once) | During planning phase | Static plan data: task metadata, agent entries, wave structure, dependency graph |
 | `logs.json` | Master (throughout) | On every event | Timestamped event log for the dashboard log panel |
 | `progress/{task_id}.json` | Workers (each owns one) | Throughout execution | Live lifecycle data: status, stage, milestones, deviations, logs |
+| `master_state.json` | Master (throughout) | After every dispatch event | Execution state checkpoint: completed/in-progress/failed task caches, upstream results, agent numbering |
+| `metrics.json` | Master (once) | After all tasks complete | Post-swarm performance metrics: elapsed time, parallel efficiency, failure rate |
 | `parallel_{name}.json` | Master (throughout) | Planning + on each completion | Authoritative task record: descriptions, context, summaries, status |
 
 The dashboard merges `initialization.json` (static plan) with `progress/` files (dynamic lifecycle) to render the complete swarm view. All stat cards (Total, Completed, In Progress, Failed, Pending, Elapsed) are derived from progress files -- the master maintains no counters.
@@ -143,6 +151,7 @@ Monitoring:
 
 Completion:
   Log final  ------------>  logs.json (completion)  -------->  "Complete" badge
+  Write metrics  -------->  metrics.json                       (post-hoc analysis)
   (Optional archive)  --->  Archive/ directory                 (dashboard clears)
 ```
 
@@ -197,13 +206,17 @@ The Synapse dashboard is the user's primary window into swarm progress. During e
 ### Real-Time Updates
 
 The server watches three data sources per dashboard:
-- `initialization.json` -- via `fs.watchFile`
-- `logs.json` -- via `fs.watchFile`
-- `progress/` directory -- via `fs.watch`
+- `initialization.json` -- via `fs.watchFile` (polling at 100ms intervals)
+- `logs.json` -- via `fs.watchFile` (polling at 100ms intervals)
+- `progress/` directory -- via `fs.watch` (OS-level event notification)
 
-When any file changes, the server immediately pushes the update to every open browser tab via Server-Sent Events (SSE). Every write becomes visible within approximately 100 milliseconds.
+When any file changes, the server reads the file (with a 30ms initial delay for progress files, plus an 80ms retry if JSON is malformed mid-write) and pushes the update to every open browser tab via Server-Sent Events (SSE).
 
-Additionally, the server provides automatic dependency tracking: when a progress file changes to `status: "completed"`, the server runs a dependency scan, identifies newly unblocked tasks, and broadcasts a `tasks_unblocked` SSE event. The dashboard shows green toast notifications for dispatchable tasks.
+Additionally, the server runs a **periodic reconciliation** every 5 seconds that scans all progress files and rebroadcasts any changes the OS watcher may have missed. This ensures eventual consistency even if `fs.watch` drops an event.
+
+The server also provides automatic dependency tracking: when a progress file changes to `status: "completed"`, the server waits 100ms (to let file writes settle), then calls `DependencyService.computeNewlyUnblocked()` to identify newly unblocked tasks and broadcasts a `tasks_unblocked` SSE event. The dashboard shows green toast notifications for dispatchable tasks.
+
+The server validates progress files on every read: the `task_id` field must match the filename, and the `dashboard_id` field (if present) must match the dashboard directory. Mismatches are hard-rejected with a `write_rejected` SSE event -- the dashboard does not render invalid writes.
 
 ---
 
@@ -244,6 +257,8 @@ These invariants hold throughout every swarm lifecycle:
 7. **Atomic writes are mandatory.** Always read the full file, parse, modify in memory, stringify with 2-space indent, and write the full file back. Partial JSON writes cause the dashboard to freeze.
 
 8. **Archive before clear.** Previous swarm data is never discarded. Before clearing a dashboard for a new swarm, the master copies the full dashboard directory to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/`.
+
+9. **Master state is checkpointed.** After every dispatch event (worker dispatched, completed, or failed), the master writes a state checkpoint to `master_state.json` containing completed task summaries, in-progress task IDs, upstream result cache, and agent numbering. This enables recovery after context compaction.
 
 ---
 

@@ -180,7 +180,7 @@ Skipping step 1 means the user never sees the popup. Writing the log entry and t
 
 ## Real Example
 
-From a completed swarm on `dashboard1`:
+From a completed swarm on dashboard `71894a`:
 
 ```json
 {

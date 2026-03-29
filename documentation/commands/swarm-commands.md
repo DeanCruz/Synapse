@@ -184,6 +184,115 @@ WORKER AGENTS (many per stream)
 
 ---
 
+### `!add_task`
+
+**Purpose:** Inject new tasks into an active swarm mid-flight. Deeply analyzes the prompt, decomposes it into subtasks, resolves dependencies against all existing tasks (both directions), updates the dashboard, and dispatches any tasks whose dependencies are already satisfied.
+
+**Syntax:**
+```
+!add_task {prompt}                          -- Add tasks to the active swarm (auto-detect dashboard)
+!add_task --dashboard {id} {prompt}         -- Add tasks to a specific dashboard's swarm
+```
+
+**Key Behavior:**
+- Requires an active swarm on the target dashboard
+- Reads the full swarm state (initialization.json, all progress files, master_state.json, master task file) and project context before planning
+- Decomposes the prompt into 1 or more right-sized subtasks following the same quality standards as `!p_track` planning
+- Resolves dependencies in both directions: new tasks may depend on existing tasks, and existing pending tasks may have new dependencies added
+- Validates no circular dependencies and warns about file conflicts with in-progress tasks
+- Assigns wave numbers and task IDs following existing conventions
+- Updates initialization.json, the master task file, logs.json, and master_state.json atomically
+- Runs eager dispatch for any new tasks whose dependencies are already satisfied
+- Never modifies completed or in-progress tasks -- only pending tasks can have their dependencies updated
+
+---
+
+### `!eager_dispatch`
+
+**Purpose:** Run a standalone eager dispatch round on an active swarm. Reads current dashboard state, identifies all tasks whose dependencies are satisfied but have not been dispatched, builds complete worker prompts, and dispatches them all immediately.
+
+**Syntax:**
+```
+!eager_dispatch                             -- Auto-detect the active dashboard
+!eager_dispatch --dashboard {id}            -- Target a specific dashboard
+```
+
+**Key Behavior:**
+- Reads initialization.json, all progress files, master_state.json, and the master task file
+- Builds completed/in-progress/failed sets from progress files
+- Identifies every task where ALL `depends_on` are completed and the task is not yet dispatched
+- Presents a dispatch summary and waits for user approval before dispatching
+- Builds complete, self-contained worker prompts with conventions, upstream results, and reference code
+- Does NOT monitor worker completions, retry failed tasks, run the circuit breaker, or produce a final report -- it is a one-shot dispatch operation
+
+**Comparison with `!dispatch --ready`:**
+
+| Feature | `!dispatch --ready` | `!eager_dispatch` |
+|---------|---------------------|-------------------|
+| Worker prompt quality | Basic -- task info + paths | Full -- conventions, upstream results, reference code |
+| Reads project CLAUDE.md | No | Yes -- builds convention_map |
+| Upstream result injection | No | Yes -- structured per-dependency summaries |
+| Writes master_state.json | No | Yes |
+| Approval gate | No | Yes -- presents summary before dispatching |
+
+---
+
+### `!export`
+
+**Purpose:** Export a dashboard's full swarm state as a formatted document for post-mortems, documentation, or sharing.
+
+**Syntax:**
+```
+!export                                     -- Export active dashboard as markdown (auto-detect)
+!export dashboard3                          -- Export a specific dashboard
+!export --format json                       -- Export as raw JSON
+!export --format markdown                   -- Export as formatted markdown (default)
+```
+
+**Key Behavior:**
+- Reads initialization.json, logs.json, all progress files, and metrics.json (if it exists)
+- Merges initialization data with progress files to compute full swarm state: task statuses, agent assignments, timelines, deviations, and derived stats
+- Supports two output formats:
+  - **Markdown** (default): Structured document with task summary table, deviations, event timeline, and performance metrics
+  - **JSON**: Raw combined data as a single JSON object with task metadata, derived stats, agents, waves, log entries, and metrics
+- Read-only -- does not modify any files
+
+---
+
+### `!p_track_resume`
+
+**Purpose:** Comprehensive resume of a stalled, interrupted, or partially completed `!p_track` swarm. The invoking agent becomes the master agent -- responsible for reconstructing the full swarm state from disk, determining which agents are alive vs stale, re-dispatching where necessary, and running the full execution-to-completion lifecycle including the final report.
+
+**Syntax:**
+```
+!p_track_resume                             -- Auto-detect the dashboard to resume
+!p_track_resume --dashboard {id}            -- Resume a specific dashboard
+```
+
+**Key Behavior:**
+- Reads all master instruction documents before taking any action (7 required files including master instructions, dashboard writes, eager dispatch, worker prompts, compaction recovery, and failure recovery)
+- Reconstructs full swarm state from initialization.json, all progress files, logs.json, and master_state.json
+- Locates and reads the master task file and project CLAUDE.md for worker prompt construction
+- Rebuilds the upstream result cache from progress files and master_state.json
+- Assesses agent health for in-progress tasks: checks progress file recency (milestones/logs within last 10 minutes) to determine if workers are likely alive or stale
+- Classifies every task as: completed, failed, likely alive, stale in-progress, pending ready, or pending blocked
+- Presents a detailed resume plan and waits for user approval
+- Dispatches all ready tasks with full worker prompts (identical quality to `!p_track`)
+- Runs the standard `!p_track` execution loop: process completions, eager dispatch, failure recovery, circuit breaker, context compaction recovery
+- Delivers the NON-NEGOTIABLE final report with metrics upon completion
+
+**Comparison:**
+
+| Command | Scope |
+|---------|-------|
+| `!p_track_resume` | Full lifecycle -- reads all master instructions, checks agent health, rebuilds state, dispatches with full prompts, runs complete execution loop, delivers final report with metrics |
+| `!track_resume` | Dispatch-focused -- assesses state, re-dispatches incomplete tasks, monitors completion. Less emphasis on instruction reading and final reporting |
+| `!dispatch --ready` | Pending only -- dispatches unblocked tasks, does not retry failed |
+| `!retry {id}` | Single task -- re-dispatches one specific failed task |
+| `!resume` | Chat session -- resumes a non-swarm chat session, not for swarm orchestration |
+
+---
+
 ### `!cancel`
 
 **Purpose:** Cancel the active swarm immediately. Marks all non-completed tasks as failed.

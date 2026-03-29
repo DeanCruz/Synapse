@@ -67,6 +67,29 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 
 ---
 
+### `!create_claude`
+
+**Purpose:** Create or update an opinionated `CLAUDE.md` for the target project that establishes coding standards, architectural patterns, documentation requirements, and styling guidelines. Unlike `!scaffold` (which documents what exists), `!create_claude` sets the rules for how the project **should** be built.
+
+**Syntax:**
+```
+!create_claude                               -- Interactive: asks for architecture directions
+!create_claude {prompt}                      -- Uses the prompt as architecture directions
+!create_claude --update                      -- Updates existing CLAUDE.md preserving user sections
+!create_claude --force                       -- Overwrites existing CLAUDE.md (requires confirmation)
+```
+
+**Key Behavior:**
+- Accepts an optional prompt with architecture directions; if none given, asks the user interactively; if the user declines, auto-detects the stack and applies best-practice defaults
+- Scans the project for tech stack indicators, directory structure, existing patterns, linter configs, and README
+- Makes concrete, opinionated decisions for architecture pattern, naming conventions, import rules, type safety, error handling, testing, styling, and documentation standards
+- Generates a comprehensive CLAUDE.md with sections for: tech stack, architecture (pattern, file structure, layer rules), coding standards (naming, imports, types, errors, functions), styling guidelines, documentation standards, testing standards, git workflow, commands, and environment
+- Respects existing files: requires `--update` to merge or `--force` to overwrite an existing CLAUDE.md
+- Differentiates from `!scaffold`: scaffold documents what IS, `!create_claude` prescribes what SHOULD BE
+- Serial mode, does not modify source code
+
+---
+
 ## Analysis Commands
 
 ### `!context`
@@ -323,6 +346,84 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 - Reports the diff before dispatching agents
 - If no changes are detected, exits immediately with "TOC is up to date"
 - Backward compatible with legacy TOCs that lack hash comments
+
+---
+
+## Project Knowledge Index (PKI) Commands
+
+### `!learn`
+
+**Purpose:** Bootstrap the Project Knowledge Index (PKI) from scratch by dispatching a parallel swarm to deeply annotate every significant file in the project. Produces deep operational knowledge -- gotchas, patterns, conventions, relationships, and domain taxonomy -- that agents can query to understand how the project actually works.
+
+**Syntax:**
+```
+!learn
+```
+
+**Produces:**
+- `{project_root}/.synapse/knowledge/manifest.json` -- Master routing index with per-file summaries, domains, tags, and cross-references
+- `{project_root}/.synapse/knowledge/annotations/{hash}.json` -- Per-file deep annotation files (flat, hash-keyed)
+- `{project_root}/.synapse/knowledge/domains.json` -- Auto-discovered domain taxonomy
+- `{project_root}/.synapse/knowledge/patterns.json` -- Cross-cutting patterns and conventions observed across the codebase
+- `{project_root}/.synapse/knowledge/queries/` -- Directory for pre-computed domain bundles (created empty, populated by `!context` queries)
+
+**Key Behavior:**
+- The master agent never reads source files -- agents do all file reading
+- Phase 1 (Discovery): Scans project structure, maps directories, reads CLAUDE.md, creates PKI directory tree
+- Phase 2 (Parallel Scan): Decomposes directories into agent tasks, dispatches agents in parallel batches via `!p` dispatch mode. Each agent deeply reads files in its directory and produces annotations covering: purpose, exports (with signatures), imports, gotchas, patterns, conventions, relationships, domain classification, tags, and complexity
+- Phase 3 (Assembly): Master assembles annotations incrementally as agents return -- writes per-file annotation files, builds manifest.json with domain/tag indexes and concept map, generates domains.json and patterns.json
+- Phase 4 (Report): Prints summary with domain/pattern statistics
+- Annotations are operationally deeper than TOC entries -- they include gotchas, patterns, conventions, and bidirectional relationships
+- Uses content hashes for staleness detection, enabling future incremental updates via `!learn_update`
+
+---
+
+### `!learn_update`
+
+**Purpose:** Incrementally refresh the Project Knowledge Index (PKI) by detecting stale annotations and re-scanning only changed files. The fast-path complement to `!learn`.
+
+**Syntax:**
+```
+!learn_update
+```
+
+**Key Behavior:**
+- Requires an existing PKI (manifest.json must exist; if not, suggests `!learn` instead)
+- Detects staleness via three mechanisms: the `stale` flag set by the PostToolUse hook, content hash comparison against stored hashes, and new/deleted file discovery
+- Only dispatches agents for files that actually need re-annotation -- unchanged files keep their existing annotations verbatim
+- For stale files, includes the previous annotation in the agent prompt so the agent can compare and produce a focused diff
+- Updates manifest.json (stats, hashes, stale flags), writes new/updated annotation files, rebuilds domains.json and patterns.json, and clears the query cache
+- If zero changes are detected, reports "PKI is up to date" and exits immediately
+- If more than 50 files need re-annotation, warns the user and suggests `!learn` for a full rebuild
+- Can be auto-triggered at swarm start when `stats.stale > 0` in manifest.json
+
+**When to use `!learn_update` vs `!learn`:**
+- `!learn_update` -- After a swarm completes, after manual edits, periodic refreshes. Fast incremental scan.
+- `!learn` -- First-time PKI generation, after major refactors (50%+ of codebase), when PKI feels fundamentally out of sync.
+
+---
+
+## Audit Commands
+
+### `!prompt_audit`
+
+**Purpose:** Post-swarm prompt quality audit. Analyzes worker performance and prompt quality indicators by reading progress files to evaluate stage progression, log density, deviation patterns, upstream result completeness, and task outcome correlation.
+
+**Syntax:**
+```
+!prompt_audit                                -- Audit the active dashboard (auto-detect)
+!prompt_audit dashboard3                     -- Audit a specific dashboard
+```
+
+**Key Behavior:**
+- Read-only -- does not modify any files
+- Reads initialization.json and all progress files to collect per-task metrics: template version, duration, stage progression, deviation count/severity, log density, milestone count, prompt size
+- Analyzes upstream result completeness for dependent tasks -- checks whether workers logged evidence of reading upstream progress files
+- Checks for convention map presence (optimization indicator)
+- Assigns each task a letter grade (A through F) based on collected metrics
+- Generates a quality scorecard with per-task grades, summary statistics (average duration, failure rate, deviation rate, upstream gap rate, log density, template version coverage, prompt size), and grade distribution
+- Produces 2-5 actionable recommendations based on threshold triggers (high failure rate, upstream gaps, low log density, high deviation rate, missing template versions, CRITICAL deviations, prompt size outliers)
+- Serial mode
 
 ---
 

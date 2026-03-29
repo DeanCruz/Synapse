@@ -50,20 +50,21 @@ The server is organized into a clean modular structure with separation of concer
 
 ```
 src/server/
-  index.js                          -- HTTP server entry point, startup, shutdown
-  SSEManager.js                     -- SSE client tracking, broadcast, heartbeat
+  index.js              (218 lines) -- HTTP server entry point, startup, shutdown
+  SSEManager.js         (108 lines) -- SSE client tracking, broadcast, heartbeat
   routes/
-    apiRoutes.js                    -- All REST API endpoint handlers
+    apiRoutes.js        (507 lines) -- All REST API endpoint handlers
   services/
-    DashboardService.js             -- Dashboard CRUD and file I/O
-    WatcherService.js               -- File system watchers for live updates
-    DependencyService.js            -- Task dependency graph resolution
-    ArchiveService.js               -- Archive management
-    HistoryService.js               -- History summary generation
-    QueueService.js                 -- Queue management
+    ArchiveService.js    (72 lines) -- Archive management
+    DashboardService.js (232 lines) -- Dashboard CRUD and file I/O
+    DependencyService.js(198 lines) -- Task dependency graph resolution
+    HistoryService.js   (140 lines) -- History summary generation
+    QueueService.js     (162 lines) -- Queue management
+    WatcherService.js   (364 lines) -- File system watchers for live updates
   utils/
-    constants.js                    -- All configuration constants
-    json.js                         -- JSON read/write utilities with validation
+    constants.js         (48 lines) -- All configuration constants
+    json.js             (194 lines) -- JSON read/write utilities with validation
+    validation.js        (88 lines) -- Dependency graph validation (cycles, dangling refs)
 ```
 
 ### Module Dependency Graph
@@ -71,7 +72,10 @@ src/server/
 ```
 index.js
   |-- SSEManager.js
+  |     |-- constants.js
   |-- DashboardService.js
+  |     |-- constants.js
+  |     |-- json.js
   |-- WatcherService.js
   |     |-- DashboardService.js
   |     |-- QueueService.js
@@ -79,6 +83,8 @@ index.js
   |     |-- json.js
   |     |-- constants.js
   |-- QueueService.js
+  |     |-- constants.js
+  |     |-- json.js
   |-- apiRoutes.js
         |-- DashboardService.js
         |-- ArchiveService.js
@@ -87,6 +93,8 @@ index.js
         |-- DependencyService.js
         |-- json.js
         |-- constants.js
+
+validation.js (standalone utility — not imported by server, used by master agent)
 ```
 
 ---

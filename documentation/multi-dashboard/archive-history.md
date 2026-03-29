@@ -66,8 +66,8 @@ Archives are named using the pattern `{YYYY-MM-DD}_{task_name}`:
 The `ArchiveService.archiveDashboard(id)` function handles archive creation:
 
 ```javascript
-const archiveName = archiveDashboard('dashboard1');
-// Copies dashboard1/ to Archive/2026-03-22_task-name/
+const archiveName = archiveDashboard('a1b2c3');
+// Copies a1b2c3/ to Archive/2026-03-22_task-name/
 // Returns: "2026-03-22_task-name"
 ```
 
@@ -146,7 +146,7 @@ Each history JSON file contains:
   "completed_at": "2026-03-15T10:18:30Z",
   "duration": "13m 30s",
   "cleared_at": "2026-03-15T10:25:00Z",
-  "dashboard_id": "dashboard1",
+  "dashboard_id": "a1b2c3",
   "agents": [
     {
       "id": "1.1",
@@ -203,8 +203,8 @@ The `HistoryService.buildHistorySummary(id)` function constructs a summary by:
 The `HistoryService.saveHistorySummary(id)` function builds the summary and writes it to disk:
 
 ```javascript
-const summary = saveHistorySummary('dashboard1');
-// Builds summary from dashboard1's data
+const summary = saveHistorySummary('a1b2c3');
+// Builds summary from dashboard a1b2c3's data
 // Writes to history/2026-03-22_task-name.json
 // Returns the summary object
 ```
@@ -243,8 +243,8 @@ The `!reset` command triggers both archiving and history saving before clearing:
 
 ```
 !reset                  # Reset auto-detected active dashboard
-!reset dashboard2       # Reset a specific dashboard
-!reset --all            # Reset all 5 dashboards
+!reset a1b2c3           # Reset a specific dashboard
+!reset --all            # Reset all dashboards
 ```
 
 ### Single Dashboard Reset Flow
@@ -258,7 +258,7 @@ The `!reset` command triggers both archiving and history saving before clearing:
 
 ### Reset All (`--all`)
 
-For each dashboard 1 through 5:
+For each dashboard returned by `listDashboards()`:
 - If `task` is `null`, skip (already empty).
 - Otherwise, archive, save history, and clear.
 

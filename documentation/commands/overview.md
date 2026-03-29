@@ -53,13 +53,13 @@ Synapse commands are organized into several functional groups:
 
 Located at `{tracker_root}/_commands/Synapse/`. These commands manage the full lifecycle of parallel agent swarms -- from planning and dispatch through monitoring and completion. See [Swarm Commands](swarm-commands.md) for full documentation.
 
-Key commands: `!p_track`, `!p`, `!master_plan_track`, `!dispatch`, `!retry`, `!resume`, `!track_resume`, `!cancel`, `!cancel-safe`
+Key commands: `!p_track`, `!p`, `!master_plan_track`, `!dispatch`, `!eager_dispatch`, `!add_task`, `!retry`, `!resume`, `!track_resume`, `!p_track_resume`, `!cancel`, `!cancel-safe`
 
 ### Monitoring Commands
 
 Also located at `{tracker_root}/_commands/Synapse/`. These commands provide visibility into active and past swarms. See [Swarm Commands](swarm-commands.md) for full documentation.
 
-Key commands: `!status`, `!logs`, `!inspect`, `!deps`, `!history`, `!update_dashboard`
+Key commands: `!status`, `!logs`, `!inspect`, `!deps`, `!history`, `!update_dashboard`, `!export`
 
 ### Server Control Commands
 
@@ -83,13 +83,25 @@ Key commands: `!context`, `!review`, `!health`, `!scope`, `!trace`, `!contracts`
 
 Also located at `{tracker_root}/_commands/project/`. Initialize and configure Synapse for a project.
 
-Key commands: `!initialize`, `!onboard`, `!scaffold`
+Key commands: `!initialize`, `!onboard`, `!scaffold`, `!create_claude`
 
 ### Table of Contents Commands
 
 Located at `{tracker_root}/_commands/project/`. Manage the project's semantic file index.
 
 Key commands: `!toc`, `!toc_generate`, `!toc_update`
+
+### Project Knowledge Index (PKI) Commands
+
+Located at `{tracker_root}/_commands/project/`. Bootstrap and maintain the deep operational knowledge layer for the target project.
+
+Key commands: `!learn`, `!learn_update`
+
+### Audit Commands
+
+Located at `{tracker_root}/_commands/project/`. Post-swarm analysis and quality assessment.
+
+Key commands: `!prompt_audit`
 
 ### Discovery Commands
 
@@ -136,11 +148,13 @@ Projects can define their own commands at `{project_root}/_commands/`. These fol
 
 | Category | Commands |
 |----------|----------|
-| **Swarm Lifecycle** | `!p_track`, `!p`, `!master_plan_track`, `!dispatch`, `!retry`, `!resume`, `!track_resume`, `!cancel`, `!cancel-safe` |
-| **Monitoring** | `!status`, `!logs`, `!inspect`, `!deps`, `!history`, `!update_dashboard` |
+| **Swarm Lifecycle** | `!p_track`, `!p`, `!master_plan_track`, `!dispatch`, `!eager_dispatch`, `!add_task`, `!retry`, `!resume`, `!track_resume`, `!p_track_resume`, `!cancel`, `!cancel-safe` |
+| **Monitoring** | `!status`, `!logs`, `!inspect`, `!deps`, `!history`, `!update_dashboard`, `!export` |
 | **Server** | `!start`, `!stop`, `!reset` |
 | **Project Mgmt** | `!project` |
-| **Setup** | `!initialize`, `!onboard`, `!scaffold` |
+| **Setup** | `!initialize`, `!onboard`, `!scaffold`, `!create_claude` |
 | **Analysis** | `!context`, `!review`, `!health`, `!scope`, `!trace`, `!contracts`, `!env_check`, `!plan` |
+| **PKI** | `!learn`, `!learn_update` |
 | **TOC** | `!toc`, `!toc_generate`, `!toc_update` |
+| **Audit** | `!prompt_audit` |
 | **Discovery** | `!commands`, `!profiles`, `!help`, `!guide` |

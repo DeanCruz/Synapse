@@ -6,7 +6,7 @@ All services live under `electron/services/` and run in the Electron main proces
 
 ## SwarmOrchestrator
 
-**File:** `electron/services/SwarmOrchestrator.js` (761 lines)
+**File:** `electron/services/SwarmOrchestrator.js` (764 lines)
 
 The SwarmOrchestrator is the core dispatch engine that replaces the terminal-based master agent for orchestrating parallel agent swarms. It manages the full swarm lifecycle: reading the dependency graph, dispatching unblocked tasks, handling completions and failures, implementing circuit breaker logic, and triggering automatic replanning.
 
@@ -203,7 +203,7 @@ The replanner must return a JSON object with:
 
 ## ClaudeCodeService
 
-**File:** `electron/services/ClaudeCodeService.js` (288 lines)
+**File:** `electron/services/ClaudeCodeService.js` (331 lines)
 
 Manages Claude Code CLI worker processes. Each spawned worker is an independent `claude` CLI process running in `--print` mode with `stream-json` output.
 
@@ -298,7 +298,7 @@ Count active workers for a specific dashboard.
 
 ## CodexService
 
-**File:** `electron/services/CodexService.js` (226 lines)
+**File:** `electron/services/CodexService.js` (225 lines)
 
 Manages Codex CLI worker processes. Similar to ClaudeCodeService but uses Codex-specific CLI arguments and output handling.
 

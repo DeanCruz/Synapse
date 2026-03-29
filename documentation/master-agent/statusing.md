@@ -100,11 +100,19 @@ The timestamped event log. Every entry becomes a row in the dashboard log panel.
 | `permission` | Amber badge (triggers popup) | Master needs user input before continuing |
 | `deviation` | Yellow badge | Plan divergence reported by a worker |
 
+### master_state.json
+
+**Written after every event** as a recovery checkpoint. During long-running swarms, context compaction may discard cached upstream results. The master writes `master_state.json` after every significant event (dispatch, completion, failure) so that state can be recovered if context is compacted. The file contains the current state of the swarm: completed task results, in-progress tasks, cached upstream summaries, and the dependency graph status. See `agent/master/compaction_recovery.md` for the full schema and recovery procedure.
+
+### metrics.json
+
+**Written once after all tasks complete.** Contains post-swarm performance metrics: elapsed time, parallel efficiency, duration distribution, and failure rate. Computed by the master during the final reporting phase. See `agent/master/compaction_recovery.md` for the full metrics computation procedure.
+
 ### progress/ Directory
 
 Worker-owned. Each worker writes to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` exclusively. The server watches this directory via `fs.watch` and broadcasts `agent_progress` SSE events to the dashboard.
 
-The master reads progress files after every worker completion to build the completed and in-progress sets for eager dispatch. The master never writes progress files.
+The master reads progress files after every worker completion to build the completed and in-progress sets for eager dispatch. The master never writes progress files during full dashboard tracking mode. In lightweight mode (`!p` or sub-threshold), the master creates minimal progress files for each completed worker using the worker's return data.
 
 Progress files are ephemeral -- they exist only during the active swarm. The master clears this directory when initializing a new swarm (after archiving).
 
@@ -466,18 +474,18 @@ The master's last statusing action is the comprehensive swarm report, delivered 
 
 ## Summary of What Gets Updated and When
 
-| Event | logs.json | Task file | initialization.json | progress/ | Terminal |
-|---|---|---|---|---|---|
-| Swarm initialized | Append | Created | Written (once) | Cleared | Plan table |
-| Agent dispatched | Append | Claim task | -- | Worker writes | One line |
-| Agent progressing | -- | -- | -- | Worker writes | -- |
-| Agent completed | Append | Update task | -- | Worker writes | One line |
-| Agent warned | Append | -- | -- | -- | One line |
-| Agent deviated | Append | -- | -- | Worker writes | One line |
-| Agent failed | Append | Update task | Repair task added | Worker writes | One line |
-| Eager dispatch | Append | -- | -- | -- | -- |
-| Circuit breaker | Append (warn + permission) | -- | -- | -- | Assessment |
-| Swarm complete | Append | Update statuses | -- | -- | Final report |
+| Event | logs.json | Task file | initialization.json | master_state.json | metrics.json | progress/ | Terminal |
+|---|---|---|---|---|---|---|---|
+| Swarm initialized | Append | Created | Written (once) | -- | -- | Cleared | Plan table |
+| Agent dispatched | Append | Claim task | -- | Updated | -- | Worker writes | One line |
+| Agent progressing | -- | -- | -- | -- | -- | Worker writes | -- |
+| Agent completed | Append | Update task | -- | Updated | -- | Worker writes | One line |
+| Agent warned | Append | -- | -- | -- | -- | -- | One line |
+| Agent deviated | Append | -- | -- | -- | -- | Worker writes | One line |
+| Agent failed | Append | Update task | Repair task added | Updated | -- | Worker writes | One line |
+| Eager dispatch | Append | -- | -- | Updated | -- | -- | -- |
+| Circuit breaker | Append (warn + permission) | -- | -- | Updated | -- | -- | Assessment |
+| Swarm complete | Append | Update statuses | -- | -- | Written (once) | -- | Final report |
 
 ---
 

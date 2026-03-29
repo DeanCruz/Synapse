@@ -5811,6 +5811,18 @@ a:hover {
   background: rgba(59, 130, 246, 0.12);
 }
 
+.claude-view-dashboard-id {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
+}
+
 .claude-clear-btn {
   margin-left: auto;
   background: none;

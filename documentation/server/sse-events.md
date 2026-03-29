@@ -41,9 +41,9 @@ GET /events?dashboard=dashboard1
 
 Connections are managed by the SSEManager module:
 
-- `addClient(res)` -- adds the client's response object to the tracked `Set`
+- `addClient(res, options)` -- adds the client's response object to the tracked `Map` with optional `{ dashboardFilter }` metadata
 - `removeClient(res)` -- removes the client on connection close
-- `broadcast(eventName, data)` -- sends an event to all connected clients
+- `broadcast(eventName, data)` -- sends an event to all connected clients. If a client has a `dashboardFilter` set, it only receives events whose `data.dashboardId` matches the filter (or global events with no `dashboardId`).
 - Dead connections (destroyed or ended responses) are automatically cleaned up during broadcast and heartbeat cycles
 
 ---
@@ -350,6 +350,48 @@ Sent when the queue state changes (new item added or item removed).
 
 ---
 
+### `write_rejected`
+
+Sent when a progress file write is rejected by the WatcherService's validation guards. This event alerts the dashboard that a worker attempted to write invalid data (e.g., wrong `task_id` for the filename or wrong `dashboard_id` for the directory).
+
+**Trigger:** WatcherService `validateAndBroadcast()` detects a mismatch between the progress file contents and its expected location
+
+**Data (task_id mismatch):**
+```json
+{
+  "dashboardId": "dashboard1",
+  "filename": "1.1.json",
+  "task_id": "2.3",
+  "reason": "task_id_mismatch",
+  "details": "File contains task_id \"2.3\" but filename is \"1.1.json\" (expected task_id \"1.1\")",
+  "expected_task_id": "1.1",
+  "timestamp": "2026-03-20T14:05:00.000Z"
+}
+```
+
+**Data (dashboard_id mismatch):**
+```json
+{
+  "dashboardId": "dashboard1",
+  "filename": "1.1.json",
+  "task_id": "1.1",
+  "reason": "dashboard_id_mismatch",
+  "details": "File contains dashboard_id \"dashboard2\" but is in dashboard \"dashboard1\"",
+  "file_dashboard_id": "dashboard2",
+  "expected_dashboard_id": "dashboard1",
+  "timestamp": "2026-03-20T14:05:00.000Z"
+}
+```
+
+**Rejection reasons:**
+
+| Reason | Description |
+|--------|-------------|
+| `task_id_mismatch` | The `task_id` field inside the progress file does not match the filename (e.g., file `1.1.json` contains `task_id: "2.3"`) |
+| `dashboard_id_mismatch` | The `dashboard_id` field inside the progress file does not match the dashboard directory it was written to |
+
+---
+
 ## Heartbeat
 
 The server sends a comment-based heartbeat ping to all connected clients at regular intervals to prevent connection timeouts.
@@ -433,3 +475,4 @@ The browser's `EventSource` API automatically reconnects if the connection drops
 | `tasks_unblocked` | Task completion | When dependencies resolve | `{ dashboardId, completedTaskId, unblocked }` |
 | `dashboards_changed` | Dashboard dir change | On change (debounced) | `{ dashboards: string[] }` |
 | `queue_changed` | Queue dir change | On change (debounced) | `{ queue: QueueSummary[] }` |
+| `write_rejected` | Invalid progress write | On validation failure | `{ dashboardId, filename, task_id, reason, details, timestamp }` |

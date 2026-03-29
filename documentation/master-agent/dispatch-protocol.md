@@ -178,9 +178,29 @@ The Synapse server automatically monitors task completions and proactively ident
 When any worker's progress file changes to `status: "completed"`, the server:
 
 1. Detects the completion via `fs.watch` on the progress directory.
-2. Runs a dependency scan after a 100ms delay to allow file writes to settle.
-3. Identifies newly unblocked tasks by checking only tasks that depend on the completed task.
-4. Broadcasts a `tasks_unblocked` SSE event to the dashboard.
+2. Runs a dependency scan after a 100ms delay (`DEPENDENCY_CHECK_DELAY_MS`) to allow file writes to settle.
+3. Identifies newly unblocked tasks by calling `DependencyService.computeNewlyUnblocked(dashboardId, completedTaskId)` -- this efficiently checks only tasks that depend on the completed task.
+4. Broadcasts a `tasks_unblocked` SSE event to the dashboard if any tasks became dispatchable. The dashboard displays a green toast notification showing which tasks are ready for dispatch.
+
+### The `tasks_unblocked` SSE Event
+
+When the server detects newly dispatchable tasks, it broadcasts:
+
+```json
+{
+  "dashboardId": "dashboard1",
+  "completedTaskId": "1.1",
+  "unblocked": [
+    {
+      "id": "2.1",
+      "title": "Add auth middleware",
+      "wave": 2,
+      "depends_on": ["1.1"],
+      "dependency_status": { "1.1": "completed" }
+    }
+  ]
+}
+```
 
 ### The Dispatchable API Endpoint
 
