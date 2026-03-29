@@ -21,7 +21,7 @@ var TARGET_ELEMENTS = [
   'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
   'p', 'span', 'button', 'a', 'label', 'li',
   'td', 'th', 'caption', 'figcaption',
-  'blockquote', 'dt', 'dd'
+  'blockquote', 'dt', 'dd', 'TextAnimated', 'TextLoop', 'Marquee', 'StyledText' // common custom text components
 ];
 
 // ---------------------------------------------------------------------------
