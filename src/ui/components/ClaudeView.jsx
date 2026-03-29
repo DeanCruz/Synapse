@@ -915,6 +915,19 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     setNewMsgCount(0);
   }
 
+  const syncAgentSettings = useCallback((settings) => {
+    if (!settings) return;
+
+    const nextProvider = settings.agentProvider || 'claude';
+    const resolvedDefaultModel = resolveModel(nextProvider, settings.defaultModel);
+    setProvider(nextProvider);
+    setModel(resolvedDefaultModel);
+
+    if (resolvedDefaultModel !== settings.defaultModel && api) {
+      api.setSetting('defaultModel', resolvedDefaultModel).catch(() => {});
+    }
+  }, [api]);
+
   // Load conversation list when history panel opens (filtered by current dashboard)
   useEffect(() => {
     if (showHistory && api) {
@@ -924,16 +937,16 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
 
   useEffect(() => {
     if (!api) return;
-    api.getSettings().then((settings) => {
-      const nextProvider = settings.agentProvider || 'claude';
-      const resolvedDefaultModel = resolveModel(nextProvider, settings.defaultModel);
-      setProvider(nextProvider);
-      setModel(resolvedDefaultModel);
-      if (resolvedDefaultModel !== settings.defaultModel) {
-        api.setSetting('defaultModel', resolvedDefaultModel).catch(() => {});
-      }
-    }).catch(() => {});
-  }, [api, dashboardId]);
+    api.getSettings().then(syncAgentSettings).catch(() => {});
+
+    const removeSettingsListener = api.on('settings-changed', (payload) => {
+      syncAgentSettings(payload?.settings || null);
+    });
+
+    return () => {
+      removeSettingsListener();
+    };
+  }, [api, dashboardId, syncAgentSettings]);
 
   // Set up push listeners — route output to correct dashboard (current or stashed)
   useEffect(() => {

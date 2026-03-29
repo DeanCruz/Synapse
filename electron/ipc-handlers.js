@@ -583,12 +583,24 @@ function registerIPCHandlers(getMainWindow) {
   ipcMain.handle('set-setting', async (_event, key, value) => {
     const settings = require('./settings');
     settings.set(key, value);
+    broadcastFn('settings-changed', {
+      key,
+      value,
+      settings: settings.getAll(),
+    });
     return { success: true };
   });
 
   ipcMain.handle('reset-settings', async () => {
     const settings = require('./settings');
-    return settings.reset();
+    const result = settings.reset();
+    broadcastFn('settings-changed', {
+      key: null,
+      value: null,
+      settings: settings.getAll(),
+      reset: true,
+    });
+    return result;
   });
 
   // --- Project handlers ---

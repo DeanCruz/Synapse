@@ -29,6 +29,7 @@ const PUSH_CHANNELS = [
   'debug-stopped',
   'debug-output',
   'preview-edit-request',
+  'settings-changed',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
