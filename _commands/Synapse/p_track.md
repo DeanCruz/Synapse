@@ -71,7 +71,7 @@
 
 ## Phase 2: Execution — Dispatch & Monitor
 
-**Steps 12-16:** Dispatch all independent tasks simultaneously (dispatch FIRST, update tracker AFTER), construct self-contained worker prompts with conventions/reference code/upstream results/sibling awareness, process completions with eager dependency-driven dispatch, handle failures with repair tasks, evaluate circuit breaker thresholds on every failure, manage compaction recovery, and checkpoint master state after every dispatch event.
+**Steps 12-16:** Dispatch all independent tasks simultaneously (dispatch FIRST, update tracker AFTER), construct self-contained worker prompts with conventions/reference code/upstream results/sibling awareness/progress tracking instructions, process completions with eager dependency-driven dispatch, handle failures with repair tasks, evaluate circuit breaker thresholds on every failure, manage compaction recovery, and checkpoint master state after every dispatch event.
 
 > **Read `{tracker_root}/agent/_commands/p_track_execution.md` for the complete execution protocol.**
 
@@ -108,10 +108,10 @@
 
 ### Agent Prompts
 
-12. **Agent prompts must be self-contained.** Every agent receives its full context in its dispatch prompt — including conventions extracted from CLAUDE.md, reference code patterns, and upstream results.
+12. **Agent prompts must be self-contained.** Every agent receives its full context in its dispatch prompt — including conventions extracted from CLAUDE.md, reference code patterns, and upstream results. Every worker prompt MUST include progress tracking instructions: progress file path, task ID, agent label, template_version, and either a reference to the instruction file or the inline progress schema.
 13. **Agents read only their task entry.** Every agent prompt instructs the agent to read ONLY their task entry in the master task file, not the entire file. The master already extracted all relevant context into the prompt.
 14. **Master embeds conventions, workers don't re-read.** The master extracts relevant CLAUDE.md sections into each worker's CONVENTIONS block. Workers only read CLAUDE.md if the master couldn't provide conventions.
-15. **Agents must write live progress.** Every agent writes stage transitions, milestones, and logs to `{tracker_root}/dashboards/{dashboardId}/progress/{id}.json`. This is how the dashboard shows real-time worker activity.
+15. **Agents must write live progress.** Every agent writes stage transitions, milestones, and logs to `{tracker_root}/dashboards/{dashboardId}/progress/{id}.json`. This is how the dashboard shows real-time worker activity. The master ensures this by including progress instructions in every worker prompt (see `worker_prompts.md` Prompt Completeness Checklist).
 16. **Agents must report deviations immediately.** Any deviation from the plan must be written to the progress file deviations array AND included in the final return. Deviations trigger a yellow badge on the dashboard. Failing to report a deviation is a task failure.
 17. **Agents self-assess with structured criteria.** Before executing, agents answer four specific questions: Can I identify every file? Do I understand the patterns? Can I describe my approach? Are there ambiguities? This replaces vague "do I know enough" self-assessment.
 

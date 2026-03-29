@@ -686,6 +686,7 @@ function registerIPCHandlers(getMainWindow) {
 
   // Build system prompt for in-app agent chat — reads Synapse CLAUDE.md + project CLAUDE.md
   ipcMain.handle('get-chat-system-prompt', async (_event, projectDir, dashboardId, additionalContextDirs) => {
+    if (!dashboardId) throw new Error('dashboardId is required for system prompt generation — received: ' + dashboardId);
     const parts = [];
     const synapseRoot = path.resolve(__dirname, '..');
     const ctxDirs = Array.isArray(additionalContextDirs) ? additionalContextDirs : [];
@@ -695,7 +696,9 @@ function registerIPCHandlers(getMainWindow) {
       '# Directory References\n\n' +
       'TRACKER ROOT (Synapse): ' + synapseRoot + '\n' +
       'PROJECT ROOT (target project): ' + (projectDir || synapseRoot) + '\n' +
-      'DASHBOARD ID: ' + (dashboardId || 'dashboard1') + '\n';
+      '===DASHBOARD_BINDING_START===\n' +
+      'DASHBOARD ID: ' + dashboardId + '\n' +
+      '===DASHBOARD_BINDING_END===\n';
 
     // Include additional context directories in the reference block
     if (ctxDirs.length > 0) {
@@ -710,14 +713,14 @@ function registerIPCHandlers(getMainWindow) {
     }
 
     dirRef +=
-      '\nYou are the agent for **' + (dashboardId || 'dashboard1') + '**. This is your PRE-ASSIGNED dashboard — ' +
+      '\nYou are the agent for **' + dashboardId + '**. This is your PRE-ASSIGNED dashboard — ' +
       'it was set by the chat view that spawned you. This dashboard binding is AUTHORITATIVE.\n' +
       'When running !p_track or any swarm command, use this dashboard directly — do NOT scan or auto-select a different one.\n' +
       'When running !master_plan_track, use this dashboard for your primary stream (S1) and scan OTHER dashboards for additional streams.\n\n' +
       'Dashboard paths:\n' +
-      '  - initialization.json: ' + synapseRoot + '/dashboards/' + (dashboardId || 'dashboard1') + '/initialization.json\n' +
-      '  - logs.json: ' + synapseRoot + '/dashboards/' + (dashboardId || 'dashboard1') + '/logs.json\n' +
-      '  - Progress files: ' + synapseRoot + '/dashboards/' + (dashboardId || 'dashboard1') + '/progress/{task_id}.json\n\n' +
+      '  - initialization.json: ' + synapseRoot + '/dashboards/' + dashboardId + '/initialization.json\n' +
+      '  - logs.json: ' + synapseRoot + '/dashboards/' + dashboardId + '/logs.json\n' +
+      '  - Progress files: ' + synapseRoot + '/dashboards/' + dashboardId + '/progress/{task_id}.json\n\n' +
       'When looking for commands and instructions, ALWAYS check the Synapse directory (TRACKER ROOT) first:\n' +
       '  1. {tracker_root}/_commands/{command}.md — Synapse swarm commands (highest priority)\n' +
       '  2. {tracker_root}/_commands/project/{command}.md — Synapse project commands\n' +
@@ -813,6 +816,12 @@ function registerIPCHandlers(getMainWindow) {
       dangerouslySkipPermissions: opts.dangerouslySkipPermissions,
     }));
     try {
+      if (opts.dashboardId) {
+        const dashDir = path.join(DASHBOARDS_DIR, opts.dashboardId);
+        if (!fs.existsSync(dashDir)) {
+          throw new Error('Dashboard directory does not exist: ' + dashDir);
+        }
+      }
       const service = opts.provider === 'codex' ? CodexService : ClaudeCodeService;
       const result = service.spawnWorker(opts);
       console.log('[spawn-worker] Spawned PID:', result.pid);

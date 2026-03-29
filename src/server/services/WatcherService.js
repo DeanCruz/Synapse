@@ -122,9 +122,9 @@ function watchDashboard(id, broadcastFn) {
         try {
           if (!fs.existsSync(filePath)) return; // file was deleted (reset)
           const data = await readJSONWithRetry(filePath, PROGRESS_RETRY_MS);
-          if (data && isValidProgress(data)) {
-            const accepted = validateAndBroadcast(data, id, filename, broadcastFn);
-            if (!accepted) return; // rejected — do not proceed to dependency check
+          const expectedId = filename.replace('.json', '');
+          if (data && isValidProgress(data, expectedId)) {
+            broadcastFn('agent_progress', { dashboardId: id, ...data });
 
             // Dependency check: when a task completes, check if new tasks are unblocked
             if (data.status === 'completed') {
@@ -281,9 +281,9 @@ function reconcileProgressFiles(id, broadcastFn) {
 
         known.set(file, stat.mtimeMs);
         const data = readJSON(filePath);
-        if (data && isValidProgress(data)) {
-          const accepted = validateAndBroadcast(data, id, file, broadcastFn);
-          if (!accepted) continue; // rejected — skip dependency check for this file
+        const expectedId = file.replace('.json', '');
+        if (data && isValidProgress(data, expectedId)) {
+          broadcastFn('agent_progress', { dashboardId: id, ...data });
 
           // Dependency check: when a task completes, check if new tasks are unblocked
           if (data.status === 'completed') {

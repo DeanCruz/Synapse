@@ -98,7 +98,10 @@ function isValidProgress(data, expectedTaskId, expectedDashboardId) {
   if (typeof data.status !== 'string') return false;
 
   // Optional task_id match validation (backward compatible — only checks if expectedTaskId is provided)
-  if (expectedTaskId !== undefined && data.task_id !== expectedTaskId) return false;
+  if (expectedTaskId !== undefined && data.task_id !== expectedTaskId) {
+    console.error(`[isValidProgress] REJECTED: task_id mismatch — file expects "${expectedTaskId}" but data contains "${data.task_id}". Possible cross-worker write violation.`);
+    return false;
+  }
 
   // dashboard_id type validation (if present, must be a non-empty string)
   if (data.dashboard_id !== undefined && data.dashboard_id !== null) {

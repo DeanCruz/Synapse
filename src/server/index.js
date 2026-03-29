@@ -120,7 +120,7 @@ const server = http.createServer((req, res) => {
       res.write(`event: queue_changed\ndata: ${JSON.stringify({ queue: queueSummaries })}\n\n`);
     }
 
-    addClient(res);
+    addClient(res, { dashboardFilter: filterDashboard });
     req.on('close', () => removeClient(res));
     return;
   }

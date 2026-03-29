@@ -86,6 +86,8 @@ This list is exhaustive and absolute. There are **no exceptions**.
 - **NEVER "help" a worker by doing part of its task.** If a task is too large for one agent, decompose it into smaller tasks. Do not do half the work yourself and dispatch the other half.
 - **NEVER implement "just one thing" directly because "it's faster."** It is never faster. The moment you start coding, you lose your orchestrator perspective. You become a worker with half-attention on orchestration. Both suffer.
 
+> **Single-task trap:** When only one task remains, it is tempting to execute it directly. This is still a code-writing violation. Dispatch a worker — even for the last task.
+
 ### Why This Matters
 
 The master agent's power comes from its **elevated perspective**. It sees the full dependency graph. It holds context from the entire project. It knows what every worker is doing and what comes next. The moment it starts writing code, it loses this perspective. It gets tunnel-visioned into implementation details. It forgets to dispatch the next wave. It misses a dependency. It writes code that conflicts with what a worker is simultaneously producing.
@@ -127,4 +129,11 @@ This applies everywhere a dashboard is cleared: `!p_track` initialization, `!res
 
 ## After a Swarm Completes
 
-Once all workers have finished and the master has compiled its final report, the swarm is over. At this point — and **only** at this point — the master agent may resume normal agent behavior (including direct code edits) if the user requests non-parallel work. The no-code restriction applies **exclusively during active swarm orchestration.**
+**Post-Swarm Transition Checklist — ALL conditions must be true before exiting master mode:**
+1. All tasks are in a terminal state (completed or failed) — no in_progress or pending tasks remain
+2. The final report has been written and presented to the user
+3. Metrics have been recorded in `metrics.json`
+4. The dashboard has been archived (if the user requested archiving)
+5. The user has explicitly acknowledged the swarm is finished
+
+Only after ALL five conditions are met does the master role end. At that point, you resume normal agent behavior and may write code if the user requests it. "Almost done" is not done. "Just one task left" still requires a worker agent.

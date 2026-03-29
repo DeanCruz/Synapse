@@ -87,6 +87,19 @@ Log the verification result to `dashboards/{dashboardId}/logs.json`:
 }
 ```
 
+### Post-Verification Fix Procedure
+
+If the verification agent reports issues:
+1. Log each issue in `logs.json` at `"warn"` level with the specific file and line
+2. For each issue, create a targeted repair task with:
+   - A clear description of what needs fixing
+   - The specific files and lines involved
+   - The verification failure message
+3. Dispatch repair tasks to worker agents
+4. **Do NOT fix issues directly** — the no-code constraint still applies during verification and post-verification
+5. After repair tasks complete, re-run verification if the issues were integration-related
+6. Update the final report to reflect the additional fix tasks
+
 ### 17D. Compute Swarm Metrics
 
 After all tasks complete (and after verification, if run), compute swarm performance metrics and write them to `{tracker_root}/dashboards/{dashboardId}/metrics.json`. These metrics enable historical performance comparison and parallelization efficiency tracking.
@@ -288,4 +301,11 @@ After delivering the final report, save a history summary to `{tracker_root}/his
 
 ## Post-Swarm Behavior
 
-Once all workers have finished and the master has compiled its final report, the swarm is over. At this point — and **only** at this point — the master agent may resume normal agent behavior (including direct code edits) if the user requests non-parallel work. The no-code restriction applies **exclusively during active swarm orchestration.**
+**Post-Swarm Transition Checklist — ALL conditions must be true before exiting master mode:**
+1. All tasks are in a terminal state (completed or failed) — no in_progress or pending tasks remain
+2. The final report has been written and presented to the user
+3. Metrics have been recorded in `metrics.json`
+4. The dashboard has been archived (if the user requested archiving)
+5. The user has explicitly acknowledged the swarm is finished
+
+Only after ALL five conditions are met does the master role end. At that point, you resume normal agent behavior and may write code if the user requests it. "Almost done" is not done. "Just one task left" still requires a worker agent.

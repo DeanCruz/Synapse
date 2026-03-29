@@ -160,6 +160,8 @@ FIRST: Read the worker instructions file:
 Follow those instructions EXACTLY. They contain the full progress file schema,
 required reporting points, log format, and examples.
 
+If you cannot read the instruction file at the path above, use the inline PROGRESS FILE SCHEMA provided in this prompt instead. Log the failure as a deviation in your progress file.
+
 {If LITE:}
 FIRST: Read the lite worker instructions file:
   {tracker_root}/agent/instructions/tracker_worker_instructions_lite.md
@@ -167,7 +169,27 @@ FIRST: Read the lite worker instructions file:
 Follow those instructions EXACTLY. They contain the streamlined progress file schema
 and required reporting points for simple tasks.
 
+If you cannot read the instruction file at the path above, use the inline PROGRESS FILE SCHEMA provided in this prompt instead. Log the failure as a deviation in your progress file.
+
+PROGRESS FILE SCHEMA (fallback — use this if you cannot read the instruction file above):
+{
+  "task_id": "{id}",
+  "template_version": "p_track_v2",
+  "status": "in_progress | completed | failed",
+  "started_at": "ISO-8601",
+  "completed_at": "ISO-8601 | null",
+  "summary": "one-line result on completion",
+  "assigned_agent": "Agent {N}",
+  "stage": "reading_context | planning | implementing | testing | finalizing | completed | failed",
+  "message": "what you are doing right now",
+  "milestones": [{ "at": "ISO-8601", "msg": "significant accomplishment" }],
+  "deviations": [{ "at": "ISO-8601", "description": "plan divergence" }],
+  "logs": [{ "at": "ISO-8601", "level": "info|warn|error|deviation", "msg": "event" }]
+}
+Write the FULL file on every update. Mandatory writes: (1) before starting work, (2) on every stage transition, (3) on any deviation, (4) on completion/failure. Timestamps: always `date -u +"%Y-%m-%dT%H:%M:%SZ"`.
+
 YOUR PROGRESS FILE: {tracker_root}/dashboards/{dashboardId}/progress/{id}.json
+MANDATORY: Write your first progress file IMMEDIATELY with status: "in_progress", stage: "reading_context" BEFORE doing any work. This is NON-NEGOTIABLE.
 YOUR TASK ID: {id}
 YOUR AGENT LABEL: Agent {N}
 
@@ -455,6 +477,7 @@ Before dispatching each agent, verify the prompt contains all of these. A missin
 | **Success criteria** | The worker can unambiguously determine when the task is done |
 | **Critical details** | Edge cases, gotchas, and non-obvious constraints are explicitly stated |
 | **Instruction mode** | FULL or LITE is selected based on task complexity (see Instruction Mode Selection) |
+| **Progress tracking** | Progress file path, task ID, agent label, template_version, inline schema, MANDATORY first-write line | Must include — workers without this will not report progress |
 
 If any element is missing, add it before dispatch. Do not assume the worker will figure it out.
 
