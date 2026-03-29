@@ -30,6 +30,30 @@ const BRIDGE_SCRIPT = `
 })();
 `;
 
+function normalizePreviewLabel(rawLabel) {
+  if (typeof rawLabel !== 'string') return '';
+
+  let label = rawLabel.trim();
+  if (!label) return '';
+
+  if (
+    (label.startsWith('{') && label.endsWith('}')) ||
+    (label.startsWith('(') && label.endsWith(')'))
+  ) {
+    label = label.slice(1, -1).trim();
+  }
+
+  if (
+    (label.startsWith('"') && label.endsWith('"')) ||
+    (label.startsWith("'") && label.endsWith("'")) ||
+    (label.startsWith('`') && label.endsWith('`'))
+  ) {
+    label = label.slice(1, -1).trim();
+  }
+
+  return label;
+}
+
 export default function PreviewView() {
   const state = useAppState();
   const dispatch = useDispatch();
@@ -98,7 +122,8 @@ export default function PreviewView() {
    * Writes the edit to the source file and updates AppContext state.
    */
   const handleSynapseEdit = useCallback(async (editData) => {
-    const { label, newText, oldText, routePath } = editData;
+    const { label: rawLabel, newText, oldText, routePath } = editData;
+    const label = normalizePreviewLabel(rawLabel);
     if (!label) return;
 
     if (!projectPath) {
@@ -280,8 +305,9 @@ export default function PreviewView() {
       if (msg && msg.startsWith('__SYNAPSE_EDIT__')) {
         try {
           const editData = JSON.parse(msg.slice('__SYNAPSE_EDIT__'.length));
-          console.log('[PreviewView] Received edit:', editData.label, '→', JSON.stringify(editData.newText).slice(0, 60));
-          handleSynapseEdit(editData);
+          const normalizedLabel = normalizePreviewLabel(editData.label);
+          console.log('[PreviewView] Received edit:', normalizedLabel, '→', JSON.stringify(editData.newText).slice(0, 60));
+          handleSynapseEdit({ ...editData, label: normalizedLabel });
         } catch (parseErr) {
           console.error('[PreviewView] Failed to parse synapse-edit message:', parseErr);
         }

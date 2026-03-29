@@ -28,6 +28,14 @@ var FRAMEWORK_SIGNATURES = {
   'svelte.config': 'svelte'
 };
 
+var LABEL_ATTRIBUTE_PATTERNS = [
+  function (label) { return 'data-synapse-label="' + label + '"'; },
+  function (label) { return "data-synapse-label='" + label + "'"; },
+  function (label) { return 'data-synapse-label={"' + label + '"}'; },
+  function (label) { return "data-synapse-label={'" + label + "'}"; },
+  function (label) { return 'data-synapse-label={`' + label + '`}'; }
+];
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -68,6 +76,45 @@ function walkDir(dir, extensions, results) {
   return results;
 }
 
+function normalizeLabel(label) {
+  if (typeof label !== 'string') return '';
+
+  var normalized = label.trim();
+  if (!normalized) return '';
+
+  if (
+    (normalized[0] === '{' && normalized[normalized.length - 1] === '}') ||
+    (normalized[0] === '(' && normalized[normalized.length - 1] === ')')
+  ) {
+    normalized = normalized.substring(1, normalized.length - 1).trim();
+  }
+
+  if (
+    (normalized[0] === '"' && normalized[normalized.length - 1] === '"') ||
+    (normalized[0] === "'" && normalized[normalized.length - 1] === "'") ||
+    (normalized[0] === '`' && normalized[normalized.length - 1] === '`')
+  ) {
+    normalized = normalized.substring(1, normalized.length - 1).trim();
+  }
+
+  return normalized;
+}
+
+function buildLabelAttributeRegex(label) {
+  var escapedLabel = label.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+  var attrValuePattern =
+    '(?:"' + escapedLabel + '"' +
+    '|' + "'" + escapedLabel + "'" +
+    '|\\{\\s*"' + escapedLabel + '"\\s*\\}' +
+    '|\\{\\s*\'' + escapedLabel + '\'\\s*\\}' +
+    '|\\{\\s*`' + escapedLabel + '`\\s*\\})';
+
+  return new RegExp(
+    '<([a-zA-Z][a-zA-Z0-9]*)[^>]*data-synapse-label\\s*=\\s*' + attrValuePattern + '[^>]*>',
+    'gi'
+  );
+}
+
 /**
  * Find the source file that contains a specific data-synapse-label UUID.
  * Since UUIDs are globally unique, this is an unambiguous search.
@@ -77,12 +124,19 @@ function walkDir(dir, extensions, results) {
  * @returns {string|null} - absolute path to the file containing the label, or null
  */
 function findFileByLabel(projectPath, label) {
+  var normalizedLabel = normalizeLabel(label);
+  if (!normalizedLabel) {
+    return null;
+  }
+
   var files = walkDir(projectPath, DEFAULT_EXTENSIONS, []);
   for (var i = 0; i < files.length; i++) {
     try {
       var content = fs.readFileSync(files[i], 'utf-8');
-      if (content.indexOf('data-synapse-label="' + label + '"') !== -1) {
-        return files[i];
+      for (var j = 0; j < LABEL_ATTRIBUTE_PATTERNS.length; j++) {
+        if (content.indexOf(LABEL_ATTRIBUTE_PATTERNS[j](normalizedLabel)) !== -1) {
+          return files[i];
+        }
       }
     } catch (e) {
       // Permission error or unreadable — skip
@@ -101,14 +155,13 @@ function findFileByLabel(projectPath, label) {
  * @returns {{ openTagEnd: number, closeTagStart: number, oldText: string, line: number } | null}
  */
 function findLabeledElement(content, label) {
-  var escapedLabel = label.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+  var normalizedLabel = normalizeLabel(label);
+  if (!normalizedLabel) {
+    return null;
+  }
 
   // Match any opening tag that has this specific data-synapse-label
-  var openTagRegex = new RegExp(
-    '<([a-zA-Z][a-zA-Z0-9]*)' +
-    '[^>]*data-synapse-label="' + escapedLabel + '"[^>]*>',
-    'gi'
-  );
+  var openTagRegex = buildLabelAttributeRegex(normalizedLabel);
 
   var match = openTagRegex.exec(content);
   if (!match) {
@@ -295,6 +348,11 @@ function checkPort(port, host, timeout) {
  */
 async function updateText(projectPath, label, newText, routePath) {
   try {
+    label = normalizeLabel(label);
+    if (!label) {
+      return { success: false, error: 'Missing label' };
+    }
+
     // 1. Find the file containing this UUID label
     var filePath = findFileByLabel(projectPath, label);
     if (!filePath) {

@@ -66,30 +66,87 @@ function walkDir(dir, extensions, results) {
 }
 
 /**
- * Build a regex that matches opening tags of target elements.
- * Captures: (1) the tag name, (2) existing attributes + whitespace before ">".
- *
- * The regex matches:
- *   <tagName            — opening angle bracket + tag name
- *   (                   — capture group for attributes region
- *     (?:\s[^>]*?)?     — optional: whitespace followed by any attributes (non-greedy)
- *   )
- *   >                   — closing angle bracket (NOT self-closing)
- *
- * This intentionally does NOT match self-closing tags (e.g., <br />) since
- * text-bearing elements should have content between open and close tags.
+ * Build a regex that matches the START of opening tags of target elements.
+ * Only matches `<tagName` followed by whitespace or `>` — does NOT try to
+ * find the closing `>` (that is handled by findTagClose).
  *
  * @returns {RegExp}
  */
-function buildTagRegex() {
+function buildTagStartRegex() {
   var tagGroup = TARGET_ELEMENTS.join('|');
-  // Match opening tags for target elements that are NOT self-closing.
-  // (?![a-zA-Z]) prevents matching <span2> or <heading> etc.
-  // The negative lookahead before > ensures we don't match self-closing tags.
   return new RegExp(
-    '<(' + tagGroup + ')(?![a-zA-Z0-9-])((?:\\s[^>]*?)?)(?<!/)>',
+    '<(' + tagGroup + ')(?![a-zA-Z0-9-])',
     'gi'
   );
+}
+
+/**
+ * Starting from `pos` (the character right after the tag name in `<tagName`),
+ * parse forward to find the real closing `>` of the opening tag.
+ *
+ * Properly handles:
+ *   - Quoted attribute values: "...", '...', `...` (with backslash escapes)
+ *   - JSX expression braces: { ... } (with arbitrary nesting)
+ *   - `>` characters inside quotes or braces are NOT treated as tag-close
+ *
+ * @param {string} source — full file content
+ * @param {number} pos — index right after the tag name
+ * @returns {{ closeIndex: number, attrs: string, selfClosing: boolean } | null}
+ *   closeIndex — index of the closing `>` character
+ *   attrs — the attribute string between tag name and `>`
+ *   selfClosing — true if the tag ends with `/>`
+ *   Returns null if no closing `>` is found (malformed markup)
+ */
+function findTagClose(source, pos) {
+  var len = source.length;
+  var braceDepth = 0;
+  var inString = false;
+  var stringChar = '';
+
+  for (var i = pos; i < len; i++) {
+    var ch = source[i];
+
+    // Handle string literals inside attributes / JSX expressions
+    if (inString) {
+      if (ch === '\\') {
+        i++; // skip escaped character
+        continue;
+      }
+      if (ch === stringChar) {
+        inString = false;
+      }
+      continue;
+    }
+
+    // Open a string
+    if ((ch === '"' || ch === "'" || ch === '`') && braceDepth >= 0) {
+      inString = true;
+      stringChar = ch;
+      continue;
+    }
+
+    // JSX expression braces
+    if (ch === '{') {
+      braceDepth++;
+      continue;
+    }
+    if (ch === '}') {
+      braceDepth = Math.max(0, braceDepth - 1);
+      continue;
+    }
+
+    // Only treat `>` as the tag close when outside braces and strings
+    if (ch === '>' && braceDepth === 0) {
+      var selfClosing = (i > 0 && source[i - 1] === '/');
+      return {
+        closeIndex: i,
+        attrs: source.substring(pos, i),
+        selfClosing: selfClosing
+      };
+    }
+  }
+
+  return null; // malformed — no closing > found
 }
 
 /**
@@ -217,38 +274,43 @@ function hasDirectTextContent(source, afterTagPos, tagName) {
  * @returns {{ content: string, labelsAdded: number, alreadyLabeled: number }}
  */
 function instrumentContent(content, filename) {
-  var tagRegex = buildTagRegex();
+  var tagStartRegex = buildTagStartRegex();
   var labelsAdded = 0;
   var alreadyLabeled = 0;
 
-  // We need to process matches one at a time since insertion changes offsets
-  var result = '';
-  var lastIndex = 0;
-  var match;
-
-  // Reset regex state
-  tagRegex.lastIndex = 0;
-
-  // Collect all matches first, then process from end to start to preserve offsets
+  // Collect all tag-start matches, then use findTagClose to locate the real closing >
   var matches = [];
-  while ((match = tagRegex.exec(content)) !== null) {
+  var match;
+  tagStartRegex.lastIndex = 0;
+
+  while ((match = tagStartRegex.exec(content)) !== null) {
+    var tagName = match[1];
+    var afterTagName = match.index + match[0].length; // position right after "<tagName"
+    var tagClose = findTagClose(content, afterTagName);
+    if (!tagClose) continue; // malformed tag — skip
+
     matches.push({
       index: match.index,
-      fullMatch: match[0],
-      tagName: match[1],
-      attrs: match[2],
-      endIndex: match.index + match[0].length
+      tagName: tagName,
+      attrs: tagClose.attrs,
+      closeIndex: tagClose.closeIndex,
+      selfClosing: tagClose.selfClosing,
+      endIndex: tagClose.closeIndex + 1 // position right after ">"
     });
   }
 
   // Process forward — rebuild the string with insertions
+  var result = '';
+  var lastIndex = 0;
+
   for (var i = 0; i < matches.length; i++) {
     var m = matches[i];
 
+    // Skip self-closing tags — they have no text content
+    if (m.selfClosing) continue;
+
     // Skip if inside a comment or string
-    if (isInsideCommentOrString(content, m.index)) {
-      continue;
-    }
+    if (isInsideCommentOrString(content, m.index)) continue;
 
     // Skip if already has data-synapse-label
     if (m.attrs && m.attrs.indexOf('data-synapse-label') !== -1) {
@@ -257,24 +319,16 @@ function instrumentContent(content, filename) {
     }
 
     // Check for direct text content (JSX/TSX heuristic)
-    if (!hasDirectTextContent(content, m.endIndex, m.tagName)) {
-      continue;
-    }
+    if (!hasDirectTextContent(content, m.endIndex, m.tagName)) continue;
 
     // Build the label
     var label = crypto.randomUUID();
-
-    // Insert the data-synapse-label attribute into the tag
-    // The match is: <tagName(attrs)>
-    // We insert data-synapse-label="..." right before the closing >
-    var tagOpen = '<' + m.tagName;
-    var attrStr = m.attrs || '';
     var insertion = ' data-synapse-label="' + label + '"';
 
-    // Append everything from lastIndex to this match start
-    result += content.substring(lastIndex, m.index);
-    // Append the modified tag
-    result += tagOpen + attrStr + insertion + '>';
+    // Append everything from lastIndex to the closing >
+    result += content.substring(lastIndex, m.closeIndex);
+    // Insert the attribute right before the >
+    result += insertion + '>';
     lastIndex = m.endIndex;
     labelsAdded++;
   }

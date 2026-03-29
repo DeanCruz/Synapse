@@ -31,6 +31,30 @@ var cachedMtimes = {};
 /** The project path used for the cached scan. */
 var cachedProjectPath = null;
 
+function normalizeLabel(label) {
+  if (typeof label !== 'string') return '';
+
+  var normalized = label.trim();
+  if (!normalized) return '';
+
+  if (
+    (normalized[0] === '{' && normalized[normalized.length - 1] === '}') ||
+    (normalized[0] === '(' && normalized[normalized.length - 1] === ')')
+  ) {
+    normalized = normalized.substring(1, normalized.length - 1).trim();
+  }
+
+  if (
+    (normalized[0] === '"' && normalized[normalized.length - 1] === '"') ||
+    (normalized[0] === "'" && normalized[normalized.length - 1] === "'") ||
+    (normalized[0] === '`' && normalized[normalized.length - 1] === '`')
+  ) {
+    normalized = normalized.substring(1, normalized.length - 1).trim();
+  }
+
+  return normalized;
+}
+
 // ---------------------------------------------------------------------------
 // Initialization
 // ---------------------------------------------------------------------------
@@ -175,7 +199,7 @@ function scanLabels(projectPath) {
   // Regex to find elements with data-synapse-label="..."
   // Captures: (1) the label value, and the full opening tag to find the tag name
   // Pattern: <tagName ... data-synapse-label="labelValue" ... >
-  var labelAttrRegex = /<([a-zA-Z][a-zA-Z0-9]*)\b[^>]*?\bdata-synapse-label="([^"]*)"[^>]*>/g;
+  var labelAttrRegex = /<([a-zA-Z][a-zA-Z0-9]*)\b[^>]*?\bdata-synapse-label\s*=\s*(?:"([^"]*)"|'([^']*)'|\{\s*"([^"]*)"\s*\}|\{\s*'([^']*)'\s*\}|\{\s*`([^`]*)`\s*\})[^>]*>/g;
 
   for (var i = 0; i < files.length; i++) {
     var filePath = files[i];
@@ -202,9 +226,13 @@ function scanLabels(projectPath) {
     var match;
     while ((match = labelAttrRegex.exec(content)) !== null) {
       var tagName = match[1];
-      var label = match[2];
+      var label = normalizeLabel(match[2] || match[3] || match[4] || match[5] || match[6] || '');
       var fullMatch = match[0];
       var matchEnd = match.index + fullMatch.length;
+
+      if (!label) {
+        continue;
+      }
 
       // Compute the line number of the element
       var line = getLineNumber(content, match.index);
