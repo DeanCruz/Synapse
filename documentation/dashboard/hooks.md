@@ -1,6 +1,6 @@
 # Hooks Reference
 
-The Synapse Dashboard uses two custom hooks to manage data flow and API access. Both are located in `/src/ui/hooks/`.
+The Synapse Dashboard uses three custom hooks to manage data flow, API access, and UI interactions. All are located in `/src/ui/hooks/`.
 
 ---
 
@@ -186,6 +186,70 @@ const isElectron = useIsElectron();
 ```
 
 Returns `true` if `window.electronAPI` exists, `false` otherwise. Used to conditionally render Electron-only features (e.g., the Commands button in the Header).
+
+---
+
+## useResize
+
+**File:** `/src/ui/hooks/useResize.js`
+
+Custom resize hook using pointer events and `requestAnimationFrame`. Replaces native CSS `resize: both` with a custom drag system for a bottom-right-anchored floating panel (`position: fixed; bottom: 20px; right: 20px`). Used by the `ClaudeFloatingPanel` in `App.jsx`.
+
+### Usage
+
+```javascript
+import { useResize } from './hooks/useResize.js';
+
+// Inside a component
+const panelRef = useRef(null);
+useResize(panelRef, viewMode);
+
+// Or with custom options
+useResize(panelRef, viewMode, { minWidth: 400, minHeight: 350, maxHeight: 900 });
+```
+
+### Parameters
+
+| Parameter | Type | Description |
+|---|---|---|
+| `panelRef` | `React.RefObject<HTMLElement>` | Ref to the floating panel container element |
+| `viewMode` | `string` | Current view mode: `'minimized'`, `'collapsed'`, `'expanded'`, `'maximized'` |
+| `options` | `object` | Optional sizing constraints |
+
+### Options
+
+| Option | Type | Default | Description |
+|---|---|---|---|
+| `minWidth` | `number` | `360` | Minimum panel width in pixels |
+| `minHeight` | `number` | `300` | Minimum panel height in pixels |
+| `maxHeight` | `number` | `800` | Maximum panel height in pixels |
+
+### Behavior
+
+- **Only active in `expanded` mode** -- In other modes, the hook cleans up any active drag state and returns early
+- **Resize handles** -- Listens for `pointerdown` events on child elements that have a `data-resize-edge` attribute:
+  - `data-resize-edge="left"` -- Horizontal resize (width only, cursor: `ew-resize`)
+  - `data-resize-edge="top"` -- Vertical resize (height only, cursor: `ns-resize`)
+  - `data-resize-edge="top-left"` -- Diagonal resize (both dimensions, cursor: `nwse-resize`)
+- **Pointer capture** -- Uses `setPointerCapture()` so resize continues even if the cursor leaves the browser window
+- **Performance** -- All dimension changes are batched inside `requestAnimationFrame` callbacks for smooth 60fps updates. No React state is involved -- dimensions are written directly to `element.style`
+- **Cleanup** -- Removes all event listeners and cancels any pending animation frames on unmount or mode change
+
+### Integration with ClaudeFloatingPanel
+
+The `ClaudeFloatingPanel` component renders three resize handle elements when in expanded mode:
+
+```jsx
+{viewMode === 'expanded' && (
+  <>
+    <div className="claude-resize-handle claude-resize-left" data-resize-edge="left" />
+    <div className="claude-resize-handle claude-resize-top" data-resize-edge="top" />
+    <div className="claude-resize-handle claude-resize-corner" data-resize-edge="top-left" />
+  </>
+)}
+```
+
+When the mode changes away from `expanded`, a `useEffect` clears inline `width`/`height` styles to prevent them from bleeding into other layout modes.
 
 ---
 

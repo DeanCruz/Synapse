@@ -102,6 +102,14 @@ This list is exhaustive and absolute. There are no exceptions during an active s
 
 Not a single line. Not a "quick fix." Not a "small tweak." Not "just this one file." If code needs to be written, it is a task for a worker agent. This applies to all application source files: `.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.go`, `.rs`, `.java`, `.css`, `.html`, `.json` (except dashboard JSON files), and any other file that belongs to the codebase being worked on.
 
+### Dashboard Tracking Is Mandatory (Thresholds)
+
+When a swarm has **3 or more parallel agents** OR **more than 1 wave** (multi-wave is non-negotiable), the master MUST use full dashboard tracking -- workers write progress files, the master writes `master_state.json`, and `metrics.json` is computed at completion. The only exception is when the user explicitly invoked `!p` (lightweight mode). For auto-parallel and all other swarm modes, these thresholds trigger automatic escalation to `!p_track`-level tracking.
+
+### Master Writes Progress in Lightweight Mode
+
+When workers do NOT write their own progress files (`!p` mode, sub-threshold auto-parallel, or serial dispatch), the master MUST create a minimal progress file for each completed worker using the worker's return data -- including `files_changed`, `summary`, and completion logs. This ensures the dashboard always shows per-task file changes and status.
+
 ### Never Creates Application Files
 
 No new components, services, utilities, tests, configs, or any other artifact that a worker should create.
@@ -132,6 +140,8 @@ During a swarm, the master agent writes to exactly these files and no others:
 |---|---|
 | `dashboards/{dashboardId}/initialization.json` | Static plan data (written ONCE during planning, with one exception for repair tasks) |
 | `dashboards/{dashboardId}/logs.json` | Timestamped event log for the dashboard |
+| `dashboards/{dashboardId}/master_state.json` | State checkpoint for context compaction recovery |
+| `dashboards/{dashboardId}/metrics.json` | Post-swarm performance metrics (written once after completion) |
 | `tasks/{date}/parallel_{name}.json` | Master task record (plan, status, summaries) |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
@@ -153,7 +163,7 @@ Every time a swarm is initiated, the master must read these files before doing a
 
 2. **The command file** -- For `!p_track`, read `{tracker_root}/_commands/Synapse/p_track.md`. For `!p`, read `{tracker_root}/_commands/Synapse/p.md`. Read the file every time. Do not "remember" what the command does.
 
-3. **`{tracker_root}/agent/instructions/tracker_master_instructions.md`** -- Maps every dashboard panel to the exact fields that drive it. Must be read before writing any dashboard files. Do not skip this. Do not summarize from memory.
+3. **`{tracker_root}/agent/instructions/tracker_master_instructions.md`** -- The master agent hub reference. Links to all module files (role, dashboard writes, UI map, eager dispatch, failure recovery, worker prompts, compaction recovery, dashboard protocol). Must be read before writing any dashboard files. Do not skip this. Do not summarize from memory.
 
 4. **`{project_root}/CLAUDE.md`** -- Project conventions for the target project. Must be read before any planning begins.
 

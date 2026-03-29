@@ -15,16 +15,17 @@ The root application component. Wires IPC data subscriptions, fetches initial da
 - Initializes CSS-derived status colors via `initStatusColorsFromCSS()`
 - Restores saved theme from localStorage on mount
 - Fetches initial dashboard statuses and queue items
-- Routes between views (`home`, `dashboard`, `swarmBuilder`, `claude`)
+- Routes between views (`home`, `dashboard`, `swarmBuilder`, `claude`, `git`, `ide`)
 - Renders modals based on `activeModal` state
-- Manages the floating Claude chat panel lifecycle
+- Manages the floating Claude chat panel lifecycle (always mounted for persistent IPC)
 
-**Internal sub-components:**
-- `ClearDashboardSection` -- Renders a "Clear Dashboard" button with confirmation popup when a task has completed
-- `ProgressSection` -- Wraps `ProgressBar` + `StatsBar`
-- `DashboardContent` -- The main dashboard area with pipeline visualization
-- `ClaudeFloatingPanel` -- Floating wrapper around `ClaudeView`
-- `ClaudeFloatingHeader` -- Title bar with minimize/maximize/close controls
+**Internal sub-components (all defined in App.jsx):**
+- `ClearDashboardSection` -- Renders a "Clear Dashboard" button with confirmation popup when a task has completed (with or without errors). Archives before clearing.
+- `ProgressSection` -- Wraps `ProgressBar` + `StatsBar`, reads task completion counts from `currentStatus`
+- `ReplanningBanner` -- Shows a pulsing notification when `task.overall_status === 'replanning'` (circuit breaker triggered)
+- `DashboardContent` -- The main dashboard area with pipeline visualization, action bar, progress section, and bottom panel
+- `ClaudeFloatingPanel` -- Floating wrapper around `ClaudeView` with drag-to-resize via `useResize` hook. Supports four view modes: minimized (pill button), collapsed, expanded (resizable), and maximized. Always mounted so IPC listeners stay alive.
+- `ClaudeFloatingHeader` -- Title bar showing "Agent Chat" title, project name, processing status, and window controls (minimize, maximize/restore)
 
 ### AppProvider (`src/ui/context/AppContext.jsx`)
 
@@ -96,6 +97,7 @@ Wave column layout -- the primary visualization mode. Renders agents in vertical
 | `status` | `object` | Merged status object: `{ agents[], waves[], chains[] }` |
 | `activeStatFilter` | `string \| null` | Filter agents by status string, or `null` for all |
 | `onAgentClick` | `function(agent)` | Called with agent object when a card is clicked |
+| `progressData` | `object` | `{ [taskId]: progressObject }` -- Raw progress data passed to AgentDetails |
 
 **Key behavior:**
 - Renders an SVG overlay for dependency lines (BFS-routed through corridor gaps)
@@ -240,26 +242,13 @@ Six stat cards showing task counts and elapsed time.
 **Internal sub-components:**
 - `StatCard({ id, value, label, numberClass, isActive, onClick })` -- Individual stat card with active highlight and keyboard accessibility
 
-### ProgressBar (`src/ui/components/ProgressBar.jsx`)
-
-Thin horizontal fill bar showing task completion percentage.
-
-**Props:**
-
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `completed` | `number` | `0` | Number of completed tasks |
-| `total` | `number` | `0` | Total number of tasks |
-
-Renders a `role="progressbar"` element with ARIA attributes. Fill width transitions with `cubic-bezier(0.16, 1, 0.3, 1)`.
-
 ---
 
 ## Log and Timeline
 
 ### LogPanel (`src/ui/components/LogPanel.jsx`)
 
-Fixed-position collapsible bottom drawer showing event log entries.
+Event log viewer showing log entries. Now rendered inside `BottomPanel` as the "OUTPUT" tab rather than as a standalone fixed-position drawer.
 
 **Props:**
 
@@ -357,7 +346,7 @@ Visual swarm plan editor for creating and editing task plans.
 
 ### ClaudeView (`src/ui/components/ClaudeView.jsx`)
 
-Full in-app agent chat interface. Handles streaming worker output, tool call rendering, and conversation history.
+Full in-app agent chat interface. Now rendered inside a `ClaudeFloatingPanel` wrapper (defined in `App.jsx`) that provides floating panel behavior with four view modes: minimized, collapsed, expanded, and maximized. The `ClaudeFloatingPanel` uses the `useResize` hook for drag-to-resize from the left edge, top edge, and top-left corner when in expanded mode.
 
 **Key features:**
 - Multi-provider support (Claude, Codex) with model selection
@@ -365,8 +354,9 @@ Full in-app agent chat interface. Handles streaming worker output, tool call ren
 - Tool call visualization (collapsible, shows server tool results)
 - File attachment support (images, documents)
 - System prompt injection with Synapse CLAUDE.md + project CLAUDE.md
-- Per-dashboard chat history persisted in localStorage
+- Per-dashboard, per-tab chat history persisted in localStorage
 - Follow-up messages while agent is still running
+- Multi-tab chat support (create, switch, close, rename tabs per dashboard)
 
 **Message types rendered:**
 
@@ -390,6 +380,135 @@ Simple placeholder shown when no active task is loaded.
 **Props:** None.
 
 **Renders:** "No active agents" title + "Waiting for !p to dispatch agents..." subtitle.
+
+---
+
+## Bottom Panel and Terminal
+
+### BottomPanel (`src/ui/components/BottomPanel.jsx`)
+
+VS Code-style bottom panel with tabbed views for Terminal, Output, Problems, Debug Console, and Ports. Supports drag-to-resize from the top edge and can be embedded (IDE mode) or used as an overlay (dashboard mode).
+
+**Props:**
+
+| Prop | Type | Description |
+|---|---|---|
+| `logs` | `object` | Logs payload: `{ entries: [...] }` |
+| `activeFilter` | `string` | Current log filter level |
+| `onFilterChange` | `function(level)` | Called when a log filter button is clicked |
+| `projectDir` | `string` | Working directory for the terminal |
+
+**Tabs:**
+
+| Tab ID | Label | Component |
+|---|---|---|
+| `terminal` | TERMINAL | `TerminalView` (PTY-backed) |
+| `problems` | PROBLEMS | `ProblemsPanel` |
+| `output` | OUTPUT | `LogPanel` |
+| `debug-console` | DEBUG CONSOLE | `DebugConsolePanel` |
+| `ports` | PORTS | Placeholder |
+
+**Features:**
+- Collapsible toggle (shows/hides the panel body)
+- Drag-to-resize from top edge
+- Multiple terminal instances via sub-tabs (up to 5)
+- Default height: 300px, minimum: 120px
+
+### TerminalView (`src/ui/components/TerminalView.jsx`)
+
+Interactive terminal component using @xterm/xterm. Renders a PTY-backed terminal inside the bottom panel. Communicates with the Electron main process via IPC for spawning, writing, resizing, and killing terminal sessions.
+
+**Props:**
+
+| Prop | Type | Description |
+|---|---|---|
+| `projectDir` | `string` | Working directory for the terminal process |
+| `tabId` | `string` | Terminal tab identifier |
+
+**Features:**
+- Full PTY terminal via xterm.js with FitAddon for auto-sizing
+- Theme colors derived from CSS custom properties (e.g., `--terminal-bg`, `--terminal-fg`, `--terminal-cursor`)
+- IPC channels for spawn, write, resize, and kill operations
+
+### MetricsPanel (`src/ui/components/MetricsPanel.jsx`)
+
+Collapsible panel showing swarm performance metrics. Fetches from `GET /api/dashboards/:id/metrics` on mount and polls every 10 seconds.
+
+**Props:**
+
+| Prop | Type | Description |
+|---|---|---|
+| `dashboardId` | `string` | Dashboard ID to fetch metrics for |
+
+**Features:**
+- Auto-polling with 10-second interval
+- Duration formatting utility (seconds to human-readable)
+- Collapsible display
+
+### ProgressBar (`src/ui/components/ProgressBar.jsx`)
+
+Thin horizontal fill bar showing task completion percentage.
+
+**Props:**
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `completed` | `number` | `0` | Number of completed tasks |
+| `total` | `number` | `0` | Total number of tasks |
+
+Renders a `role="progressbar"` element with ARIA attributes. Fill width transitions with `cubic-bezier(0.16, 1, 0.3, 1)`.
+
+---
+
+## Git Manager
+
+### GitManagerView (`src/ui/components/git/GitManagerView.jsx`)
+
+Full Git repository manager view with multi-repo tab support. Activated via the `'git'` view.
+
+**Sub-components (all in `src/ui/components/git/`):**
+
+| Component | File | Description |
+|---|---|---|
+| `GitManagerView` | `GitManagerView.jsx` | Root view with repo tabs and panel layout |
+| `GitWelcome` | `GitWelcome.jsx` | Welcome screen shown when no repo is open |
+| `RepoTabs` | `RepoTabs.jsx` | Tab bar for switching between open repositories |
+| `BranchPanel` | `BranchPanel.jsx` | Branch listing, switching, creation |
+| `ChangesPanel` | `ChangesPanel.jsx` | Staged/unstaged/untracked file changes |
+| `CommitPanel` | `CommitPanel.jsx` | Commit message input and commit action |
+| `DiffViewer` | `DiffViewer.jsx` | Side-by-side or unified diff display |
+| `HistoryPanel` | `HistoryPanel.jsx` | Git log with commit history |
+| `RemotePanel` | `RemotePanel.jsx` | Remote repository management |
+| `InitFlow` | `InitFlow.jsx` | Git init workflow for non-repo directories |
+| `QuickActions` | `QuickActions.jsx` | Common git operations (pull, push, fetch) |
+| `SafetyDialogs` | `SafetyDialogs.jsx` | Confirmation dialogs for destructive operations |
+
+**State:** Uses `GIT_*` action types in AppContext (see [State Management](./state-management.md)).
+
+---
+
+## IDE
+
+### IDEView (`src/ui/components/ide/IDEView.jsx`)
+
+Multi-workspace code editor view with file explorer, editor tabs, debug support, and integrated chat. Activated via the `'ide'` view.
+
+**Sub-components (all in `src/ui/components/ide/`):**
+
+| Component | File | Description |
+|---|---|---|
+| `IDEView` | `IDEView.jsx` | Root IDE layout with sidebar, editor area, and bottom panel |
+| `IDEWelcome` | `IDEWelcome.jsx` | Welcome screen when no workspace is open |
+| `FileExplorer` | `FileExplorer.jsx` | Tree-view file browser with lazy-loaded children |
+| `WorkspaceTabs` | `WorkspaceTabs.jsx` | Tab bar for switching between open workspaces |
+| `EditorTabs` | `EditorTabs.jsx` | Tab bar for open files within a workspace |
+| `CodeEditor` | `CodeEditor.jsx` | Code display/editing area |
+| `DebugToolbar` | `DebugToolbar.jsx` | Debug controls (continue, step over, step into, etc.) |
+| `DebugPanels` | `DebugPanels.jsx` | Variables, call stack, breakpoints, watch expressions |
+| `DebugConsolePanel` | `DebugConsolePanel.jsx` | Debug console output and input |
+| `ProblemsPanel` | `ProblemsPanel.jsx` | Diagnostics display (errors, warnings, info) |
+
+**State:** Uses `IDE_*` and `DEBUG_*` action types in AppContext (see [State Management](./state-management.md)).
 
 ---
 
@@ -426,6 +545,7 @@ Detailed view of a single agent's lifecycle, shown when clicking an agent card.
 | `progressData` | `object` | `{ [taskId]: progressObject }` |
 | `findAgentFn` | `function(id)` | Lookup function for dependency agents |
 | `onClose` | `function` | Close callback |
+| `projectRoot` | `string` | Project root path (for file navigation) |
 
 **Sections displayed:**
 1. **Header** -- Agent ID badge + title

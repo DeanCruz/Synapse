@@ -186,9 +186,46 @@ Deletes a dashboard directory entirely (removes directory, all files including i
 
 #### `nextDashboardId()`
 
-Finds the next available dashboard ID by scanning existing dashboards and returning the lowest unused number.
+Generates a new unique dashboard ID as a 6-character hex string using `crypto.randomBytes(3)`. Loops until the generated ID is not already in use by an existing dashboard.
 
-**Returns:** `string` -- Next available ID (e.g., `"dashboard3"` if `dashboard1` and `dashboard2` exist).
+**Returns:** `string` -- A 6-character hex string (e.g., `"a1b2c3"`, `"71894a"`).
+
+```javascript
+nextDashboardId()
+// => '71894a'
+```
+
+---
+
+#### `getDashboardCreationTime(id)`
+
+Gets the creation time (birthtime) of a dashboard directory. Used for initial ordering of dashboards not yet in the persisted order array.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `string` | Dashboard identifier |
+
+**Returns:** `number` -- Epoch milliseconds (`stat.birthtimeMs` or `stat.ctimeMs`), or `Infinity` if the directory is unreadable.
+
+---
+
+#### `getFullDashboardState(id)`
+
+Returns the complete state of a dashboard: initialization, progress, and logs. A convenience wrapper that consolidates the individual read functions into a single call.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `string` | Dashboard identifier |
+
+**Returns:** `Object` with the following shape:
+
+```javascript
+{
+  initialization: Object | null,  // readDashboardInit(id)
+  progress: Object,               // readDashboardProgress(id)
+  logs: Object | null              // readDashboardLogs(id)
+}
+```
 
 ---
 
@@ -656,18 +693,18 @@ Manages SSE (Server-Sent Events) client connections. Tracks connected clients, b
 
 ### Internal State
 
-- `sseClients` -- `Set<http.ServerResponse>` of active SSE client connections
+- `sseClients` -- `Map<http.ServerResponse, { dashboardFilter: string|null }>` of active SSE client connections with per-client metadata
 
 ### Functions
 
 #### `broadcast(eventName, data)`
 
-Broadcasts an SSE event to all connected clients. Automatically cleans up destroyed or ended connections.
+Broadcasts an SSE event to all connected clients. Supports per-client dashboard filtering: if a client has a `dashboardFilter` set, it only receives events that either contain a matching `dashboardId` in the data payload or have no `dashboardId` (global events like `dashboards_list`, `queue_changed`). Clients without a filter receive all events. Automatically cleans up destroyed or ended connections.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `eventName` | `string` | SSE event name (e.g., `"initialization"`, `"agent_progress"`) |
-| `data` | `any` | Data payload (JSON-serialized) |
+| `data` | `any` | Data payload (JSON-serialized). If the payload contains `dashboardId`, it is used for client filtering. |
 
 **Returns:** `void`
 
@@ -680,13 +717,15 @@ data: {JSON.stringify(data)}
 
 ---
 
-#### `addClient(res)`
+#### `addClient(res, options)`
 
-Adds an SSE client response object to the tracked set.
+Adds an SSE client response object to the tracked map with optional configuration.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `res` | `http.ServerResponse` | The client's response object |
+| `options` | `Object` (optional) | Configuration options |
+| `options.dashboardFilter` | `string \| null` (optional) | If set, this client only receives events for the specified dashboard ID. Global events (no `dashboardId`) are always delivered. |
 
 **Returns:** `void`
 
@@ -694,7 +733,7 @@ Adds an SSE client response object to the tracked set.
 
 #### `removeClient(res)`
 
-Removes an SSE client response object from the tracked set.
+Removes an SSE client response object from the tracked map.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -722,6 +761,52 @@ Stops the SSE heartbeat timer.
 
 #### `closeAll()`
 
-Closes all SSE client connections by calling `.end()` on each response, then clears the client set.
+Closes all SSE client connections by calling `.end()` on each response, then clears the client map.
 
 **Returns:** `void`
+
+---
+
+## Validation Utility
+
+**File:** `src/server/utils/validation.js`
+
+Provides dependency graph validation for the agents array defined in `initialization.json`. Used by the master agent during planning to catch structural errors before dispatching workers.
+
+### Functions
+
+#### `validateDependencyGraph(agents)`
+
+Validates the dependency graph defined by the agents array. Checks for:
+
+1. **Self-references** -- A task that depends on itself (error)
+2. **Dangling references** -- A dependency pointing to a non-existent task ID (error)
+3. **Circular dependencies** -- Cycles in the dependency graph, detected using Kahn's algorithm / BFS topological sort (error)
+4. **Orphan tasks** -- Tasks with no dependencies and nothing depends on them (warning only; Wave 1 tasks are exempt since they are root tasks by design)
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `agents` | `Array` | Array of agent objects with `{ id, depends_on, wave }` fields |
+
+**Returns:** `Object` with the following shape:
+
+```javascript
+{
+  valid: true,           // false if any errors found
+  errors: [              // Array of error objects
+    { type: 'self_ref', message: 'Task 1.1 depends on itself' },
+    { type: 'dangling_ref', message: 'Task 2.1 depends on 9.9 which does not exist' },
+    { type: 'cycle', message: 'Circular dependency detected involving tasks: 2.1, 2.2' }
+  ],
+  warnings: [            // Array of warning objects
+    { type: 'orphan', message: 'Task 3.1 has no dependencies and nothing depends on it' }
+  ]
+}
+```
+
+| Error Type | Severity | Description |
+|------------|----------|-------------|
+| `self_ref` | Error | Task lists itself in `depends_on` |
+| `dangling_ref` | Error | `depends_on` references a task ID not in the agents array |
+| `cycle` | Error | Circular dependency chain detected (lists all involved task IDs) |
+| `orphan` | Warning | Task has no connections to the dependency graph (Wave 1 exempt) |

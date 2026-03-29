@@ -132,7 +132,8 @@ Creates the metadata directory inside the project:
 ```
 {project_root}/.synapse/
 ├── config.json     # Project-Synapse configuration
-└── toc.md          # Table of Contents placeholder
+├── toc.md          # Table of Contents placeholder
+└── knowledge/      # PKI data (created later by !learn)
 ```
 
 The `config.json` file links the project to Synapse:
@@ -246,7 +247,25 @@ See [TOC System](./toc-system.md) for details on generation, searching, and main
 
 ---
 
-## Step 5: Start Using Synapse
+## Step 5: Bootstrap the Project Knowledge Index (Optional)
+
+For deep codebase understanding, bootstrap the PKI:
+
+```bash
+!learn
+```
+
+This dispatches a parallel swarm that reads every source file and produces structured annotations (gotchas, patterns, conventions) at `{project_root}/.synapse/knowledge/`. The PKI enables the master agent to inject relevant knowledge into worker prompts during planning.
+
+After bootstrapping, the PKI auto-maintains itself:
+- Workers mark annotations stale when they modify annotated files
+- Run `!learn_update` periodically to re-scan stale and new files
+
+See [PKI Overview](./pki-overview.md) for full details.
+
+---
+
+## Step 6: Start Using Synapse
 
 With the project connected, you can now use any Synapse command:
 

@@ -61,6 +61,7 @@ Never guess or construct timestamps from memory. The dashboard derives elapsed t
   "completed_at": "ISO 8601 string | null",
   "summary": "string | null",
   "assigned_agent": "string",
+  "template_version": "string | null",
   "stage": "string",
   "message": "string",
   "milestones": [
@@ -75,6 +76,17 @@ Never guess or construct timestamps from memory. The dashboard derives elapsed t
   "files_changed": [
     { "action": "created | modified | deleted", "path": "string (relative to project root)" }
   ],
+  "prompt_size": {
+    "total_chars": "number",
+    "estimated_tokens": "number"
+  },
+  "shared_context": {
+    "exports": ["string"],
+    "interfaces": ["string"],
+    "patterns": ["string"],
+    "notes": "string"
+  },
+  "sibling_reads": ["string (task ID)"],
   "annotations": {
     "{relative_file_path}": {
       "gotchas": ["string"],
@@ -100,6 +112,7 @@ Never guess or construct timestamps from memory. The dashboard derives elapsed t
 | `completed_at` | ISO 8601 or null | Completion/failure | Timestamp when work finished. Must be `null` when `status` is `"in_progress"`. Freezes the per-card timer. The swarm elapsed timer freezes when all workers have `completed_at` set. |
 | `summary` | string or null | Completion/failure | One-line summary of what was accomplished. Shown directly on the completed/failed card. Must be descriptive -- `"Created auth middleware with rate limiting -- 3 endpoints"`, not `"Done"`. |
 | `assigned_agent` | string | First write | Agent label (e.g., `"Agent 1"`, `"Agent 8"`). Shown as dim text on the card's meta row. |
+| `template_version` | string or null | First write | The TEMPLATE_VERSION value from the worker's dispatch prompt (e.g., `"p_track_v2"`, `"2.0"`). Helps the master agent identify which prompt template was used. |
 | `stage` | string | Updated throughout | Current execution stage. See **Fixed Stages** below. |
 | `message` | string | Updated throughout | What the worker is doing right now -- one line, specific and actionable. Shown on in-progress cards below the stage badge. |
 
@@ -110,7 +123,10 @@ Never guess or construct timestamps from memory. The dashboard derives elapsed t
 | `milestones` | array of `{ at, msg }` | Significant accomplishments during execution. Append-only. Shown in the agent details popup timeline. |
 | `deviations` | array of `{ at, severity, description }` | Any divergences from the original plan. Append-only. Drives the yellow deviation badge on the card. |
 | `logs` | array of `{ at, level, msg }` | Detailed log entries. Append-only. Feeds the popup log box in the agent details modal. |
-| `files_changed` | array of `{ action, path }` | Files created, modified, or deleted during the task. Optional. Workers should populate this during their final progress write when status transitions to `"completed"`. |
+| `files_changed` | array of `{ action, path }` | Files created, modified, or deleted during the task. Required from `implementing` stage onward. Workers should populate this incrementally as they work -- add each file as it is changed, not just at the end. The dashboard renders this as a clickable file list in the task popup. |
+| `prompt_size` | object or null | Optional. Size metrics of the dispatch prompt received. Contains `total_chars` (integer) and `estimated_tokens` (integer, calculated as `Math.ceil(total_chars / 3.5)`). Helps the master agent calibrate future prompt budgets. |
+| `shared_context` | object or null | Optional. Information this worker makes available to same-wave siblings. Sub-fields: `exports` (array of export names), `interfaces` (array of interface signatures), `patterns` (array of pattern descriptions), `notes` (free-form string). Should be populated early when creating exports or interfaces siblings might use. |
+| `sibling_reads` | array of strings | Optional. Array of task ID strings of sibling progress files the worker has read. Used by the dashboard for sibling communication visualization. |
 | `annotations` | object or null | Operational knowledge about files the worker READ during execution. Optional. Keys are relative file paths; values are objects with optional `gotchas`, `patterns`, and `conventions` arrays (all arrays of strings). Workers populate this during `reading_context` and `implementing` stages as they gain deep understanding of source files. The master merges these into the PKI after task completion. |
 
 ---
@@ -382,10 +398,10 @@ The server validates every progress file read:
 | `milestones` | Optional, but if present must be an array |
 | `deviations` | Optional, but if present must be an array |
 | `logs` | Optional, but if present must be an array |
-| `files_changed` | Optional, but if present must be an array |
-| `annotations` | Optional, but if present must be an object. Keys must be non-empty strings (relative file paths). Values must be objects with optional `gotchas`, `patterns`, and `conventions` fields, each an array of strings if present. |
 
 Fields like `stage`, `started_at`, `milestones`, etc. are validated **if present** but not required to exist. This handles initial writes where the worker may not have all fields populated yet.
+
+**Note:** Fields such as `files_changed`, `annotations`, `template_version`, `prompt_size`, `shared_context`, and `sibling_reads` are not validated by `isValidProgress()` -- they are passed through to the dashboard without server-side schema checks. Workers are responsible for populating them correctly per the worker protocol.
 
 ### Reconciliation
 

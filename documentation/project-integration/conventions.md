@@ -177,7 +177,13 @@ The `.synapse/` directory stores Synapse-specific metadata inside the target pro
 ```
 .synapse/
 ├── config.json    # Project-Synapse configuration
-└── toc.md         # Table of Contents (semantic file index)
+├── toc.md         # Table of Contents (semantic file index)
+└── knowledge/     # Project Knowledge Index (persistent knowledge layer)
+    ├── manifest.json
+    ├── annotations/
+    ├── domains.json
+    ├── patterns.json
+    └── queries/
 ```
 
 ### config.json
@@ -244,6 +250,10 @@ For non-monorepo projects, the field is explicitly `null` (not omitted).
 ### toc.md
 
 The Table of Contents is a semantic index of every significant file in the project. See the [TOC System](./toc-system.md) documentation for full details on generation, searching, and maintenance.
+
+### knowledge/
+
+The Project Knowledge Index (PKI) stores persistent, auto-accumulating knowledge about the codebase -- gotchas, patterns, conventions, domain taxonomy, and file relationships. Created by `!learn` and incrementally refreshed by `!learn_update`. See the [PKI Overview](./pki-overview.md) documentation for full details.
 
 ### Version Control
 
@@ -421,6 +431,7 @@ When no CLAUDE.md exists, agents:
 | `CLAUDE.md` | `{project_root}/CLAUDE.md` | Yes (commit) | `!scaffold`, `!initialize`, or manual | Project conventions for agents |
 | `.synapse/config.json` | `{project_root}/.synapse/config.json` | No (gitignore) | `!initialize` | Links project to Synapse |
 | `.synapse/toc.md` | `{project_root}/.synapse/toc.md` | No (gitignore) | `!toc_generate` | Semantic file index |
+| `.synapse/knowledge/` | `{project_root}/.synapse/knowledge/` | No (gitignore) | `!learn` | Persistent knowledge layer (PKI) |
 | `_commands/*.md` | `{project_root}/_commands/` | Optional | Manual | Project-specific commands |
 
 ---

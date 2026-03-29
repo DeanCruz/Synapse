@@ -359,13 +359,43 @@ Saves a history summary for the current swarm without clearing the dashboard. Pr
 
 ---
 
+### Get Dashboard Metrics
+
+```
+GET /api/dashboards/:id/metrics
+```
+
+Returns the `metrics.json` data for a dashboard, if it exists. Metrics are written by the master agent and contain timing and performance data for the swarm.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `:id` | `string` | Dashboard identifier |
+
+**Response (200, metrics exist):**
+```json
+{
+  "total_duration_ms": 180000,
+  "wave_durations": [...],
+  "...": "..."
+}
+```
+
+**Response (200, no metrics):**
+```json
+{
+  "metrics": null
+}
+```
+
+---
+
 ### Clear Dashboard
 
 ```
 POST /api/dashboards/:id/clear
 ```
 
-Saves a history summary, then clears the dashboard to default state. This is a destructive operation that resets all dashboard data.
+Archives the dashboard (if it has an active task), saves a history summary, then clears the dashboard to default state. This is a destructive operation that resets all dashboard data.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -374,15 +404,27 @@ Saves a history summary, then clears the dashboard to default state. This is a d
 **Response (200):**
 ```json
 {
-  "success": true
+  "success": true,
+  "archived": true,
+  "archiveName": "2026-03-20_api-refactor"
+}
+```
+
+**Response (200, no active task -- nothing to archive):**
+```json
+{
+  "success": true,
+  "archived": false,
+  "archiveName": null
 }
 ```
 
 **Side effects:**
-1. Builds and saves a history summary (if task exists)
-2. Re-initializes the dashboard directory structure
-3. Clears all progress files
-4. Resets `initialization.json` and `logs.json` to defaults
+1. Archives the dashboard directory to `Archive/` (if task exists)
+2. Builds and saves a history summary (if task exists)
+3. Re-initializes the dashboard directory structure
+4. Clears all progress files
+5. Resets `initialization.json` and `logs.json` to defaults
 
 ---
 
@@ -601,6 +643,32 @@ Returns all history summary files, sorted newest-first.
       "log_count": 24
     }
   ]
+}
+```
+
+---
+
+### Get History Analytics
+
+```
+GET /api/history/analytics
+```
+
+Returns the history analytics data from `history/analytics.json`. This file is generated externally and contains aggregated statistics across all historical swarms.
+
+**Response (200, analytics exist):**
+```json
+{
+  "total_swarms": 15,
+  "avg_duration_ms": 120000,
+  "...": "..."
+}
+```
+
+**Response (200, no analytics file):**
+```json
+{
+  "analytics": null
 }
 ```
 

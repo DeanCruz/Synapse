@@ -248,19 +248,23 @@ Validates that a parsed JSON object conforms to the initialization.json schema.
 
 ---
 
-#### `isValidProgress(data)`
+#### `isValidProgress(data, expectedTaskId, expectedDashboardId)`
 
-Validates that a parsed JSON object conforms to the progress file schema.
+Validates that a parsed JSON object conforms to the progress file schema. Optionally checks that the `task_id` and `dashboard_id` fields match expected values (used by the WatcherService to reject cross-worker writes and dashboard binding violations).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `data` | `any` | Parsed JSON data to validate |
+| `expectedTaskId` | `string` (optional) | If provided, `data.task_id` must match this value exactly. A mismatch is logged and rejected. |
+| `expectedDashboardId` | `string` (optional) | If provided and `data.dashboard_id` is present, they must match. |
 
 **Returns:** `boolean`
 
 **Validation rules:**
 - Must be a non-null object
 - `task_id` must be a non-empty string
+- If `expectedTaskId` is provided, `data.task_id` must equal it (logs rejection message on mismatch)
+- `dashboard_id` (if present) must be a non-empty string; if `expectedDashboardId` is also provided, they must match
 - `status` must be one of: `"in_progress"`, `"completed"`, `"failed"`
 - `stage` (if present) must be one of: `"reading_context"`, `"planning"`, `"implementing"`, `"testing"`, `"finalizing"`, `"completed"`, `"failed"`
 - `started_at` and `completed_at` (if present) must be strings or null
@@ -328,3 +332,11 @@ Both `writeAtomic` and `writeAtomicAsync` use the write-then-rename pattern:
 ```
 
 This guarantees that the target file is never in a partially-written state. Readers always see either the old complete file or the new complete file, never a truncated or corrupted intermediate state. This is critical for the server's file watching system, where `fs.watch` may fire before a non-atomic write completes.
+
+---
+
+## Dependency Graph Validation
+
+**File:** `src/server/utils/validation.js`
+
+This utility is not imported by the server runtime. It provides a `validateDependencyGraph(agents)` function used by the master agent during planning to validate the agents array before writing `initialization.json`. See [Services Reference -- Validation Utility](./services.md#validation-utility) for full API documentation.

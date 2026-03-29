@@ -1,6 +1,6 @@
 # Dashboard Selection
 
-When a Synapse command needs to interact with a dashboard, it must determine which of the 5 dashboard slots to use. Synapse employs two distinct selection mechanisms: **claiming** (for write operations like starting a new swarm) and **detection** (for read operations like checking status).
+When a Synapse command needs to interact with a dashboard, it must determine which dashboard to use. Synapse employs two distinct selection mechanisms: **claiming** (for write operations like starting a new swarm) and **detection** (for read operations like checking status).
 
 ---
 
@@ -15,7 +15,7 @@ The selection follows a strict priority order. The first matching rule wins:
 ```
 1. Pre-assigned dashboard (system prompt directive)     ← Highest priority
 2. Explicit --dashboard flag
-3. Auto-selection (scan for first available slot)       ← Fallback
+3. Auto-selection (create new or reuse available)       ← Fallback
 ```
 
 ### Priority 1: Pre-Assigned Dashboard
@@ -27,28 +27,28 @@ Each chat view in the Electron app is associated with exactly one dashboard. The
 **Pre-assigned dashboards are never overridden by auto-selection.**
 
 ```
-System prompt contains:  DASHBOARD ID: dashboard3
-Result:                  Agent uses dashboard3 unconditionally
+System prompt contains:  DASHBOARD ID: a1b2c3
+Result:                  Agent uses a1b2c3 unconditionally
 ```
 
 ### Priority 2: Explicit `--dashboard` Flag
 
-The user can force a specific dashboard slot with a command-line flag:
+The user can force a specific dashboard with a command-line flag:
 
 ```
-!p_track --dashboard dashboard3 Implement user authentication
+!p_track --dashboard a1b2c3 Implement user authentication
 ```
 
-This bypasses auto-selection and uses `dashboard3` directly. If the specified dashboard is currently in use (has agents that are `pending` or `in_progress`), Synapse warns the user and requires confirmation before overwriting.
+This bypasses auto-selection and uses `a1b2c3` directly. If the specified dashboard is currently in use (has agents that are `pending` or `in_progress`), Synapse warns the user and requires confirmation before overwriting.
 
 ### Priority 3: Auto-Selection
 
-When no dashboard is pre-assigned and no `--dashboard` flag is specified, the master scans all 5 dashboard slots in order to find the first available one.
+When no dashboard is pre-assigned and no `--dashboard` flag is specified, the master scans all existing dashboards to find an available one, or creates a new dashboard via `nextDashboardId()`.
 
 **Algorithm:**
 
 ```
-for each dashboard in [dashboard1, dashboard2, ..., dashboard5]:
+for each dashboard in listDashboards():
     read initialization.json
 
     if task is null:
@@ -65,23 +65,13 @@ for each dashboard in [dashboard1, dashboard2, ..., dashboard5]:
 
     if any agent is "pending" or "in_progress":
         → IN USE. Skip.
+
+if no available dashboard found:
+    → CREATE a new dashboard with nextDashboardId().
+    → Use the new dashboard.
 ```
 
-If all 5 dashboards are in use, Synapse displays a summary table and asks the user to choose:
-
-```
-## All Dashboards In Use
-
-| Dashboard | Task            | Status      | Progress |
-|-----------|-----------------|-------------|----------|
-| dashboard1| Auth refactor   | in_progress | 5/12     |
-| dashboard2| Dark mode       | in_progress | 3/8      |
-| dashboard3| DB migration    | in_progress | 1/6      |
-| dashboard4| API endpoints   | in_progress | 7/10     |
-| dashboard5| Test suite      | in_progress | 2/5      |
-
-Pick a dashboard to overwrite, or run `!reset {dashboardId}` first.
-```
+Since dashboards are created dynamically (no fixed slot limit), auto-selection will create a new dashboard when all existing ones are in use.
 
 ### Auto-Selection: Finished Dashboards
 
@@ -115,7 +105,7 @@ Used by read commands (`!status`, `!logs`, `!inspect`, `!deps`) when no specific
 | Exactly 1 candidate is `in_progress` | Use it |
 | Multiple candidates | Use the one with the most recent activity timestamp |
 
-When auto-detection selects a dashboard, it announces the choice with a prefix: `"[dashboard3] ..."`.
+When auto-detection selects a dashboard, it announces the choice with a prefix: `"[a1b2c3] ..."`.
 
 ---
 
@@ -148,14 +138,14 @@ All commands accept an optional `{dashboardId}` as the **first positional argume
 
 ```
 !status                         → auto-detect
-!status dashboard3              → explicit: dashboard3
+!status a1b2c3                  → explicit: a1b2c3
 !inspect 2.3                    → auto-detect + task_id "2.3"
-!inspect dashboard1 2.3         → explicit: dashboard1 + task_id "2.3"
+!inspect a1b2c3 2.3             → explicit: a1b2c3 + task_id "2.3"
 !logs --level error             → auto-detect + filter
-!logs dashboard2 --level error  → explicit: dashboard2 + filter
+!logs a1b2c3 --level error      → explicit: a1b2c3 + filter
 ```
 
-**Parsing rule:** If the first argument matches the pattern `dashboard\d+`, consume it as `{dashboardId}`. Otherwise, run auto-detection. Task IDs use `N.N` format and flags start with `--`, so there is no ambiguity.
+**Parsing rule:** If the first argument matches a dashboard ID format (6-character hex string), consume it as `{dashboardId}`. Otherwise, run auto-detection. Task IDs use `N.N` format and flags start with `--`, so there is no ambiguity.
 
 ---
 
@@ -169,7 +159,7 @@ Write your progress to: {tracker_root}/dashboards/{dashboardId}/progress/{task_i
 
 Every worker receives:
 - `{tracker_root}` — where to write progress files
-- `{dashboardId}` — which dashboard slot to write to
+- `{dashboardId}` — which dashboard to write to (6-character hex string)
 - `{task_id}` — which progress file to create
 - `{project_root}` — where to do code work
 

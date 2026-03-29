@@ -311,6 +311,15 @@ After:  3.1 depends_on: ["2.4r"]
 
 **Step 6 -- Run the eager dispatch scan as normal.** The repair task is now in-progress. Unrelated unblocked tasks are dispatched. The pipeline continues.
 
+### Double Failure Handling
+
+If a repair task itself fails (its ID ends with `r`), the master does NOT create another repair task. Instead:
+
+1. Log an `"error"` level entry: `"Double failure: repair task {id} failed. Original task permanently blocked."`
+2. Log a `"permission"` level entry to trigger the dashboard popup: `"Repair task {id} failed -- manual intervention required."`
+3. Skip repair task creation -- do not chain repair tasks
+4. Proceed to the eager dispatch scan -- other unblocked tasks continue
+
 ### Repair Task Example
 
 ```
@@ -371,6 +380,54 @@ The server-side tracking is a **complement** to the manual eager dispatch, not a
 - **Proactive notification** -- the dashboard shows unblocked tasks before the master finishes processing
 - **Redundancy** -- if the master misses a dispatch opportunity, the server catches it
 - **Visibility** -- the user sees real-time dependency resolution on the dashboard
+
+---
+
+## Worker Return Validation
+
+When a worker agent returns, the master validates the return text before processing it as a completion:
+
+| Section | Required? | Validation |
+|---|---|---|
+| `STATUS` | Yes | Must be `COMPLETED`, `FAILED`, or `PARTIAL`. If missing, treat as failure -- create repair task. |
+| `SUMMARY` | Yes | Must be non-generic. Generic patterns ("Done", "Completed", "Finished") trigger a `"warn"` log. |
+| `FILES CHANGED` | Conditional | Required if the task was expected to modify files. If missing, log a `"warn"`. |
+| `DIVERGENT ACTIONS` | Optional | If present, log each deviation at `"deviation"` level in `logs.json`. |
+
+After parsing the return, the master verifies the progress file exists on disk. If missing, a stub progress file is created from the return data with a `"warn"` log entry noting the stub was created by the master. If the progress file exists but its status mismatches the return, the return value takes precedence for dispatch decisions.
+
+---
+
+## Master State Checkpoint
+
+After every dispatch event (worker dispatched, completed, or failed), the master writes a state checkpoint to `{tracker_root}/dashboards/{dashboardId}/master_state.json`:
+
+```json
+{
+  "last_updated": "2026-03-22T15:30:00Z",
+  "completed": [
+    { "id": "1.1", "summary": "Created auth middleware -- 3 endpoints protected" }
+  ],
+  "in_progress": ["2.1", "2.3"],
+  "failed": [
+    { "id": "2.2", "summary": "Failed: missing dependency", "repair_id": "2.4r" }
+  ],
+  "ready_to_dispatch": ["3.1"],
+  "upstream_results": {
+    "1.1": "Created auth middleware with rate limiting for /api/auth, /api/users, /api/admin."
+  },
+  "next_agent_number": 5,
+  "permanently_failed": []
+}
+```
+
+This checkpoint enables recovery after context compaction. If the master loses track of which tasks are dispatched, it reads `master_state.json`, `initialization.json`, and all progress files to reconstruct its state (progress files are authoritative if they conflict with the checkpoint).
+
+---
+
+## Compaction Recovery
+
+During long-running swarms, context compaction may discard the master's cached upstream results. Before constructing any downstream worker prompt, the master verifies that cached results exist for all completed upstream tasks. If any are missing, it reconstructs the cache by reading all completed progress files, extracting `task_id`, `summary`, `milestones`, and `deviations`, and logs a `"warn"` entry noting the compaction. File change data may be incomplete after compaction since progress files do not contain the `FILES CHANGED` list from the worker's return.
 
 ---
 

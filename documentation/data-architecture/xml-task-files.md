@@ -1,5 +1,7 @@
 # Task Files -- Reference
 
+> **Note on filename:** This file is named `xml-task-files.md` for historical reasons. Task files are **JSON**, not XML. The filename has been retained to avoid breaking internal documentation links.
+
 Task files are the **authoritative master record** for each swarm. They contain the complete plan -- task descriptions, context, critical instructions, file lists, dependencies, statuses, and completion summaries. Every worker reads the task file for context about the overall swarm and its specific task. The master updates it on every agent completion.
 
 **Location:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{name}.json`
@@ -50,9 +52,12 @@ The `{name}` is derived from `task.name` in `initialization.json`, typically usi
     "type": "{Waves|Chains}",
     "project": "{Project name}",
     "project_root": "{Absolute path to target project}",
+    "directories": ["{target directories}"],
+    "affected_projects": "{Affected project names}",
     "total_tasks": 0,
     "total_waves": 0,
-    "dashboard": "{dashboardId}"
+    "dashboard": "{dashboardId}",
+    "overall_status": "pending"
   },
   "waves": [
     {
@@ -82,9 +87,12 @@ The `{name}` is derived from `task.name` in `initialization.json`, typically usi
     "type": "{Waves|Chains}",
     "project": "{Project name}",
     "project_root": "{Absolute path to target project}",
+    "directories": ["{target directories}"],
+    "affected_projects": "{Affected project names}",
     "total_tasks": 0,
     "total_waves": 0,
-    "dashboard": "{dashboardId}"
+    "dashboard": "{dashboardId}",
+    "overall_status": "pending"
   }
 }
 ```
@@ -95,9 +103,12 @@ The `{name}` is derived from `task.name` in `initialization.json`, typically usi
 | `type` | Parallelization type: `"Waves"` or `"Chains"`. |
 | `project` | Project name, matching `task.project` in initialization.json. |
 | `project_root` | Absolute path to the target project. |
+| `directories` | Optional. Array of target directory paths relevant to this swarm. |
+| `affected_projects` | Optional. Comma-separated string of affected project areas. |
 | `total_tasks` | Total task count across all waves. |
 | `total_waves` | Total wave count. |
-| `dashboard` | Which dashboard this swarm is running on (e.g., `"dashboard1"`). |
+| `dashboard` | Which dashboard this swarm is running on (e.g., `"71894a"`). Dashboard IDs are 6-character hex strings. |
+| `overall_status` | Current swarm status: `"pending"`, `"in_progress"`, or `"completed"`. Updated by the master. |
 
 ### Wave Objects
 
@@ -128,8 +139,10 @@ Each task in the swarm gets its own object within a wave's `tasks` array:
   "id": "1.1",
   "title": "{short title}",
   "description": "{Detailed task description}",
+  "directory": "{target directory}",
   "context": "{Additional context}",
   "critical": "{Critical instructions}",
+  "tags": ["{category}"],
   "files": [
     { "action": "modify", "path": "{file path}" },
     { "action": "create", "path": "{file path}" },
@@ -137,7 +150,11 @@ Each task in the swarm gets its own object within a wave's `tasks` array:
   ],
   "depends_on": [],
   "status": "pending",
-  "summary": null
+  "assigned_agent": null,
+  "started_at": null,
+  "completed_at": null,
+  "summary": null,
+  "logs": []
 }
 ```
 
@@ -148,12 +165,18 @@ Each task in the swarm gets its own object within a wave's `tasks` array:
 | `id` | string | Planning | Task identifier (e.g., `"1.1"`, `"2.3"`). Matches `agents[].id` in initialization.json. |
 | `title` | string | Planning | Short verb phrase describing the task. |
 | `description` | string | Planning | Detailed description of what the worker must do. Can be multiple sentences. Should be self-contained -- a worker should understand the full scope from this field alone. |
+| `directory` | string | Planning | Optional. Target directory within the project for this task. |
 | `context` | string | Planning | Background information the worker needs. File locations, line numbers, patterns to follow, related code sections. |
 | `critical` | string | Planning | Non-negotiable constraints and gotchas. Things the worker must NOT do, edge cases to handle, compatibility requirements. |
+| `tags` | string[] | Planning | Optional. Category tags for the task (e.g., `["backend"]`, `["config", "documentation"]`). Used for filtering and identification. |
 | `files` | array | Planning | Array of file objects the worker will read, modify, or create. Each entry has `action` (`"modify"`, `"create"`, or `"read"`) and `path` (relative to project root). |
 | `depends_on` | string[] | Planning | Array of task IDs that must complete first. Empty array `[]` for root tasks. |
 | `status` | string | Updated by master | Current status: `"pending"`, `"in_progress"`, `"completed"`, or `"failed"`. Updated by the master as workers start and finish. |
+| `assigned_agent` | string or null | On dispatch | Agent label assigned to this task (e.g., `"Agent 1"`). `null` until dispatched. |
+| `started_at` | ISO 8601 or null | On dispatch | Timestamp when the task was dispatched. `null` until dispatched. |
+| `completed_at` | ISO 8601 or null | After completion | Timestamp when the task finished. `null` until complete. |
 | `summary` | string or null | After completion | One-line summary of what was accomplished. Added by the master when the worker returns. `null` until the task completes. |
+| `logs` | array | Updated by master | Array of log entries recorded by the master for this task. Initially empty `[]`. |
 
 ### Wave Separators
 
@@ -220,7 +243,7 @@ From `tasks/03_22_26/parallel_synapse_backlog_phase1.json`:
     "project_root": "/Users/dean/Desktop/Working/Repos/Synapse",
     "total_tasks": 12,
     "total_waves": 3,
-    "dashboard": "dashboard1"
+    "dashboard": "71894a"
   },
   "waves": [
     {

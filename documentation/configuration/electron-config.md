@@ -49,6 +49,7 @@ Window geometry is saved automatically on resize and move events (debounced to 5
 | Key | Default | Type | Purpose |
 |---|---|---|---|
 | `dashboardCount` | `5` | number | Number of dashboard slots available in the sidebar |
+| `dashboardMeta` | `{ order: [], names: {} }` | object | Dashboard metadata controlling sidebar display order and custom names. `order` is an array of dashboard IDs; `names` maps IDs to user-defined display names. |
 
 ### Performance / Polling
 

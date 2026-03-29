@@ -93,10 +93,13 @@ Workers execute the task exactly as described in their dispatch prompt. The prom
 Workers write their progress file throughout execution:
 
 - On every stage transition (mandatory)
+- On every file change -- add to `files_changed[]` immediately (mandatory)
 - On significant milestones (recommended)
 - On any deviation from the plan (mandatory, immediately)
 - On any error (mandatory)
 - On task completion or failure (mandatory)
+
+The progress file must include `dashboard_id` on every write (the server rejects mismatches) and `template_version` from the dispatch prompt header.
 
 See [Progress Reporting](progress-reporting.md) for the complete schema and rules.
 
@@ -112,14 +115,21 @@ If the task depends on other tasks that ran before it, the worker must read thos
 
 See [Upstream Results](upstream-results.md) for the complete protocol.
 
-### 7. Return Results
+### 7. Annotate Files (Optional)
+
+Workers can optionally report operational knowledge about files they read deeply during execution. The `annotations` field in the progress file captures gotchas, patterns, and conventions discovered during `reading_context` and `implementing` stages. The master merges these into the Project Knowledge Index (PKI) after task completion. Only annotate files where the worker gained non-obvious understanding that would help future agents.
+
+### 8. Return Results
 
 When the task completes, the worker returns a structured result to the master agent containing:
 
+- Status (completed or failed)
 - Summary of what was accomplished
 - Files changed
 - Exports introduced (new functions, types, endpoints, etc.)
+- Annotations (operational knowledge about files read deeply)
 - Divergent actions (deviations from the plan)
+- Warnings and errors (if applicable)
 
 ---
 
@@ -177,18 +187,21 @@ If shell writes are absolutely necessary (e.g., inside a script), use the write-
 When a worker completes, it returns a structured response to the master. The format includes:
 
 ```
-SUMMARY:
-  One-line description of what was accomplished.
-
+STATUS: completed | failed
+SUMMARY: {one-line description of what was accomplished or why it failed}
 FILES CHANGED:
-  - path/to/file1.ts — what was changed
-  - path/to/file2.ts — what was created
-
-EXPORTS:
+  - {path} ({created | modified | deleted})
+EXPORTS: (omit entirely if no new exports)
   - {type} {name} — {brief description}
-
-DIVERGENT ACTIONS:
-  - Description of any deviations from the plan
+ANNOTATIONS: (omit entirely if none)
+  - {relative_file_path}
+    gotchas: {list}
+    patterns: {list}
+    conventions: {list}
+DIVERGENT ACTIONS: (omit entirely if none)
+  - {what was different from the plan and why}
+WARNINGS: (omit entirely if none)
+ERRORS: (omit entirely if none)
 ```
 
 ### The EXPORTS Field
@@ -229,3 +242,5 @@ These rules are NON-NEGOTIABLE for every worker agent:
 7. **Include logs** — the popup log box renders from the `logs[]` array
 8. **Set status lifecycle fields** — `started_at` on first write, `completed_at` on completion/failure
 9. **Summary must be descriptive** — `"Created auth middleware with rate limiting — 3 endpoints"` not `"Done"`
+10. **Include `dashboard_id` in every write** — from the dispatch context; the server rejects mismatches
+11. **Track every file change in `files_changed[]`** — add entries incrementally as you work, not just at the end
