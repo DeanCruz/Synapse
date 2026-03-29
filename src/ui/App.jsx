@@ -29,6 +29,30 @@ import { getDashboardProject } from './utils/dashboardProjects.js';
 import GitManagerView from './components/git/GitManagerView.jsx';
 import PreviewView from './components/preview/PreviewView.jsx';
 
+function useAgentProviderLabel() {
+  const [provider, setProvider] = useState('claude');
+
+  useEffect(() => {
+    const api = window.electronAPI;
+    if (!api) return;
+
+    function syncProvider(settings) {
+      setProvider(settings?.agentProvider || 'claude');
+    }
+
+    api.getSettings().then(syncProvider).catch(() => {});
+    const removeSettingsListener = api.on('settings-changed', (payload) => {
+      syncProvider(payload?.settings || null);
+    });
+
+    return () => {
+      removeSettingsListener();
+    };
+  }, []);
+
+  return provider === 'codex' ? 'Codex' : 'Claude';
+}
+
 // ── ClearDashboardSection ────────────────────────────────────────────────────
 function ClearDashboardSection({ visible, onClear, taskName }) {
   const [showConfirm, setShowConfirm] = useState(false);
@@ -371,6 +395,7 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMo
   const prevMode = React.useRef(viewMode);
   const dragRef = React.useRef(null);
   const handleRef = React.useRef(null);
+  const providerLabel = useAgentProviderLabel();
   useResize(floatRef, viewMode);
 
   // Clear inline resize styles when leaving expanded mode so they don't
@@ -436,7 +461,7 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMo
             <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
             <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
           </svg>
-          <span>Claude</span>
+          <span>{providerLabel}</span>
         </button>
       )}
       {/* Left-edge resize handle (expanded mode only) */}
