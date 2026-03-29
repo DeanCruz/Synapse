@@ -539,6 +539,15 @@ Append to `entries` in `{tracker_root}/dashboards/{dashboardId}/logs.json`:
 
 Write back.
 
+**Dashboard ID Survival Rule:** The system prompt wraps the DASHBOARD ID line with `===DASHBOARD_BINDING_START===` / `===DASHBOARD_BINDING_END===` sentinel markers. These distinctive markers help the dashboard binding survive LLM context compaction — compaction algorithms are less likely to drop lines flanked by unique sentinel tokens.
+
+After any context compaction event, the master MUST verify the DASHBOARD ID is still present in context. If the sentinels or the DASHBOARD ID line between them are missing, follow this recovery procedure:
+1. **STOP execution immediately** — do not dispatch, log, or write to any dashboard.
+2. **Attempt recovery** — re-read the dashboard binding from `initialization.json` (`task.dashboard_id` or the file's parent directory name) or from the original system prompt if still accessible.
+3. **If recovery fails, ask the user** — request explicit confirmation of the dashboard ID before resuming.
+4. **Never auto-select a different dashboard** as a fallback — this corrupts the swarm by splitting writes across dashboards.
+
+
 #### 11D. Present the plan to the user
 
 The dashboard is now live with the full plan — all tasks visible as pending cards with dependency lines drawn. Present the terminal summary alongside it:

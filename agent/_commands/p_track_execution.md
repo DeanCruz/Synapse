@@ -6,6 +6,8 @@
 
 > **WAVES ARE VISUAL ONLY.** Dispatch is driven exclusively by individual task dependencies (`depends_on` arrays), not by wave boundaries. A task in wave 5 with all dependencies satisfied is dispatchable immediately — even if waves 2, 3, and 4 still have running tasks. If you removed the `wave` field from every agent, the dispatch logic should not change at all.
 
+> **REMINDER: The master NEVER writes code during a swarm.** Not one line. Not a "quick fix." Not "just this one file." If you are about to edit an application file — STOP. Create a worker task instead.
+
 ---
 
 ## Step 12: Begin execution
@@ -295,6 +297,34 @@ After parsing the agent's return text, the master must validate these required s
 - If STATUS is `PARTIAL`, treat as completed but log a `"warn"` entry and include the incomplete items in the final report.
 - If STATUS is missing entirely, treat as a failure — create a repair task per the standard procedure.
 
+### A-3. Progress File Validation
+
+After parsing the worker's return, verify the progress file exists on disk:
+
+1. **Check:** Does `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` exist?
+2. **If missing:** Log a `"warn"` level entry to `logs.json`: `"Worker {task_id} returned {status} but no progress file found — creating stub from return data."`
+3. **Create stub:** Write a progress file with these fields populated from the return data:
+   ```json
+   {
+     "task_id": "{task_id}",
+     "status": "{status from return}",
+     "started_at": null,
+     "completed_at": "{current timestamp}",
+     "summary": "{SUMMARY from return}",
+     "assigned_agent": "Agent {N}",
+     "stage": "{status}",
+     "message": "{SUMMARY from return}",
+     "milestones": [],
+     "deviations": [],
+     "logs": [
+       { "at": "{current timestamp}", "level": "warn", "msg": "Progress file stub created by master — worker did not write progress file during execution" }
+     ]
+   }
+   ```
+4. **If exists but status mismatches return:** Log a `"warn"` level entry noting the mismatch. The return value takes precedence for the master's dispatch decisions.
+
+This validation ensures the dashboard always reflects task outcomes, even when a worker fails to write its progress file.
+
 ### B. Update the master task file
 
 Read the task file. Find the task by `id`:
@@ -379,6 +409,8 @@ After processing a completion, **read the master task file** and scan ALL pendin
 **When dispatching downstream tasks, include upstream results:** For each dependency listed in the downstream task's `depends_on`, pull the cached result (from Step 15D) and embed it in the worker prompt's `UPSTREAM RESULTS` section. This ensures downstream workers know exactly what their prerequisites produced, including any deviations from the plan.
 
 Update tracker files for each newly dispatched task **after dispatch** (per the NON-NEGOTIABLE rule in Step 13B).
+
+> **Single-task trap:** When only one task remains, it is tempting to execute it directly. This is still a code-writing violation. Dispatch a worker — even for the last task.
 
 ### F. Circuit Breaker Check
 

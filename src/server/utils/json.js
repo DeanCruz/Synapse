@@ -98,7 +98,10 @@ function isValidProgress(data, expectedTaskId) {
   if (typeof data.status !== 'string') return false;
 
   // Optional task_id match validation (backward compatible — only checks if expectedTaskId is provided)
-  if (expectedTaskId !== undefined && data.task_id !== expectedTaskId) return false;
+  if (expectedTaskId !== undefined && data.task_id !== expectedTaskId) {
+    console.error(`[isValidProgress] REJECTED: task_id mismatch — file expects "${expectedTaskId}" but data contains "${data.task_id}". Possible cross-worker write violation.`);
+    return false;
+  }
 
   // Status must be one of the valid values
   const VALID_STATUSES = ['in_progress', 'completed', 'failed'];

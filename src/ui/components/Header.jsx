@@ -41,7 +41,8 @@ export default function Header() {
 
   function handleArchiveTask() {
     setArchiveOpen(false);
-    window.electronAPI?.archiveDashboard(state.currentDashboardId).catch(() => {});
+    if (!currentDashboardId) return;
+    window.electronAPI?.archiveDashboard(currentDashboardId).catch(() => {});
   }
 
   function handleViewArchive() {
@@ -59,6 +60,7 @@ export default function Header() {
 
   async function handleExport() {
     const dashboardId = state.currentDashboardId;
+    if (!dashboardId) return;
     try {
       const res = await fetch(`/api/dashboards/${dashboardId}/export`);
       if (!res.ok) return;

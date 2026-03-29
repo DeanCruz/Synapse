@@ -158,6 +158,7 @@ export function useDashboardData() {
 
   // Fetch data whenever the active dashboard changes (covers initial mount + all switches)
   useEffect(() => {
+    if (!state.currentDashboardId) return;
     fetchDashboardData(state.currentDashboardId);
   }, [state.currentDashboardId, fetchDashboardData]);
 
@@ -329,6 +330,7 @@ export function useDashboardData() {
 
     const interval = setInterval(() => {
       if (Date.now() - lastEventTime > STALE_THRESHOLD) {
+        if (!currentDashboardIdRef.current) return;
         console.warn('[useDashboardData] Connection appears stale, re-fetching...');
         fetchDashboardData(currentDashboardIdRef.current);
         lastEventTime = Date.now(); // Reset to avoid rapid re-fetches

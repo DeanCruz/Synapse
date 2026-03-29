@@ -2,9 +2,27 @@
 
 > **Self-contained module for the master agent's failure handling and recovery procedures.** This document covers single-task failure recovery via repair tasks, double failure handling, the circuit breaker for cascading failures with automatic replanning, worker return validation, and the core error resilience principle that governs swarm behavior during failures.
 
+> **REMINDER: The master NEVER writes code during a swarm.** Not one line. Not a "quick fix." Not "just this one file." If you are about to edit an application file — STOP. Create a worker task instead.
+
 ---
 
 ## On Failure — Automatic Recovery via Repair Tasks
+
+> **WARNING: Do NOT fix the failed task yourself.** Fixing code is a code-writing violation.
+> Always create a repair task and dispatch it to a new worker agent. The only acceptable master
+> actions are: logging the failure, creating a repair task, and dispatching a worker.
+
+> **TEMPTATION WARNING — Read this every time a worker fails.**
+>
+> When a worker fails, you will feel a strong urge to "just fix it quickly" yourself. **Resist this urge completely.** Common temptation patterns:
+>
+> - "It's just a one-line fix" — **NO.** Create a repair worker task.
+> - "I can see exactly what went wrong" — **NO.** Put that diagnosis in the repair worker's prompt and dispatch it.
+> - "It'll be faster if I do it" — **NO.** Speed is not an excuse. The no-code constraint is absolute.
+> - "The worker made a silly mistake" — **NO.** Dispatch a repair worker with the error context.
+> - "I'll just edit this config file" — **NO.** Config files are application files. Dispatch a worker.
+>
+> **The ONLY things you do when a worker fails:** (1) log the failure, (2) create a repair task in `initialization.json`, (3) dispatch a repair worker agent. That is the complete list. There are no exceptions.
 
 When a worker returns with `status: "failed"`, the master does NOT treat the failed task as completed. **Failed tasks do not satisfy dependencies.** Any downstream task with the failed task in its `depends_on` remains blocked. However, the master MUST still run the eager dispatch scan — other dependency chains unrelated to the failure may have been freed by concurrent completions.
 

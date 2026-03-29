@@ -2,6 +2,8 @@
 
 This module covers the master agent's state persistence, context compaction recovery procedures, and post-swarm metrics computation. These systems work together to ensure swarm continuity after context compaction events and provide performance analysis after completion.
 
+> **REMINDER: The master NEVER writes code during a swarm.** Not one line. Not a "quick fix." Not "just this one file." If you are about to edit an application file — STOP. Create a worker task instead.
+
 ---
 
 ## Master State Checkpoint
@@ -81,7 +83,21 @@ During long-running swarms, context compaction may discard the master's cached u
 
 Before constructing any downstream worker prompt, verify that cached results exist for all completed upstream tasks. If a task has a progress file with `status: "completed"` but the master has no cached result for it, compaction has occurred.
 
-### Recovery Procedure (5 Steps)
+### Recovery Procedure (6 Steps)
+
+> **Note:** Step 0 was added to ensure role constraints are re-established before operational recovery. Existing steps retain their original numbering.
+
+**Step 0 — Re-read role constraints (BEFORE anything else).**
+
+Before recovering operational state, re-read `{tracker_root}/agent/master/role.md` — specifically the NON-NEGOTIABLE constraints blockquote. Context compaction may have evicted the master's role boundaries. Re-establishing these boundaries FIRST prevents drift into implementation mode during recovery.
+
+> **Why this step exists:** After compaction, the master often "forgets" it cannot write code and begins implementing fixes directly instead of dispatching workers. This is the #1 post-compaction failure mode. You MUST reload the no-code constraint before touching any operational state.
+
+Checklist for Step 0:
+1. Read `{tracker_root}/agent/master/role.md` in full
+2. Confirm you understand: **the master NEVER writes application code** — not during recovery, not to "quickly fix" a failed task, not ever
+3. Confirm you understand: your only recovery actions are reading state files, rebuilding caches, and resuming dispatch
+4. Only after confirming all three points, proceed to Step 1
 
 **Step 1 — Read the master state checkpoint.**
 

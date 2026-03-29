@@ -24,16 +24,18 @@
 
 ## Module Index
 
-| Module | Path | When to Read |
-|---|---|---|
-| **Role & Constraints** | `agent/master/role.md` | Before any swarm — understand your boundaries, responsibilities, and the archive protocol |
-| **Dashboard Writes** | `agent/master/dashboard_writes.md` | When writing `initialization.json`, `logs.json`, `master_state.json`, or `metrics.json` — full schemas, write rules, and timing |
-| **UI Map** | `agent/master/ui_map.md` | When writing dashboard files — maps every UI panel to the exact fields that drive it |
-| **Eager Dispatch** | `agent/master/eager_dispatch.md` | On every worker completion — the full dispatch protocol, mechanism steps, examples, and server-side alerts |
-| **Failure Recovery** | `agent/master/failure_recovery.md` | When a worker fails — repair tasks, double failure handling, circuit breaker, and worker return validation |
-| **Worker Prompts** | `agent/master/worker_prompts.md` | When constructing worker dispatch prompts — template, convention map, budget guidelines, and completeness checklist |
-| **Compaction Recovery** | `agent/master/compaction_recovery.md` | After context compaction — state checkpoint schema, recovery procedure, cache awareness, and swarm metrics |
-| **Dashboard Protocol** | `agent/master/dashboard_protocol.md` | When understanding `!p` vs `!p_track` dashboard interaction — write timelines, mode comparison, and decision flowchart |
+> **Constraint reminder:** Every module below operates under the absolute no-code constraint. The master orchestrates — it never implements. If any module's procedure tempts you to edit application files, you are misreading it. Dispatch a worker instead.
+
+| Module | Path | When to Read | Constraint |
+|---|---|---|---|
+| **Role & Constraints** | `agent/master/role.md` | Before any swarm — understand your boundaries, responsibilities, and the archive protocol. | **NEVER write code. Read this FIRST.** |
+| **Dashboard Writes** | `agent/master/dashboard_writes.md` | When writing `initialization.json`, `logs.json`, `master_state.json`, or `metrics.json` — full schemas, write rules, and timing | Only write dashboard/tracker files — never application files. |
+| **UI Map** | `agent/master/ui_map.md` | When writing dashboard files — maps every UI panel to the exact fields that drive it | Dashboard files only. |
+| **Eager Dispatch** | `agent/master/eager_dispatch.md` | On every worker completion — the full dispatch protocol, mechanism steps, examples, and server-side alerts. | **Dispatch workers; NEVER implement yourself.** |
+| **Failure Recovery** | `agent/master/failure_recovery.md` | When a worker fails — repair tasks, double failure handling, circuit breaker, and worker return validation. | **Create repair tasks; NEVER fix code directly.** |
+| **Worker Prompts** | `agent/master/worker_prompts.md` | When constructing worker dispatch prompts — template, convention map, budget guidelines, and completeness checklist | Workers write code — you write prompts. |
+| **Compaction Recovery** | `agent/master/compaction_recovery.md` | After context compaction — state checkpoint schema, recovery procedure, cache awareness, and swarm metrics. | **Re-read role.md FIRST. Recover state, don't implement.** |
+| **Dashboard Protocol** | `agent/master/dashboard_protocol.md` | When understanding `!p` vs `!p_track` dashboard interaction — write timelines, mode comparison, and decision flowchart | Orchestration only. |
 
 ---
 
@@ -93,7 +95,7 @@ During long-running swarms, context compaction may discard cached upstream resul
 
 After all tasks complete, compute `metrics.json` with elapsed time, parallel efficiency, duration distribution, and failure rate.
 
-**Read:** `agent/master/compaction_recovery.md` for the state checkpoint schema, 5-step recovery procedure, prevention tips, and the full metrics computation procedure.
+**Read:** `agent/master/compaction_recovery.md` for the state checkpoint schema, recovery procedure (Step 0: re-read role constraints, then Steps 1-5), prevention tips, and the full metrics computation procedure.
 
 ---
 

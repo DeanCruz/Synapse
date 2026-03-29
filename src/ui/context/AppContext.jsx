@@ -110,7 +110,7 @@ const savedWorkspaces = loadSavedWorkspaces();
 const savedGitRepos = loadSavedGitRepos();
 
 const initialState = {
-  currentDashboardId: 'dashboard1',
+  currentDashboardId: null,
   currentInit: null,
   currentProgress: {},
   currentLogs: null,
@@ -136,7 +136,7 @@ const initialState = {
   claudeEverOpened: false,   // true once the Claude panel has been opened — keeps it mounted
   connected: false,
   // Persistent Claude chat state (per-dashboard)
-  claudeMessages: loadSavedMessages('dashboard1') || [CLAUDE_WELCOME_MSG],
+  claudeMessages: [CLAUDE_WELCOME_MSG],
   claudeTabStash: {}, // { [dashboardId:tabId]: messages } — in-memory cache for tab/dashboard switching
   claudeProcessingStash: {}, // { [dashboardId]: { isProcessing, status, pendingAttachments } }
   claudeTabs: {}, // { [dashboardId]: [{ id, name }] } — tabs per dashboard
@@ -200,6 +200,10 @@ function appReducerCore(state, action) {
       return { ...state, allDashboardLogs: newLogs };
     }
     case 'SWITCH_DASHBOARD': {
+      // If no current dashboard yet (initial state), skip stashing — just set the new ID
+      if (!state.currentDashboardId) {
+        return { ...state, currentDashboardId: action.id };
+      }
       const prevDid = state.currentDashboardId;
       const prevTabId = state.claudeActiveTabId;
       // Stash current tab's messages
@@ -285,7 +289,7 @@ function appReducerCore(state, action) {
       const newMessages = [...state.claudeMessages, { id: Date.now() + Math.random(), ...action.msg }];
       // Track unread if user isn't viewing this dashboard's chat
       const shouldTrackUnread = action.msg.type === 'assistant' && state.activeView !== 'claude';
-      const updatedUnread = shouldTrackUnread
+      const updatedUnread = (shouldTrackUnread && state.currentDashboardId)
         ? { ...state.unreadChatCounts, [state.currentDashboardId]: (state.unreadChatCounts[state.currentDashboardId] || 0) + 1 }
         : state.unreadChatCounts;
       return { ...state, claudeMessages: newMessages, unreadChatCounts: updatedUnread };
@@ -294,6 +298,7 @@ function appReducerCore(state, action) {
       // Functional update: action.updater(prevMessages) => newMessages
       return { ...state, claudeMessages: action.updater(state.claudeMessages) };
     case 'CLAUDE_CLEAR_MESSAGES':
+      if (!state.currentDashboardId) return state;
       try { localStorage.removeItem(claudeMessagesKey(state.currentDashboardId, state.claudeActiveTabId)); } catch (e) { /* unavailable */ }
       return { ...state, claudeMessages: [CLAUDE_WELCOME_MSG], claudePendingAttachments: [] };
     case 'CLAUDE_SET_VIEW_MODE':
@@ -314,6 +319,7 @@ function appReducerCore(state, action) {
       return { ...state, claudePendingAttachments: [] };
     // --- Tab management ---
     case 'CLAUDE_NEW_TAB': {
+      if (!state.currentDashboardId) return state;
       const did = state.currentDashboardId;
       const currentTabs = state.claudeTabs[did] || [{ ...DEFAULT_TAB }];
       const newTabId = 'tab-' + Date.now();
@@ -333,6 +339,7 @@ function appReducerCore(state, action) {
       };
     }
     case 'CLAUDE_SWITCH_TAB': {
+      if (!state.currentDashboardId) return state;
       const did = state.currentDashboardId;
       const targetTabId = action.tabId;
       if (targetTabId === state.claudeActiveTabId) return state;
@@ -349,6 +356,7 @@ function appReducerCore(state, action) {
       };
     }
     case 'CLAUDE_CLOSE_TAB': {
+      if (!state.currentDashboardId) return state;
       const did = state.currentDashboardId;
       const currentTabs = state.claudeTabs[did] || [{ ...DEFAULT_TAB }];
       if (currentTabs.length <= 1) return state;
@@ -379,6 +387,7 @@ function appReducerCore(state, action) {
       };
     }
     case 'CLAUDE_RENAME_TAB': {
+      if (!state.currentDashboardId) return state;
       const did = state.currentDashboardId;
       const currentTabs = state.claudeTabs[did] || [{ ...DEFAULT_TAB }];
       const updatedTabs = currentTabs.map(t => t.id === action.tabId ? { ...t, name: action.name } : t);
@@ -387,6 +396,7 @@ function appReducerCore(state, action) {
     }
     // --- Stashed tab updates (for non-active tabs on same dashboard with running workers) ---
     case 'CLAUDE_TAB_STASH_APPEND_MSG': {
+      if (!state.currentDashboardId) return state;
       const did = state.currentDashboardId;
       const stashKey = did + ':' + action.tabId;
       const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
@@ -736,6 +746,7 @@ const CLAUDE_PERSIST_ACTIONS = new Set(['CLAUDE_SET_MESSAGES', 'CLAUDE_APPEND_MS
 // Debounced localStorage persistence — avoids serializing on every streaming delta
 let persistTimer = null;
 function schedulePersist(dashboardId, tabId, messages) {
+  if (!dashboardId) return;
   if (persistTimer) clearTimeout(persistTimer);
   persistTimer = setTimeout(() => {
     persistTimer = null;

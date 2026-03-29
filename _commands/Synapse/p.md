@@ -126,7 +126,7 @@ Use `subagent_type: "general-purpose"` for each worker.
 
 ```
 You are executing task {id}: {title}
-TEMPLATE_VERSION: p_v2
+TEMPLATE_VERSION: p_worker_v1
 
 ## What To Do
 {Detailed description — not just a title, but exactly what to implement, change, or create.
@@ -195,6 +195,8 @@ EXPORTS: (omit if no new exports)
 WARNINGS: {anything the master should know — optional}
 ERRORS: {if failed, what went wrong}
 ```
+
+> **Note:** This template is for `!p` dispatches only. For `!p_track`, use the template in `agent/master/worker_prompts.md` (TEMPLATE_VERSION: p_track_v2).
 
 **Prompt quality checklist — verify before dispatching each worker:**
 - [ ] Description is specific enough that someone unfamiliar with the codebase could execute it

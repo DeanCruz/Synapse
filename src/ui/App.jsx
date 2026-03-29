@@ -121,6 +121,7 @@ function DashboardContent() {
   async function handleClear() {
     const api = window.electronAPI;
     if (!api) return;
+    if (!state.currentDashboardId) return;
     // Archive the current task before clearing
     if (hasTask) {
       await api.archiveDashboard(state.currentDashboardId).catch(() => {});
@@ -462,7 +463,7 @@ function ClaudeFloatingHeader({ dashboardId, viewMode, onSetMode }) {
   const state = useAppState();
   const projectPath = getDashboardProject(dashboardId);
   const projectName = projectPath ? projectPath.replace(/\/+$/, '').split('/').pop() : null;
-  const dashboardLabel = dashboardId.replace('dashboard', 'Dashboard ');
+  const dashboardLabel = dashboardId ? dashboardId.replace('dashboard', 'Dashboard ') : '';
 
   return (
     <div

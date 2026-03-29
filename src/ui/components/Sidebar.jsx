@@ -84,7 +84,7 @@ export default function Sidebar() {
   const dragCounterRef = useRef(0);
 
   // Use dashboardList from server (populated via SSE/IPC), fall back to currentDashboardId
-  const allDashboards = dashboardList.length > 0 ? dashboardList : [currentDashboardId];
+  const allDashboards = dashboardList.length > 0 ? dashboardList : [];
 
   // Build set of valid IDE dashboard IDs and a map from dashboardId → workspace index
   // for sorting IDE dashboards in workspace creation order (matching tab order).

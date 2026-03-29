@@ -71,13 +71,8 @@ function watchDashboard(id, broadcastFn) {
         try {
           if (!fs.existsSync(filePath)) return; // file was deleted (reset)
           const data = await readJSONWithRetry(filePath, PROGRESS_RETRY_MS);
-          if (data && isValidProgress(data)) {
-            // Write-guard: warn if task_id inside the file doesn't match the filename
-            const expectedId = filename.replace('.json', '');
-            if (data.task_id !== expectedId) {
-              console.warn(`[watcher] GUARD: Progress file ${id}/${filename} contains task_id "${data.task_id}" — expected "${expectedId}". Possible cross-worker write violation.`);
-              // Still broadcast — soft guard, warn only
-            }
+          const expectedId = filename.replace('.json', '');
+          if (data && isValidProgress(data, expectedId)) {
             broadcastFn('agent_progress', { dashboardId: id, ...data });
 
             // Dependency check: when a task completes, check if new tasks are unblocked
@@ -235,13 +230,8 @@ function reconcileProgressFiles(id, broadcastFn) {
 
         known.set(file, stat.mtimeMs);
         const data = readJSON(filePath);
-        if (data && isValidProgress(data)) {
-          // Write-guard: warn if task_id inside the file doesn't match the filename
-          const expectedId = file.replace('.json', '');
-          if (data.task_id !== expectedId) {
-            console.warn(`[watcher] GUARD: Progress file ${id}/${file} contains task_id "${data.task_id}" — expected "${expectedId}". Possible cross-worker write violation.`);
-            // Still broadcast — soft guard, warn only
-          }
+        const expectedId = file.replace('.json', '');
+        if (data && isValidProgress(data, expectedId)) {
           broadcastFn('agent_progress', { dashboardId: id, ...data });
 
           // Dependency check: when a task completes, check if new tasks are unblocked

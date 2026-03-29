@@ -8,6 +8,8 @@
 
 > **This is the master agent's highest-priority runtime obligation.** Failing to dispatch available tasks immediately is the single most common cause of pipeline stalls. Read this section carefully.
 
+> **REMINDER: The master NEVER writes code during a swarm.** Not one line. Not a "quick fix." Not "just this one file." If you are about to edit an application file — STOP. Create a worker task instead.
+
 ### The Rule
 
 **Every time a worker agent completes (success or failure), the master MUST immediately scan ALL remaining tasks — across ALL waves — and dispatch an agent for EVERY task whose dependencies are fully satisfied.** Do not wait for an entire wave to finish. Do not batch dispatches. Do not limit yourself to "the current wave." The only gate is dependency satisfaction.

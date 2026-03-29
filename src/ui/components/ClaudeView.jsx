@@ -331,6 +331,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const isProcessing = state.claudeIsProcessing;
   const status = state.claudeStatus;
   const dashboardId = state.currentDashboardId;
+  if (!dashboardId) return <div className="claude-view-empty">Select a dashboard to begin</div>;
   const pendingAttachments = state.claudePendingAttachments;
   const tabs = state.claudeTabs[dashboardId] || [{ id: 'default', name: 'Chat 1' }];
   const activeTabId = state.claudeActiveTabId;
@@ -1076,6 +1077,12 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   }
 
   function finishProcessing(taskId) {
+    // Capture the task's original dashboard ID before cleanup deletes it.
+    // If the user switched dashboards during execution, the closure-captured
+    // `dashboardId` would be stale — this ref lookup ensures we target the
+    // correct dashboard for preview updates, logging, and conversation saves.
+    const taskDashId = taskDashboardMapRef.current[taskId] || dashboardId;
+
     activeTaskIdsRef.current.delete(taskId);
     codexStreamedTaskIdsRef.current.delete(taskId);
     delete taskDashboardMapRef.current[taskId];
@@ -1100,7 +1107,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       const lastMsg = finalMsgs[finalMsgs.length - 1];
       if (lastMsg.type === 'assistant' && lastMsg.text) {
         const preview = lastMsg.text.length > 60 ? '...' + lastMsg.text.slice(-57) : lastMsg.text;
-        dispatch({ type: 'SET_CHAT_PREVIEW', dashboardId, text: preview, isStreaming: false });
+        dispatch({ type: 'SET_CHAT_PREVIEW', dashboardId: taskDashId, text: preview, isStreaming: false });
       }
     }
     currentTextIndexRef.current = null;
@@ -1108,8 +1115,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     flushThinking();
 
     // Log completion to dashboard
-    if (api && dashboardId) {
-      api.logChatEvent(dashboardId, {
+    if (api && taskDashId) {
+      api.logChatEvent(taskDashId, {
         level: 'info',
         message: 'Claude chat response completed',
         task_id: taskId,
@@ -1133,7 +1140,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         name,
         created: convCreatedRef.current || now,
         sessionId: sessionIdRef.current,
-        dashboardId,
+        dashboardId: taskDashId,
         messages: currentMsgs,
       }).catch(() => {});
     }
