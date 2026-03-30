@@ -12,7 +12,7 @@ This is a **post-mortem tool** — run it after a swarm completes to identify wh
 
 ```
 !prompt_audit                  <- Audit your assigned dashboard
-!prompt_audit dashboard3       <- Audit a specific dashboard
+!prompt_audit {dashboardId}    <- Audit a specific dashboard (e.g., a3f7k2)
 ```
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md`
@@ -81,12 +81,12 @@ For each task that has dependencies (non-empty `depends_on` in `initialization.j
 
 ### Step 4: Analyze Convention Relevance
 
-Check if `{tracker_root}/convention_map.json` or `{project_root}/convention_map.json` exists.
+Check if the master built a convention map during planning (evidence: worker prompts contain filtered CONVENTIONS sections with category-specific rules from CLAUDE.md).
 
-- If found: report "Convention map present — conventions can be filtered per task"
-- If not found: report "No convention map found — all workers receive unfiltered conventions (potential context waste)"
+- If evidence found in worker logs/prompts: report "Convention filtering active — conventions were filtered per task"
+- If not found: report "No convention filtering detected — all workers may have received unfiltered conventions (potential context waste)"
 
-This is informational only — the convention map is an optimization, not a requirement.
+This is informational only — the convention map is an in-memory structure built during planning (not a persisted file). Its presence is inferred from worker prompt quality.
 
 ### Step 5: Generate Quality Scorecard
 

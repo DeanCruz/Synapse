@@ -29,24 +29,49 @@ You're working with **Synapse**, a distributed agent swarm control system. It ca
 | `!toc {query}` | Search the project's semantic index for files |
 | `!toc_update` | Incrementally update the project index |
 | `!toc_generate` | Full rebuild of the project index (swarm) |
+| `!context {query}` | Deep context gathering within the project |
+| `!learn` | Bootstrap the Project Knowledge Index (PKI) |
+| `!learn_update` | Incrementally refresh the PKI |
 
 **Parallel Execution** — Go fast
 | Command | What it does |
 |---|---|
 | `!p_track {task}` | Dispatch a full parallel agent swarm with dashboard |
+| `!p {task}` | Lightweight parallel dispatch (no live progress tracking) |
+| `!master_plan_track {task}` | Multi-stream orchestration across dashboards |
 | `!status` | Check current swarm status |
 | `!dispatch` | Manually dispatch pending tasks |
-| `!start` / `!stop` | Start/stop the dashboard server |
+| `!start` / `!stop` | Launch the Electron app / stop the server |
 
-**Auditing** — Catch problems early
+**Auditing & Analysis** — Catch problems early
 | Command | What it does |
 |---|---|
+| `!review` | Code review of recent changes |
+| `!health` | Project health check |
+| `!scope {change}` | Blast radius analysis |
+| `!trace {endpoint}` | End-to-end code tracing |
+| `!contracts` | API contract audit |
 | `!env_check` | Verify environment variable consistency |
+| `!prompt_audit` | Post-swarm prompt quality audit |
+
+**Monitoring**
+| Command | What it does |
+|---|---|
+| `!logs` | View/filter event log entries |
+| `!inspect {id}` | Deep-dive into a specific task |
+| `!deps` | Visualize the dependency graph |
+| `!history` | View past swarm history |
+| `!export` | Export swarm state as markdown or JSON |
 
 **Project Management**
 | Command | What it does |
 |---|---|
+| `!project` | Show, set, or clear the target project path |
 | `!initialize` | Set up Synapse for a project |
+| `!onboard` | Project walkthrough and orientation |
+| `!scaffold` | Generate a CLAUDE.md for a project |
+| `!create_claude` | Create/update an opinionated CLAUDE.md |
+| `!instrument` | Add Live Preview labels to project files |
 | `!commands` | List all available commands |
 | `!profiles` | List available agent profiles |
 | `!help` | This guide |
@@ -73,6 +98,9 @@ Catches missing or inconsistent environment variables that only surface at runti
 **6. Use `!toc_update` after structural changes.**
 After adding new files or directories, run `!toc_update` so the semantic index stays current.
 
+**7. Bootstrap project knowledge with `!learn`.**
+Run once per project to build the PKI, then `!learn_update` to keep it current. Workers get better context when PKI exists.
+
 ---
 
 ### Workflow Patterns
@@ -83,11 +111,23 @@ Agent builds it directly in serial mode.
 **New feature (large):**
 `!p_track {feature}` -> `!start` (dashboard) -> review results
 
+**Very large feature (multiple swarms):**
+`!master_plan_track {feature}` -> review plans -> approve dispatch
+
+**First time on a project:**
+`!project set /path` -> `!initialize` -> `!learn` -> `!onboard`
+
 **Start of session:**
 `!toc_update` (if stale) -> start working
 
+**Code review workflow:**
+`!review` -> `!scope {change}` -> `!contracts`
+
+**Blast radius analysis:**
+`!scope {proposed change}` -> review affected files -> plan accordingly
+
 **Periodic maintenance:**
-`!env_check` -> fix issues -> `!toc_update`
+`!env_check` -> fix issues -> `!toc_update` -> `!learn_update`
 ```
 
 ---

@@ -2,9 +2,9 @@
 name: dashboard-ops
 description: >
   Monitor, inspect, and operate Synapse swarms. Handles status checks, log viewing,
-  task inspection, dependency analysis, history browsing, cancellation, resets, and
-  server control. Use when the user invokes !status, !logs, !inspect, !deps, !history,
-  !cancel, !cancel-safe, !reset, !start, !stop, !guide, or !update_dashboard.
+  task inspection, dependency analysis, history browsing, cancellation, resets, exports,
+  and server control. Use when the user invokes !status, !logs, !inspect, !deps, !history,
+  !cancel, !cancel-safe, !reset, !start, !stop, !guide, !update_dashboard, or !export.
 argument-hint: <command> [args]
 user-invocable: true
 ---
@@ -29,6 +29,7 @@ Route to the correct Synapse command for monitoring, inspecting, and operating s
 | `!stop` | `_commands/Synapse/stop.md` | Stop dashboard server |
 | `!guide` | `_commands/Synapse/guide.md` | Command decision tree |
 | `!update_dashboard` | `_commands/Synapse/update_dashboard.md` | Update dashboard data |
+| `!export` | `_commands/Synapse/export.md` | Export swarm state as markdown or JSON |
 
 ## Dashboard Resolution
 

@@ -1,6 +1,6 @@
 # `!start`
 
-**Purpose:** Start the Synapse dashboard server and launch the Electron app.
+**Purpose:** Start the Synapse dashboard. There are two modes: **Electron app** (recommended, embeds the server) and **standalone server** (browser-only).
 
 **Syntax:** `!start`
 
@@ -8,27 +8,39 @@
 
 ## Steps
 
-1. **Locate the tracker directory.** Find the Synapse directory (Synapse) relative to the current working directory. It contains `src/server/index.js` and the `dashboards/` directory.
+### Option A: Electron App (recommended)
 
-2. **Check if already running.** Run:
+The Electron app embeds the SSE server, so starting the app starts everything.
+
+1. **Locate the tracker directory.** Find the Synapse directory containing `package.json` and `electron/main.js`.
+
+2. **Launch the Electron app:**
+   ```bash
+   cd {tracker_root} && npm start
+   ```
+   This launches the Synapse desktop app, which automatically starts the embedded SSE server.
+
+3. **Report.** Tell the user the Synapse dashboard app is running.
+
+> **Note:** Do NOT also start the standalone server (`node src/server/index.js`) when using Electron mode -- the Electron app already runs the server internally. Running both will cause a port conflict on port 3456.
+
+### Option B: Standalone Server (browser-only, no Electron)
+
+Use this if the user explicitly requests the standalone server or Electron is not available.
+
+1. **Check if already running:**
    ```bash
    lsof -i :3456 -t 2>/dev/null
    ```
-   If a PID is returned, the server is already running. Report this to the user and skip to step 4.
+   If a PID is returned, the server is already running. Report this and provide the URL.
 
-3. **Start the server.** Run in the background:
+2. **Start the server:**
    ```bash
    node {tracker_root}/src/server/index.js &
    ```
-   Wait 1 second, then verify it's running:
+   Wait 1 second, then verify:
    ```bash
    curl -s http://127.0.0.1:3456/api/dashboards > /dev/null && echo "Server running" || echo "Server failed to start"
    ```
 
-4. **Open the Electron app.** Run:
-   ```bash
-   npm start
-   ```
-   This launches the Synapse Electron app.
-
-5. **Report.** Tell the user the Synapse dashboard app is running.
+3. **Report.** Tell the user: "Dashboard server running at http://localhost:3456"

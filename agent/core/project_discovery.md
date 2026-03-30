@@ -75,7 +75,11 @@ Synapse/                            ← {tracker_root}
 │   │   ├── history.md              ← View past swarm history
 │   │   ├── deps.md                 ← Visualize dependency graph
 │   │   ├── guide.md                ← Command decision tree
-│   │   └── update_dashboard.md     ← Update dashboard config
+│   │   ├── update_dashboard.md     ← Update dashboard config
+│   │   ├── add_task.md             ← Add tasks to a running swarm
+│   │   ├── eager_dispatch.md       ← Full eager dispatch round
+│   │   ├── export.md               ← Export swarm state
+│   │   └── p_track_resume.md       ← Resume a stalled !p_track swarm
 │   ├── project/                    ← Project analysis & management commands
 │   │   ├── initialize.md           ← Initialize Synapse for a project
 │   │   ├── onboard.md              ← Project walkthrough
@@ -93,7 +97,11 @@ Synapse/                            ← {tracker_root}
 │   │   ├── toc_update.md           ← Update project TOC
 │   │   ├── commands.md             ← List all available commands
 │   │   ├── help.md                 ← Master agent guide
-│   │   └── profiles.md             ← List available profiles
+│   │   ├── profiles.md             ← List available profiles
+│   │   ├── learn.md                ← Bootstrap PKI
+│   │   ├── learn_update.md         ← Incrementally refresh PKI
+│   │   ├── instrument.md           ← Add data-synapse-label attributes
+│   │   └── prompt_audit.md         ← Post-swarm prompt quality audit
 │   └── profiles/                   ← Agent role profiles
 │       ├── analyst.md
 │       ├── architect.md
@@ -110,21 +118,41 @@ Synapse/                            ← {tracker_root}
 │       ├── sales.md
 │       ├── security.md
 │       └── technical-writer.md
-├── agent/                          ← Agent instruction files
-│   └── instructions/
-│       ├── dashboard_resolution.md
-│       ├── tracker_master_instructions.md
-│       ├── tracker_multi_plan_instructions.md
-│       ├── tracker_worker_instructions.md
-│       ├── failed_task.md
-│       └── common_pitfalls.md
-├── dashboards/                     ← Multi-dashboard support (up to 5)
-│   ├── dashboard1/
+├── agent/                          ← Agent instruction files & reference docs
+│   ├── instructions/
+│   │   ├── dashboard_resolution.md
+│   │   ├── tracker_master_instructions.md
+│   │   ├── tracker_multi_plan_instructions.md
+│   │   ├── tracker_worker_instructions.md
+│   │   ├── tracker_worker_instructions_lite.md
+│   │   ├── failed_task.md
+│   │   └── common_pitfalls.md
+│   ├── master/                     ← Master agent reference docs
+│   │   ├── role.md, dashboard_writes.md, ui_map.md
+│   │   ├── eager_dispatch.md, failure_recovery.md, worker_prompts.md
+│   │   ├── compaction_recovery.md, dashboard_protocol.md
+│   │   └── pki_integration.md
+│   ├── worker/                     ← Worker agent reference docs
+│   │   ├── progress_reporting.md, return_format.md, deviations.md
+│   │   ├── upstream_deps.md, sibling_comms.md
+│   ├── core/                       ← Core principles and conventions
+│   │   ├── command_resolution.md, parallel_principles.md
+│   │   ├── profile_system.md, project_discovery.md, path_convention.md
+│   │   ├── dashboard_features.md, data_architecture.md
+│   ├── _commands/                  ← Internal p_track phase docs
+│   │   ├── p_track_planning.md, p_track_execution.md, p_track_completion.md
+│   └── utils/
+│       └── token_estimate.js
+├── dashboards/                     ← Multi-dashboard support (unlimited)
+│   ├── ide/                        ← Reserved for IDE agent
 │   │   ├── initialization.json
 │   │   ├── logs.json
-│   │   ├── master_state.json          ← Master state checkpoint (context recovery)
 │   │   └── progress/
-│   └── dashboard2/ ... dashboard5/
+│   └── {hex-id}/                   ← e.g., a3f7k2 (6-char hex)
+│       ├── initialization.json
+│       ├── logs.json
+│       ├── master_state.json          ← Master state checkpoint (context recovery)
+│       └── progress/
 ├── queue/                          ← Overflow queue slots
 ├── history/                        ← History summary JSON files
 ├── Archive/                        ← Full archived dashboard snapshots

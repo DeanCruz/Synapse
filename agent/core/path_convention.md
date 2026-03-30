@@ -70,7 +70,7 @@ Synapse is project-agnostic and fully standalone. To use it with any project:
 
 ## Multi-Project Support
 
-Each of the 5 dashboard slots can serve a different project simultaneously. The `task.project_root` field in `initialization.json` identifies which project each swarm belongs to.
+Each dashboard can serve a different project simultaneously. Dashboards are unlimited (created dynamically with 6-character hex IDs). The `task.project_root` field in `initialization.json` identifies which project each swarm belongs to.
 
 When working across multiple projects:
 - Use `!project set` to switch the active project, or pass `--project` to individual commands

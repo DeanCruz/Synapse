@@ -3,10 +3,11 @@ name: project-workflow
 description: >
   Run Synapse project setup, discovery, auditing, and analysis workflows.
   Handles project configuration, onboarding, code review, health checks,
-  TOC management, scaffolding, and implementation planning. Use when the user
-  invokes !project, !initialize, !onboard, !context, !review, !health, !scaffold,
-  !plan, !scope, !trace, !contracts, !env_check, !toc, !toc_generate, !toc_update,
-  !commands, !profiles, !help, or !create_claude.
+  TOC management, scaffolding, implementation planning, PKI management, and
+  instrumentation. Use when the user invokes !project, !initialize, !onboard,
+  !context, !review, !health, !scaffold, !plan, !scope, !trace, !contracts,
+  !env_check, !toc, !toc_generate, !toc_update, !commands, !profiles, !help,
+  !create_claude, !learn, !learn_update, !instrument, or !prompt_audit.
 argument-hint: <command> [args]
 user-invocable: true
 ---
@@ -43,6 +44,15 @@ Route to the correct Synapse command for project setup, discovery, auditing, and
 | `!contracts` | `_commands/project/contracts.md` | API contract audit |
 | `!env_check` | `_commands/project/env_check.md` | Environment variable audit |
 | `!plan {task}` | `_commands/project/plan.md` | Implementation planning |
+| `!prompt_audit` | `_commands/project/prompt_audit.md` | Post-swarm prompt quality audit |
+
+### PKI & Instrumentation
+
+| Command | File | Description |
+|---|---|---|
+| `!learn` | `_commands/project/learn.md` | Bootstrap the Project Knowledge Index from scratch |
+| `!learn_update` | `_commands/project/learn_update.md` | Incrementally refresh the PKI (stale/new files only) |
+| `!instrument` | `_commands/project/instrument.md` | Add `data-synapse-label` attributes for Live Preview |
 
 ### TOC Management
 
