@@ -72,27 +72,38 @@ The app opens with the Claude Chat view ready for input. No separate server proc
 
 ### Step 3: Connect Your Project
 
-Synapse is fully standalone -- it works with any project, no special directory structure required.
+Synapse is fully standalone -- it works with any project, no special directory structure required. Each dashboard has its own project configuration, so you can work on multiple projects simultaneously.
 
-**Option A: Quick start (no setup)**
+**Setting a project directory**
+
+When you create a new dashboard, click the **Project** button in the sidebar to open the project selector. Choose a directory -- this becomes the dashboard's **project root**, where agents will read and write code.
+
+Each dashboard remembers its own project independently. You can have five dashboards open, each pointing at a different repo.
+
+**Adding additional context directories**
+
+In the same project selector, you can add **additional context directories** -- read-only reference paths that agents can read for context but will never modify. Use these for:
+
+- **Shared libraries** or monorepo packages your project depends on
+- **Documentation repos** with specs, designs, or API references
+- **Other related projects** agents should understand but not touch
+
+Additional context is injected into worker prompts as clearly marked READ-ONLY material. Agents can reference files from these directories to inform their work, but all code changes go exclusively to the project root.
+
+**Quick start**
 ```
-# Just tell Synapse where your project is
-!project set /path/to/your/project
-
-# Start working immediately
-!p_track Implement user authentication with JWT tokens
+1. Click "+" in the sidebar to create a dashboard
+2. Click the Project button → select your project directory
+3. (Optional) Add additional context directories for reference material
+4. Start working: !p_track Implement user authentication with JWT tokens
 ```
 
-**Option B: Full initialization (recommended for new projects)**
+**Full initialization (recommended for new projects)**
 ```
-# Point at your project
-!project set /path/to/your/project
-
-# Run full setup -- detects tech stack, creates .synapse/ directory, scaffolds CLAUDE.md, generates TOC
+# After selecting your project directory, run full setup in chat
 !initialize
 
-# Verify everything is connected
-!project
+# This detects your tech stack, creates .synapse/, scaffolds CLAUDE.md, generates TOC
 ```
 
 `!initialize` does the following automatically:
@@ -100,9 +111,8 @@ Synapse is fully standalone -- it works with any project, no special directory s
 2. Creates a `.synapse/` directory in your project with configuration and a semantic table of contents
 3. Scaffolds a `CLAUDE.md` in your project root if one doesn't exist (tech-stack-aware template)
 4. Generates a full TOC index of your codebase for faster agent context gathering
-5. Initializes dashboard slots for concurrent swarms
 
-**Option C: Just scaffold a CLAUDE.md**
+**Just scaffold a CLAUDE.md**
 ```
 # If you only need agent instructions for your project
 !scaffold
@@ -377,8 +387,7 @@ Commands work in both the built-in chat and the terminal Claude Code CLI. Synaps
 
 | Command | What It Does |
 |---|---|
-| `!project set {path}` | Point Synapse at a target project. |
-| `!project` | Show current project path and status. |
+| `!project` | Show current project path and status. Use the Project button in the sidebar to set a project per-dashboard. |
 | `!initialize` | Full setup -- tech stack detection, `.synapse/` creation, CLAUDE.md scaffold, TOC generation. |
 | `!scaffold` | Generate a `CLAUDE.md` for your project from its structure and tech stack. |
 | `!create_claude` | Create or update an opinionated `CLAUDE.md` with rules for how the project should be built. |
