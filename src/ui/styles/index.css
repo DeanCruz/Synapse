@@ -6238,13 +6238,87 @@ a:hover {
   padding: 8px 12px;
 }
 
-.claude-system-msg.claude-compaction {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+/* Expandable compaction box */
+.claude-compaction-box {
+  border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: 6px;
+  background: rgba(245, 158, 11, 0.08);
+  overflow: hidden;
+  align-self: stretch;
+}
+
+.claude-compaction-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
   padding: 8px 12px;
-  font-weight: 500;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f59e0b;
+  text-align: left;
+  font-family: inherit;
+}
+
+.claude-compaction-header:hover {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.claude-compaction-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.claude-compaction-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.claude-compaction-label {
+  white-space: nowrap;
+}
+
+.claude-compaction-hint {
+  color: rgba(245, 158, 11, 0.6);
+  font-weight: 400;
+  margin-left: auto;
+  font-size: 0.7rem;
+}
+
+.claude-compaction-body {
+  padding: 0 12px 10px;
+  border-top: 1px solid rgba(245, 158, 11, 0.15);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.claude-compaction-body p {
+  margin: 6px 0;
+}
+
+.claude-compaction-body p:first-child {
+  margin-top: 8px;
+}
+
+.claude-compaction-body code {
+  background: rgba(245, 158, 11, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+
+.claude-compaction-body ul, .claude-compaction-body ol {
+  padding-left: 18px;
+  margin: 4px 0;
+}
+
+.claude-compaction-body li {
+  margin: 2px 0;
 }
 
 /* ----- CLI Activity block (batched stderr output — background agent actions) ----- */
