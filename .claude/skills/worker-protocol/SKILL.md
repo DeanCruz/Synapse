@@ -29,6 +29,7 @@ Write the **full file** on every update using the Write tool. You are the sole w
 ```json
 {
   "task_id": "1.1",
+  "dashboard_id": "a3f7k2",
   "status": "in_progress",
   "started_at": "2026-03-24T14:05:00Z",
   "completed_at": null,
@@ -44,6 +45,8 @@ Write the **full file** on every update using the Write tool. You are the sole w
   "logs": [
     { "at": "2026-03-24T14:05:00Z", "level": "info", "msg": "Starting task" }
   ],
+  "files_changed": [],
+  "annotations": null,
   "prompt_size": { "total_chars": 12500, "estimated_tokens": 3571 },
   "shared_context": null,
   "sibling_reads": []
@@ -55,6 +58,7 @@ Write the **full file** on every update using the Write tool. You are the sole w
 | Field | Type | Description |
 |---|---|---|
 | `task_id` | string | Your task ID from the dispatch prompt (e.g., `"1.1"`, `"2.3"`) |
+| `dashboard_id` | string | The dashboard ID from your dispatch prompt (e.g., `"a3f7k2"`). **Required** -- the server rejects progress files where this does not match the dashboard directory. |
 | `status` | string | `"in_progress"`, `"completed"`, or `"failed"` |
 | `started_at` | ISO 8601 / null | Set on first write. Capture live via `date -u +"%Y-%m-%dT%H:%M:%SZ"` |
 | `completed_at` | ISO 8601 / null | Set only on `"completed"` or `"failed"` |
@@ -66,6 +70,8 @@ Write the **full file** on every update using the Write tool. You are the sole w
 | `milestones` | array | `{ "at": "ISO", "msg": "..." }` -- significant accomplishments, append-only |
 | `deviations` | array | `{ "at": "ISO", "severity": "MODERATE", "description": "..." }` -- append-only |
 | `logs` | array | `{ "at": "ISO", "level": "info/warn/error/deviation", "msg": "..." }` -- append-only |
+| `files_changed` | array | `{ "path": "src/auth.ts", "action": "modified" }` -- files you created, modified, or deleted. **Required from `implementing` stage onward.** Update on every file write. |
+| `annotations` | object / null | Optional. Per-file knowledge for the PKI. See Annotations section below. |
 | `prompt_size` | object / null | Optional. `{ "total_chars": N, "estimated_tokens": Math.ceil(N/3.5) }` |
 | `shared_context` | object / null | Optional. `{ "exports": [], "interfaces": [], "patterns": [], "notes": "" }` |
 | `sibling_reads` | array | Task ID strings of sibling progress files you read |
@@ -88,17 +94,18 @@ Progress through these in order. Every transition requires a progress file write
 
 ---
 
-## 7 Mandatory Writes
+## 8 Mandatory Writes
 
 Skipping any of these is a failure.
 
-1. **Before starting work** -- Set `status: "in_progress"`, `started_at`, `stage: "reading_context"`, `template_version`, initial log entry. Use the Write tool, not shell commands.
+1. **Before starting work** -- Set `status: "in_progress"`, `started_at`, `dashboard_id`, `stage: "reading_context"`, `template_version`, initial log entry. Use the Write tool, not shell commands.
 2. **After reading upstream dependencies** (if any) -- Log what you found in upstream progress files. Adapt if upstream deviated.
 3. **On every stage transition** -- Update `stage`, `message`, add a log entry.
 4. **On any deviation** -- Add to `deviations[]` AND `logs[]` (level: `"deviation"`) immediately. Do not batch for later.
 5. **On any error** -- Add a log entry at level `"error"` with details.
-6. **On completion** -- Set `status: "completed"`, `stage: "completed"`, `completed_at`, `summary`, final log.
-7. **On failure** -- Set `status: "failed"`, `stage: "failed"`, `completed_at`, `summary` (with error), log at level `"error"`.
+6. **On every file change** -- Update `files_changed[]` with the path and action (`created`, `modified`, `deleted`). Required from `implementing` stage onward.
+7. **On completion** -- Set `status: "completed"`, `stage: "completed"`, `completed_at`, `summary`, final log.
+8. **On failure** -- Set `status: "failed"`, `stage: "failed"`, `completed_at`, `summary` (with error), log at level `"error"`.
 
 **Timestamps:** Always capture live via `date -u +"%Y-%m-%dT%H:%M:%SZ"`. Never guess or hardcode.
 
@@ -202,6 +209,26 @@ Reserve `status: "failed"` for zero useful output -- target file missing, fundam
 
 ---
 
+## PKI Annotations (Optional)
+
+When you gain deep understanding of a file during your task, capture that knowledge in the `annotations` field. This feeds the Project Knowledge Index (PKI) -- a persistent knowledge layer for future sessions. Add annotations for files where you discovered non-obvious gotchas, patterns, or conventions:
+
+```json
+{
+  "annotations": {
+    "src/auth/login.ts": {
+      "gotchas": ["Refresh token rotation: old must be invalidated first"],
+      "patterns": ["Uses asyncHandler wrapper for all async routes"],
+      "conventions": ["Error shape: { error: string, code: number }"]
+    }
+  }
+}
+```
+
+All sub-fields (`gotchas`, `patterns`, `conventions`) are optional arrays of strings. Only annotate files you actually read deeply -- do not speculate.
+
+---
+
 ## Return Format
 
 When your task completes, return this exact structure to the master:
@@ -215,6 +242,8 @@ EXPORTS: (omit section if no new exports)
   - {type: function|type|interface|endpoint|constant|file} {name} -- {description}
 DIVERGENT ACTIONS: (omit section if none)
   - {what was different from the plan and why}
+ANNOTATIONS: (omit section if no deep file knowledge gained)
+  - {file_path}: {gotchas | patterns | conventions}
 WARNINGS: (omit section if none)
 ERRORS: (omit section if none)
 ```

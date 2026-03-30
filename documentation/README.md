@@ -106,7 +106,7 @@ The React-based real-time dashboard UI that visualizes swarm progress.
 | [State Management](dashboard/state-management.md) | AppProvider, initial state, all reducer actions, localStorage persistence, and merge cycle |
 | [Hooks](dashboard/hooks.md) | useDashboardData, mergeState, useElectronAPI, and utility modules |
 | [Styling](dashboard/styling.md) | CSS design system (10 CSS files, 13,778 lines), themes, status colors, animations, IDE and Git Manager styling, layout system, and z-index layers |
-| [Layout Modes](dashboard/layout-modes.md) | 6-view switching system (Waves, Chains, IDE, Git views), SVG dependency line rendering, BFS pathfinding, and hover interactions |
+| [Layout Modes](dashboard/layout-modes.md) | 7-view switching system (Waves, Chains, IDE, Git, Preview views), SVG dependency line rendering, BFS pathfinding, and hover interactions |
 
 ### Data Architecture
 
@@ -128,8 +128,8 @@ The Electron desktop application that wraps the dashboard and provides native OS
 | Document | Description |
 |---|---|
 | [Overview](electron/overview.md) | Electron architecture, process model, data flow, and security model |
-| [IPC Reference](electron/ipc-reference.md) | All 21 push channels and 139 pull request handlers between main and renderer, organized into 15 handler groups |
-| [Services](electron/services.md) | All 8 Electron services (SwarmOrchestrator, ClaudeCodeService, CodexService, PromptBuilder, ProjectService, CommandsService, TaskEditorService, ConversationService) with exported methods and responsibilities |
+| [IPC Reference](electron/ipc-reference.md) | All 33 push channels and ~140 pull request handlers between main and renderer, organized into 17+ handler groups |
+| [Services](electron/services.md) | All 13 Electron services (SwarmOrchestrator, ClaudeCodeService, CodexService, PromptBuilder, ProjectService, CommandsService, TaskEditorService, ConversationService, DebugService, TerminalService, InstrumentService, PreviewService, PreviewTextWriter) with exported methods and responsibilities |
 | [Configuration](electron/configuration.md) | Settings system, Vite build config, electron-builder packaging, and `app://` protocol |
 
 ### Git Manager
@@ -165,13 +165,13 @@ The orchestrator role -- how the master agent plans, dispatches, monitors, and r
 
 ### Multi-Dashboard
 
-Running up to 5 concurrent swarms across independent dashboard instances.
+Running multiple concurrent swarms across independent dashboard instances (no fixed upper limit).
 
 | Document | Description |
 |---|---|
-| [Overview](multi-dashboard/overview.md) | Multi-dashboard architecture, slot model, and concurrent swarm support |
+| [Overview](multi-dashboard/overview.md) | Multi-dashboard architecture, hex-ID model, and concurrent swarm support |
 | [Dashboard Selection](multi-dashboard/dashboard-selection.md) | Priority chain for selecting a dashboard: system prompt directive, CLI flag, auto-scan |
-| [Queue System](multi-dashboard/queue-system.md) | Overflow queue for when all 5 dashboard slots are occupied |
+| [Queue System](multi-dashboard/queue-system.md) | Overflow queue for pending swarms |
 | [Archive & History](multi-dashboard/archive-history.md) | Archiving completed swarms and browsing swarm history |
 
 ### Profiles
@@ -239,13 +239,13 @@ How worker agents report progress, handle deviations, and consume upstream resul
 | **Architecture** | System-level overview of how Synapse is structured, how data flows between components, and what the directory layout looks like on disk. |
 | **Commands** | The `!command` system including 4-tier resolution hierarchy, all swarm lifecycle commands, project analysis commands, and creating custom commands with profiles and structural patterns. |
 | **Configuration** | All configuration surfaces: server constants, Electron settings and packaging, and the CSS/JS theming system. |
-| **Dashboard** | The React dashboard UI covering component architecture (54 components), state management with reducers, custom hooks, the CSS design system (10 files, 13,778 lines), and 6-view switching layout modes (Waves, Chains, IDE, Git views). |
+| **Dashboard** | The React dashboard UI covering component architecture (54+ components), state management with reducers, custom hooks, the CSS design system (10 files, 13,778 lines), and 7-view switching layout modes (Waves, Chains, IDE, Git, Preview views). |
 | **Data Architecture** | The five data file categories that drive Synapse: `initialization.json` (static plan), `logs.json` (event log), worker progress files (live lifecycle), task files (authoritative record), and PKI schemas (knowledge index). |
-| **Electron** | The desktop application layer including the main/renderer process model, 21 push channels and 139 pull request handlers across 15 handler groups, the 8 service modules, and build/packaging configuration. |
+| **Electron** | The desktop application layer including the main/renderer process model, 33 push channels and ~140 pull request handlers across 17+ handler groups, the 13 service modules (including Live Preview services), and build/packaging configuration. |
 | **Git Manager** | The integrated git UI for visual repository management, covering 12 React components, 28 IPC handlers, multi-repo support, staging/unstaging, diffs, commits, branches, history with SVG graph, and remote operations. |
 | **IDE (Code Explorer)** | The built-in IDE with Monaco-powered code editor, file explorer, integrated Node.js debugger with VS Code-style debug panels, syntax diagnostics, and workspace-dashboard bridging -- covering 10 React components and 24 IPC handlers. |
 | **Master Agent** | The orchestrator role and its five responsibilities: context gathering, planning, dispatch, statusing, and reporting -- plus the constraints that prevent it from writing code. |
-| **Multi-Dashboard** | Running up to 5 concurrent swarms across independent dashboard slots, including dashboard selection logic, the overflow queue, and archive/history management. |
+| **Multi-Dashboard** | Running multiple concurrent swarms across independent dashboard instances (hex IDs, no fixed upper limit), including dashboard selection logic, the overflow queue, and archive/history management. |
 | **Profiles** | The profile modifier system that layers role-specific priorities, output styles, and personas on top of any command or prompt. |
 | **Project Integration** | How Synapse connects to any target project, including the `!project` command, `.synapse/` directory, TOC generation, and CLAUDE.md conventions. |
 | **Server** | The zero-dependency Node.js backend with 7 services plus validation utility, serving static files, exposing REST endpoints, and broadcasting real-time updates via Server-Sent Events. |

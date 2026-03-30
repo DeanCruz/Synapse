@@ -251,21 +251,30 @@ Synapse/                            <- {tracker_root}
 │       ├── sales.md
 │       ├── security.md
 │       └── technical-writer.md
-├── agent/                          <- Agent instruction files
-│   └── instructions/
-│       ├── dashboard_resolution.md
-│       ├── tracker_master_instructions.md
-│       ├── tracker_multi_plan_instructions.md
-│       ├── tracker_worker_instructions.md
-│       ├── failed_task.md
-│       └── common_pitfalls.md
-├── dashboards/                     <- Multi-dashboard support (unlimited)
-│   ├── {id}/
+├── agent/                          <- Agent instruction files & reference docs
+│   ├── instructions/
+│   │   ├── dashboard_resolution.md
+│   │   ├── tracker_master_instructions.md
+│   │   ├── tracker_multi_plan_instructions.md
+│   │   ├── tracker_worker_instructions.md
+│   │   ├── tracker_worker_instructions_lite.md
+│   │   ├── failed_task.md
+│   │   └── common_pitfalls.md
+│   ├── master/                     <- Master agent reference docs (9 files)
+│   ├── worker/                     <- Worker agent reference docs (5 files)
+│   ├── core/                       <- Core principles and conventions (7 files)
+│   ├── _commands/                  <- Internal p_track phase docs
+│   └── utils/
+├── dashboards/                     <- Multi-dashboard support (unlimited hex-ID based)
+│   ├── ide/                        <- Reserved for IDE agent
 │   │   ├── initialization.json
 │   │   ├── logs.json
-│   │   ├── master_state.json          <- Master state checkpoint (context recovery)
 │   │   └── progress/
-│   └── ide/                        <- Reserved for IDE agent
+│   └── {hex-id}/                   <- e.g., a3f7k2 (6-char hex)
+│       ├── initialization.json
+│       ├── logs.json
+│       ├── master_state.json          <- Master state checkpoint (context recovery)
+│       └── progress/
 ├── queue/                          <- Overflow queue slots
 ├── history/                        <- History summary JSON files
 ├── Archive/                        <- Full archived dashboard snapshots

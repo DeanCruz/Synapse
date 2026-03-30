@@ -20,7 +20,7 @@
 
 ### Steps
 
-1. **Parse the optional `{dashboardId}` argument.** If the first argument matches `dashboard[1-5]`, use it. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
+1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (see `dashboard_resolution.md`), use it as `{dashboardId}`. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
 
 2. **Read `{tracker_root}/dashboards/{dashboardId}/initialization.json`.** Extract all agents and their `depends_on` arrays.
 
@@ -93,7 +93,7 @@ Use status indicators on each node:
 
 ### Steps
 
-1. **Parse the optional `{dashboardId}` argument.** If the first argument after `validate` matches `dashboard[1-5]`, use it. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
+1. **Parse the optional `{dashboardId}` argument.** If the first argument after `validate` is a valid dashboard ID (see `dashboard_resolution.md`), use it as `{dashboardId}`. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
 
 2. **Read `{tracker_root}/dashboards/{dashboardId}/initialization.json`.** Extract `agents[]` and `waves[]`. If `task` is `null` or `agents` is empty, report "No active swarm on {dashboardId}" and exit.
 

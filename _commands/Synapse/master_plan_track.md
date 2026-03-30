@@ -126,7 +126,7 @@ For each independent stream, define:
 | **Affected directories** | Which repos/directories this stream touches |
 | **Estimated tasks** | Rough estimate of how many worker tasks the stream will decompose into |
 | **Cross-stream dependencies** | Other stream IDs that must complete before this stream can be dispatched. Empty if independent. |
-| **Slot assignment** | `dashboard1`-`dashboard5` for the first 5, `queue1`, `queue2`, etc. for overflow |
+| **Slot assignment** | Available dashboard hex IDs for the first N available slots, `queue1`, `queue2`, etc. for overflow |
 
 ### Step 7: Resolve dashboard and queue slots
 

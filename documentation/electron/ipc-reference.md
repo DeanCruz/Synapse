@@ -1,6 +1,6 @@
 # IPC Channels and Handlers Reference
 
-This document provides a complete reference of every IPC channel in Synapse's Electron app. All IPC communication flows through the `window.electronAPI` context bridge defined in `electron/preload.js` (227 lines), with handlers registered in `electron/ipc-handlers.js` (2438 lines). There are **21 push event channels** and **139 pull request handlers** organized into 15 handler groups.
+This document provides a complete reference of every IPC channel in Synapse's Electron app. All IPC communication flows through the `window.electronAPI` context bridge defined in `electron/preload.js` (244 lines), with handlers registered in `electron/ipc-handlers.js` (~2200 lines). There are **33 push event channels** and **~140 pull request handlers** organized into 17+ handler groups.
 
 ---
 
@@ -19,7 +19,7 @@ Synapse uses two IPC patterns:
 
 Push events are initiated by the main process (typically from file watchers or worker process events) and delivered to the renderer. The preload script whitelists allowed channels.
 
-### Channel Whitelist (21 channels)
+### Channel Whitelist (33 channels)
 
 ```javascript
 const PUSH_CHANNELS = [
@@ -46,6 +46,8 @@ const PUSH_CHANNELS = [
   'debug-resumed',
   'debug-stopped',
   'debug-output',
+  'settings-changed',
+  'preview-edit-request',
 ];
 ```
 
@@ -67,7 +69,7 @@ Fired when a dashboard's `initialization.json` changes on disk.
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   task: { name, type, directory, prompt, project, created, total_tasks, total_waves },
   agents: [{ id, title, wave, layer, directory, depends_on }],
   waves: [{ id, name, total }],
@@ -82,7 +84,7 @@ Fired when a dashboard's `logs.json` changes on disk.
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   entries: [
     { timestamp, task_id, agent, level, message, task_name }
   ]
@@ -95,7 +97,7 @@ Fired when a single worker's progress file changes. Also feeds into `SwarmOrches
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   task_id: "1.1",
   status: "in_progress",
   started_at: "2026-03-22T15:00:00Z",
@@ -116,7 +118,7 @@ Fired during initial data load. Contains all progress files for a dashboard keye
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   "1.1": { task_id, status, started_at, ... },
   "1.2": { task_id, status, started_at, ... }
 }
@@ -128,7 +130,7 @@ Fired once during initial data load. Contains the list of all dashboard IDs.
 
 ```javascript
 {
-  dashboards: ["dashboard1", "dashboard2", "dashboard3", "dashboard4", "dashboard5"]
+  dashboards: ["2d84ac", "356dc5", "71894a", "a1b2c3", "d4e5f6"]
 }
 ```
 
@@ -138,7 +140,7 @@ Fired when a dashboard is created or deleted.
 
 ```javascript
 {
-  dashboards: ["dashboard1", "dashboard2"]
+  dashboards: ["2d84ac", "356dc5"]
 }
 ```
 
@@ -169,7 +171,7 @@ Fired for each NDJSON line from a worker's stdout. Streamed in real-time.
   pid: 12345,
   provider: "claude",        // or "codex"
   taskId: "1.1",
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   chunk: "{\"type\":\"assistant\",...}\n",
   parsed: { type: "assistant", ... }  // or null if not valid JSON
 }
@@ -184,7 +186,7 @@ Fired when a worker process exits.
   pid: 12345,
   provider: "claude",
   taskId: "1.1",
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   exitCode: 0,
   output: "full accumulated stdout",
   errorOutput: "full accumulated stderr",
@@ -201,7 +203,7 @@ Fired when a worker process fails to spawn or encounters an OS-level error.
   pid: 12345,
   provider: "claude",
   taskId: "1.1",
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   error: "spawn ENOENT"
 }
 ```
@@ -212,7 +214,7 @@ Fired when the SwarmOrchestrator changes a swarm's state (e.g., entering replann
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   state: "replanning"    // "running" | "paused" | "replanning"
 }
 ```
@@ -225,7 +227,7 @@ Fired when a worker CLI process encounters a permission prompt.
 {
   pid: 12345,
   taskId: "1.1",
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   ...                    // permission request details
 }
 ```
@@ -279,7 +281,7 @@ Fired for initial state synchronization during app startup.
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   ...                    // state data
 }
 ```
@@ -290,7 +292,7 @@ Fired when dependency completion unblocks downstream tasks.
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   tasks: ["2.1", "2.2"]  // task IDs that are now unblocked
 }
 ```
@@ -385,7 +387,7 @@ Creates the next available dashboard directory, starts a file watcher, and broad
 
 #### `deleteDashboard(id)` -> `delete-dashboard`
 
-**Parameters:** `id: string` (e.g., `"dashboard3"`)
+**Parameters:** `id: string` (e.g., `"71894a"`)
 
 **Returns:** `{ success: boolean, error?: string }`
 
@@ -557,7 +559,7 @@ Copies the full dashboard directory to `Archive/{YYYY-MM-DD}_{taskName}/`, then 
 {
   provider: "claude" | "codex",
   taskId: "1.1",
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   projectDir: "/path/to/project",
   prompt: "task prompt text",
   systemPrompt: "system prompt text",
@@ -717,6 +719,22 @@ Spawns a Node.js process with `--inspect-brk=0`, connects to the Chrome DevTools
 | `gitGraph(repoPath, maxCount)` | `git-graph` | Get commit graph with branch refs for visualization |
 
 All Git handlers execute `git` commands via `child_process.execFile` in the specified repository path. They are implemented directly in `ipc-handlers.js` without a separate service module.
+
+### Additional Context Handlers
+
+| Renderer API | IPC Channel | Description |
+|---|---|---|
+| `getAdditionalContextDirs(dashboardId)` | `get-additional-context-dirs` | Get additional context directories for a dashboard |
+| `setAdditionalContextDirs(dashboardId, dirs)` | `set-additional-context-dirs` | Set additional context directories for a dashboard |
+
+### Preview Handlers
+
+| Renderer API | IPC Channel | Handler Service | Description |
+|---|---|---|---|
+| `previewResolveLabel(projectDir, label)` | `preview-resolve-label` | PreviewService | Resolve a `data-synapse-label` to source file location |
+| `previewWriteText(projectDir, label, newText)` | `preview-write-text` | PreviewTextWriter | Write text edit back to source file |
+| `instrumentProject(projectDir, opts)` | `instrument-project` | InstrumentService | Add `data-synapse-label` attributes to project files |
+| `previewGetLabels(projectDir)` | `preview-get-labels` | PreviewService | Get all known labels and their source locations |
 
 ---
 

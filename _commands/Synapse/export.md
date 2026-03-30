@@ -18,7 +18,7 @@ Flags can be combined with a dashboard ID: `!export dashboard2 --format json`
 
 ### Step 1: Resolve Dashboard and Parse Flags
 
-1. **Parse the optional `{dashboardId}` argument.** If the first argument matches `dashboard[1-5]`, use it. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
+1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (see `dashboard_resolution.md`), use it as `{dashboardId}`. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
 
 2. **Parse the `--format` flag.** Accepted values: `markdown` (default), `json`. If an unrecognized format is provided, report: "Unknown format '{value}'. Supported formats: markdown, json."
 

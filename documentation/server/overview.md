@@ -214,4 +214,4 @@ Browser dashboard receives SSE events and updates UI in real-time
 
 4. **Hybrid watching strategy.** The server uses `fs.watch` (event-driven, low latency) for progress directories and `fs.watchFile` (polling) for `initialization.json` and `logs.json`. Periodic reconciliation catches any events missed by `fs.watch`, which can be unreliable on some platforms.
 
-5. **Multi-dashboard support.** Up to 5 concurrent dashboards, each an independent swarm with its own `initialization.json`, `logs.json`, and `progress/` directory. The server auto-discovers new dashboards and starts watchers dynamically.
+5. **Multi-dashboard support.** Multiple concurrent dashboards (no fixed upper limit), each identified by a 6-character hex ID and representing an independent swarm with its own `initialization.json`, `logs.json`, and `progress/` directory. The server auto-discovers new dashboards and starts watchers dynamically.

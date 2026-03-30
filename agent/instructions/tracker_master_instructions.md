@@ -40,6 +40,7 @@
 | **Worker Prompts** | `agent/master/worker_prompts.md` | When constructing worker dispatch prompts — template, convention map, budget guidelines, and completeness checklist | Workers write code — you write prompts. |
 | **Compaction Recovery** | `agent/master/compaction_recovery.md` | After context compaction — state checkpoint schema, recovery procedure, cache awareness, and swarm metrics. | **Re-read role.md FIRST. Recover state, don't implement.** |
 | **Dashboard Protocol** | `agent/master/dashboard_protocol.md` | When understanding `!p` vs `!p_track` dashboard interaction — write timelines, mode comparison, and decision flowchart | Orchestration only. |
+| **PKI Integration** | `agent/master/pki_integration.md` | Before task decomposition — 6-step pre-planning flow, manifest lookup, annotation extraction, prompt injection, and context budget rules. | Knowledge augments planning — never replaces CLAUDE.md. |
 
 ---
 
@@ -131,7 +132,8 @@ After all tasks complete, compute `metrics.json` with elapsed time, parallel eff
 │       ├── failure_recovery.md
 │       ├── worker_prompts.md
 │       ├── pki_integration.md
-│       └── compaction_recovery.md
+│       ├── compaction_recovery.md
+│       └── dashboard_protocol.md
 ├── dashboards/
 │   ├── ide/                                  ← Reserved (IDE agent, never for swarms)
 │   │   ├── initialization.json

@@ -668,6 +668,24 @@ function CopyBubbleButton({ text }) {
   );
 }
 
+// Expandable compaction banner — yellow box that reveals compacted summary on click
+function CompactionMessage({ msg }) {
+  const [expanded, setExpanded] = useState(false);
+  const summary = msg.compactionSummary || '';
+  return (
+    <div className="claude-compaction-box">
+      <button className="claude-compaction-header" onClick={() => setExpanded(e => !e)}>
+        <svg className={'claude-compaction-chevron' + (expanded ? ' expanded' : '')} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+        <span className="claude-compaction-label">Context compacted</span>
+        <span className="claude-compaction-hint">{summary ? 'click to view summary' : 'earlier messages may be summarized'}</span>
+      </button>
+      {expanded && summary && (
+        <div className="claude-compaction-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(summary) }} />
+      )}
+    </div>
+  );
+}
+
 // A single conversation message
 function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }) {
   if (msg.type === 'thinking') {
@@ -716,8 +734,11 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }
         return <TaskEventMessage data={parsed} />;
       } catch (_) { /* fall through to default rendering */ }
     }
+    if (msg.isCompaction) {
+      return <CompactionMessage msg={msg} />;
+    }
     return (
-      <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '') + (msg.isCompaction ? ' claude-compaction' : '')}>
+      <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '')}>
         {msg.text}
       </div>
     );
@@ -1675,7 +1696,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         if (cleaned && /auto.?compact|compacting conversation/i.test(cleaned)) {
           flushText();
           flushThinking();
-          appendMsg({ type: 'system', text: 'Context is being compacted — earlier messages may be summarized', isCompaction: true });
+          appendMsg({ type: 'system', text: 'Context compacted', isCompaction: true, compactionSummary: cleaned });
           // Reset streaming state — compaction invalidates current message indices
           currentTextIndexRef.current = null;
           currentThinkingIndexRef.current = null;
@@ -1705,7 +1726,13 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           const msg = evt.message || JSON.stringify(evt);
           const isCompaction = /compact|context.*(truncat|compress|summar)/i.test(msg)
             || evt.subtype === 'auto_compact' || evt.subtype === 'compact';
-          appendMsg({ type: 'system', text: isCompaction ? 'Context is being compacted — earlier messages may be summarized' : msg, isCompaction });
+          if (isCompaction) {
+            // Capture the summary from the CLI event for expandable display
+            const summary = evt.summary || evt.message || '';
+            appendMsg({ type: 'system', text: 'Context compacted', isCompaction: true, compactionSummary: summary });
+          } else {
+            appendMsg({ type: 'system', text: msg });
+          }
         }
         break;
       }

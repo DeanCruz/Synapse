@@ -349,7 +349,7 @@ Shown when `task === null` in `initialization.json` (or the file doesn't exist).
 | `stage` | string | Updated throughout | `"reading_context"` → `"planning"` → `"implementing"` → `"testing"` → `"finalizing"` → `"completed"` \| `"failed"` |
 | `message` | string | Updated throughout | Current activity description. Shown on in-progress cards. |
 | `milestones` | array | Appended on milestones | `[{ "at": "<ISO>", "msg": "<text>" }]`. Shown in agent details popup. |
-| `deviations` | array | Appended on deviations | `[{ "at": "<ISO>", "description": "<text>" }]`. Drives yellow deviation badge. |
+| `deviations` | array | Appended on deviations | `[{ "at": "<ISO>", "severity": "MODERATE", "description": "<text>" }]`. Drives yellow deviation badge. Severity: `CRITICAL`, `MODERATE`, `MINOR`. |
 | `logs` | array | Appended throughout | `[{ "at": "<ISO>", "level": "info", "msg": "<text>" }]`. Feeds the popup log box in agent details modal. |
 | `prompt_size` | object \| null | Optional | Worker-reported size of the dispatch prompt. Contains `total_chars` and `estimated_tokens`. |
 

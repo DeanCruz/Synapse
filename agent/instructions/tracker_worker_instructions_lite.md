@@ -40,7 +40,7 @@ Write to: `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — 
 | `stage` | string | Current stage (see Fixed Stages) |
 | `message` | string | What you are doing right now — one specific line |
 | `milestones` | array | `{ "at": "ISO", "msg": "..." }` — significant accomplishments |
-| `deviations` | array | `{ "at": "ISO", "description": "..." }` — plan divergences |
+| `deviations` | array | `{ "at": "ISO", "severity": "MODERATE", "description": "..." }` — plan divergences. Severity: `CRITICAL` (affects downstream), `MODERATE` (different approach, same outcome), `MINOR` (cosmetic) |
 | `logs` | array | `{ "at": "ISO", "level": "info\|warn\|error\|deviation", "msg": "..." }` |
 | `annotations` | object \| null | Optional. Per-file knowledge for the PKI (see below) |
 

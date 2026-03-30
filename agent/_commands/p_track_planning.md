@@ -433,22 +433,34 @@ Set `{dashboardId}` to the selected dashboard. Announce: **"Using {dashboardId} 
 
 **Always use atomic read-modify-write:** Read the full file, parse JSON, modify the in-memory object, stringify with 2-space indent, write the full file back. Never write partial JSON.
 
-#### 11A. Archive and clear the dashboard
+#### 11A. Archive and clear the dashboard — HARD GATE
 
-**If the dashboard contains data from a previous swarm** (i.e., `initialization.json` has `task` not `null`), **archive it first** before clearing:
+> **STOP.** You MUST complete ALL steps below and verify the dashboard is clean BEFORE proceeding to 11B. Do NOT skip any step. Do NOT proceed to writing initialization.json until verification passes.
 
+**If the dashboard contains data from a previous swarm** (i.e., `initialization.json` has `task` not `null`), **archive it first** before clearing.
+
+**Step 1 — Archive the previous swarm (MANDATORY):**
 ```bash
-# 1. Archive the previous swarm (MANDATORY — never skip)
-TASK_NAME=$(cat {tracker_root}/dashboards/{dashboardId}/initialization.json | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
-ARCHIVE_NAME="$(date -u +%Y-%m-%d)_${TASK_NAME:-unnamed}"
-mkdir -p {tracker_root}/Archive/${ARCHIVE_NAME}
-cp -r {tracker_root}/dashboards/{dashboardId}/* {tracker_root}/Archive/${ARCHIVE_NAME}/
+TASK_NAME=$(cat {tracker_root}/dashboards/{dashboardId}/initialization.json | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4) && ARCHIVE_NAME="$(date -u +%Y-%m-%d)_${TASK_NAME:-unnamed}" && mkdir -p {tracker_root}/Archive/${ARCHIVE_NAME} && cp -r {tracker_root}/dashboards/{dashboardId}/* {tracker_root}/Archive/${ARCHIVE_NAME}/
+```
 
-# 2. Clear progress files
+**Step 2 — Clear ALL dashboard state (progress files AND logs):**
+```bash
 rm -f {tracker_root}/dashboards/{dashboardId}/progress/*.json
 ```
 
-Create the dashboard directory structure if it doesn't exist:
+Then reset `logs.json` to empty state by writing:
+```json
+{ "entries": [] }
+```
+
+**Step 3 — Verify the dashboard is clean:**
+```bash
+ls {tracker_root}/dashboards/{dashboardId}/progress/
+```
+The progress directory MUST be empty (no `.json` files). If any remain, delete them before proceeding.
+
+**If the dashboard is new or already empty**, just ensure the directory structure exists:
 
 ```bash
 mkdir -p {tracker_root}/dashboards/{dashboardId}/progress

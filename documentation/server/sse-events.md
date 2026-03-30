@@ -26,7 +26,7 @@ Connection: keep-alive
 
 **Example:**
 ```
-GET /events?dashboard=dashboard1
+GET /events?dashboard=2d84ac
 ```
 
 ### Connection Lifecycle
@@ -77,7 +77,7 @@ Sent on initial connection. Contains the list of all dashboard IDs.
 **Data:**
 ```json
 {
-  "dashboards": ["dashboard1", "dashboard2", "dashboard3"]
+  "dashboards": ["2d84ac", "356dc5", "71894a"]
 }
 ```
 
@@ -94,7 +94,7 @@ Contains the static plan data from a dashboard's `initialization.json`.
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "task": {
     "name": "api-refactor",
     "type": "Waves",
@@ -141,7 +141,7 @@ Contains all progress files for a dashboard, sent as a single batch. Only sent d
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "1.1": {
     "task_id": "1.1",
     "status": "completed",
@@ -172,7 +172,7 @@ Combined state for a dashboard, providing all data needed for full reconnection 
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "initialization": {
     "task": { ... },
     "agents": [...],
@@ -205,7 +205,7 @@ Individual agent progress update. Broadcast whenever a worker writes to its prog
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "task_id": "1.2",
   "status": "in_progress",
   "started_at": "2026-03-20T14:01:00Z",
@@ -246,7 +246,7 @@ Updated log entries from a dashboard's `logs.json`.
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "entries": [
     {
       "timestamp": "2026-03-20T14:05:00Z",
@@ -276,7 +276,7 @@ Sent when a task completion unblocks downstream tasks. The WatcherService automa
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "completedTaskId": "1.1",
   "unblocked": [
     {
@@ -314,7 +314,7 @@ Sent when the set of dashboards changes (new dashboard created or existing one r
 **Data:**
 ```json
 {
-  "dashboards": ["dashboard1", "dashboard2", "dashboard3"]
+  "dashboards": ["2d84ac", "356dc5", "71894a"]
 }
 ```
 
@@ -359,7 +359,7 @@ Sent when a progress file write is rejected by the WatcherService's validation g
 **Data (task_id mismatch):**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "filename": "1.1.json",
   "task_id": "2.3",
   "reason": "task_id_mismatch",
@@ -372,13 +372,13 @@ Sent when a progress file write is rejected by the WatcherService's validation g
 **Data (dashboard_id mismatch):**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "filename": "1.1.json",
   "task_id": "1.1",
   "reason": "dashboard_id_mismatch",
   "details": "File contains dashboard_id \"dashboard2\" but is in dashboard \"dashboard1\"",
-  "file_dashboard_id": "dashboard2",
-  "expected_dashboard_id": "dashboard1",
+  "file_dashboard_id": "356dc5",
+  "expected_dashboard_id": "2d84ac",
   "timestamp": "2026-03-20T14:05:00.000Z"
 }
 ```
@@ -428,7 +428,7 @@ Each event consists of:
 **Example on the wire:**
 ```
 event: agent_progress
-data: {"dashboardId":"dashboard1","task_id":"1.1","status":"completed","stage":"completed"}
+data: {"dashboardId":"2d84ac","task_id":"1.1","status":"completed","stage":"completed"}
 
 ```
 
@@ -453,7 +453,7 @@ evtSource.addEventListener('initialization', (event) => {
 });
 
 // Filter to single dashboard
-const filtered = new EventSource('http://localhost:3456/events?dashboard=dashboard1');
+const filtered = new EventSource('http://localhost:3456/events?dashboard=2d84ac');
 ```
 
 ### Reconnection

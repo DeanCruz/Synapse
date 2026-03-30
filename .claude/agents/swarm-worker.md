@@ -34,17 +34,19 @@ Update your progress file on every stage transition:
 3. `implementing` — Writing code, creating or modifying files
 4. `testing` — Running tests, validating changes
 5. `finalizing` — Final cleanup, preparing summary
-6. `completed` — Task finished successfully (or `failed` if errors occur)
+6. `completed` — Task finished successfully
+7. `failed` — Task failed (errors prevented completion)
 
-## Mandatory Writes (7 minimum)
+## Mandatory Writes (8 minimum)
 
-1. **Before starting work** — Set status to in_progress with started_at timestamp
+1. **Before starting work** — Set status to in_progress with started_at, dashboard_id timestamp
 2. **On reading_context start** — Log what you are reading
 3. **On planning complete** — Log your approach
 4. **On implementing start** — Log what you are building
 5. **On each milestone** — Add to milestones array
 6. **On any deviation** — Add to deviations array immediately
-7. **On completion/failure** — Set final status, completed_at, and summary
+7. **On every file change** — Update files_changed array with path and action
+8. **On completion/failure** — Set final status, completed_at, and summary
 
 ## Protocol Reference
 

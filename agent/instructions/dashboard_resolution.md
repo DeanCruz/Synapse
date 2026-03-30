@@ -68,10 +68,11 @@ When an agent is spawned from the Synapse chat view, its system prompt contains 
 - **If the dashboard is empty** (`initialization.json` has `task: null` or does not exist) — proceed directly to set up the new dashboard.
 - **If the dashboard contains previous data** (i.e., `initialization.json` has `task` not `null`), **auto-archive and proceed.** Follow the archive protocol in Step 11A of `p_track_planning.md`:
     1. Copy the full dashboard contents to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/`
-    2. Delete all progress files (`rm -f {tracker_root}/dashboards/{id}/progress/*.json`)
-    3. Reset `initialization.json` and `logs.json` to empty state
-    4. Log the archive action: `Auto-archived previous task '{task.name}' → Archive/{date}_{task_name}/`
-    5. Proceed with setting up the new dashboard
+    2. Delete all `.json` files in the progress directory (`rm -f {tracker_root}/dashboards/{id}/progress/*.json`)
+    3. Reset `logs.json` to `{ "entries": [] }`
+    4. **Verify** — run `ls {tracker_root}/dashboards/{id}/progress/` and confirm it is empty. If any `.json` files remain, delete them.
+    5. Log the archive action: `Auto-archived previous task '{task.name}' → Archive/{date}_{task_name}/`
+    6. Proceed with setting up the new dashboard — do NOT write `initialization.json` until step 4 passes
 
   **Do NOT ask the user for confirmation** — archiving is automatic and non-destructive (the old data is preserved in `Archive/`). This ensures the dashboard is always ready for the new swarm without blocking on user input.
 - **Never "find the next free dashboard."** Your dashboard is your dashboard. Archive automatically and reuse.

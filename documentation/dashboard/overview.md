@@ -8,7 +8,7 @@ The Synapse Dashboard is a React-based single-page application that provides rea
 
 | Layer | Technology |
 |---|---|
-| UI Framework | React 19 (JSX, functional components, hooks) |
+| UI Framework | React 18 (JSX, functional components, hooks) |
 | State Management | React Context + `useReducer` (no external libraries) |
 | Desktop Shell | Electron |
 | Communication | Electron IPC (renderer-to-main process) |
@@ -48,6 +48,7 @@ main.jsx
         {activeView === 'claude' && <DashboardContent />}   -- Claude floats on top
         {activeView === 'git' && <GitManagerView />}         -- Git manager view
         {activeView === 'ide' && <IDEView />}                -- IDE view
+        {activeView === 'preview' && <PreviewView />}        -- Live Preview view
       </div>
       {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
       <ClaudeFloatingPanel>               -- useResize hook for drag-to-resize
@@ -184,6 +185,7 @@ The application uses a simple view-switching model managed by the `activeView` s
 | `'claude'` | `DashboardContent` + `ClaudeFloatingPanel` | Dashboard with floating chat overlay |
 | `'git'` | `GitManagerView` | Git repository manager with branches, commits, diffs, remotes |
 | `'ide'` | `IDEView` | Multi-workspace code editor with file explorer, debug, and terminal |
+| `'preview'` | `PreviewView` | Live Preview with embedded webview and inline text editing |
 
 Views are switched via `dispatch({ type: 'SET_VIEW', view: 'dashboard' })`. The Claude floating panel is visible in all views except `'git'`.
 

@@ -36,9 +36,11 @@ Returns the list of all valid dashboard IDs.
 **Response (200):**
 ```json
 {
-  "dashboards": ["dashboard1", "dashboard2", "dashboard3"]
+  "dashboards": ["2d84ac", "356dc5", "71894a"]
 }
 ```
+
+Dashboard IDs are 6-character hexadecimal strings. There is no fixed upper limit on the number of concurrent dashboards.
 
 ---
 
@@ -54,7 +56,7 @@ Creates a new dashboard with the next available ID. The new dashboard is initial
 ```json
 {
   "success": true,
-  "id": "dashboard3"
+  "id": "a3f1b2"
 }
 ```
 
@@ -70,7 +72,7 @@ Deletes a dashboard directory entirely, including all files.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `:id` | `string` | Dashboard identifier (e.g., `dashboard1`) |
+| `:id` | `string` | Dashboard identifier (e.g., `2d84ac`) |
 
 **Response (200):**
 ```json
@@ -97,9 +99,9 @@ Returns a lightweight status summary for all dashboards. Designed for sidebar st
 ```json
 {
   "statuses": {
-    "dashboard1": "in_progress",
-    "dashboard2": "completed",
-    "dashboard3": "idle"
+    "2d84ac": "in_progress",
+    "356dc5": "completed",
+    "71894a": "idle"
   }
 }
 ```
@@ -483,7 +485,7 @@ Returns a high-level overview of all dashboards, recent logs, archives, and hist
 {
   "dashboards": [
     {
-      "id": "dashboard1",
+      "id": "2d84ac",
       "status": "in_progress",
       "task": {
         "name": "api-refactor",
@@ -496,7 +498,7 @@ Returns a high-level overview of all dashboards, recent logs, archives, and hist
       }
     },
     {
-      "id": "dashboard2",
+      "id": "356dc5",
       "status": "idle",
       "task": null
     }
@@ -518,7 +520,7 @@ Returns a high-level overview of all dashboards, recent logs, archives, and hist
   ],
   "recentLogs": [
     {
-      "dashboardId": "dashboard1",
+      "dashboardId": "2d84ac",
       "timestamp": "2026-03-20T14:05:00Z",
       "level": "info",
       "message": "Agent completed task 1.1"
@@ -638,7 +640,7 @@ Returns all history summary files, sorted newest-first.
       "failed_tasks": 0,
       "duration": "15m 30s",
       "cleared_at": "2026-03-20T14:16:00Z",
-      "dashboard_id": "dashboard1",
+      "dashboard_id": "2d84ac",
       "agents": [...],
       "log_count": 24
     }
