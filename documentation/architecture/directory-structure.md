@@ -65,20 +65,23 @@ Synapse/                                 <- {tracker_root}
 ```
 electron/
 +-- main.js                              Main process entry point (173 lines)
-+-- preload.js                           Context bridge for IPC (227 lines)
++-- preload.js                           Context bridge for IPC (244 lines)
 +-- settings.js                          JSON settings store (105 lines)
-+-- ipc-handlers.js                      IPC data bridge (2,438 lines)
++-- ipc-handlers.js                      IPC data bridge (~2,200 lines)
 +-- services/
 |   +-- SwarmOrchestrator.js             Self-managing dispatch engine (764 lines)
-|   +-- ClaudeCodeService.js             Claude CLI process management (331 lines)
+|   +-- ClaudeCodeService.js             Claude CLI process management (370 lines)
 |   +-- CodexService.js                  Codex CLI process management (225 lines)
-|   +-- PromptBuilder.js                 Worker prompt construction (371 lines)
+|   +-- PromptBuilder.js                 Worker prompt construction (372 lines)
 |   +-- ProjectService.js               Project detection and context loading (193 lines)
 |   +-- CommandsService.js              Command file CRUD and generation (651 lines)
 |   +-- TaskEditorService.js            Swarm and task CRUD operations (377 lines)
 |   +-- ConversationService.js          Chat conversation persistence (143 lines)
 |   +-- DebugService.js                 IDE debug session management (796 lines)
 |   +-- TerminalService.js             Integrated terminal (PTY) management (182 lines)
+|   +-- InstrumentService.js          Project file instrumentation for Live Preview
+|   +-- PreviewService.js             Label-to-source file mapping for Live Preview
+|   +-- PreviewTextWriter.js          Text update writer for Live Preview edits
 +-- assets/
     +-- icon.icns                        macOS app icon
     +-- icon.iconset/                    Icon set with multiple resolutions
@@ -89,8 +92,8 @@ electron/
 | File | Description |
 |---|---|
 | `main.js` | Electron main process entry point. Registers the custom `app://synapse/` protocol scheme, creates the BrowserWindow, manages app lifecycle (ready, activate, window-all-closed), and saves window state (size, position) on resize/move. Loads `app://synapse/dist/index.html` as the app content. |
-| `preload.js` | Context bridge that exposes `window.electronAPI` to the renderer process. Defines a push channel whitelist (13 channels for main-to-renderer events) and 60+ `ipcRenderer.invoke()` methods for renderer-to-main requests. All methods are organized by domain: dashboards, archives, history, queue, settings, project, task editor, commands, workers, orchestration, conversations, and file handling. |
-| `settings.js` | A simple JSON file-backed settings store. Persists settings to `~/.synapse-settings.json`. Stores window dimensions, position, maximized state, recent projects, and user preferences. Provides `get()`, `set()`, `getAll()`, `reset()`, and `init()` methods. |
+| `preload.js` | Context bridge that exposes `window.electronAPI` to the renderer process. Defines a push channel whitelist (33 channels for main-to-renderer events) and ~140 `ipcRenderer.invoke()` methods for renderer-to-main requests. All methods are organized by domain: dashboards, archives, history, queue, settings, project, task editor, commands, workers, orchestration, conversations, terminal, IDE, debug, git, preview, and file handling. |
+| `settings.js` | A simple JSON file-backed settings store. Persists settings to `{userData}/synapse-settings.json` (where `{userData}` is the OS-specific user data directory, e.g., `~/Library/Application Support/synapse` on macOS). Stores window dimensions, position, maximized state, recent projects, and user preferences. Provides `get()`, `set()`, `getAll()`, `reset()`, and `init()` methods. |
 | `ipc-handlers.js` | The largest Electron file. Registers all `ipcMain.handle()` handlers that bridge renderer IPC requests to server-side services. Also creates the broadcast function that routes file watcher events to the renderer via `webContents.send()`, and feeds progress updates to the SwarmOrchestrator. Sets up file watchers on startup and sends initial data to the renderer once the window is ready. |
 
 ### Electron Services
@@ -107,6 +110,9 @@ electron/
 | `ConversationService.js` | Manages chat conversation persistence. Stores conversations as JSON files in `{tracker_root}/conversations/`. Supports listing (optionally filtered by dashboard), loading, saving, creating, deleting, and renaming conversations. |
 | `DebugService.js` | Manages IDE debug sessions. Handles breakpoint management, debug session lifecycle (start, stop, step, continue), variable inspection, call stack retrieval, and debug console evaluation. Communicates debug state to the renderer via IPC events. |
 | `TerminalService.js` | Manages integrated terminal instances using node-pty. Spawns PTY processes, handles terminal input/output streaming via IPC, supports resize events, and manages terminal lifecycle (create, destroy, list active terminals). |
+| `InstrumentService.js` | Scans project JSX/TSX/HTML files and adds `data-synapse-label` attributes to text-bearing elements (headings, paragraphs, buttons, links) for Live Preview integration. |
+| `PreviewService.js` | Maps `data-synapse-label` attributes back to source file locations, enabling the Live Preview to identify which source file and position correspond to a given labeled element. |
+| `PreviewTextWriter.js` | Writes text edits from the Live Preview overlay back to the corresponding source files, updating the text content at the mapped location. |
 
 ---
 
@@ -217,6 +223,8 @@ src/ui/
 |   |   +-- EditorTabs.jsx              Open file tab bar
 |   |   +-- WorkspaceTabs.jsx           Workspace tab bar
 |   |   +-- IDEWelcome.jsx              IDE welcome screen
+|   +-- preview/                         Live Preview components
+|   |   +-- PreviewView.jsx              Embedded webview with inline text editing
 |   +-- git/                             12 Git management components
 |       +-- GitManagerView.jsx           Git manager layout container
 |       +-- BranchPanel.jsx             Branch management
@@ -498,7 +506,7 @@ The overflow queue holds swarm plans waiting to be promoted to an active dashboa
 }
 ```
 
-The settings file for window state and preferences is stored at `~/.synapse-settings.json` (outside the repository).
+The settings file for window state and preferences is stored at `{userData}/synapse-settings.json` (the OS-specific user data directory, outside the repository).
 
 ---
 

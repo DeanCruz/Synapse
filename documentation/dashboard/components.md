@@ -15,7 +15,7 @@ The root application component. Wires IPC data subscriptions, fetches initial da
 - Initializes CSS-derived status colors via `initStatusColorsFromCSS()`
 - Restores saved theme from localStorage on mount
 - Fetches initial dashboard statuses and queue items
-- Routes between views (`home`, `dashboard`, `swarmBuilder`, `claude`, `git`, `ide`)
+- Routes between views (`home`, `dashboard`, `swarmBuilder`, `claude`, `git`, `ide`, `preview`)
 - Renders modals based on `activeModal` state
 - Manages the floating Claude chat panel lifecycle (always mounted for persistent IPC)
 
@@ -509,6 +509,33 @@ Multi-workspace code editor view with file explorer, editor tabs, debug support,
 | `ProblemsPanel` | `ProblemsPanel.jsx` | Diagnostics display (errors, warnings, info) |
 
 **State:** Uses `IDE_*` and `DEBUG_*` action types in AppContext (see [State Management](./state-management.md)).
+
+---
+
+## Live Preview
+
+### PreviewView (`src/ui/components/preview/PreviewView.jsx`)
+
+Live Preview tab that embeds the running web application in a webview and enables inline text editing. Users can double-click any text element with a `data-synapse-label` attribute to edit it directly, and the change is written back to the source file automatically.
+
+**Props:** None (reads from context).
+
+**Features:**
+- URL input for the dev server address (e.g., `http://localhost:3000`)
+- Embedded webview with overlay script injection (`inject-overlay.js`)
+- Double-click on labeled elements opens an inline text editor
+- Text edits are sent to the main process via `preview-edit-request` IPC channel
+- PreviewService resolves the label to the source file location
+- PreviewTextWriter writes the updated text back to the source code
+- Supports React, Next.js, Vite, and any HTML/JS project with instrumented labels
+
+**How it works:**
+1. User runs `!instrument` to add `data-synapse-label` attributes to project files
+2. User starts their dev server and enters the URL in the Preview tab
+3. The webview loads the app with an injected overlay script
+4. The overlay detects elements with `data-synapse-label` and enables double-click editing
+5. On edit, the new text and label are sent via IPC to the Electron main process
+6. PreviewService maps the label to the source file, PreviewTextWriter updates the code
 
 ---
 
