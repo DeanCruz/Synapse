@@ -466,21 +466,18 @@ With the plan complete and validated, the master populates the dashboard before 
 Dashboards are selected via a priority chain:
 
 ```
-1. Pre-assigned from chat context (DASHBOARD ID: directive in system prompt)
+1. Assigned dashboard (DASHBOARD ID: directive in system prompt)
+       → Use unconditionally. NO access to other dashboards.
+       → If has previous data: ask user before archiving (active) or archive directly (completed/failed).
        |
        v (not present)
 2. Explicit --dashboard {id} flag
        |
        v (not provided)
-3. Auto-selection: scan all dashboards (excluding ide) for first available slot
-       |
-       v (all in use)
-4. Display summary table, ask user to choose or clear a dashboard
+3. Ask the user which dashboard to use. Never scan or auto-select.
 ```
 
-Dashboard IDs are 6-character hex strings (e.g., `a3f7k2`). The `ide` dashboard is permanently reserved for the IDE agent and is always excluded from auto-selection.
-
-A dashboard is "available" if its `initialization.json` has `task: null`, if no progress files exist (stale claim), or if all its progress files show terminal status (completed or failed).
+Dashboard IDs are 6-character hex strings (e.g., `a3f7k2`). The `ide` dashboard is permanently reserved for the IDE agent.
 
 ### Archive Before Clear
 

@@ -2,6 +2,8 @@
 
 The circuit breaker is Synapse's automatic replanning mechanism for cascading failures. When failures propagate through the dependency graph -- indicating a systemic problem rather than isolated task errors -- the circuit breaker halts new dispatches, analyzes the root cause, and produces a revised plan that addresses the underlying issue. This prevents the swarm from wasting cycles on doomed tasks while routing around the failure.
 
+The circuit breaker is distinct from the repair task mechanism (documented in `agent/master/failure_recovery.md`). Repair tasks handle individual, isolated failures by creating a drop-in replacement task. The circuit breaker handles cascading or systemic failures that require structural replanning of the remaining dependency graph.
+
 ---
 
 ## Why a Circuit Breaker Exists
@@ -81,23 +83,29 @@ These are two distinct failure-handling mechanisms that operate at different sca
 Task fails.
     |
     v
+Is this a repair task (ID ends with "r")?
+  YES --> Double failure: log error + permission, do NOT create another repair
+          Skip to eager dispatch scan for unrelated tasks
+          (See failure_recovery.md Step 0)
+  NO  |
+      v
 Is this the 3rd+ failure in the same wave?
-  YES --> Circuit breaker
+  YES --> Circuit breaker (automatic replanning)
   NO  |
       v
 Does this failure block 3+ downstream tasks?
-  YES --> Circuit breaker
+  YES --> Circuit breaker (automatic replanning)
   NO  |
       v
 Does this failure block >50% of remaining tasks?
-  YES --> Circuit breaker
+  YES --> Circuit breaker (automatic replanning)
   NO  |
       v
 Create repair task, rewire dependencies, dispatch repair worker
-(Standard repair task protocol -- see Dispatch Phase)
+(Standard repair task protocol -- see failure_recovery.md Steps 1-7)
 ```
 
-The repair task mechanism handles the common case (isolated failures). The circuit breaker handles the exceptional case (systemic failures that require structural intervention).
+The repair task mechanism handles the common case (isolated failures). The circuit breaker handles the exceptional case (systemic failures that require structural intervention). Double failures (repair tasks that fail) are escalated to the user rather than creating infinite repair chains.
 
 ---
 
@@ -331,6 +339,8 @@ Swarm paused. Options:
 
 The swarm never pushes through cascading failures blind. Either the replanner produces a valid revision, or the user intervenes manually. This is a safety guarantee: no matter what goes wrong, the swarm stops and asks rather than compounding errors.
 
+The dashboard shows the `"permission"` log entry as an amber modal popup. The user sees it in their browser and responds in the terminal where the master agent is running.
+
 ---
 
 ## Worked Example: TypeScript Migration
@@ -437,6 +447,16 @@ During the replanning process, the dashboard provides full visibility:
 - Removed tasks disappear from the pipeline view
 - Retried tasks reset to pending state
 - The pipeline resumes flowing
+
+---
+
+## Interaction with Monitoring and Completion
+
+The circuit breaker fires during the monitoring phase. When it triggers, the monitoring phase enters a sub-state (`replanning`) where dispatch is paused but monitoring continues. Running workers continue to completion -- their results provide useful context for the replanner.
+
+After the revision is applied and dispatch resumes, the normal monitoring loop continues. The completion phase is not entered until all tasks (including any newly added repair tasks) reach terminal state.
+
+If the circuit breaker fires and replanning occurs, the completion report must include the replanning details: what triggered it, what the root cause was, what revision was applied, and how the revised plan executed. See [Completion Phase](./completion-phase.md) for the partial completion scenario.
 
 ---
 

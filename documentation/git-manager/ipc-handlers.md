@@ -1,6 +1,6 @@
 # Git Manager IPC Handlers Reference
 
-The Git Manager operations are handled by 28 IPC handlers registered in `electron/ipc-handlers.js`. All handlers follow the `git-*` naming convention and are exposed to the renderer via `window.electronAPI` in `electron/preload.js`.
+The Git Manager operations are handled by 28 IPC handlers registered in `electron/ipc-handlers.js`. All handlers follow the `git-*` naming convention and are exposed to the renderer via `window.electronAPI` (28 methods) in `electron/preload.js`.
 
 ---
 

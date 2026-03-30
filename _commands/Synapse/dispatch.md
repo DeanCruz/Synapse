@@ -3,7 +3,7 @@
 **Purpose:** Manually dispatch a specific pending task or all tasks whose dependencies are satisfied.
 
 **Syntax:**
-- `!dispatch 2.3` — Dispatch a specific task (auto-detect dashboard)
+- `!dispatch 2.3` — Dispatch a specific task (uses your assigned dashboard)
 - `!dispatch dashboard2 2.3` — Dispatch a specific task on a specific dashboard
 - `!dispatch --ready` — Dispatch all tasks whose dependencies are met
 - `!dispatch dashboard1 --ready` — Same, on a specific dashboard

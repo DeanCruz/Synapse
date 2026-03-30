@@ -411,7 +411,7 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 
 **Syntax:**
 ```
-!prompt_audit                                -- Audit the active dashboard (auto-detect)
+!prompt_audit                                -- Audit your assigned dashboard
 !prompt_audit dashboard3                     -- Audit a specific dashboard
 ```
 

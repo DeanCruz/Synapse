@@ -6,7 +6,7 @@ All Git Manager components live in `src/ui/components/git/`. They use React Cont
 
 ## GitManagerView
 
-**File:** `src/ui/components/git/GitManagerView.jsx` (413 lines)
+**File:** `src/ui/components/git/GitManagerView.jsx` (436 lines)
 
 The root layout component for the Git Manager. Assembles RepoTabs, the sidebar (ChangesPanel + CommitPanel), content area (DiffViewer / HistoryPanel / BranchPanel), RemotePanel, and QuickActions. Manages the draggable split panel between the sidebar and content area.
 
@@ -449,7 +449,7 @@ The current IPC handler does not support force push. The double-confirmation flo
 
 ## BranchPanel
 
-**File:** `src/ui/components/git/BranchPanel.jsx` (1542 lines)
+**File:** `src/ui/components/git/BranchPanel.jsx` (1567 lines)
 
 Full-featured branch management panel with a visual SVG branch graph, collapsible local/remote branch lists, search filtering, and actions for creating, switching, deleting, merging, and moving changes to new branches. The largest component in the git manager.
 
@@ -536,7 +536,7 @@ Full-featured branch management panel with a visual SVG branch graph, collapsibl
 
 ## HistoryPanel
 
-**File:** `src/ui/components/git/HistoryPanel.jsx` (1068 lines)
+**File:** `src/ui/components/git/HistoryPanel.jsx` (1097 lines)
 
 Commit history viewer with an SVG branch/merge graph, expandable commit rows, filtering by branch/author/date, lazy loading via infinite scroll, and per-commit detail views with file changes and on-demand diffs.
 

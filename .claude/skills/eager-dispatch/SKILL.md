@@ -48,14 +48,11 @@ The master-protocol skill provides your core identity and constraints. Follow th
 
 ### Step 1: Resolve the Dashboard
 
+**If your system prompt contains a `DASHBOARD ID:` directive:** Use it unconditionally. You have no access to any other dashboard.
+
 **If `--dashboard {id}` was specified:** Use it directly.
 
-**If auto-detecting:** Scan all dashboards (excluding `ide`). For each:
-1. Read `initialization.json` — if `task` is `null`, skip (empty).
-2. Read all progress files from `progress/`.
-   - If every progress file has `status: "completed"` or `"failed"` — skip (fully finished).
-   - If `initialization.json` has agents but some have no progress files, or some have `"in_progress"` — this is an active/stalled swarm. Select it.
-3. If no active dashboard found, report: "No dashboards have active or stalled swarms. Nothing to dispatch."
+**If none of the above apply:** Ask the user which dashboard to target. Do not scan or select one yourself.
 
 ### Step 2: Read Full Dashboard State
 

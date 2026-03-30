@@ -11,7 +11,7 @@ This is a **post-mortem tool** — run it after a swarm completes to identify wh
 ## Usage
 
 ```
-!prompt_audit                  <- Audit the active dashboard (auto-detect)
+!prompt_audit                  <- Audit your assigned dashboard
 !prompt_audit dashboard3       <- Audit a specific dashboard
 ```
 
@@ -23,7 +23,7 @@ This is a **post-mortem tool** — run it after a swarm completes to identify wh
 
 ### Step 1: Resolve Dashboard and Read Swarm Data
 
-Parse the optional `{dashboardId}` argument. If not provided, auto-detect the active dashboard per the dashboard resolution protocol.
+Parse the optional `{dashboardId}` argument. If not provided, use your assigned dashboard per the dashboard resolution protocol.
 
 Read the following files from `{tracker_root}/dashboards/{dashboardId}/`:
 

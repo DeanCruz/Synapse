@@ -32,7 +32,7 @@ Route to the correct Synapse command for monitoring, inspecting, and operating s
 
 ## Dashboard Resolution
 
-Resolve target dashboard: `--dashboard {id}` flag if provided, otherwise auto-select first available dashboard (excluding `ide`). The `ide` dashboard is reserved for the IDE agent.
+Resolve target dashboard: Use your assigned dashboard from the `DASHBOARD ID:` directive in your system prompt. You have no access to other dashboards. Override with `--dashboard {id}` flag if provided. If neither, ask the user. Never scan or auto-detect.
 
 Dashboard ID formats:
 - `ide` — Reserved, always exists, auto-created on startup

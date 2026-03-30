@@ -37,11 +37,11 @@ The dashboard supports unlimited concurrent swarms via a sidebar that lists all 
 
 ### Dashboard Selection Priority Chain
 
-1. **Chat-spawned directive** — When an agent is spawned from the Synapse chat view, its system prompt contains a `DASHBOARD ID:` directive binding it to that chat's dashboard. This is always authoritative and the agent uses it unconditionally.
-2. **Explicit flag** — `--dashboard {id}` can force a specific slot if no pre-assigned dashboard exists.
-3. **Auto-selection fallback** — The master scans all dashboards (excluding `ide`) for the first available slot. The agent will never overwrite an in-progress swarm.
+1. **Chat-spawned directive (MANDATORY ISOLATION)** — When an agent is spawned from the Synapse chat view, its system prompt contains a `DASHBOARD ID:` directive binding it to that chat's dashboard. This is always authoritative — the agent uses it unconditionally and has NO access to any other dashboard. If the dashboard has previous data, the agent asks the user if they want to archive it and set up the new dashboard before proceeding.
+2. **Explicit flag** — `--dashboard {id}` can force a specific dashboard if no pre-assigned dashboard exists.
+3. **No dashboard?** Ask the user which dashboard to use. Never scan or auto-select.
 
-All commands (`!status`, `!logs`, `!inspect`, etc.) auto-detect the active dashboard when no dashboard is specified. See `agent/instructions/dashboard_resolution.md` for the full selection and detection protocol.
+All commands use the agent's assigned dashboard. See `agent/instructions/dashboard_resolution.md` for the full protocol.
 
 ### Every Agent Knows Its Dashboard
 
@@ -53,7 +53,7 @@ Dashboard IDs are 6-character hex strings (e.g., `a3f7k2`) generated when a new 
 
 ### Reserved Dashboard: `ide`
 
-The `ide` dashboard is permanently reserved for the IDE agent. It always exists, is never claimed by swarms, and is excluded from auto-selection. Swarm commands will never use the `ide` dashboard unless explicitly overridden by the user.
+The `ide` dashboard is permanently reserved for the IDE agent. It always exists and is exclusively bound to IDE chat views. Swarm agents use only their own assigned dashboard.
 
 ---
 
@@ -180,7 +180,7 @@ This architecture dramatically reduces master agent context consumption compared
 | Master outputs full terminal status table on every event | Master outputs one-line confirmations only |
 | No visibility into worker progress during execution | Live stage + milestone + log updates on dashboard |
 | Deviations only visible after completion | Deviations visible immediately |
-| Single swarm at a time | Unlimited concurrent swarms across dashboards with auto-selection |
+| Single swarm at a time | Unlimited concurrent swarms (each chat bound to its own dashboard) |
 | Cascading failures require manual intervention | Circuit breaker triggers automatic replanning via CLI |
 | No sibling awareness between workers | shared_context + sibling_reads enable optional cross-worker data sharing |
 

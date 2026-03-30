@@ -52,9 +52,10 @@ For someone new to Synapse, the following order provides a logical progression f
    - [Commands Overview](commands/overview.md)
    - [Configuration Overview](configuration/overview.md)
 
-7. **Advanced Topics** -- Multi-dashboard orchestration, Electron desktop app, git manager, project integration.
+7. **Advanced Topics** -- Multi-dashboard orchestration, Electron desktop app, IDE, git manager, project integration.
    - [Multi-Dashboard Overview](multi-dashboard/overview.md)
    - [Electron Overview](electron/overview.md)
+   - [IDE Overview](ide/overview.md)
    - [Git Manager Overview](git-manager/overview.md)
    - [Project Integration Overview](project-integration/overview.md)
 
@@ -81,7 +82,7 @@ The `!command` system that drives all Synapse operations, from swarm dispatch to
 | [Overview](commands/overview.md) | Command resolution hierarchy, syntax, and how commands are discovered |
 | [Swarm Commands](commands/swarm-commands.md) | All swarm lifecycle commands: `!p_track`, `!p`, `!dispatch`, `!retry`, `!resume`, `!track_resume`, `!cancel`, and more |
 | [Project Commands](commands/project-commands.md) | Project analysis commands: `!context`, `!review`, `!health`, `!scope`, `!trace`, `!contracts`, `!env_check` |
-| [Creating Commands](commands/creating-commands.md) | How to create custom commands and profiles, including duplicate detection and file structure |
+| [Creating Commands](commands/creating-commands.md) | How to create custom commands: 4-tier resolution hierarchy, profiles, structural patterns, naming conventions, and duplicate detection |
 
 ### Configuration
 
@@ -104,8 +105,8 @@ The React-based real-time dashboard UI that visualizes swarm progress.
 | [Components](dashboard/components.md) | All React components with props, sections, and sub-components |
 | [State Management](dashboard/state-management.md) | AppProvider, initial state, all reducer actions, localStorage persistence, and merge cycle |
 | [Hooks](dashboard/hooks.md) | useDashboardData, mergeState, useElectronAPI, and utility modules |
-| [Styling](dashboard/styling.md) | CSS design system, themes, status colors, animations, layout system, and z-index layers |
-| [Layout Modes](dashboard/layout-modes.md) | Waves vs Chains layout, SVG dependency line rendering, BFS pathfinding, and hover interactions |
+| [Styling](dashboard/styling.md) | CSS design system (10 CSS files, 13,778 lines), themes, status colors, animations, IDE and Git Manager styling, layout system, and z-index layers |
+| [Layout Modes](dashboard/layout-modes.md) | 6-view switching system (Waves, Chains, IDE, Git views), SVG dependency line rendering, BFS pathfinding, and hover interactions |
 
 ### Data Architecture
 
@@ -117,6 +118,7 @@ The JSON file formats that store swarm plans, progress, logs, and task records.
 | [initialization.json](data-architecture/initialization-json.md) | Full schema for the static plan store -- task, agents, waves, chains, and history objects |
 | [logs.json](data-architecture/logs-json.md) | Log entry schema, log levels, write timing, and dashboard rendering |
 | [Progress Files](data-architecture/progress-files.md) | Worker-owned progress file schema, ownership model, stages, lifecycle, and server handling |
+| [PKI Schemas](data-architecture/pki-schemas.md) | JSON schemas for all Project Knowledge Index data files -- the authoritative PKI reference |
 | [Task Files](data-architecture/xml-task-files.md) | Task file JSON schema reference, update timing, and real-world examples |
 
 ### Electron
@@ -126,19 +128,29 @@ The Electron desktop application that wraps the dashboard and provides native OS
 | Document | Description |
 |---|---|
 | [Overview](electron/overview.md) | Electron architecture, process model, data flow, and security model |
-| [IPC Reference](electron/ipc-reference.md) | All 12 push channels and 50+ pull request handlers between main and renderer |
-| [Services](electron/services.md) | All 8 Electron services with exported methods and responsibilities |
+| [IPC Reference](electron/ipc-reference.md) | All 21 push channels and 139 pull request handlers between main and renderer, organized into 15 handler groups |
+| [Services](electron/services.md) | All 8 Electron services (SwarmOrchestrator, ClaudeCodeService, CodexService, PromptBuilder, ProjectService, CommandsService, TaskEditorService, ConversationService) with exported methods and responsibilities |
 | [Configuration](electron/configuration.md) | Settings system, Vite build config, electron-builder packaging, and `app://` protocol |
 
 ### Git Manager
 
-The integrated git UI built into the Synapse Electron app for visual repository management.
+The integrated git UI built into the Synapse Electron app for visual repository management, including multi-repo support, staging/unstaging, diffs, commits, branches, history with SVG graph, and remote operations.
 
 | Document | Description |
 |---|---|
-| [Overview](git-manager/overview.md) | Architecture, component hierarchy, data flow, state management, IPC integration, and security model |
-| [Components](git-manager/components.md) | All 12 React components with props, state, key functions, and UI element details |
+| [Overview](git-manager/overview.md) | Architecture, technology stack, component hierarchy, data flow, state management, debug system, IPC integration, and security model |
+| [Components](git-manager/components.md) | All 12 React components (GitManagerView through SafetyDialogs) with props, state, key functions, and UI element details |
 | [IPC Handlers](git-manager/ipc-handlers.md) | All 28 git-* IPC handlers with channel names, parameters, return values, and security measures |
+
+### IDE (Code Explorer)
+
+The built-in IDE integrated into the Synapse Electron app, providing a file explorer, Monaco-powered code editor, integrated Node.js debugger, and syntax diagnostics.
+
+| Document | Description |
+|---|---|
+| [Overview](ide/overview.md) | IDE architecture, technology stack, component hierarchy, data flow, state management, and debug system |
+| [Components](ide/components.md) | All 10 React components (IDEView, FileExplorer, CodeEditor, EditorTabs, WorkspaceTabs, IDEWelcome, DebugToolbar, DebugPanels, DebugConsolePanel, ProblemsPanel) with props, state, and key functions |
+| [IPC Handlers](ide/ipc-handlers.md) | All 24 IDE IPC handlers: 9 file system (ide-*), 2 diagnostics (ide-check-syntax*), and 13 debug (debug-*) handlers |
 
 ### Master Agent
 
@@ -189,8 +201,8 @@ The zero-dependency Node.js backend that serves the dashboard and broadcasts rea
 | Document | Description |
 |---|---|
 | [Overview](server/overview.md) | Server architecture, startup flow, and zero-dependency design |
-| [Services](server/services.md) | All 6 server services with exported methods and responsibilities |
-| [API Reference](server/api-reference.md) | All REST endpoints with request/response schemas |
+| [Services](server/services.md) | All 7 server services (DashboardService, WatcherService, DependencyService, ArchiveService, HistoryService, QueueService, SSEManager) plus validation utility |
+| [API Reference](server/api-reference.md) | All REST endpoints with request/response schemas, including validation and queue management |
 | [SSE Events](server/sse-events.md) | All Server-Sent Events with payloads, triggers, and client handling |
 | [Configuration](server/configuration.md) | Port configuration, timing constants, MIME types, and utility functions |
 
@@ -203,9 +215,9 @@ The end-to-end lifecycle of a parallel agent swarm, from planning through comple
 | [Overview](swarm-lifecycle/overview.md) | End-to-end lifecycle with flow diagrams and data flow summary |
 | [Planning Phase](swarm-lifecycle/planning-phase.md) | Context gathering, task decomposition, shared file patterns, layout selection, and dashboard population |
 | [Dispatch Phase](swarm-lifecycle/dispatch-phase.md) | Eager dispatch protocol, prompt construction, failure handling, and upstream results |
-| [Monitoring Phase](swarm-lifecycle/monitoring-phase.md) | Progress file watching, SSE broadcasting, deviation handling, and log patterns |
-| [Completion Phase](swarm-lifecycle/completion-phase.md) | Final report, verification agents, archiving, and partial completion handling |
-| [Circuit Breaker](swarm-lifecycle/circuit-breaker.md) | Trigger conditions, automatic replanning flow, fallback behavior, and worked examples |
+| [Monitoring Phase](swarm-lifecycle/monitoring-phase.md) | Progress file watching, SSE broadcasting, timing constants, deviation handling, and log patterns |
+| [Completion Phase](swarm-lifecycle/completion-phase.md) | Final report with metrics, verification agents, expanded report format, archiving, and partial completion handling |
+| [Circuit Breaker](swarm-lifecycle/circuit-breaker.md) | Trigger conditions, double-failure detection, automatic replanning flow, cross-references, fallback behavior, and worked examples |
 
 ### Worker Protocol
 
@@ -215,8 +227,8 @@ How worker agents report progress, handle deviations, and consume upstream resul
 |---|---|
 | [Overview](worker-protocol/overview.md) | Worker lifecycle, responsibilities, rules, return format, and the EXPORTS field |
 | [Progress Reporting](worker-protocol/progress-reporting.md) | Full progress file schema, fixed stages, mandatory writes, log formats, and lifecycle examples |
-| [Deviations](worker-protocol/deviations.md) | Severity levels (CRITICAL/MODERATE/MINOR), entry format, common scenarios, and ambiguity handling |
-| [Upstream Results](worker-protocol/upstream-results.md) | Four-step protocol for reading, extracting, adapting to, and logging upstream dependency results |
+| [Deviations](worker-protocol/deviations.md) | Severity levels (CRITICAL/MODERATE/MINOR), entry format, 11 detailed sections covering common scenarios, ambiguity handling, and master replanning triggers |
+| [Upstream Results](worker-protocol/upstream-results.md) | Four-step protocol for reading, extracting, adapting to, and logging upstream dependency results; 11 sections covering failure handling, critical deviations, and adaptation strategies |
 
 ---
 
@@ -225,16 +237,17 @@ How worker agents report progress, handle deviations, and consume upstream resul
 | Section | Summary |
 |---|---|
 | **Architecture** | System-level overview of how Synapse is structured, how data flows between components, and what the directory layout looks like on disk. |
-| **Commands** | The `!command` system including resolution hierarchy, all swarm lifecycle commands, project analysis commands, and how to create custom commands. |
+| **Commands** | The `!command` system including 4-tier resolution hierarchy, all swarm lifecycle commands, project analysis commands, and creating custom commands with profiles and structural patterns. |
 | **Configuration** | All configuration surfaces: server constants, Electron settings and packaging, and the CSS/JS theming system. |
-| **Dashboard** | The React dashboard UI covering component architecture, state management with reducers, custom hooks, the CSS design system, and Waves/Chains layout modes. |
-| **Data Architecture** | The four data file formats that drive Synapse: `initialization.json` (static plan), `logs.json` (event log), worker progress files (live lifecycle), and task files (authoritative record). |
-| **Electron** | The desktop application layer including the main/renderer process model, all IPC channels, the 8 service modules, and build/packaging configuration. |
+| **Dashboard** | The React dashboard UI covering component architecture (54 components), state management with reducers, custom hooks, the CSS design system (10 files, 13,778 lines), and 6-view switching layout modes (Waves, Chains, IDE, Git views). |
+| **Data Architecture** | The five data file categories that drive Synapse: `initialization.json` (static plan), `logs.json` (event log), worker progress files (live lifecycle), task files (authoritative record), and PKI schemas (knowledge index). |
+| **Electron** | The desktop application layer including the main/renderer process model, 21 push channels and 139 pull request handlers across 15 handler groups, the 8 service modules, and build/packaging configuration. |
 | **Git Manager** | The integrated git UI for visual repository management, covering 12 React components, 28 IPC handlers, multi-repo support, staging/unstaging, diffs, commits, branches, history with SVG graph, and remote operations. |
+| **IDE (Code Explorer)** | The built-in IDE with Monaco-powered code editor, file explorer, integrated Node.js debugger with VS Code-style debug panels, syntax diagnostics, and workspace-dashboard bridging -- covering 10 React components and 24 IPC handlers. |
 | **Master Agent** | The orchestrator role and its five responsibilities: context gathering, planning, dispatch, statusing, and reporting -- plus the constraints that prevent it from writing code. |
 | **Multi-Dashboard** | Running up to 5 concurrent swarms across independent dashboard slots, including dashboard selection logic, the overflow queue, and archive/history management. |
 | **Profiles** | The profile modifier system that layers role-specific priorities, output styles, and personas on top of any command or prompt. |
 | **Project Integration** | How Synapse connects to any target project, including the `!project` command, `.synapse/` directory, TOC generation, and CLAUDE.md conventions. |
-| **Server** | The zero-dependency Node.js backend that serves static files, exposes REST endpoints, and broadcasts real-time updates via Server-Sent Events. |
+| **Server** | The zero-dependency Node.js backend with 7 services plus validation utility, serving static files, exposing REST endpoints, and broadcasting real-time updates via Server-Sent Events. |
 | **Swarm Lifecycle** | The complete journey of a parallel swarm from planning through completion, including eager dispatch, monitoring, circuit breaker automatic replanning, and final reporting. |
-| **Worker Protocol** | How worker agents operate: writing progress files, transitioning through stages, reporting deviations with severity levels, and consuming upstream task results. |
+| **Worker Protocol** | How worker agents operate: writing progress files, transitioning through stages, reporting deviations with severity levels (11 detailed sections), and consuming upstream task results (11 sections covering adaptation strategies). |

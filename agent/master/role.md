@@ -27,6 +27,7 @@ The master agent has exactly **five responsibilities** during a swarm. Nothing m
 - Read the Synapse `CLAUDE.md` for swarm protocols
 - Read `{project_root}/CLAUDE.md` for target project conventions, architecture, and constraints
 - If a project TOC exists at `{project_root}/.synapse/toc.md`, read it for semantic orientation
+- If additional context directories are configured (in `.synapse/project.json` or the Electron app), read their `CLAUDE.md` files alongside the project CLAUDE.md. These directories are read-only supplemental context — their conventions should be included in worker prompts.
 - Use Glob/Grep within `{project_root}` for targeted file discovery
 - Read source files, documentation, types, schemas, and configs needed to understand the task
 - Read relevant command files from `_commands/` directories

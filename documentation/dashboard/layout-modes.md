@@ -1,6 +1,23 @@
-# Layout Modes: Waves vs Chains
+# Layout Modes and Views
 
-The Synapse Dashboard supports two visualization modes for rendering agent task pipelines. The mode is determined by the `task.type` field in `initialization.json`, which is set to either `"Waves"` or `"Chains"` during swarm planning.
+The Synapse Dashboard supports multiple views, selected via `activeView` in AppContext. The primary views are:
+
+| View | `activeView` Value | Component | Description |
+|---|---|---|---|
+| Dashboard | `'dashboard'` | `DashboardContent` | Default. Swarm pipeline visualization (Waves or Chains) |
+| Home | `'home'` | `HomeView` | Multi-dashboard overview with archive access |
+| Swarm Builder | `'swarmBuilder'` | `SwarmBuilder` | Swarm construction and dispatch UI |
+| Claude Chat | `'claude'` | `DashboardContent` + floating `ClaudeFloatingPanel` | Chat with Claude — dashboard renders behind floating panel |
+| IDE | `'ide'` | `IDEView` | VS Code-style code editor with file explorer and debugger |
+| Git | `'git'` | `GitManagerView` | Git repository management with diff viewer and branch controls |
+
+View switching is controlled by `dispatch({ type: 'SET_VIEW', view: '...' })` from the Sidebar. The activeView state is defined in `AppContext.jsx`.
+
+---
+
+## Pipeline Modes (Dashboard View)
+
+Within the dashboard view, two pipeline visualization modes render agent task pipelines. The mode is determined by the `task.type` field in `initialization.json`, which is set to either `"Waves"` or `"Chains"` during swarm planning.
 
 ---
 
@@ -67,14 +84,20 @@ const taskType = task?.type ?? 'Waves';
 | `.wave-title` | Wave name text |
 | `.wave-count` | Completed/total count |
 
-### Dependency Lines
+### Dependency and Sibling Lines
 
-Waves mode includes an **SVG overlay** for drawing dependency lines between agent cards. Lines are routed through corridor gaps between columns using BFS pathfinding.
+Waves mode includes an **SVG overlay** for drawing two types of lines between agent cards:
+
+1. **Dependency lines** — Drawn between cards linked by `depends_on` relationships. Routed through corridor gaps between columns using BFS pathfinding.
+2. **Sibling communication lines** — Drawn between agents that read each other's progress files (via non-empty `sibling_reads` arrays in progress data). These show inter-agent coordination.
 
 **Components involved:**
 - SVG element: `<svg ref={svgRef} className="chain-svg" />` (overlay, absolutely positioned)
-- `drawDependencyLines()` -- Draws lines between dependent cards
-- `setupCardHoverEffects()` -- Sets up hover highlight behavior
+- `drawDependencyLines()` — Draws lines between dependent cards
+- `drawSiblingLines()` — Draws lines between agents with sibling reads
+- `setupCardHoverEffects()` — Sets up hover highlight behavior
+
+All three functions are imported from `/src/ui/utils/dependencyLines.js`.
 
 Lines are redrawn:
 - After every render where `status` changes
@@ -170,11 +193,11 @@ Chain mode currently does **not** draw SVG dependency lines. The visual structur
 
 ---
 
-## Dependency Line System (Waves Mode)
+## Dependency and Sibling Line System (Waves Mode)
 
 **File:** `/src/ui/utils/dependencyLines.js`
 
-The dependency line system uses a BFS (Breadth-First Search) pathfinding algorithm to route lines through corridor gaps between wave columns. This prevents lines from crossing through agent cards or wave headers.
+The line system uses a BFS (Breadth-First Search) pathfinding algorithm to route dependency lines through corridor gaps between wave columns. This prevents lines from crossing through agent cards or wave headers. The same pathway grid is shared by both dependency lines and sibling communication lines.
 
 ### Architecture
 
@@ -284,3 +307,119 @@ Both pipeline modes support stat-based filtering via the `activeStatFilter` prop
 - **Clearing:** Clicking the "Total" stat card or clicking the active filter again clears the filter
 
 The filter state is managed in AppContext as `activeStatFilter` and passed down through `DashboardContent` to the pipeline components.
+
+---
+
+## IDE View
+
+**Component:** `IDEView` (`/src/ui/components/ide/IDEView.jsx`)
+
+**Activated by:** `dispatch({ type: 'SET_VIEW', view: 'ide' })` from the Sidebar's Code Explorer tab.
+
+A VS Code-style integrated development environment within the dashboard. Provides file editing, debugging, and terminal access without leaving Synapse.
+
+### Layout Structure
+
+```
++----------------------------------------------------+
+| WorkspaceTabs (top bar — switch between workspaces) |
++-------------+--------------------------------------+
+| FileExplorer | EditorTabs                           |
+| (resizable   | [file1.js] [file2.py] [+]            |
+|  sidebar)    +--------------------------------------+
+|              | CodeEditor (Monaco)     | DebugPanels |
+|              |                         | (optional   |
+|              |                         |  right side) |
++-------------+--------------------------------------+
+| BottomPanel (Terminal / Output / Problems / Debug)  |
++----------------------------------------------------+
+```
+
+### Sub-Components
+
+| Component | File | Description |
+|---|---|---|
+| `WorkspaceTabs` | `ide/WorkspaceTabs.jsx` | Top tab bar for switching between workspace folders |
+| `FileExplorer` | `ide/FileExplorer.jsx` | Tree-view file browser with folder expand/collapse |
+| `EditorTabs` | `ide/EditorTabs.jsx` | Open file tabs with dirty indicators and close buttons |
+| `CodeEditor` | `ide/CodeEditor.jsx` | Monaco editor host with syntax highlighting and breakpoints |
+| `IDEWelcome` | `ide/IDEWelcome.jsx` | Welcome screen shown when no workspace is open |
+| `DebugToolbar` | `ide/DebugToolbar.jsx` | Debug session controls (start, stop, step, continue) |
+| `DebugPanels` | `ide/DebugPanels.jsx` | Variables, call stack, breakpoints, watch panels |
+| `ProblemsPanel` | `ide/ProblemsPanel.jsx` | Diagnostics display (errors, warnings, info) |
+| `DebugConsolePanel` | `ide/DebugConsolePanel.jsx` | REPL-style debug console for expression evaluation |
+| `BottomPanel` | `BottomPanel.jsx` | VS Code-style bottom panel (Terminal, Output, Problems, Debug Console) |
+
+### Key Features
+
+- **Resizable file explorer:** Draggable divider between explorer and editor (180px min, 500px max, 250px default)
+- **Workspace-dashboard binding:** Each workspace is associated with a dashboard for Claude context
+- **Monaco integration:** Full syntax highlighting, breakpoint glyph margin, diagnostic decorations
+- **Debug sidebar:** Appears to the right of the editor during active debug sessions
+- **Claude chat integration:** Floating Claude panel available alongside the IDE via `ideChatOpen` state
+
+### CSS Files
+
+The IDE view uses 8 dedicated CSS files (see [styling.md](styling.md) for details):
+- `ide-layout.css` — Main layout, workspace tabs, dividers
+- `ide-editor.css` — Editor tabs, Monaco host, breakpoint glyphs, diagnostics
+- `ide-explorer.css` — File tree, welcome screen
+- `ide-sidebar.css` — Sidebar tab bar and dashboard items
+- `ide-debug.css` — Debug toolbar
+- `ide-debug-panels.css` — Variables, call stack, breakpoints, watch panels
+- `ide-debug-console.css` — Debug console REPL
+- `ide-problems.css` — Problems panel diagnostics display
+
+---
+
+## Git View
+
+**Component:** `GitManagerView` (`/src/ui/components/git/GitManagerView.jsx`)
+
+**Activated by:** `dispatch({ type: 'SET_VIEW', view: 'git' })` from the Sidebar's Git tab.
+
+A full Git management interface for repository operations. Mirrors the IDE layout structure with a resizable sidebar pattern.
+
+### Layout Structure
+
+```
++----------------------------------------------------+
+| RepoTabs (top bar — switch between repositories)    |
++---------------+------------------------------------+
+| Sidebar       | Content Area                       |
+| (resizable)   | (DiffViewer / HistoryPanel /       |
+|               |  BranchPanel)                      |
+| ChangesPanel  |                                    |
+| CommitPanel   |                                    |
+|               |                                    |
++---------------+------------------------------------+
+| QuickActions (bottom action strip)                  |
++----------------------------------------------------+
+```
+
+### Sub-Components
+
+| Component | File | Description |
+|---|---|---|
+| `RepoTabs` | `git/RepoTabs.jsx` | Top tab bar for switching between git repositories |
+| `GitWelcome` | `git/GitWelcome.jsx` | Welcome screen when no repository is open |
+| `InitFlow` | `git/InitFlow.jsx` | Git init flow for non-repo directories |
+| `ChangesPanel` | `git/ChangesPanel.jsx` | Staged/unstaged file change lists |
+| `CommitPanel` | `git/CommitPanel.jsx` | Commit message input and commit button |
+| `DiffViewer` | `git/DiffViewer.jsx` | Line-level diff display with green/red highlighting |
+| `HistoryPanel` | `git/HistoryPanel.jsx` | Commit log table with history browsing |
+| `BranchPanel` | `git/BranchPanel.jsx` | Branch list with merge/rebase controls |
+| `RemotePanel` | `git/RemotePanel.jsx` | Remote repository management |
+| `QuickActions` | `git/QuickActions.jsx` | Bottom toolbar with common git actions |
+| `SafetyDialogs` | `git/SafetyDialogs.jsx` | Confirmation dialogs for destructive operations |
+
+### Key Features
+
+- **Resizable sidebar:** Draggable divider (220px min, 500px max, 300px default)
+- **Content tabs:** Switches between `changes`, `history`, and `branches` views in the main content area
+- **Git repo detection:** Checks for `.git` directory on workspace load; shows `InitFlow` for non-repo paths
+- **Claude chat hidden:** The floating Claude panel is not visible when `activeView === 'git'`
+
+### CSS
+
+All Git Manager styling lives in a single file: `git-manager.css` (2,401 lines). All classes are prefixed with `.git-manager-*`. See [styling.md](styling.md) for full breakdown.

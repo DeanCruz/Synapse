@@ -130,7 +130,7 @@ Each dashboard can serve a different project. When a swarm starts, the resolved 
 | `d4e5f6` | `/Users/dean/repos/frontend-app` | Add dark mode |
 | `71894a` | `/Users/dean/repos/api-server` | Migrate to PostgreSQL |
 
-Commands like `!status`, `!logs`, and `!inspect` auto-detect the active dashboard regardless of which project it serves.
+Commands like `!status`, `!logs`, and `!inspect` use your assigned dashboard.
 
 ---
 

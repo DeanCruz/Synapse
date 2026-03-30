@@ -242,7 +242,7 @@ Live terminal output per worker process. See exactly what each agent is doing as
 
 ### Multi-Dashboard
 
-Up to 5 simultaneous swarms. Synapse auto-selects the first available slot and never overwrites an in-progress swarm. Switch between them from the sidebar.
+Multiple simultaneous swarms. Each chat is bound to its own dashboard — agents use their assigned dashboard exclusively and archive/clear it if it has previous data. Switch between dashboards from the sidebar.
 
 ### Git Manager
 
@@ -436,7 +436,7 @@ Synapse supports up to 5 simultaneous swarms on separate dashboards. Use this wh
 !p_track Build the reporting dashboard with charts and export functionality
 ```
 
-Each swarm gets its own dashboard slot. Switch between them from the sidebar. Synapse auto-selects the first available slot and never overwrites an in-progress swarm.
+Each chat is bound to its own dashboard. Switch between them from the sidebar. Agents always use their assigned dashboard — if it has previous data, the agent asks before archiving and reusing.
 
 ### Review Before You Approve
 

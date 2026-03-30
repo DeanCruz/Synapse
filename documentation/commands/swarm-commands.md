@@ -17,7 +17,7 @@ All swarm commands are located at `{tracker_root}/_commands/Synapse/`. They mana
 
 **Arguments:**
 - `{prompt}` -- Natural-language description of the work to be done
-- `--dashboard dashboardN` -- (Optional) Force a specific dashboard slot. If omitted, auto-selects the first available dashboard.
+- `--dashboard {id}` -- (Optional) Force a specific dashboard. Your system prompt contains a `DASHBOARD ID:` directive — use that dashboard unconditionally. No scanning or auto-selection.
 
 **Key Behavior:**
 - The invoking agent becomes the **master agent** and enters orchestrator mode
@@ -190,7 +190,7 @@ WORKER AGENTS (many per stream)
 
 **Syntax:**
 ```
-!add_task {prompt}                          -- Add tasks to the active swarm (auto-detect dashboard)
+!add_task {prompt}                          -- Add tasks to the active swarm (uses your assigned dashboard)
 !add_task --dashboard {id} {prompt}         -- Add tasks to a specific dashboard's swarm
 ```
 
@@ -213,7 +213,7 @@ WORKER AGENTS (many per stream)
 
 **Syntax:**
 ```
-!eager_dispatch                             -- Auto-detect the active dashboard
+!eager_dispatch                             -- Dispatch on your assigned dashboard
 !eager_dispatch --dashboard {id}            -- Target a specific dashboard
 ```
 
@@ -243,7 +243,7 @@ WORKER AGENTS (many per stream)
 
 **Syntax:**
 ```
-!export                                     -- Export active dashboard as markdown (auto-detect)
+!export                                     -- Export your assigned dashboard as markdown
 !export dashboard3                          -- Export a specific dashboard
 !export --format json                       -- Export as raw JSON
 !export --format markdown                   -- Export as formatted markdown (default)
@@ -265,7 +265,7 @@ WORKER AGENTS (many per stream)
 
 **Syntax:**
 ```
-!p_track_resume                             -- Auto-detect the dashboard to resume
+!p_track_resume                             -- Resume your assigned dashboard
 !p_track_resume --dashboard {id}            -- Resume a specific dashboard
 ```
 
@@ -479,7 +479,7 @@ WORKER AGENTS (many per stream)
 
 **Syntax:**
 ```
-!reset [dashboardId]        -- Reset a specific or auto-detected dashboard
+!reset [dashboardId]        -- Reset a specific or your assigned dashboard
 !reset --all                -- Reset all 5 dashboards
 ```
 

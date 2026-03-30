@@ -75,8 +75,8 @@ Each of the 5 dashboard slots can serve a different project simultaneously. The 
 When working across multiple projects:
 - Use `!project set` to switch the active project, or pass `--project` to individual commands
 - Each swarm's dashboard shows which project it's targeting
-- Commands like `!status` and `!logs` auto-detect the active dashboard regardless of which project it serves
-- Workers always receive explicit `{project_root}` in their prompts — they never need to auto-detect
+- Commands like `!status` and `!logs` use the agent's assigned dashboard
+- Workers always receive explicit `{project_root}` in their prompts
 
 ---
 

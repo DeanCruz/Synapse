@@ -3,7 +3,7 @@
 **Purpose:** Display log entries from the dashboard's event log in the terminal. Supports filtering by level, task ID, or agent.
 
 **Syntax:**
-- `!logs` — Show all log entries (auto-detect dashboard)
+- `!logs` — Show all log entries (uses your assigned dashboard)
 - `!logs dashboard2` — Show logs for a specific dashboard
 - `!logs --level error` — Show only error entries
 - `!logs --level warn` — Show only warn entries

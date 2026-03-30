@@ -3,10 +3,10 @@
 **Purpose:** Run a standalone eager dispatch round on an active swarm. Reads current dashboard state, identifies all tasks whose dependencies are satisfied but haven't been dispatched, builds complete worker prompts, and dispatches them all immediately.
 
 **Syntax:**
-- `!eager_dispatch` — Auto-detect the active dashboard and dispatch all ready tasks
+- `!eager_dispatch` — Dispatch all ready tasks on your assigned dashboard
 - `!eager_dispatch --dashboard {id}` — Target a specific dashboard
 
-> **Dashboard resolution:** Auto-selects the first dashboard with an active/stalled swarm (excluding `ide`). Override with `--dashboard {id}`.
+> **Dashboard resolution:** Use your assigned dashboard from the `DASHBOARD ID:` directive in your system prompt. Override with `--dashboard {id}`. Never scan for dashboards.
 
 ---
 

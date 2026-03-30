@@ -3,7 +3,7 @@
 **Purpose:** Generate a visual progress report of the current swarm — showing all completed tasks, their summaries, milestones, and deviations. Highlights the most recently completed task.
 
 **Syntax:**
-- `!update_dashboard` — Auto-detect the active dashboard
+- `!update_dashboard` — Update your assigned dashboard
 - `!update_dashboard dashboard1` — Show report for a specific dashboard
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.

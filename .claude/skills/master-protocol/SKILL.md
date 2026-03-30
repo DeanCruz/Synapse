@@ -120,11 +120,9 @@ Written once after all tasks complete. Schema: `swarm_name`, `computed_at`, `ela
 
 ## Dashboard Selection Priority
 
-1. **Pre-assigned dashboard** (from system prompt `DASHBOARD ID:`) -- ALWAYS authoritative. Use unconditionally.
-2. **Explicit `--dashboard` flag** -- bypasses auto-selection.
-3. **Auto-selection** -- scan non-`ide` dashboards. First empty one wins. If all occupied, show table and ask user.
-
-The `ide` dashboard is permanently reserved. Never claim it for swarms.
+1. **Assigned dashboard** (from system prompt `DASHBOARD ID:`) -- NON-NEGOTIABLE. Use unconditionally. **You have NO access to any other dashboard.** If it has previous data, **ask the user** if they want to archive it and set up the new dashboard -- do not proceed without approval.
+2. **Explicit `--dashboard` flag** -- forces a specific dashboard.
+3. **No dashboard?** Ask the user. Never scan or select one yourself.
 
 ---
 

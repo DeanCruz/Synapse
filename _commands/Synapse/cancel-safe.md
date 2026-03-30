@@ -3,7 +3,7 @@
 **Purpose:** Graceful shutdown of the active swarm. Stops dispatching new tasks but lets all in-progress agents finish their work naturally. Pending tasks are marked as cancelled. This is the preferred alternative to `!cancel` when you want to preserve work from running agents.
 
 **Syntax:**
-- `!cancel-safe` — Graceful shutdown of the auto-detected active swarm
+- `!cancel-safe` — Graceful shutdown of the swarm on your assigned dashboard
 - `!cancel-safe dashboard3` — Graceful shutdown of a specific dashboard's swarm
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.

@@ -175,6 +175,18 @@ function spawnWorker(opts) {
     var errText = chunk.toString();
     console.log('[ClaudeCodeService] stderr from PID', proc.pid, ':', errText.substring(0, 200));
     worker.errorOutput += errText;
+
+    // Forward stderr as status updates so the UI can show tool execution activity
+    if (broadcastFn) {
+      broadcastFn('worker-output', {
+        pid: proc.pid,
+        provider: 'claude',
+        taskId: opts.taskId,
+        dashboardId: opts.dashboardId,
+        chunk: errText,
+        isStderr: true,
+      });
+    }
   });
 
   proc.on('close', function (code) {
