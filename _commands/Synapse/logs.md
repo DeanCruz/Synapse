@@ -3,7 +3,8 @@
 **Purpose:** Display log entries from the dashboard's event log in the terminal. Supports filtering by level, task ID, or agent.
 
 **Syntax:**
-- `!logs` — Show all log entries (uses your assigned dashboard)
+- `!logs` — Show all log entries (auto-detect dashboard)
+- `!logs a3f7k2` — Show logs for a specific hex dashboard
 - `!logs dashboard2` — Show logs for a specific dashboard
 - `!logs --level error` — Show only error entries
 - `!logs --level warn` — Show only warn entries
@@ -20,7 +21,7 @@ Filters can be combined: `!logs --level error --last 10`
 
 ## Steps
 
-1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (see `dashboard_resolution.md`), use it as `{dashboardId}`. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
+1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (any non-flag string that is not a task ID, including 6-char hex IDs like `a3f7k2`, `ide`, and legacy `dashboardN`), use it. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
 
 2. **Read `{tracker_root}/dashboards/{dashboardId}/logs.json`.** Parse the `entries` array.
 

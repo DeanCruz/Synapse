@@ -3,7 +3,8 @@
 **Purpose:** Re-dispatch a failed or blocked task. Deletes the old progress file and launches a fresh agent.
 
 **Syntax:**
-- `!retry 2.3` — Retry a task (uses your assigned dashboard)
+- `!retry 2.3` — Retry a task (auto-detect dashboard)
+- `!retry a3f7k2 2.3` — Retry a task on a specific hex dashboard
 - `!retry dashboard1 2.3` — Retry a task on a specific dashboard
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.
@@ -12,7 +13,7 @@
 
 ## Steps
 
-1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (see `dashboard_resolution.md`), use it as `{dashboardId}`. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
+1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (any non-flag string that is not a task ID, including 6-char hex IDs like `a3f7k2`, `ide`, and legacy `dashboardN`), use it. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
 
 2. **Read `{tracker_root}/dashboards/{dashboardId}/initialization.json`.** Find the agent entry matching `{task_id}`.
 

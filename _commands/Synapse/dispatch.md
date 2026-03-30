@@ -3,9 +3,11 @@
 **Purpose:** Manually dispatch a specific pending task or all tasks whose dependencies are satisfied.
 
 **Syntax:**
-- `!dispatch 2.3` — Dispatch a specific task (uses your assigned dashboard)
+- `!dispatch 2.3` — Dispatch a specific task (auto-detect dashboard)
+- `!dispatch a3f7k2 2.3` — Dispatch a specific task on a specific hex dashboard
 - `!dispatch dashboard2 2.3` — Dispatch a specific task on a specific dashboard
 - `!dispatch --ready` — Dispatch all tasks whose dependencies are met
+- `!dispatch a3f7k2 --ready` — Same, on a specific hex dashboard
 - `!dispatch dashboard1 --ready` — Same, on a specific dashboard
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.
@@ -16,7 +18,7 @@
 
 ### Steps
 
-1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (see `dashboard_resolution.md`), use it as `{dashboardId}`. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
+1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (any non-flag string that is not a task ID, including 6-char hex IDs like `a3f7k2`, `ide`, and legacy `dashboardN`), use it. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
 
 2. **Read `{tracker_root}/dashboards/{dashboardId}/initialization.json`.** Find the agent entry matching `{task_id}`.
 

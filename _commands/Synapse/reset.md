@@ -15,7 +15,7 @@
 
 ### Single Dashboard Reset
 
-1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (see `dashboard_resolution.md`), use it as `{dashboardId}`. If `--all` is specified, see the "Reset All" section below. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
+1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (any non-flag string that is not a task ID, including 6-char hex IDs like `a3f7k2`, `ide`, and legacy `dashboardN`), use it. If `--all` is specified, see the "Reset All" section below. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
 
 2. **Read `{tracker_root}/dashboards/{dashboardId}/initialization.json`.** If `task` is `null`, report: "Dashboard {dashboardId} is already empty." and stop.
 
@@ -62,7 +62,7 @@
 
 ### Reset All (`--all`)
 
-1. For each dashboard returned by `listDashboards()` (excluding `ide`):
+1. For each dashboard returned by `listDashboards()`:
    - If `initialization.json` has `task: null`, skip (already empty).
    - Otherwise, archive, save history summary, and clear (same as steps 3-5 above).
 

@@ -126,7 +126,7 @@ For each independent stream, define:
 | **Affected directories** | Which repos/directories this stream touches |
 | **Estimated tasks** | Rough estimate of how many worker tasks the stream will decompose into |
 | **Cross-stream dependencies** | Other stream IDs that must complete before this stream can be dispatched. Empty if independent. |
-| **Slot assignment** | Available dashboard hex IDs for the first N available slots, `queue1`, `queue2`, etc. for overflow |
+| **Slot assignment** | Use the pre-assigned dashboard first, then any additional available dashboard IDs returned by `listDashboards()`, then `queue1`, `queue2`, etc. for overflow |
 
 ### Step 7: Resolve dashboard and queue slots
 
@@ -136,7 +136,7 @@ Follow the slot management protocol from `tracker_multi_plan_instructions.md`:
 
 **Pre-assigned dashboard (from chat context).** If your system prompt contains a `DASHBOARD ID:` directive, you are running inside a chat view bound to that specific dashboard. Your pre-assigned dashboard is **always claimed first** for Stream 1 (S1) — do not scan or auto-select a different dashboard for it. This is how the user sees your primary swarm in the correct panel.
 
-**Scan remaining dashboards** for additional streams. Scan all dashboards in order (excluding `ide` and your pre-assigned dashboard):
+**Scan remaining dashboards** for additional streams. Scan the dashboards returned by `listDashboards()` (skipping your pre-assigned dashboard) using the standard `selectDashboard()` algorithm from `{tracker_root}/agent/instructions/dashboard_resolution.md`. Remaining slots may be 6-char hex IDs, legacy `dashboardN`, or other future-compatible IDs:
 - `task: null` → **available**
 - `task` not null but all progress files terminal → **finished, available after history save**
 - `task` not null with active agents → **in use, skip**
@@ -186,8 +186,8 @@ Before dispatching planner agents, present the stream breakdown:
 
 | # | Stream | Scope | Directories | Est. Tasks | Slot | Dependencies |
 |---|---|---|---|---|---|---|
-| S1 | {slug} | {brief scope} | {dirs} | ~{N} | dashboard1 | — |
-| S2 | {slug} | {brief scope} | {dirs} | ~{N} | dashboard2 | — |
+| S1 | {slug} | {brief scope} | {dirs} | ~{N} | {dashboardId} | — |
+| S2 | {slug} | {brief scope} | {dirs} | ~{N} | {dashboardId} | — |
 | S3 | {slug} | {brief scope} | {dirs} | ~{N} | queue1 | After S1 |
 
 **Architecture:** Each stream gets its own child master agent that owns a dashboard and manages its own worker swarm.
@@ -427,8 +427,8 @@ Once all planner agents have returned, present a consolidated view:
 ### Stream Summary
 | # | Stream | Tasks | Waves | Type | Slot | Critical Path | Status |
 |---|---|---|---|---|---|---|---|
-| S1 | {slug} | {N} | {W} | {type} | dashboard1 | {path} | Ready |
-| S2 | {slug} | {N} | {W} | {type} | dashboard2 | {path} | Ready |
+| S1 | {slug} | {N} | {W} | {type} | {dashboardId} | {path} | Ready |
+| S2 | {slug} | {N} | {W} | {type} | {dashboardId} | {path} | Ready |
 | S3 | {slug} | {N} | {W} | {type} | queue1 | {path} | Queued |
 
 ### Cross-Stream Dependencies
@@ -439,8 +439,8 @@ Once all planner agents have returned, present a consolidated view:
 ### Artifacts
 | Stream | Plan | Task File | Dashboard/Queue |
 |---|---|---|---|
-| S1 | `tasks/{date}/parallel_plan_{slug}.md` | `tasks/{date}/parallel_{slug}.json` | `dashboards/dashboard1/` |
-| S2 | `tasks/{date}/parallel_plan_{slug}.md` | `tasks/{date}/parallel_{slug}.json` | `dashboards/dashboard2/` |
+| S1 | `tasks/{date}/parallel_plan_{slug}.md` | `tasks/{date}/parallel_{slug}.json` | `dashboards/{dashboardId}/` |
+| S2 | `tasks/{date}/parallel_plan_{slug}.md` | `tasks/{date}/parallel_{slug}.json` | `dashboards/{dashboardId}/` |
 
 ### Execution Architecture
 Each approved stream will be handed to an autonomous **child master agent** that:
@@ -530,8 +530,8 @@ When all streams across all dashboards and queues are complete:
 ### Stream Results
 | # | Stream | Slot | Tasks | Result | Duration |
 |---|---|---|---|---|---|
-| S1 | {slug} | dashboard1 | {completed}/{total} | Success | {duration} |
-| S2 | {slug} | dashboard2 | {completed}/{total} | Success | {duration} |
+| S1 | {slug} | {dashboardId} | {completed}/{total} | Success | {duration} |
+| S2 | {slug} | {dashboardId} | {completed}/{total} | Success | {duration} |
 
 ### What Was Done
 {3-5 sentences summarizing the full body of work accomplished across all streams}

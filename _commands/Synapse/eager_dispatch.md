@@ -6,7 +6,7 @@
 - `!eager_dispatch` — Dispatch all ready tasks on your assigned dashboard
 - `!eager_dispatch --dashboard {id}` — Target a specific dashboard
 
-> **Dashboard resolution:** Use your assigned dashboard from the `DASHBOARD ID:` directive in your system prompt. Override with `--dashboard {id}`. Never scan for dashboards.
+> **Dashboard resolution:** Use the standard resolution chain from `dashboard_resolution.md`: pre-assigned chat dashboard first, then explicit `--dashboard {id}` (hex IDs and legacy `dashboardN` both valid), then auto-detect the active/stalled swarm if neither is present.
 
 ---
 
