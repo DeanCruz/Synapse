@@ -583,12 +583,24 @@ function registerIPCHandlers(getMainWindow) {
   ipcMain.handle('set-setting', async (_event, key, value) => {
     const settings = require('./settings');
     settings.set(key, value);
+    broadcastFn('settings-changed', {
+      key,
+      value,
+      settings: settings.getAll(),
+    });
     return { success: true };
   });
 
   ipcMain.handle('reset-settings', async () => {
     const settings = require('./settings');
-    return settings.reset();
+    const result = settings.reset();
+    broadcastFn('settings-changed', {
+      key: null,
+      value: null,
+      settings: settings.getAll(),
+      reset: true,
+    });
+    return result;
   });
 
   // --- Additional context persistence handlers ---
@@ -2668,6 +2680,52 @@ function registerIPCHandlers(getMainWindow) {
       return { success: true, data: commits };
     } catch (err) {
       return { success: false, error: err.message };
+    }
+  });
+
+  // --- Preview handlers — wired to PreviewService ---
+
+  const PreviewService = require('./services/PreviewService');
+  const { updateText: previewUpdateText, detectDevServer: previewDetectDevServer } = require('./services/PreviewTextWriter');
+  PreviewService.init(broadcastFn);
+
+  ipcMain.handle('preview-scan-labels', async (_event, projectPath) => {
+    try {
+      const map = PreviewService.scanLabels(projectPath);
+      if (map && map.error) {
+        return { error: map.error };
+      }
+      return { labels: Object.keys(map), count: Object.keys(map).length };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
+
+  ipcMain.handle('preview-update-text', async (_event, projectPath, label, newText, routePath) => {
+    try {
+      return await previewUpdateText(projectPath, label, newText, routePath || '');
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  ipcMain.handle('preview-get-label-map', async (_event, projectPath) => {
+    try {
+      const map = PreviewService.getLabelMap(projectPath);
+      if (map && map.error) {
+        return { error: map.error };
+      }
+      return { map: map };
+    } catch (err) {
+      return { error: err.message };
+    }
+  });
+
+  ipcMain.handle('preview-detect-dev-server', async (_event, projectPath) => {
+    try {
+      return await previewDetectDevServer(projectPath);
+    } catch (err) {
+      return { detected: false, url: null, framework: null };
     }
   });
 

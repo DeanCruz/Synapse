@@ -144,7 +144,7 @@ const initialState = {
   activeStatFilter: null,
   seenPermissionCount: 0,
   pendingPermission: null, // { pid, toolName, toolInput, requestId, toolUseId, timestamp } — active permission request from a worker
-  activeView: 'dashboard', // 'dashboard' | 'home' | 'swarmBuilder' | 'claude' | 'ide' | 'git'
+  activeView: 'dashboard', // 'dashboard' | 'home' | 'swarmBuilder' | 'claude' | 'ide' | 'git' | 'preview'
   activeModal: null, // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor'
   modalDashboardId: null, // which dashboard a modal was opened for
   claudeDashboardId: null, // which dashboard the Claude view is associated with
@@ -205,6 +205,13 @@ const initialState = {
   gitLoading: false, // boolean — global loading indicator
   gitError: null, // string | null — last error message
   gitSelectedFile: null, // string | null — currently selected file path for diff view
+  // Preview state — live preview editor with label-based source mapping
+  previewUrl: '',                    // Current preview URL
+  previewIsLoading: false,           // Whether the webview is loading
+  previewError: null,                // Error message if page failed to load
+  previewEditHistory: [],            // Array of { label, oldText, newText, timestamp }
+  previewLabelMap: {},               // { label: { file, line, text } } — cached label-to-source mapping
+  previewInstrumentedProject: null,  // Path of the last instrumented project
 };
 
 function appReducerCore(state, action) {
@@ -942,6 +949,32 @@ function appReducerCore(state, action) {
       delete newDiagnostics[action.filePath];
       return { ...state, diagnostics: newDiagnostics };
     }
+    // --- Preview state management ---
+    case 'PREVIEW_SET_URL':
+      return { ...state, previewUrl: action.url };
+    case 'PREVIEW_SET_LOADING':
+      return { ...state, previewIsLoading: action.value };
+    case 'PREVIEW_SET_ERROR':
+      return { ...state, previewError: action.error };
+    case 'PREVIEW_ADD_EDIT': {
+      const updatedHistory = [...state.previewEditHistory, action.edit];
+      // Cap at 100 entries — drop oldest
+      return { ...state, previewEditHistory: updatedHistory.length > 100 ? updatedHistory.slice(-100) : updatedHistory };
+    }
+    case 'PREVIEW_SET_LABEL_MAP':
+      return { ...state, previewLabelMap: action.map };
+    case 'PREVIEW_SET_INSTRUMENTED':
+      return { ...state, previewInstrumentedProject: action.path };
+    case 'PREVIEW_CLEAR':
+      return {
+        ...state,
+        previewUrl: '',
+        previewIsLoading: false,
+        previewError: null,
+        previewEditHistory: [],
+        previewLabelMap: {},
+        previewInstrumentedProject: null,
+      };
     default:
       return state;
   }
