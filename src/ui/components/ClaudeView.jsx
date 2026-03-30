@@ -415,7 +415,8 @@ function ToolInputFormatted({ name, input, onOpenFile }) {
 
 // Single collapsible tool call block
 function ToolCallBlock({ block, onOpenFile }) {
-  const [expanded, setExpanded] = useState(false);
+  const isCodeChange = block.name === 'Edit' || block.name === 'Write';
+  const [expanded, setExpanded] = useState(isCodeChange);
   const summary = toolInputSummary(block.name, block.input);
   const hasResult = block._result !== undefined && block._result !== null;
 

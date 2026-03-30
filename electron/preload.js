@@ -180,6 +180,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ideCheckSyntax: (filePath, workspaceRoot) => ipcRenderer.invoke('ide-check-syntax', filePath, workspaceRoot),
   ideCheckSyntaxBatch: (filePaths, workspaceRoot) => ipcRenderer.invoke('ide-check-syntax-batch', filePaths, workspaceRoot),
 
+  // IDE Search
+  ideSearch: (workspacePath, query, options) => ipcRenderer.invoke('ide-search', workspacePath, query, options),
+  ideSearchReplace: (workspacePath, replacements) => ipcRenderer.invoke('ide-search-replace', workspacePath, replacements),
+  ideSearchCheckRg: () => ipcRenderer.invoke('ide-search-check-rg'),
+
   // Debug Service
   debugLaunch: (opts) => ipcRenderer.invoke('debug-launch', opts),
   debugStop: () => ipcRenderer.invoke('debug-stop'),

@@ -7,6 +7,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppState, useDispatch } from '../../context/AppContext.jsx';
 import WorkspaceTabs from './WorkspaceTabs.jsx';
 import FileExplorer from './FileExplorer.jsx';
+import SearchPanel from './SearchPanel.jsx';
 import EditorTabs from './EditorTabs.jsx';
 import CodeEditor from './CodeEditor.jsx';
 import IDEWelcome from './IDEWelcome.jsx';
@@ -230,6 +231,22 @@ export default function IDEView() {
     };
   }, [dispatch]);
 
+  // ---- Cmd+Shift+F → open search panel ----
+  useEffect(() => {
+    function handleSearchShortcut(e) {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        dispatch({ type: 'SET', key: 'ideSidebarView', value: 'search' });
+        setTimeout(() => {
+          var input = document.querySelector('.ide-search-input');
+          if (input) input.focus();
+        }, 50);
+      }
+    }
+    window.addEventListener('keydown', handleSearchShortcut);
+    return () => window.removeEventListener('keydown', handleSearchShortcut);
+  }, [dispatch]);
+
   // Draggable divider handlers
   const handleDividerMouseDown = useCallback((e) => {
     e.preventDefault();
@@ -296,12 +313,12 @@ export default function IDEView() {
     <div className="ide-view">
       <WorkspaceTabs />
       <div className="ide-main">
-        {/* File Explorer Panel */}
+        {/* File Explorer / Search Panel */}
         <div
           className="ide-explorer-panel"
           style={{ width: explorerWidth }}
         >
-          <FileExplorer />
+          {state.ideSidebarView === 'search' ? <SearchPanel /> : <FileExplorer />}
         </div>
 
         {/* Draggable Divider */}

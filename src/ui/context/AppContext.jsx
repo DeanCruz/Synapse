@@ -175,6 +175,15 @@ const initialState = {
   ideFileTrees: {}, // { [workspaceId]: treeData }
   ideSidebarView: 'explorer', // which sidebar panel is shown in IDE
   ideChatOpen: false, // whether IDE inline chat is open
+  // Search state
+  ideSearchQuery: '',
+  ideSearchOptions: { regex: false, caseSensitive: false, wholeWord: false, includeGlob: '', excludeGlob: '' },
+  ideSearchResults: null, // null = no search yet, [] = no results, [...] = results
+  ideSearchLoading: false,
+  ideSearchTotalMatches: 0,
+  ideSearchTruncated: false,
+  ideSearchReplaceMode: false,
+  ideSearchReplaceText: '',
   // Debug state — breakpoints, session, call stack, variables, scopes, watch expressions
   debugBreakpoints: {}, // { [filePath]: [lineNumber, ...] }
   debugSession: { status: 'idle', pausedFile: null, pausedLine: null, threadId: null }, // debug session state
@@ -728,6 +737,34 @@ function appReducerCore(state, action) {
       return { ...state, ideChatOpen: true, claudeViewMode: 'expanded', claudeEverOpened: true };
     case 'IDE_CLOSE_CHAT':
       return { ...state, ideChatOpen: false };
+    // --- IDE Search state ---
+    case 'IDE_SET_SEARCH_QUERY':
+      return { ...state, ideSearchQuery: action.query };
+    case 'IDE_SET_SEARCH_OPTIONS':
+      return { ...state, ideSearchOptions: { ...state.ideSearchOptions, ...action.options } };
+    case 'IDE_SET_SEARCH_RESULTS':
+      return {
+        ...state,
+        ideSearchResults: action.results,
+        ideSearchTotalMatches: action.totalMatches || 0,
+        ideSearchTruncated: action.truncated || false,
+        ideSearchLoading: false,
+      };
+    case 'IDE_SET_SEARCH_LOADING':
+      return { ...state, ideSearchLoading: action.value };
+    case 'IDE_CLEAR_SEARCH':
+      return {
+        ...state,
+        ideSearchQuery: '',
+        ideSearchResults: null,
+        ideSearchLoading: false,
+        ideSearchTotalMatches: 0,
+        ideSearchTruncated: false,
+      };
+    case 'IDE_SET_SEARCH_REPLACE_MODE':
+      return { ...state, ideSearchReplaceMode: action.value };
+    case 'IDE_SET_SEARCH_REPLACE_TEXT':
+      return { ...state, ideSearchReplaceText: action.text };
     // --- Git Manager state management ---
     case 'GIT_OPEN_REPO': {
       const repoId = action.id || String(Date.now());

@@ -1639,6 +1639,304 @@ function registerIPCHandlers(getMainWindow) {
 
 
   // ---------------------------------------------------------------------------
+  // IDE Search — ripgrep-powered workspace search with Node.js fallback
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Execute ripgrep with given args. Returns { success, data } or { success: false, error }.
+   * Exit code 1 = no matches (not an error).
+   */
+  function rgExec(args, cwd, opts = {}) {
+    return new Promise((resolve) => {
+      const options = {
+        cwd,
+        maxBuffer: opts.maxBuffer || 20 * 1024 * 1024,
+        timeout: opts.timeout || 60000,
+      };
+      execFile('rg', args, options, (error, stdout, stderr) => {
+        if (error && error.code === 1) {
+          resolve({ success: true, data: '' });
+        } else if (error) {
+          resolve({ success: false, error: stderr || error.message });
+        } else {
+          resolve({ success: true, data: stdout });
+        }
+      });
+    });
+  }
+
+  /**
+   * Build ripgrep CLI args from search query and options.
+   */
+  function buildRgArgs(query, options) {
+    const args = ['--json', '--max-filesize', '1M', '--max-count', '500'];
+
+    for (const pattern of IDE_DEFAULT_IGNORE) {
+      args.push('--glob', '!' + pattern);
+    }
+    // Also skip hidden files/dirs
+    args.push('--glob', '!.*');
+
+    if (!options.caseSensitive) args.push('-i');
+    if (options.wholeWord) args.push('-w');
+    if (options.regex) {
+      args.push('-e', query);
+    } else {
+      args.push('-F', '--', query);
+    }
+
+    if (options.includeGlob) {
+      options.includeGlob.split(',').map(function(g) { return g.trim(); }).filter(Boolean).forEach(function(g) {
+        args.push('--glob', g);
+      });
+    }
+    if (options.excludeGlob) {
+      options.excludeGlob.split(',').map(function(g) { return g.trim(); }).filter(Boolean).forEach(function(g) {
+        args.push('--glob', '!' + g);
+      });
+    }
+
+    return args;
+  }
+
+  /**
+   * Parse ripgrep --json output into structured results.
+   */
+  function parseRgOutput(output, workspacePath, maxResults) {
+    var results = {};
+    var totalMatches = 0;
+    var truncated = false;
+
+    var lines = output.split('\n').filter(Boolean);
+    for (var i = 0; i < lines.length; i++) {
+      var parsed;
+      try { parsed = JSON.parse(lines[i]); } catch (e) { continue; }
+
+      if (parsed.type === 'match') {
+        if (totalMatches >= maxResults) { truncated = true; break; }
+
+        var filePath = parsed.data.path.text;
+        var relativePath = path.relative(workspacePath, filePath);
+
+        if (!results[filePath]) {
+          results[filePath] = { file: filePath, relativePath: relativePath, matches: [] };
+        }
+
+        var submatches = parsed.data.submatches || [];
+        for (var j = 0; j < submatches.length; j++) {
+          totalMatches++;
+          if (totalMatches > maxResults) { truncated = true; break; }
+          results[filePath].matches.push({
+            line: parsed.data.line_number,
+            column: submatches[j].start + 1,
+            lineContent: (parsed.data.lines.text || '').replace(/\n$/, ''),
+            matchStart: submatches[j].start,
+            matchLength: submatches[j].end - submatches[j].start,
+          });
+        }
+      }
+    }
+
+    return {
+      results: Object.values(results),
+      totalMatches: totalMatches,
+      truncated: truncated,
+    };
+  }
+
+  /**
+   * Node.js fallback search — recursive walk + line-by-line regex matching.
+   * Used when ripgrep is not installed.
+   */
+  async function nodeSearch(workspacePath, query, options, maxResults) {
+    var results = {};
+    var totalMatches = 0;
+    var truncated = false;
+
+    // Build matcher
+    var pattern;
+    if (options.regex) {
+      var flags = options.caseSensitive ? 'g' : 'gi';
+      try { pattern = new RegExp(query, flags); } catch (e) {
+        return { results: [], totalMatches: 0, truncated: false, error: 'Invalid regex: ' + e.message };
+      }
+    } else {
+      var escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      var wrapped = options.wholeWord ? '\\b' + escaped + '\\b' : escaped;
+      var regFlags = options.caseSensitive ? 'g' : 'gi';
+      pattern = new RegExp(wrapped, regFlags);
+    }
+
+    // Simple glob matcher for include/exclude
+    function matchesGlob(fileName, globStr) {
+      if (!globStr) return true;
+      var globs = globStr.split(',').map(function(g) { return g.trim(); }).filter(Boolean);
+      if (globs.length === 0) return true;
+      return globs.some(function(g) {
+        // Simple wildcard: *.ext or **/*.ext
+        var re = g.replace(/\./g, '\\.').replace(/\*\*/g, '§').replace(/\*/g, '[^/]*').replace(/§/g, '.*');
+        return new RegExp('^' + re + '$').test(fileName);
+      });
+    }
+
+    async function walk(dirPath) {
+      if (truncated) return;
+      var entries;
+      try { entries = await fsPromises.readdir(dirPath); } catch (e) { return; }
+
+      for (var i = 0; i < entries.length; i++) {
+        if (truncated) return;
+        var name = entries[i];
+        if (IDE_DEFAULT_IGNORE.includes(name)) continue;
+        if (name.startsWith('.')) continue;
+        var fullPath = path.join(dirPath, name);
+        var stat;
+        try { stat = await fsPromises.lstat(fullPath); } catch (e) { continue; }
+        if (stat.isSymbolicLink()) continue;
+
+        if (stat.isDirectory()) {
+          await walk(fullPath);
+        } else if (stat.isFile() && stat.size < 1048576) {
+          // Check include/exclude
+          if (options.includeGlob && !matchesGlob(name, options.includeGlob)) continue;
+          if (options.excludeGlob && matchesGlob(name, options.excludeGlob)) continue;
+
+          var content;
+          try { content = await fsPromises.readFile(fullPath, 'utf-8'); } catch (e) { continue; }
+
+          // Skip binary files
+          if (content.indexOf('\0') !== -1) continue;
+
+          var fileLines = content.split('\n');
+          for (var li = 0; li < fileLines.length; li++) {
+            var line = fileLines[li];
+            pattern.lastIndex = 0;
+            var match;
+            while ((match = pattern.exec(line)) !== null) {
+              if (totalMatches >= maxResults) { truncated = true; return; }
+              totalMatches++;
+              var relativePath = path.relative(workspacePath, fullPath);
+              if (!results[fullPath]) {
+                results[fullPath] = { file: fullPath, relativePath: relativePath, matches: [] };
+              }
+              results[fullPath].matches.push({
+                line: li + 1,
+                column: match.index + 1,
+                lineContent: line,
+                matchStart: match.index,
+                matchLength: match[0].length,
+              });
+              // Prevent infinite loops on zero-length matches
+              if (match[0].length === 0) { pattern.lastIndex++; }
+            }
+          }
+        }
+      }
+    }
+
+    await walk(workspacePath);
+    return { results: Object.values(results), totalMatches: totalMatches, truncated: truncated };
+  }
+
+  // --- ide-search-check-rg: Detect ripgrep availability ---
+  ipcMain.handle('ide-search-check-rg', async () => {
+    try {
+      return await new Promise((resolve) => {
+        execFile('rg', ['--version'], { timeout: 5000 }, (error, stdout) => {
+          if (error) {
+            resolve({ available: false });
+          } else {
+            resolve({ available: true, version: (stdout || '').trim().split('\n')[0] });
+          }
+        });
+      });
+    } catch (err) {
+      return { available: false };
+    }
+  });
+
+  // --- ide-search: Search workspace files ---
+  ipcMain.handle('ide-search', async (_event, workspacePath, query, options) => {
+    try {
+      if (!workspacePath || !query) {
+        return { success: true, results: [], totalMatches: 0, truncated: false };
+      }
+
+      var resolvedPath = path.resolve(workspacePath);
+      var opts = options || {};
+      var maxResults = opts.maxResults || 5000;
+
+      // Try ripgrep first
+      var rgArgs = buildRgArgs(query, opts);
+      var rgResult = await rgExec(rgArgs, resolvedPath);
+
+      if (rgResult.success) {
+        var parsed = parseRgOutput(rgResult.data, resolvedPath, maxResults);
+        return { success: true, results: parsed.results, totalMatches: parsed.totalMatches, truncated: parsed.truncated };
+      }
+
+      // If rg not found, fall back to Node.js search
+      if (rgResult.error && (rgResult.error.includes('ENOENT') || rgResult.error.includes('not found') || rgResult.error.includes('No such file'))) {
+        var nodeResult = await nodeSearch(resolvedPath, query, opts, maxResults);
+        if (nodeResult.error) {
+          return { success: false, error: nodeResult.error };
+        }
+        return { success: true, results: nodeResult.results, totalMatches: nodeResult.totalMatches, truncated: nodeResult.truncated };
+      }
+
+      return { success: false, error: rgResult.error };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- ide-search-replace: Replace matches in files ---
+  ipcMain.handle('ide-search-replace', async (_event, workspacePath, replacements) => {
+    try {
+      if (!Array.isArray(replacements) || replacements.length === 0) {
+        return { success: true, filesModified: 0, replacementsMade: 0 };
+      }
+
+      var filesModified = 0;
+      var replacementsMade = 0;
+
+      for (var i = 0; i < replacements.length; i++) {
+        var r = replacements[i];
+        if (!r.file || !r.matches || r.matches.length === 0) continue;
+
+        if (workspacePath) ideValidatePath(r.file, workspacePath);
+
+        var content = await fsPromises.readFile(r.file, 'utf-8');
+        var lines = content.split('\n');
+
+        // Sort matches in reverse order (bottom-up) to preserve positions
+        var sortedMatches = r.matches.slice().sort(function(a, b) {
+          if (b.line !== a.line) return b.line - a.line;
+          return b.column - a.column;
+        });
+
+        for (var j = 0; j < sortedMatches.length; j++) {
+          var m = sortedMatches[j];
+          var lineIdx = m.line - 1;
+          if (lineIdx < 0 || lineIdx >= lines.length) continue;
+          var lineStr = lines[lineIdx];
+          var colIdx = m.matchStart != null ? m.matchStart : (m.column - 1);
+          lines[lineIdx] = lineStr.substring(0, colIdx) + r.replacement + lineStr.substring(colIdx + m.matchLength);
+          replacementsMade++;
+        }
+
+        await fsPromises.writeFile(r.file, lines.join('\n'), 'utf-8');
+        filesModified++;
+      }
+
+      return { success: true, filesModified: filesModified, replacementsMade: replacementsMade };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+
+  // ---------------------------------------------------------------------------
   // Debug Service — Node.js debugging via Chrome DevTools Protocol
   // ---------------------------------------------------------------------------
 

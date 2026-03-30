@@ -128,6 +128,15 @@ function getFileIcon(name) {
 
 // ── Refresh Icon ─────────────────────────────────────────────
 
+function SearchIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="7" cy="7" r="4" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M10 10l3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function RefreshIcon() {
   return (
     <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -415,6 +424,13 @@ export default function FileExplorer() {
           {workspace.name}
         </span>
         <div className="ide-explorer-actions">
+          <button
+            className="ide-explorer-action-btn"
+            onClick={() => dispatch({ type: 'SET', key: 'ideSidebarView', value: 'search' })}
+            title="Search in files (⌘⇧F)"
+          >
+            <SearchIcon />
+          </button>
           <button
             className="ide-explorer-action-btn"
             onClick={handleRefresh}
