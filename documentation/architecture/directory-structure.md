@@ -369,7 +369,7 @@ agent/instructions/
 | `tracker_master_instructions.md` | Maps every field in `initialization.json` to the UI panel it drives. The master agent must read this before writing any dashboard files to ensure the plan renders correctly. |
 | `tracker_worker_instructions.md` | Complete reference for worker progress reporting. Defines the progress file schema, fixed stages, mandatory write points, deviation reporting, upstream dependency reading, log formats, and the return format with EXPORTS. |
 | `tracker_multi_plan_instructions.md` | Guide for multi-stream orchestration via `!master_plan_track`. Covers decomposing large tasks into independent swarms across multiple dashboard slots. |
-| `dashboard_resolution.md` | Defines the priority chain for selecting a dashboard: pre-assigned via system prompt > `--dashboard` flag > auto-scan for first available slot. |
+| `dashboard_resolution.md` | Defines dashboard assignment: pre-assigned via system prompt (mandatory, no scanning) > `--dashboard` flag > ask user. |
 | `failed_task.md` | Analysis framework for failed tasks. Helps the master agent assess whether to retry, replan, or skip. |
 | `common_pitfalls.md` | Catalog of common mistakes agents make and how to avoid them. Covers issues like stale file reads, atomic write failures, dependency cycles, and over-sized tasks. |
 

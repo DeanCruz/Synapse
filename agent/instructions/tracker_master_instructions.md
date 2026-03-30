@@ -161,6 +161,6 @@ After all tasks complete, compute `metrics.json` with elapsed time, parallel eff
 | **Guessed timestamps** | Always `date -u +"%Y-%m-%dT%H:%M:%SZ"`. |
 | **Asking permission without writing log entry first** | Write `"permission"` level to `logs.json` FIRST, then ask in terminal. |
 | **Not clearing progress/ before new swarm** | Archive first, then clear. Never clear without archiving. |
-| **Claiming ide for a swarm** | Never use the `ide` dashboard for swarms — it is reserved for IDE. Skip it during auto-selection. |
+| **Claiming ide for a swarm** | Never use the `ide` dashboard for swarms — it is reserved for IDE. |
 
 **Read:** `agent/master/ui_map.md` for the full common mistakes table with dashboard effects.

@@ -151,7 +151,7 @@
 
 - **Most users start with `!p_track`** — it handles everything: planning, dispatch, tracking, and reporting.
 - **Use `!p` for quick jobs** — fewer than 5 tasks where you don't need a live dashboard.
-- **All dashboard commands auto-detect** — you don't need to specify `dashboardN` unless you're running multiple swarms.
+- **Each chat uses its assigned dashboard** — commands automatically use the dashboard bound to your chat view.
 - **`!cancel-safe` over `!cancel`** — prefer graceful shutdown to avoid losing in-progress work.
 - **Combine `!logs` filters** — e.g., `!logs --level error --last 10` for recent errors only.
 ```

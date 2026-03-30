@@ -161,9 +161,9 @@ A collapsible drawer at the bottom shows every event across all agents. Filter b
 
 ### Multi-Dashboard
 
-Synapse supports up to five simultaneous swarms. The sidebar shows all five dashboards with status indicators and project names. Starting a new swarm auto-selects the first available slot and never overwrites an in-progress swarm. Switch between dashboards with a click.
+Synapse supports multiple simultaneous swarms. The sidebar shows all dashboards with status indicators and project names. Each chat is bound to exactly one dashboard — agents always use their assigned dashboard and archive/clear it if it has previous data. Switch between dashboards with a click.
 
-This means you can run a frontend swarm on dashboard 1, a backend swarm on dashboard 2, and a documentation swarm on dashboard 3 — all in parallel, all visible, all independent.
+This means you can run a frontend swarm on one dashboard, a backend swarm on another, and a documentation swarm on a third — all in parallel, all visible, all independent.
 
 ---
 

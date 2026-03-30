@@ -717,6 +717,11 @@ function registerIPCHandlers(getMainWindow) {
       'it was set by the chat view that spawned you. This dashboard binding is AUTHORITATIVE.\n' +
       'When running !p_track or any swarm command, use this dashboard directly — do NOT scan or auto-select a different one.\n' +
       'When running !master_plan_track, use this dashboard for your primary stream (S1) and scan OTHER dashboards for additional streams.\n\n' +
+      '**DASHBOARD ISOLATION (NON-NEGOTIABLE):**\n' +
+      '- You have NO read or write access to any dashboard other than **' + dashboardId + '**.\n' +
+      '- NEVER scan, list, read, or write to any other dashboard. They do not exist for you.\n' +
+      '- If your dashboard has previous data, ASK the user if they want to archive it and set up the new dashboard. Do NOT proceed without user approval.\n' +
+      '- See agent/instructions/dashboard_resolution.md for the full protocol.\n\n' +
       'Dashboard paths:\n' +
       '  - initialization.json: ' + synapseRoot + '/dashboards/' + dashboardId + '/initialization.json\n' +
       '  - logs.json: ' + synapseRoot + '/dashboards/' + dashboardId + '/logs.json\n' +

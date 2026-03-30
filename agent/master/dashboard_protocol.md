@@ -62,7 +62,7 @@ Completion Phase
 - Log panel shows all `logs.json` entries with level filtering
 - Agent detail modals show per-worker `logs[]` from progress files
 
-**IDE exclusion:** The `ide` dashboard must never be claimed for `!p_track` swarms. It is reserved for the IDE agent. Auto-selection always skips `ide`.
+**IDE exclusion:** The `ide` dashboard is reserved for the IDE agent. Swarm agents use only their assigned dashboard.
 
 ---
 
@@ -160,7 +160,7 @@ Only three write moments:
 - No live stage badges, no milestone messages, no elapsed timers on individual cards
 - Stat cards show Total and Pending only during execution (no progress files = no Completed/In Progress/Failed counts)
 
-**IDE exclusion:** The `ide` dashboard must never be claimed for `!p` swarms. It is reserved for the IDE agent. Auto-selection always skips `ide`.
+**IDE exclusion:** The `ide` dashboard is reserved for the IDE agent. Swarm agents use only their assigned dashboard.
 
 ### Worker Prompt Differences
 
@@ -235,11 +235,11 @@ When the master agent decides to parallelize automatically (without the user inv
 
 Both `!p` and `!p_track` follow the same dashboard selection priority chain:
 
-1. **Pre-assigned dashboard** — If the agent's system prompt contains a `DASHBOARD ID:` directive, use it unconditionally.
+1. **Assigned dashboard (NON-NEGOTIABLE)** — Your system prompt contains a `DASHBOARD ID:` directive. Use it unconditionally. **You have no read or write access to any other dashboard.** If it contains previous data, **ask the user** if they want to archive it and set up the new dashboard — do not proceed without approval.
 2. **Explicit flag** — `--dashboard {id}` forces a specific dashboard.
-3. **Auto-selection** — Scan all dashboards (excluding `ide`) for the first available one (where `task` is `null` in `initialization.json`). The `ide` dashboard is reserved for the IDE agent and must never be claimed for swarms.
+3. **No dashboard?** Ask the user. Never scan or select one yourself.
 
-Never overwrite an in-progress swarm. See `agent/instructions/dashboard_resolution.md` for the full protocol.
+See `agent/instructions/dashboard_resolution.md` for the full protocol.
 
 ---
 

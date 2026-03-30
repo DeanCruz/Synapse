@@ -481,7 +481,7 @@ This architecture dramatically reduces master agent context consumption:
 | Master outputs full terminal status table on every event | Master outputs one-line confirmations only |
 | No visibility into worker progress during execution | Live stage + milestone + log updates on dashboard |
 | Deviations only visible after completion | Deviations visible immediately |
-| Single swarm at a time | Up to 5 concurrent swarms across dashboards with auto-selection |
+| Single swarm at a time | Multiple concurrent swarms across dashboards (each chat bound to its own dashboard) |
 
 ---
 
@@ -854,9 +854,9 @@ In Wave mode, dependency lines are drawn between cards using BFS pathfinding thr
 
 ### Multi-Dashboard Sidebar
 
-The dashboard supports up to 5 simultaneous swarms via a sidebar that lists all dashboard instances (`dashboard1` through `dashboard5`). Each dashboard directory is an independent swarm with its own `initialization.json`, `logs.json`, and `progress/` directory. Different dashboards can serve different projects — the `task.project_root` field identifies which project each swarm belongs to.
+The dashboard supports multiple simultaneous swarms via a sidebar that lists all dashboard instances. Each dashboard directory is an independent swarm with its own `initialization.json`, `logs.json`, and `progress/` directory. Dashboards use dynamic 6-character hex IDs (e.g., `a3f7k2`). Different dashboards can serve different projects — the `task.project_root` field identifies which project each swarm belongs to.
 
-**Dashboard selection is automatic.** When `!p_track` starts, the master scans dashboards 1-5 for the first available slot — it will never overwrite an in-progress swarm. All commands (`!status`, `!logs`, `!inspect`, etc.) auto-detect the active dashboard when no dashboard is specified. See `agent/instructions/dashboard_resolution.md` for the full selection and detection protocol.
+**Each chat is bound to exactly one dashboard.** When an agent is spawned from a chat view, its system prompt contains a `DASHBOARD ID:` directive — the agent uses that dashboard unconditionally and has no access to any other dashboard. If the dashboard has previous data, the agent asks the user before archiving and reusing it. There is no scanning or auto-selection. See `agent/instructions/dashboard_resolution.md` for the full protocol.
 
 **Workers always know their dashboard.** The master includes `{dashboardId}` in every worker dispatch prompt. Workers write progress files to `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — they never auto-detect.
 
@@ -918,8 +918,8 @@ Each of the 5 dashboard slots can serve a different project simultaneously. The 
 When working across multiple projects:
 - Use `!project set` to switch the active project, or pass `--project` to individual commands
 - Each swarm's dashboard shows which project it's targeting
-- Commands like `!status` and `!logs` auto-detect the active dashboard regardless of which project it serves
-- Workers always receive explicit `{project_root}` in their prompts — they never need to auto-detect
+- Commands like `!status` and `!logs` use the agent's assigned dashboard
+- Workers always receive explicit `{project_root}` in their prompts
 
 ---
 

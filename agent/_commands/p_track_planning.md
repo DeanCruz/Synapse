@@ -398,41 +398,42 @@ If the plan has <3 agents and 1 wave, these are still included for `!p_track` �
 
 #### 11-PRE. Select a dashboard
 
-Before writing any plan data, the master must claim an available dashboard. This ensures new swarms never interfere with in-progress dashboards.
+Before writing any plan data, the master must claim a dashboard.
 
-**Resolution order (first match wins):**
+**Your dashboard is assigned. Use it. No exceptions.**
 
-1. **Pre-assigned dashboard from chat context (highest priority).** If your system prompt contains a `DASHBOARD ID:` directive, you are running inside a chat view that is bound to that specific dashboard. **Use it unconditionally** — do not scan, do not auto-select, do not override. Each chat view is associated with exactly one dashboard, and you must write to that dashboard. This is how the user sees your swarm in the correct panel.
+1. **Pre-assigned dashboard from system prompt (NON-NEGOTIABLE).**
+   Your system prompt contains a `DASHBOARD ID:` directive — this is the dashboard bound to your chat view.
+
+   - **Use this dashboard unconditionally** — regardless of whether it is empty, full, or has an active swarm.
+   - **You have NO read or write access to any other dashboard.** Other dashboards do not exist for you.
+   - **If the dashboard is empty** (`initialization.json` has `task: null` or does not exist) — proceed directly to set up the new dashboard.
+   - **If the dashboard has previous data** (i.e., `initialization.json` has `task` not `null`), **ask the user before proceeding.** Read `initialization.json` and derive the overall status, then present:
+
+     ```markdown
+     ## Dashboard {dashboardId} has an existing task
+
+     | Field | Value |
+     |---|---|
+     | Task | {task.name} |
+     | Status | {derived overall status} |
+     | Progress | {completed}/{total} agents done |
+
+     Would you like me to archive this dashboard and set up the new one?
+     ```
+
+     **Wait for the user's answer.** If yes → proceed to **Step 11A**. If no → **stop** (do not proceed with the swarm).
+   - **Never scan for available dashboards. Never use a different dashboard.**
 
 2. **Explicit `--dashboard {id}` flag.** If the user specified `--dashboard {id}` in the command, use that dashboard directly.
    - If it has an active swarm (in-progress agents), warn the user and require confirmation before overwriting.
    - If it has a completed swarm, save a history summary to `{tracker_root}/history/` before overwriting.
 
-3. **Auto-selection (fallback — only when no dashboard is pre-assigned or explicitly specified):**
-   1. Scan all dashboards in order (excluding `ide`).
-      > **The `ide` dashboard is always excluded from auto-selection** — it is reserved for the IDE agent and must never be claimed by a swarm.
-   2. For each dashboard, read `{tracker_root}/dashboards/{dashboardId}/initialization.json`:
-      - If `task` is `null` → **available**. Claim this dashboard.
-      - If `task` is not null, read all files in `progress/`:
-        - If no progress files exist → **stale** (plan written but never dispatched). Treat as available.
-        - If every progress file has status `"completed"` or `"failed"` → **finished but uncleared**. Save a history summary to `{tracker_root}/history/`, then claim this dashboard.
-        - Otherwise → **in use**. Skip to next dashboard.
-   3. If all dashboards are in use, display a summary table:
+3. **No dashboard?** If you have no assigned dashboard and no `--dashboard` flag, ask the user which dashboard to use. Do not scan or select one yourself.
 
-   ```markdown
-   ## All Dashboards In Use
+Set `{dashboardId}` to the selected dashboard. Announce: **"Using {dashboardId} for this swarm."**
 
-   | Dashboard | Task | Status | Progress |
-   |---|---|---|---|
-   | {dashboardId} | {task.name} | {overall_status} | {completed}/{total} |
-   | ... | ... | ... | ... |
-
-   Pick a dashboard to overwrite, or run `!reset {dashboardId}` first.
-   ```
-
-4. Set `{dashboardId}` to the selected dashboard. Announce: **"Using {dashboardId} for this swarm."**
-
-> **See `{tracker_root}/agent/instructions/dashboard_resolution.md`** for the full `selectDashboard()` algorithm and status derivation logic.
+> **See `{tracker_root}/agent/instructions/dashboard_resolution.md`** for the full protocol.
 
 ---
 

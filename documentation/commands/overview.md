@@ -134,7 +134,7 @@ Command files are the single source of truth for command behavior. The agent nev
 
 ## Dashboard Resolution
 
-Many commands accept an optional `[dashboardId]` argument (e.g., `!status dashboard3`). When no dashboard is specified, commands auto-detect the active dashboard by scanning `dashboard1` through `dashboard5` for one that has an active swarm. The full detection protocol is documented at `{tracker_root}/agent/instructions/dashboard_resolution.md`.
+Many commands accept an optional `[dashboardId]` argument (e.g., `!status a3f7k2`). Every agent has an assigned dashboard via the `DASHBOARD ID:` directive in its system prompt — it uses that dashboard unconditionally and has no access to any other. If no assignment exists and no explicit ID is given, the agent asks the user. There is no scanning or auto-detection. See `{tracker_root}/agent/instructions/dashboard_resolution.md` for the full protocol.
 
 ---
 

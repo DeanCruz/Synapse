@@ -136,7 +136,7 @@ Follow the slot management protocol from `tracker_multi_plan_instructions.md`:
 
 **Pre-assigned dashboard (from chat context).** If your system prompt contains a `DASHBOARD ID:` directive, you are running inside a chat view bound to that specific dashboard. Your pre-assigned dashboard is **always claimed first** for Stream 1 (S1) — do not scan or auto-select a different dashboard for it. This is how the user sees your primary swarm in the correct panel.
 
-**Scan remaining dashboards** for additional streams. Scan `dashboard1` through `dashboard5` (skipping your pre-assigned dashboard) using the standard `selectDashboard()` algorithm from `{tracker_root}/agent/instructions/dashboard_resolution.md`:
+**Scan remaining dashboards** for additional streams. Scan all dashboards in order (excluding `ide` and your pre-assigned dashboard):
 - `task: null` → **available**
 - `task` not null but all progress files terminal → **finished, available after history save**
 - `task` not null with active agents → **in use, skip**

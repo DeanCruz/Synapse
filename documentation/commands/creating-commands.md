@@ -177,9 +177,9 @@ Critical commands (like `!p_track`) front-load mandatory constraints in a blockq
 Commands that interact with dashboards include a resolution note:
 
 ```markdown
-> **Dashboard resolution:** Auto-selects the first dashboard with an active swarm.
-> Override with `--dashboard {id}`.
-> See `{tracker_root}/agent/instructions/dashboard_resolution.md` for the full algorithm.
+> **Dashboard resolution:** Uses your assigned dashboard from the `DASHBOARD ID:` directive.
+> Override with `--dashboard {id}`. If neither, ask the user.
+> See `{tracker_root}/agent/instructions/dashboard_resolution.md` for the full protocol.
 ```
 
 ---

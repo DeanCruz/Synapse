@@ -3,7 +3,7 @@
 **Purpose:** Show detailed information about a specific task — its full context, dependencies, status timeline, milestones, deviations, and worker logs.
 
 **Syntax:**
-- `!inspect 2.3` — Inspect a task (auto-detect dashboard)
+- `!inspect 2.3` — Inspect a task (uses your assigned dashboard)
 - `!inspect dashboard1 2.3` — Inspect a task on a specific dashboard
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.

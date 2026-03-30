@@ -3,13 +3,13 @@
 **Purpose:** Visualize the dependency graph for a specific task or the entire swarm. Shows what blocks what, the critical path, and current bottlenecks. Can also validate the dependency graph for structural issues.
 
 **Syntax:**
-- `!deps` — Show the full dependency graph (auto-detect dashboard)
+- `!deps` — Show the full dependency graph (uses your assigned dashboard)
 - `!deps dashboard3` — Show graph for a specific dashboard
-- `!deps 2.3` — Show dependencies for a specific task (auto-detect dashboard)
+- `!deps 2.3` — Show dependencies for a specific task (uses your assigned dashboard)
 - `!deps dashboard1 2.3` — Show dependencies for a task on a specific dashboard
 - `!deps --critical` — Highlight the critical path
 - `!deps --blocked` — Show only blocked or failing dependency chains
-- `!deps validate` — Validate the dependency graph for structural issues (auto-detect dashboard)
+- `!deps validate` — Validate the dependency graph for structural issues (uses your assigned dashboard)
 - `!deps validate dashboard2` — Validate a specific dashboard's dependency graph
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.

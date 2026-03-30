@@ -16,7 +16,7 @@ Every operation that clears a dashboard must follow this sequence:
 4. **Then clear** -- delete progress files, reset `initialization.json` and `logs.json` to empty state.
 
 This applies everywhere a dashboard is cleared:
-- `!p_track` initialization (when auto-selecting a finished dashboard)
+- `!p_track` initialization (when the assigned dashboard has previous data)
 - `!reset` command
 - `!master_plan_track` slot clearing
 - Queue-to-dashboard promotion
@@ -242,14 +242,14 @@ History is global across all dashboards. The output includes task names, project
 The `!reset` command triggers both archiving and history saving before clearing:
 
 ```
-!reset                  # Reset auto-detected active dashboard
+!reset                  # Reset your assigned dashboard
 !reset a1b2c3           # Reset a specific dashboard
 !reset --all            # Reset all dashboards
 ```
 
 ### Single Dashboard Reset Flow
 
-1. Parse the optional `{dashboardId}` argument (or auto-detect).
+1. Parse the optional `{dashboardId}` argument (or use your assigned dashboard).
 2. Read `initialization.json`. If `task` is `null`, report "already empty" and stop.
 3. **Save history summary** to `{tracker_root}/history/`.
 4. **Archive the dashboard** to `{tracker_root}/Archive/`.

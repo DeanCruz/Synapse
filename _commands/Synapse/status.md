@@ -3,7 +3,7 @@
 **Purpose:** Display a quick summary of the current swarm state from dashboard data without opening the browser.
 
 **Syntax:**
-- `!status` — Auto-detect the active dashboard
+- `!status` — Show status for your assigned dashboard
 - `!status dashboard3` — Show status for a specific dashboard
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.

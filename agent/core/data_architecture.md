@@ -16,7 +16,7 @@ This architecture dramatically reduces master agent context consumption:
 | Master outputs full terminal status table on every event | Master outputs one-line confirmations only |
 | No visibility into worker progress during execution | Live stage + milestone + log updates on dashboard |
 | Deviations only visible after completion | Deviations visible immediately |
-| Single swarm at a time | Unlimited concurrent swarms across dashboards with auto-selection |
+| Single swarm at a time | Unlimited concurrent swarms across dashboards (each chat bound to its own) |
 | Cascading failures require manual intervention | Circuit breaker triggers automatic replanning via CLI |
 | No sibling awareness between workers | shared_context + sibling_reads enable optional cross-worker data sharing |
 

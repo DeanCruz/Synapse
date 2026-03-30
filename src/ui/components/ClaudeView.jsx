@@ -768,6 +768,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const streamingBlocksRef = useRef({});
   // Track whether we received streaming content_block events (to skip duplicate assistant summary)
   const sawStreamingRef = useRef(false);
+  // Track pending tool executions — between message_stop and tool_result, status should show activity
+  const pendingToolCountRef = useRef(0);
   // Track whether current task is a resumed session (history replay events should be ignored)
   const isResumedSessionRef = useRef(false);
   // Health check consecutive failure counter — only hard-reset after 3 consecutive IPC failures
@@ -1389,6 +1391,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
 
   function appendToolResult(toolUseId, content) {
     flushText();
+    if (pendingToolCountRef.current > 0) pendingToolCountRef.current--;
     if (toolUseId && toolCallIndexRef.current[toolUseId] !== undefined) {
       dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
         const idx = toolCallIndexRef.current[toolUseId];
@@ -1406,6 +1409,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   function addToolCall(block) {
     flushText();
     flushThinking();
+    pendingToolCountRef.current++;
     dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
       if (block.id) {
         toolCallIndexRef.current[block.id] = prev.length;
@@ -1426,6 +1430,19 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   function handleChunk(data) {
     const chunk = data.chunk;
     const pid = data.pid;
+
+    // stderr output — use as status indicator without adding to conversation
+    if (data.isStderr) {
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        const cleaned = stripAnsi(line).trim();
+        if (cleaned && !isProgressBarLine(cleaned) && cleaned.length < 200) {
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: cleaned });
+        }
+      }
+      return;
+    }
+
     const lines = chunk.split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
@@ -1558,9 +1575,13 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       }
 
       case 'message_start':
-      case 'message_delta':
-        // Message-level streaming events — session_id may appear here
+        // New assistant turn — reset pending tool counter (previous tools are done)
+        pendingToolCountRef.current = 0;
         if (evt.message?.id) { /* message started */ }
+        break;
+
+      case 'message_delta':
+        if (evt.message?.id) { /* message delta */ }
         break;
 
       case 'message_stop':
@@ -1569,7 +1590,12 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         streamingBlocksRef.current = {};
         sawStreamingRef.current = false;
         isResumedSessionRef.current = false;
-        dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+        // Don't show 'Ready' while tools are still executing
+        if (pendingToolCountRef.current > 0) {
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Executing...' });
+        } else {
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+        }
         break;
 
       case 'user': {
@@ -1591,6 +1617,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         streamingBlocksRef.current = {};
         sawStreamingRef.current = false;
         isResumedSessionRef.current = false;
+        pendingToolCountRef.current = 0;
         if (evt.session_id) sessionIdRef.current = evt.session_id;
         dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
         break;

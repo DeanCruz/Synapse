@@ -3,7 +3,7 @@
 **Purpose:** Export a dashboard's full swarm state as a formatted document for post-mortems, documentation, or sharing.
 
 **Syntax:**
-- `!export` — Export active dashboard as markdown (auto-detect)
+- `!export` — Export your assigned dashboard as markdown
 - `!export dashboard3` — Export a specific dashboard
 - `!export --format json` — Export as raw JSON
 - `!export --format markdown` — Export as formatted markdown (default)

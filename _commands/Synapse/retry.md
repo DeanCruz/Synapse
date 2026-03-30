@@ -3,7 +3,7 @@
 **Purpose:** Re-dispatch a failed or blocked task. Deletes the old progress file and launches a fresh agent.
 
 **Syntax:**
-- `!retry 2.3` — Retry a task (auto-detect dashboard)
+- `!retry 2.3` — Retry a task (uses your assigned dashboard)
 - `!retry dashboard1 2.3` — Retry a task on a specific dashboard
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.

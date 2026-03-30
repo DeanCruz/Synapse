@@ -324,8 +324,8 @@ Include verification results in the final report.
 
 Write `initialization.json` with a snapshot of the plan:
 
-1. **Resolve the dashboard** — follow the standard dashboard selection priority chain (chat-spawned directive > `--dashboard {id}` flag > auto-select first available slot, excluding the `ide` dashboard which is reserved for the IDE agent). See `agent/instructions/dashboard_resolution.md`.
-2. **Archive if needed** — if the selected dashboard has previous swarm data (`task` is not `null`), archive it first before clearing.
+1. **Resolve the dashboard** — use your assigned dashboard from the `DASHBOARD ID:` directive in your system prompt. You have NO access to any other dashboard. If the dashboard has previous data, **ask the user** if they want to archive it and set up the new dashboard — do not proceed without approval. If no pre-assignment, use `--dashboard {id}` flag; if neither, ask the user. See `agent/instructions/dashboard_resolution.md`.
+2. **Archive if approved** — if the user approved archiving, archive the previous swarm data before clearing.
 3. **Clear the `progress/` directory** — remove any leftover progress files.
 4. **Write `initialization.json`** with:
    - `task` object: `name`, `type`, `prompt`, `project`, `project_root`, `created`, `total_tasks`, `total_waves`
