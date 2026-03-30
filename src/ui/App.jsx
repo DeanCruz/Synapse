@@ -23,6 +23,7 @@ import CommandsModal from './components/modals/CommandsModal.jsx';
 import ProjectModal from './components/modals/ProjectModal.jsx';
 import PlanningModal from './components/modals/PlanningModal.jsx';
 import SettingsModal from './components/modals/SettingsModal.jsx';
+import LogsModal from './components/modals/LogsModal.jsx';
 import AgentDetails from './components/modals/AgentDetails.jsx';
 import { getDashboardProject } from './utils/dashboardProjects.js';
 
@@ -171,6 +172,16 @@ function DashboardContent() {
             <path d="M6 2v12M10 4v12" stroke="currentColor" strokeWidth="1.3"/>
           </svg>
           <span>{projectName || 'Project'}</span>
+        </button>
+        <button
+          className="dashboard-action-bar-btn"
+          title="View dashboard logs"
+          onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'logs', dashboardId })}
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M2 3h12M2 6.5h12M2 10h8M2 13.5h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+          </svg>
+          <span>Logs</span>
         </button>
       </div>
 
@@ -383,6 +394,13 @@ export default function App() {
       )}
       {activeModal === 'settings' && (
         <SettingsModal onClose={closeModal} />
+      )}
+      {activeModal === 'logs' && (
+        <LogsModal
+          onClose={closeModal}
+          logs={allDashboardLogs[state.modalDashboardId || currentDashboardId] || currentLogs}
+          dashboardId={state.modalDashboardId || currentDashboardId}
+        />
       )}
     </>
   );
