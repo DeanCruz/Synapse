@@ -88,6 +88,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setSetting: (key, value) => ipcRenderer.invoke('set-setting', key, value),
   resetSettings: () => ipcRenderer.invoke('reset-settings'),
 
+  // Additional context persistence (disk fallback for localStorage)
+  getAdditionalContext: (dashboardId) => ipcRenderer.invoke('get-additional-context', dashboardId),
+  saveAdditionalContext: (dashboardId, dirs) => ipcRenderer.invoke('save-additional-context', dashboardId, dirs),
+
   // Project
   selectProjectDirectory: () => ipcRenderer.invoke('select-project-directory'),
   loadProject: (dirPath) => ipcRenderer.invoke('load-project', dirPath),

@@ -31,6 +31,9 @@ const DEFAULTS = {
   // Dashboard metadata (sidebar order + custom display names)
   dashboardMeta: { order: [], names: {} },
 
+  // Per-dashboard additional context directories (disk fallback for localStorage)
+  dashboardAdditionalContext: {},
+
   // Project
   recentProjects: [],
   activeProjectPath: null,

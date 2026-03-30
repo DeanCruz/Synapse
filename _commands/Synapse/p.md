@@ -35,7 +35,7 @@ The master agent's most important job is **deep planning** and **high-quality pr
 
 Resolve `{project_root}` using the standard resolution order (see `{tracker_root}/CLAUDE.md` — Path Convention section): explicit `--project` flag → stored config at `{tracker_root}/.synapse/project.json` → agent's CWD.
 
-Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/toc.md` exists, read it for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**.
+Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/toc.md` exists, read it for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If additional context directories are configured (in `.synapse/project.json`), read their `CLAUDE.md` files as well — these are read-only supplemental context whose conventions should be merged into worker prompts.
 
 **Extract and cache** the conventions, patterns, tech stack, and constraints that are relevant to this task. These will be embedded directly into worker prompts — workers will not read these files themselves.
 

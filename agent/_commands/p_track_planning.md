@@ -11,7 +11,7 @@
 
 Resolve `{project_root}` using the standard resolution order (see `{tracker_root}/CLAUDE.md` — Path Convention section): explicit `--project` flag → stored config at `{tracker_root}/.synapse/project.json` → agent's CWD.
 
-Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/toc.md` exists, read it for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
+Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/toc.md` exists, read it for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If additional context directories are configured (in `.synapse/project.json`), read their `CLAUDE.md` files as well — these are read-only supplemental context whose conventions should be merged into worker prompts. If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
 
 ### Step 2: Read the tracker master instructions
 

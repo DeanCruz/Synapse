@@ -164,30 +164,30 @@ function detectAgentCLI(provider) {
 }
 
 /**
- * Get project context with fallback to additional directories.
- * Tries the primary project directory first. If no CLAUDE.md files are found,
- * searches additional context directories as backup.
+ * Get project context from the primary directory and all additional directories (additive).
+ * Collects CLAUDE.md files from every provided directory and returns them as a combined array.
+ * The function name retains "Fallback" for backward compatibility, but behavior is additive —
+ * all directories are always checked regardless of whether the primary has context.
  *
- * @param {string} primaryDir — project directory to check first
- * @param {string[]} [fallbackDirs] — additional directories to check if primary has no context
+ * @param {string} primaryDir — primary project directory
+ * @param {string[]} [additionalDirs] — additional context directories to also include
  * @returns {{ path: string, content: string }[]}
  */
-function getProjectContextWithFallback(primaryDir, fallbackDirs) {
-  // Try primary directory first
+function getProjectContextWithFallback(primaryDir, additionalDirs) {
   var contexts = primaryDir ? getProjectContext(primaryDir) : [];
-  if (contexts.length > 0) return contexts;
 
-  // Primary had no CLAUDE.md — try fallback directories
-  if (!fallbackDirs || fallbackDirs.length === 0) return contexts;
+  if (!additionalDirs || additionalDirs.length === 0) return contexts;
 
-  for (var i = 0; i < fallbackDirs.length; i++) {
+  for (var i = 0; i < additionalDirs.length; i++) {
     try {
-      var fallbackContexts = getProjectContext(fallbackDirs[i]);
-      if (fallbackContexts.length > 0) return fallbackContexts;
+      var additionalContexts = getProjectContext(additionalDirs[i]);
+      for (var j = 0; j < additionalContexts.length; j++) {
+        contexts.push(additionalContexts[j]);
+      }
     } catch (e) { /* skip dirs that don't exist */ }
   }
 
-  return [];
+  return contexts;
 }
 
 module.exports = { loadProject, getProjectContext, getProjectContextWithFallback, scanDirectory, detectClaudeCLI, detectCodexCLI, detectAgentCLI };

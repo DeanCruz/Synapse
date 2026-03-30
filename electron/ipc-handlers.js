@@ -591,6 +591,20 @@ function registerIPCHandlers(getMainWindow) {
     return settings.reset();
   });
 
+  // --- Additional context persistence handlers ---
+  ipcMain.handle('get-additional-context', async (_event, dashboardId) => {
+    var all = settings.get('dashboardAdditionalContext') || {};
+    if (dashboardId) return all[dashboardId] || [];
+    return all;
+  });
+
+  ipcMain.handle('save-additional-context', async (_event, dashboardId, dirs) => {
+    var all = settings.get('dashboardAdditionalContext') || {};
+    all[dashboardId] = dirs;
+    settings.set('dashboardAdditionalContext', all);
+    return { success: true };
+  });
+
   // --- Project handlers ---
   const ProjectService = require('./services/ProjectService');
   const { dialog } = require('electron');
