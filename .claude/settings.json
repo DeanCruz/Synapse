@@ -6,6 +6,10 @@
         "hooks": [
           {
             "type": "command",
+            "command": ".claude/hooks/enforce-dashboard-isolation.sh"
+          },
+          {
+            "type": "command",
             "command": ".claude/hooks/validate-master-write.sh"
           },
           {
@@ -26,6 +30,10 @@
       {
         "matcher": "Bash",
         "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/enforce-dashboard-isolation-bash.sh"
+          },
           {
             "type": "command",
             "command": ".claude/hooks/validate-archive-before-clear.sh"

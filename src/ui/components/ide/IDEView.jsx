@@ -303,6 +303,7 @@ export default function IDEView() {
           activeFilter={activeLogFilter}
           onFilterChange={(level) => dispatch({ type: 'SET', key: 'activeLogFilter', value: level })}
           projectDir={projectPath}
+          dashboardId={currentDashboardId}
           embedded
         />
       </div>
@@ -395,6 +396,7 @@ export default function IDEView() {
         activeFilter={activeLogFilter}
         onFilterChange={(level) => dispatch({ type: 'SET', key: 'activeLogFilter', value: level })}
         projectDir={activeWorkspace?.path || projectPath}
+        dashboardId={currentDashboardId}
         onNavigate={handleDebugNavigate}
         embedded
       />

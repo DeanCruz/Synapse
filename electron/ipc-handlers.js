@@ -33,6 +33,7 @@ const {
   unwatchDashboard,
   startDashboardsWatcher,
   startQueueWatcher,
+  startReconciliation,
   stopAll: stopAllWatchers,
 } = require('../src/server/services/WatcherService');
 
@@ -746,7 +747,7 @@ function registerIPCHandlers(getMainWindow) {
       '**DASHBOARD ISOLATION (NON-NEGOTIABLE):**\n' +
       '- You have NO read or write access to any dashboard other than **' + dashboardId + '**.\n' +
       '- NEVER scan, list, read, or write to any other dashboard. They do not exist for you.\n' +
-      '- If your dashboard has previous data, ASK the user if they want to archive it and set up the new dashboard. Do NOT proceed without user approval.\n' +
+      '- If your dashboard has previous data, auto-archive it and proceed. Archiving is automatic and non-destructive.\n' +
       '- See agent/instructions/dashboard_resolution.md for the full protocol.\n\n' +
       'Dashboard paths:\n' +
       '  - initialization.json: ' + synapseRoot + '/dashboards/' + dashboardId + '/initialization.json\n' +
@@ -2744,6 +2745,9 @@ function registerIPCHandlers(getMainWindow) {
 
   // Start queue watcher
   startQueueWatcher(broadcastFn);
+
+  // Start reconciliation loop — catches fs.watch events dropped by the OS
+  startReconciliation(broadcastFn);
 
   // NOTE: Live reload is NOT started — it was for the web dev server, not needed in Electron
 

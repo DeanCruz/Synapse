@@ -408,21 +408,13 @@ Before writing any plan data, the master must claim a dashboard.
    - **Use this dashboard unconditionally** — regardless of whether it is empty, full, or has an active swarm.
    - **You have NO read or write access to any other dashboard.** Other dashboards do not exist for you.
    - **If the dashboard is empty** (`initialization.json` has `task: null` or does not exist) — proceed directly to set up the new dashboard.
-   - **If the dashboard has previous data** (i.e., `initialization.json` has `task` not `null`), **ask the user before proceeding.** Read `initialization.json` and derive the overall status, then present:
+   - **If the dashboard has previous data** (i.e., `initialization.json` has `task` not `null`), **auto-archive and proceed.** Read `initialization.json` to get the task name, then immediately execute **Step 11A** (archive + clear) before setting up the new dashboard. Log the auto-archive action:
 
-     ```markdown
-     ## Dashboard {dashboardId} has an existing task
-
-     | Field | Value |
-     |---|---|
-     | Task | {task.name} |
-     | Status | {derived overall status} |
-     | Progress | {completed}/{total} agents done |
-
-     Would you like me to archive this dashboard and set up the new one?
+     ```
+     Auto-archived previous task '{task.name}' from dashboard {dashboardId} → Archive/{date}_{task_name}/
      ```
 
-     **Wait for the user's answer.** If yes → proceed to **Step 11A**. If no → **stop** (do not proceed with the swarm).
+     **Do NOT ask the user for confirmation** — archiving is automatic and non-destructive (the old data is preserved in `Archive/`). This ensures the dashboard is always ready for the new swarm without blocking on user input.
    - **Never scan for available dashboards. Never use a different dashboard.**
 
 2. **Explicit `--dashboard {id}` flag.** If the user specified `--dashboard {id}` in the command, use that dashboard directly.

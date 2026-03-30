@@ -64,30 +64,17 @@ When an agent is spawned from the Synapse chat view, its system prompt contains 
 **Rules for pre-assigned dashboards:**
 
 - **ALWAYS use this dashboard.** No scanning. No auto-selection. No fallback. No exceptions.
-- **You have NO read or write access to any other dashboard.** Treat all other dashboards as if they do not exist. Never scan, read, query, or write to any dashboard other than your assigned one.
+- **You have NO read or write access to any other dashboard.** Treat all other dashboards as if they do not exist. Never scan, read, query, or write to any dashboard other than your assigned one. This is enforced by the `enforce-dashboard-isolation.sh` PreToolUse hook via the `SYNAPSE_DASHBOARD_ID` environment variable — writes to other dashboards will be blocked.
 - **If the dashboard is empty** (`initialization.json` has `task: null` or does not exist) — proceed directly to set up the new dashboard.
-- **If the dashboard contains previous data** (i.e., `initialization.json` has `task` not `null`), **you MUST ask the user before proceeding.** Present the current state and wait for explicit approval:
-
-  ```markdown
-  ## Dashboard {id} has an existing task
-
-  | Field | Value |
-  |---|---|
-  | Task | {task.name} |
-  | Status | {derived overall status} |
-  | Progress | {completed}/{total} agents done |
-
-  Would you like me to archive this dashboard and set up the new one?
-  ```
-
-  **Wait for the user's answer.** Do NOT proceed until approved.
-  - **If yes:** follow the archive protocol in Step 11A of `p_track_planning.md`:
+- **If the dashboard contains previous data** (i.e., `initialization.json` has `task` not `null`), **auto-archive and proceed.** Follow the archive protocol in Step 11A of `p_track_planning.md`:
     1. Copy the full dashboard contents to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/`
     2. Delete all progress files (`rm -f {tracker_root}/dashboards/{id}/progress/*.json`)
     3. Reset `initialization.json` and `logs.json` to empty state
-    4. Proceed with setting up the new dashboard
-  - **If no:** **stop.** Do not proceed with the swarm. The user may want to resume the existing task or cancel it first.
-- **Never "find the next free dashboard."** Your dashboard is your dashboard. Ask the user, archive if approved, and reuse.
+    4. Log the archive action: `Auto-archived previous task '{task.name}' → Archive/{date}_{task_name}/`
+    5. Proceed with setting up the new dashboard
+
+  **Do NOT ask the user for confirmation** — archiving is automatic and non-destructive (the old data is preserved in `Archive/`). This ensures the dashboard is always ready for the new swarm without blocking on user input.
+- **Never "find the next free dashboard."** Your dashboard is your dashboard. Archive automatically and reuse.
 
 Each chat view in the Synapse Electron app is associated with exactly one dashboard. The agent spawned from that chat must write to that dashboard so the user sees the swarm in the correct panel.
 
