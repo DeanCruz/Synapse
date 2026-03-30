@@ -192,6 +192,27 @@ function spawnWorker(opts) {
   proc.on('close', function (code) {
     var exitCode = code == null ? 0 : code;
     console.log('[ClaudeCodeService] Process closed, PID:', proc.pid, 'exit code:', exitCode);
+
+    // Flush any remaining data in the line buffer — the last chunk from the CLI
+    // may not end with a newline, leaving events (result, content_block_start, etc.)
+    // silently stuck in the buffer.
+    if (worker.lineBuffer && worker.lineBuffer.trim()) {
+      var remaining = worker.lineBuffer.trim();
+      worker.lineBuffer = '';
+      var parsed = null;
+      try { parsed = JSON.parse(remaining); } catch (e) { /* not valid JSON */ }
+      if (broadcastFn) {
+        broadcastFn('worker-output', {
+          pid: proc.pid,
+          provider: 'claude',
+          taskId: opts.taskId,
+          dashboardId: opts.dashboardId,
+          chunk: remaining + '\n',
+          parsed: parsed,
+        });
+      }
+    }
+
     delete activeWorkers[proc.pid];
     if (broadcastFn) {
       broadcastFn('worker-complete', {

@@ -1095,6 +1095,14 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
               msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true }
             });
           }
+          // If the process exited with a non-zero code and no visible response
+          // was produced, show feedback so the user isn't left staring at silence.
+          if (data.exitCode && data.exitCode !== 0 && !sawStreamingRef.current) {
+            dispatch({
+              type: 'CLAUDE_APPEND_MSG',
+              msg: { type: 'system', text: 'Agent process exited with code ' + data.exitCode + ' without producing a response. Try sending your message again.', isError: true }
+            });
+          }
           if (finishRef.current) finishRef.current(data.taskId);
         } else {
           // Different tab on same dashboard — route to tab stash

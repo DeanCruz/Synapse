@@ -33,6 +33,7 @@ const {
   unwatchDashboard,
   startDashboardsWatcher,
   startQueueWatcher,
+  startReconciliation,
   stopAll: stopAllWatchers,
 } = require('../src/server/services/WatcherService');
 
@@ -2744,6 +2745,9 @@ function registerIPCHandlers(getMainWindow) {
 
   // Start queue watcher
   startQueueWatcher(broadcastFn);
+
+  // Start reconciliation loop — catches fs.watch events dropped by the OS
+  startReconciliation(broadcastFn);
 
   // NOTE: Live reload is NOT started — it was for the web dev server, not needed in Electron
 
