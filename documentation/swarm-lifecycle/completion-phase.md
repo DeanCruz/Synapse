@@ -30,21 +30,32 @@ All workers returned (completed or failed)
 |    Dispatch verification agent    |
 |    Run tests, type checks, build  |
 |    Log verification results       |
+|    Post-verification fix if needed|
 +----------------------------------+
     |
     v
 +----------------------------------+
-| 4. READ LOGS AND COMPILE REPORT  |
+| 4. COMPUTE SWARM METRICS         |
+|    Read all progress files        |
+|    Calculate performance metrics  |
+|    Write metrics.json             |
+|    Log metrics summary            |
++----------------------------------+
+    |
+    v
++----------------------------------+
+| 5. READ LOGS AND COMPILE REPORT  |
 |    Read full logs.json            |
-|    Analyze all events             |
+|    Read all progress files        |
+|    Read task file + metrics.json  |
 |    Deliver structured final report|
 +----------------------------------+
     |
     v
 +----------------------------------+
-| 5. POST-SWARM CLEANUP            |
+| 6. POST-SWARM CLEANUP            |
+|    Save to history/               |
 |    Update project TOC if needed   |
-|    Save history (if applicable)   |
 |    Master resumes normal behavior |
 +----------------------------------+
 ```
@@ -130,9 +141,11 @@ Return:
 
 When the swarm spans multiple repositories, the verification agent also checks:
 
-1. **Type/interface consistency** -- For every shared type or API contract modified, verify that all consuming repos use the updated signature
-2. **Import path validity** -- Verify that cross-repo imports resolve correctly after file moves or renames
-3. **Contract alignment** -- If the swarm modified both a backend API and its frontend consumer, verify request/response shapes match
+1. **Type/interface consistency** -- For every shared type or API contract modified by the swarm, verify that all consuming repos use the updated signature. Grep for the type name across all affected repos.
+2. **Import path validity** -- Verify that cross-repo imports (if any) resolve correctly after file moves or renames.
+3. **Contract alignment** -- If the swarm modified both a backend API and its frontend consumer, verify request/response shapes match.
+
+If cross-repo inconsistencies are found, log them at level `"warn"` and include them in the final report's Warnings section.
 
 ### Logging Verification Results
 
@@ -162,60 +175,199 @@ If verification found issues:
 }
 ```
 
+### Post-Verification Fix Procedure
+
+If the verification agent reports issues:
+
+1. Log each issue in `logs.json` at `"warn"` level with the specific file and line
+2. For each issue, create a targeted repair task with:
+   - A clear description of what needs fixing
+   - The specific files and lines involved
+   - The verification failure message
+3. Dispatch repair tasks to worker agents
+4. **Do NOT fix issues directly** -- the no-code constraint still applies during verification and post-verification
+5. After repair tasks complete, re-run verification if the issues were integration-related
+6. Update the final report to reflect the additional fix tasks
+
 ---
 
-## Step 4: Final Report
+## Step 4: Compute Swarm Metrics
 
-The master reads `{tracker_root}/dashboards/{dashboardId}/logs.json` in full, analyzes all entries for the current task, and delivers a structured final report.
+After all tasks complete (and after verification, if run), the master computes swarm performance metrics and writes them to `{tracker_root}/dashboards/{dashboardId}/metrics.json`. These metrics enable historical performance comparison and parallelization efficiency tracking.
+
+### Computation Procedure
+
+1. Read all progress files in `{tracker_root}/dashboards/{dashboardId}/progress/`.
+2. For each completed task, compute its duration: `completed_at - started_at` (in seconds).
+3. Compute the following metrics:
+
+| Metric | How to Compute |
+|---|---|
+| `elapsed_seconds` | Latest `completed_at` across all workers minus earliest `started_at` across all workers |
+| `serial_estimate_seconds` | Sum of all individual task durations (what it would take if tasks ran sequentially) |
+| `parallel_efficiency` | `serial_estimate_seconds / elapsed_seconds` (higher = better parallelism; 1.0 = no benefit; >1.0 = parallel speedup) |
+| `duration_distribution` | `{ min, avg, max, median }` of individual task durations in seconds |
+| `failure_rate` | `failed_tasks / total_tasks` (0.0 = no failures) |
+| `max_concurrent` | Peak number of simultaneously in-progress tasks (compute from overlapping `started_at`/`completed_at` windows) |
+| `deviation_count` | Total deviations across all tasks (sum of all `deviations[]` array lengths) |
+| `total_tasks` | Total number of tasks in the swarm |
+| `completed_tasks` | Count of tasks with `status === "completed"` |
+| `failed_tasks` | Count of tasks with `status === "failed"` |
+
+### Metrics File Schema
+
+```json
+{
+  "swarm_name": "add-rate-limiting",
+  "computed_at": "2026-03-22T14:45:30Z",
+  "elapsed_seconds": 187,
+  "serial_estimate_seconds": 612,
+  "parallel_efficiency": 3.27,
+  "duration_distribution": {
+    "min": 28,
+    "avg": 76.5,
+    "max": 142,
+    "median": 71
+  },
+  "failure_rate": 0.0,
+  "max_concurrent": 5,
+  "deviation_count": 2,
+  "total_tasks": 8,
+  "completed_tasks": 8,
+  "failed_tasks": 0
+}
+```
+
+### Logging Metrics
+
+The master logs the metrics summary to `logs.json`:
+
+```json
+{
+  "timestamp": "2026-03-22T14:45:30Z",
+  "task_id": "0.0",
+  "agent": "Orchestrator",
+  "level": "info",
+  "message": "Metrics: 187s elapsed, 3.27x efficiency, 5 max concurrent, 0.0 failure rate",
+  "task_name": "add-rate-limiting"
+}
+```
+
+Note: `metrics.json` is written once after swarm completion. It is not watched by the server for live updates -- it is a post-hoc analysis artifact. The dashboard may optionally read it for a metrics summary panel in future versions.
+
+---
+
+## Step 5: Final Report
+
+The master must read ALL of the following data before compiling the report:
+
+1. **`{tracker_root}/dashboards/{dashboardId}/logs.json` in full** -- Analyze all entries for the current task
+2. **Every progress file** in `{tracker_root}/dashboards/{dashboardId}/progress/` -- Extract summaries, deviations, milestones, warnings, and logs from each worker
+3. **The master task file** at `{tracker_root}/tasks/{date}/parallel_{task_name}.json` -- Cross-reference planned vs. actual outcomes
+4. **`{tracker_root}/dashboards/{dashboardId}/metrics.json`** -- Include performance data from Step 4
+
+The master then synthesizes all gathered data into a structured final report. Every section marked REQUIRED must appear. Sections marked CONDITIONAL appear only when their trigger condition is met. The report is non-negotiable -- it must be comprehensive enough that a developer who was not present during the swarm can understand what happened, what changed, and what to do next.
 
 ### Final Report Template
 
 ```markdown
 ## Swarm Complete: {task-slug}
 
-**{completed}/{total} tasks** -- **{W} waves** -- **{0 or N} failures** -- **Type: {Waves|Chains}**
+**{completed}/{total} tasks** -- **{W} waves** -- **{0 or N} failures** -- **{elapsed_seconds}s elapsed** -- **{parallel_efficiency}x parallel efficiency** -- **Type: {Waves|Chains}**
 
-### What Was Done
-{2-4 sentences. What was the goal? What was accomplished? Any significant decisions?}
+---
 
-### Files Changed
-| File | Action | Task |
-|---|---|---|
-| {path} | created / modified / deleted | {task id} |
+### Summary of Work Completed (REQUIRED)
 
-### Important Logs and Observations
-{Summary of the most significant log entries -- not every log, just the ones that
-matter. Focus on: unexpected findings, key decisions, performance notes.}
+{Thorough summary of what was accomplished. This is NOT a 2-sentence blurb -- it should
+give the user a complete understanding of the work without needing to read individual task
+outputs. Cover:
+- What was the original goal?
+- What was actually built/changed/fixed?
+- How does the implementation work at a high level?
+- Any significant architectural or design decisions made during execution?
+- What is the current state of the feature/fix -- is it fully functional, partially
+  complete, or needs follow-up?
 
-### Divergent Actions
-(Only if any agents deviated -- omit entirely if all followed the plan)
-- **{task id} -- {title}:** {what was different and why}
+Aim for a well-structured summary that tells the full story.}
 
-### Warnings
-(Only if agents reported unexpected findings -- omit entirely if none)
-- **{task id}:** {warning description}
+### Files Changed (REQUIRED)
 
-### Failures
-(Only if tasks failed -- omit entirely if all succeeded)
+| File | Action | Task | What Changed |
+|---|---|---|---|
+| {path} | created / modified / deleted | {task id} | {1-line description of the change} |
+
+{Group files logically if the swarm was large -- by feature area, directory, or layer.}
+
+### Deviations & Their Impact (CONDITIONAL -- include if ANY worker reported deviations)
+
+For each deviation:
+- **Task {id} -- {title}**
+  - **What changed:** {What the worker did differently from the plan}
+  - **Why:** {The reason for the deviation}
+  - **Impact on project:** {How this deviation affects the codebase, other features, future work}
+
+### Warnings & Observations (CONDITIONAL -- include if any workers reported warnings)
+
+- **{task id}:** {warning description and its significance}
+
+### Failures (CONDITIONAL -- include if any tasks failed)
+
 - **{task id} -- {title}:** {what failed and why}
+- **Recovery:** {was a repair task dispatched? Did it succeed?}
 - **Blocked by failure:** {any tasks that could not run as a result}
+- **Residual impact:** {any incomplete work or broken state left behind}
 
-### Verification
-(Only if a verification step was run -- omit entirely if skipped)
+### Verification Results (CONDITIONAL -- include if a verification step was run)
+
 - **Tests:** {pass | fail | no test suite}
 - **Types:** {pass | fail | N/A}
 - **Build:** {pass | fail | N/A}
 - **Issues:** {list of integration problems, or "None"}
 
-### Recommendations and Next Steps
-(Only if applicable -- omit if the task is fully complete)
-- {Recommendation based on what was learned during execution}
+### Potential Improvements (REQUIRED)
+
+{Based on everything the master observed during the swarm -- worker logs, deviations, code
+patterns, architectural decisions -- identify improvements that could be made to the work
+that was just completed or to the surrounding codebase. Consider:
+- Code quality: DRY violations? Missing abstractions?
+- Performance: Any potential concerns noted by workers?
+- Robustness: Error handling gaps? Missing edge cases?
+- Testing: Adequate coverage? What is missing?
+- Architecture: Does the new code fit well? Coupling concerns?
+
+If the work is genuinely clean and complete with no improvements needed, explicitly state
+that and briefly explain why.}
+
+### Future Steps (REQUIRED)
+
+{Concrete, actionable next steps that emerge naturally from the work done:
+- Follow-up work that was out of scope but is now possible or necessary
+- Integration steps (e.g., "Wire the new component into the main layout")
+- Manual testing that should be done
+- Configuration or environment changes needed
+- Related features or improvements that would complement this work
+
+If the task is self-contained: "No immediate follow-up required."}
+
+### Performance (REQUIRED)
+
+| Metric | Value |
+|---|---|
+| Wall-clock time | {elapsed_seconds}s |
+| Serial estimate | {serial_estimate_seconds}s |
+| Parallel efficiency | {parallel_efficiency}x |
+| Max concurrent agents | {max_concurrent} |
+| Total deviations | {deviation_count} |
+| Failure rate | {failure_rate} |
 
 ### Artifacts
-- **Task Record:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
+
+- **Task file:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
 - **Plan:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
 - **Dashboard:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
 - **Logs:** `{tracker_root}/dashboards/{dashboardId}/logs.json`
+- **Metrics:** `{tracker_root}/dashboards/{dashboardId}/metrics.json`
 ```
 
 ### What the Master Assesses
@@ -232,19 +384,11 @@ During report compilation, the master evaluates the overall outcome:
 
 ---
 
-## Step 5: Post-Swarm Cleanup
+## Step 6: Post-Swarm Cleanup
 
-### Project TOC Update
+### Save to History
 
-If the swarm created, moved, or restructured files in the project, and a project TOC exists at `{project_root}/.synapse/toc.md`, the master updates it to reflect the new file structure.
-
-This update is done only when:
-- A TOC already exists (the master does not create one during completion)
-- The swarm actually changed the project's file structure (new files, moved files, deleted files)
-
-### History Summary
-
-The master may save a history summary to `{tracker_root}/history/` for future reference via the `!history` command:
+After delivering the final report, the master saves a history summary to `{tracker_root}/history/` for future reference via the `!history` command. This enables history lookups without reading full dashboard data.
 
 ```json
 {
@@ -255,10 +399,18 @@ The master may save a history summary to `{tracker_root}/history/` for future re
   "completed_tasks": 7,
   "failed_tasks": 1,
   "repaired_tasks": 1,
-  "dashboard": "dashboard1",
+  "dashboard": "540931",
   "project_root": "/Users/dean/repos/my-app"
 }
 ```
+
+### Project TOC Update
+
+If the swarm created, moved, or restructured files in the project, and a project TOC exists at `{project_root}/.synapse/toc.md`, the master updates it to reflect the new file structure.
+
+This update is done only when:
+- A TOC already exists (the master does not create one during completion)
+- The swarm actually changed the project's file structure (new files, moved files, deleted files)
 
 ### Dashboard Data Preservation
 
@@ -296,14 +448,17 @@ Previous swarm data is never discarded. This is a non-negotiable constraint -- e
 
 Once the swarm is complete and the final report is delivered, the master agent's orchestrator restrictions are lifted. It may resume normal agent behavior (including direct code edits) if the user requests non-parallel work.
 
-### Conditions for Exiting Orchestrator Mode
+### Post-Swarm Transition Checklist
 
-The master exits orchestrator mode when ALL of the following are true:
+ALL of the following conditions must be true before the master exits orchestrator mode:
 
-1. All workers have returned with terminal status (completed or failed)
-2. No repair tasks are pending or in progress
-3. The final report has been compiled and presented to the user
-4. No verification agent is currently running
+1. All tasks are in a terminal state (completed or failed) -- no in_progress or pending tasks remain
+2. The final report has been written and presented to the user
+3. Metrics have been recorded in `metrics.json`
+4. The dashboard has been archived (if the user requested archiving)
+5. The user has explicitly acknowledged the swarm is finished
+
+Only after ALL five conditions are met does the master role end. "Almost done" is not done. "Just one task left" still requires a worker agent.
 
 The no-code restriction applies exclusively during active swarm orchestration. Once the swarm is over, the agent operates normally.
 

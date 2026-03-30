@@ -283,7 +283,7 @@ All git commands execute through `gitExec()`, a helper that wraps `child_process
 
 ### Preload Bridge
 
-The `electron/preload.js` file exposes 29 git methods via `contextBridge.exposeInMainWorld('electronAPI', { ... })`. Each method maps 1:1 to an IPC handler via `ipcRenderer.invoke()`. The renderer accesses git operations through `window.electronAPI.gitStatus(repoPath)`, etc.
+The `electron/preload.js` file exposes 28 git methods via `contextBridge.exposeInMainWorld('electronAPI', { ... })`. Each method maps 1:1 to an IPC handler via `ipcRenderer.invoke()`. The renderer accesses git operations through `window.electronAPI.gitStatus(repoPath)`, etc.
 
 ---
 
@@ -327,7 +327,7 @@ A `refreshGitData()` callback performs a full parallel refresh of status, branch
 ```
 src/ui/
   components/git/
-    GitManagerView.jsx       -- Main layout orchestrator (413 lines)
+    GitManagerView.jsx       -- Main layout orchestrator (436 lines)
     RepoTabs.jsx             -- Repository tab bar (105 lines)
     GitWelcome.jsx           -- Welcome screen / empty state (78 lines)
     InitFlow.jsx             -- Git init wizard (103 lines)
@@ -335,8 +335,8 @@ src/ui/
     DiffViewer.jsx           -- Unified diff renderer with line numbers (169 lines)
     CommitPanel.jsx          -- Commit message composer (405 lines)
     RemotePanel.jsx          -- Push/pull/fetch with remote management (645 lines)
-    BranchPanel.jsx          -- Branch management UI (1,542 lines)
-    HistoryPanel.jsx         -- Commit history + SVG graph (1,068 lines)
+    BranchPanel.jsx          -- Branch management UI (1,567 lines)
+    HistoryPanel.jsx         -- Commit history + SVG graph (1,097 lines)
     QuickActions.jsx         -- Quick action modal for non-coders (962 lines)
     SafetyDialogs.jsx        -- ConfirmDialog + DoubleConfirmDialog (247 lines)
   context/
@@ -346,10 +346,10 @@ src/ui/
 
 electron/
   ipc-handlers.js             -- 28 git-* IPC handlers (~580 lines of git code)
-  preload.js                  -- 29 git methods exposed via contextBridge
+  preload.js                  -- 28 git methods exposed via contextBridge
 ```
 
-**Total:** ~8,500 lines of code across 14 files (12 components + CSS + IPC handlers).
+**Total:** ~8,800 lines of code across 14 files (12 components + CSS + IPC handlers).
 
 ---
 

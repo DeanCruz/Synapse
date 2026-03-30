@@ -1,6 +1,26 @@
 # CSS Design System
 
-The Synapse Dashboard uses a custom CSS design system built on CSS custom properties, with no CSS-in-JS libraries or utility frameworks. All styles live in `/src/ui/styles/index.css` (approximately 5900+ lines). JavaScript reads status colors from CSS via `getComputedStyle` at runtime so that theme changes propagate to both CSS and JS rendering.
+The Synapse Dashboard uses a custom CSS design system built on CSS custom properties, with no CSS-in-JS libraries or utility frameworks. Styles are split across **10 CSS files** in `/src/ui/styles/` totaling **13,778 lines**. JavaScript reads status colors from CSS via `getComputedStyle` at runtime so that theme changes propagate to both CSS and JS rendering.
+
+---
+
+## CSS File Inventory
+
+| File | Lines | Scope | Imported By |
+|---|---|---|---|
+| `index.css` | 8,073 | Core design system, dashboard components, pipelines, modals, themes, animations | `main.jsx` |
+| `git-manager.css` | 2,401 | Full Git Manager view — repo tabs, changes, commits, diffs, branches, history, quick actions, dialogs | `GitManagerView.jsx` + all git sub-components |
+| `ide-debug.css` | 1,124 | IDE debug toolbar, status indicators, button styles, launch config | `IDEView.jsx`, `DebugToolbar.jsx`, `DebugPanels.jsx`, `ProblemsPanel.jsx` |
+| `ide-debug-panels.css` | 525 | Debug side panels — variables, call stack, breakpoints, watch expressions | `IDEView.jsx` |
+| `ide-explorer.css` | 345 | File tree browser, welcome screen, tree node indent levels, loading states | `FileExplorer.jsx`, `IDEWelcome.jsx`, `main.jsx` |
+| `ide-editor.css` | 297 | Editor tabs, Monaco host, breakpoint glyphs, diagnostic decorations, saving indicator | `EditorTabs.jsx`, `CodeEditor.jsx`, `main.jsx` |
+| `ide-debug-console.css` | 288 | Debug console REPL — output display, expression input, entry types | `IDEView.jsx` |
+| `ide-layout.css` | 270 | IDE container layout, workspace tabs, resizable divider, editor area, debug sidebar | `IDEView.jsx`, `main.jsx` |
+| `ide-problems.css` | 233 | Problems panel — diagnostics list, severity icons, file groups, filter bar | Standalone (used by `ProblemsPanel.jsx`) |
+| `ide-sidebar.css` | 222 | Sidebar tab bar (Code Explorer / Dashboards), dashboard item styling, drag-and-drop, rename input | `Sidebar.jsx`, `main.jsx` |
+| **Total** | **13,778** | | |
+
+**Loading strategy:** Core CSS files (`index.css`, `ide-sidebar.css`, `ide-explorer.css`, `ide-editor.css`, `ide-layout.css`) are imported globally in `main.jsx`. Component-specific CSS files are imported by their respective components.
 
 ---
 
@@ -422,6 +442,164 @@ In `WorkerTerminal.jsx`, the same message type uses the `.claude-tool-result-sta
 
 ---
 
+## IDE Styling
+
+The IDE view uses 7 dedicated CSS files, plus `ide-sidebar.css` which is shared with the main sidebar. These files follow VS Code-inspired dark theme conventions.
+
+### `ide-layout.css` (270 lines)
+
+Main IDE container layout and workspace management.
+
+| Class | Element |
+|---|---|
+| `.ide-view` | Root container — full-width/height flexbox column |
+| `.workspace-tabs` | Top bar for workspace switching (36px height) |
+| `.workspace-tab` | Individual workspace tab with folder icon and close button |
+| `.workspace-tab.active` | Active workspace highlight |
+| `.ide-main` | Split panel container (explorer + editor) |
+| `.ide-explorer-panel` | Left sidebar for file tree |
+| `.ide-divider` | Draggable column resize handle (4px, purple on hover) |
+| `.ide-editor-area` | Main editor region |
+| `.ide-editor-and-debug` | Horizontal split: editor + debug sidebar |
+| `.ide-debug-sidebar` | Right-side debug panels (280px default) |
+
+### `ide-editor.css` (297 lines)
+
+Editor tabs and Monaco integration.
+
+| Class | Element |
+|---|---|
+| `.editor-tabs-bar` | Tab strip for open files (36px height, hidden scrollbar) |
+| `.editor-tab` | Individual file tab with close button |
+| `.editor-tab.active` | Active tab with purple top border accent (`::before`) |
+| `.editor-tab-dirty` | Unsaved changes dot indicator (purple, 7px) |
+| `.code-editor-container` | Monaco editor host |
+| `.code-editor-saving` | Save indicator overlay (fades out via `editorSaveFade` animation) |
+| `.breakpoint-glyph` | Red circle in gutter margin for breakpoints |
+| `.diagnostic-error-glyph` | Red circle for error diagnostics |
+| `.diagnostic-warning-glyph` | Yellow triangle for warning diagnostics |
+| `.diagnostic-info-glyph` | Purple circle for info diagnostics |
+| `.debug-current-line` | Yellow highlight on the current debug execution line |
+
+### `ide-explorer.css` (345 lines)
+
+File tree browser and welcome screen.
+
+| Class | Element |
+|---|---|
+| `.ide-explorer` | Explorer container with header and tree |
+| `.ide-explorer-item` | Tree node (file or folder) with depth-based indentation |
+| `.ide-explorer-item[data-depth="N"]` | Indent levels 0-10 (8px base + 14px per level) |
+| `.ide-explorer-chevron` | Folder expand/collapse arrow (rotates 90deg when expanded) |
+| `.ide-welcome` | Welcome screen with centered layout and action buttons |
+| `.ide-welcome-btn.primary` | Purple gradient primary action button |
+| `.ide-welcome-shortcut kbd` | Keyboard shortcut hint badges |
+
+### `ide-sidebar.css` (222 lines)
+
+Sidebar tab bar shared between dashboard and IDE views.
+
+| Class | Element |
+|---|---|
+| `.sidebar-tab-bar` | Stacked tab rows container |
+| `.sidebar-tab` | Individual tab (Code Explorer, Dashboards) |
+| `.sidebar-tab.active` | Purple accent highlight for active tab |
+| `.dashboard-item-content` | Dashboard list item in sidebar |
+| `.dashboard-item-preview` | Chat preview text with streaming pulse animation |
+| `.dashboard-item[draggable]` | Drag-and-drop reorder support |
+| `.dashboard-item-rename-input` | Inline rename text field |
+
+### `ide-debug.css` (1,124 lines)
+
+Debug toolbar and session controls.
+
+| Class | Element |
+|---|---|
+| `.debug-toolbar` | Toolbar container with controls and launch config |
+| `.debug-toolbar-controls` | Status indicator + action buttons row |
+| `.debug-status-dot` | 8px status indicator dot |
+| `.debug-toolbar-btn` | Action button (play, stop, step over, step into, step out) |
+| `.debug-toolbar-btn.primary-action` | Green start button with glow |
+
+### `ide-debug-panels.css` (525 lines)
+
+Debug side panels (Variables, Call Stack, Breakpoints, Watch).
+
+| Class | Element |
+|---|---|
+| `.debug-panels` | Scrollable container for all debug panel sections |
+| `.debug-panel-section` | Collapsible section with header and body |
+| `.debug-panel-section-header` | Clickable header with chevron and title |
+| `.debug-var-row` | Variable row with name, value, and type |
+| `.debug-var-value` | Syntax-colored value display (string=green, number=blue, boolean=purple) |
+| `.debug-frame-row` | Call stack frame entry |
+| `.debug-bp-row` | Breakpoint entry with toggle and location |
+
+### `ide-debug-console.css` (288 lines)
+
+REPL-style debug console.
+
+| Class | Element |
+|---|---|
+| `.debug-console` | Container with monospace font (Cascadia Code / Fira Code) |
+| `.debug-console-header` | Header bar with title and clear button |
+| `.debug-console-output` | Scrollable output area |
+| `.debug-console-entry` | Individual output entry (input echo, result, log, error) |
+| `.debug-console-input-row` | Bottom input row with prompt chevron |
+
+### `ide-problems.css` (233 lines)
+
+Problems panel for diagnostics display.
+
+| Class | Element |
+|---|---|
+| `.problems-panel` | Container (VS Code dark theme: `#1e1e1e` background) |
+| `.problems-summary-bar` | Filter toggle bar (errors, warnings, info counts) |
+| `.problems-filter-btn` | Toggle button for severity filtering |
+| `.problems-file-group` | File header + diagnostics list grouped by file |
+| `.problems-row` | Individual diagnostic entry with severity icon, message, and location |
+| `.problems-severity--error` | Red severity dot (`#f44747`) |
+| `.problems-severity--warning` | Yellow severity dot (`#cca700`) |
+| `.problems-severity--info` | Blue severity dot (`#3794ff`) |
+
+---
+
+## Git Manager Styling
+
+All Git Manager styles live in a single file: `git-manager.css` (2,401 lines). Every class is prefixed with `.git-manager-*` to avoid namespace collisions.
+
+### Major Sections
+
+| Section | Lines | Description |
+|---|---|---|
+| Repo Tab Bar | ~140 | Top tab strip for switching between repositories (mirrors workspace tabs pattern) |
+| Main Layout | ~10 | Flexbox sidebar + divider + content area |
+| Sidebar | ~85 | Changes list + commit panel container (~300px default, resizable) |
+| Changes Panel | ~195 | Staged/unstaged file lists with status icons and action buttons |
+| Commit Panel | ~90 | Message textarea, amend toggle, commit button with character count |
+| Divider | ~60 | Resizable panel separator (mirrors IDE divider) |
+| Content Area | ~80 | Main right panel tab bar (Changes, History, Branches) |
+| Diff Viewer | ~180 | Line-level green/red diff highlighting with line numbers |
+| Branch Panel | ~185 | Branch list, current branch indicator, merge/rebase controls |
+| History Panel | ~295 | Commit log table with hash, author, date, message columns |
+| Quick Actions | ~195 | Bottom toolbar with fetch, pull, push buttons and centered modal |
+| Safety Dialogs | ~195 | Confirmation overlays for destructive operations (force push, hard reset) |
+| Loading/Error States | ~40 | Full-panel loading spinner and error display |
+| Tooltips & Badges | ~40 | Generic tooltip positioning and count badges |
+| Stash List | ~55 | Stash entries with apply/drop controls |
+| Conflict Indicator | ~40 | Merge/rebase conflict warning banner |
+| Keyboard Hints | ~35 | Shortcut hint badges |
+| Scrollbar Overrides | ~35 | Custom scrollbar styling for git panels |
+
+### Design Patterns
+
+- **Mirrors IDE structure:** Layout (repo tabs, resizable sidebar, divider) follows the same pattern as `ide-layout.css`
+- **VS Code dark theme colors:** Many components use `#1e1e1e` background, `#cccccc` text, `#333` borders
+- **Diff colors:** Added lines use green (`rgba(35, 134, 54, 0.25)`) background, removed lines use red (`rgba(248, 81, 73, 0.25)`)
+- **Status indicators:** Branch status badges, ahead/behind counts, conflict markers
+
+---
+
 ## Animations
 
 ### fadeIn
@@ -467,6 +645,40 @@ Applied to permission request modals. Duration: `2.5s ease-in-out infinite`.
 ```
 
 Used by the unblocked tasks toast notification. Duration: `0.3s ease-out`.
+
+### editorSaveFade (IDE)
+
+```css
+@keyframes editorSaveFade {
+  0%   { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+```
+
+Applied to the `.code-editor-saving` indicator. Duration: `1.5s ease-out forwards`. Defined in `ide-editor.css`.
+
+### ide-spin (IDE)
+
+```css
+@keyframes ide-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+```
+
+Loading spinner for file explorer lazy-load states. Duration: `0.8s linear infinite`. Defined in `ide-explorer.css`.
+
+### preview-pulse (Sidebar)
+
+```css
+@keyframes preview-pulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.7; }
+}
+```
+
+Pulsing opacity on chat preview text when streaming. Duration: `1.5s ease-in-out infinite`. Defined in `ide-sidebar.css`.
 
 ---
 

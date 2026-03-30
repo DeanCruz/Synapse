@@ -88,8 +88,11 @@ Synapse/                         <-- {tracker_root}
 |-- .synapse/project.json        <-- Target project config
 |-- _commands/                   <-- Synapse/ (swarm), project/ (analysis), profiles/
 |-- agent/                       <-- Instructions, master/worker protocols, core docs
+|-- backlog/                     <-- Backlog items (complete/ and todo/)
+|-- conversations/               <-- Conversation history JSON files
 |-- dashboards/{id}/             <-- Live dashboard data (progress files, logs, state)
 |-- documentation/               <-- Deep-dive reference by topic
+|-- history/                     <-- Past swarm history records
 |-- tasks/{date}/                <-- Per-swarm task + plan files
 |-- Archive/                     <-- Archived swarm snapshots
 |-- src/server/ + src/ui/        <-- SSE server + React dashboard
@@ -121,6 +124,8 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | | `!resume` | Resume a chat session after interruption |
 | | `!p_track_resume` | Resume a stalled/interrupted `!p_track` swarm |
 | | `!track_resume` | Resume a stalled/interrupted swarm |
+| | `!update_dashboard` | Generate a visual progress report of the current swarm |
+| | `!export` | Export a dashboard's swarm state as markdown or JSON |
 | | `!cancel` | Cancel the active swarm |
 | | `!cancel-safe` | Graceful shutdown |
 | **Monitor** | `!status` | Terminal status summary |
@@ -136,6 +141,7 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | | `!contracts` | API contract audit |
 | | `!env_check` | Environment variable audit |
 | | `!plan {task}` | Implementation planning |
+| | `!prompt_audit` | Post-swarm prompt quality audit |
 | **TOC** | `!toc {query}` | Search the project TOC |
 | | `!toc_generate` | Generate a full project TOC |
 | | `!toc_update` | Incrementally update the TOC |
