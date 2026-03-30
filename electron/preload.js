@@ -90,6 +90,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setSetting: (key, value) => ipcRenderer.invoke('set-setting', key, value),
   resetSettings: () => ipcRenderer.invoke('reset-settings'),
 
+  // Additional context persistence (disk fallback for localStorage)
+  getAdditionalContext: (dashboardId) => ipcRenderer.invoke('get-additional-context', dashboardId),
+  saveAdditionalContext: (dashboardId, dirs) => ipcRenderer.invoke('save-additional-context', dashboardId, dirs),
+
   // Project
   selectProjectDirectory: () => ipcRenderer.invoke('select-project-directory'),
   loadProject: (dirPath) => ipcRenderer.invoke('load-project', dirPath),
@@ -181,6 +185,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ideSelectFolder: () => ipcRenderer.invoke('ide-select-folder'),
   ideCheckSyntax: (filePath, workspaceRoot) => ipcRenderer.invoke('ide-check-syntax', filePath, workspaceRoot),
   ideCheckSyntaxBatch: (filePaths, workspaceRoot) => ipcRenderer.invoke('ide-check-syntax-batch', filePaths, workspaceRoot),
+
+  // IDE Search
+  ideSearch: (workspacePath, query, options) => ipcRenderer.invoke('ide-search', workspacePath, query, options),
+  ideSearchReplace: (workspacePath, replacements) => ipcRenderer.invoke('ide-search-replace', workspacePath, replacements),
+  ideSearchCheckRg: () => ipcRenderer.invoke('ide-search-check-rg'),
 
   // Debug Service
   debugLaunch: (opts) => ipcRenderer.invoke('debug-launch', opts),

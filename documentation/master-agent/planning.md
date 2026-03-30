@@ -255,6 +255,14 @@ The master selects FULL or LITE mode per-task based on complexity:
 
 Default to FULL when uncertain. LITE is an optimization for simple tasks -- never use it for tasks with dependencies or coordination requirements.
 
+### Convention Map System
+
+After reading `{project_root}/CLAUDE.md`, the master categorizes its conventions into a **convention map** -- a mental or written index that groups rules by domain (e.g., `naming`, `file_structure`, `imports`, `frontend_styling`, `backend_api`, `error_handling`, `testing`, `types`). This map is used during prompt construction to filter conventions per-worker, ensuring each agent receives only the rules relevant to its specific task. See [worker_prompts.md](../../agent/master/worker_prompts.md) for the full category list and relevance checklist.
+
+### PKI Context Injection
+
+When a Project Knowledge Index (PKI) exists at `{project_root}/.synapse/knowledge/`, the master reads `manifest.json` before decomposing tasks. It extracts relevant domains and tags from the user's prompt, looks up files via the manifest's reverse indexes, and reads annotations for matched files. Gotchas, patterns, and conventions from annotations are injected into each worker's CONVENTIONS section under a `[PKI]` label -- filtered per-worker based on that worker's specific files. The PKI supplements but never replaces the CLAUDE.md convention map. If no PKI exists, the master proceeds with standard planning.
+
 ### Prompt Completeness Checklist
 
 Before dispatching each agent, verify the prompt contains:
@@ -262,13 +270,16 @@ Before dispatching each agent, verify the prompt contains:
 | Required Element | Description |
 |---|---|
 | File paths | Every file to read, modify, or create is listed with its full path |
-| CLAUDE.md conventions | Relevant sections quoted directly from the target repo's CLAUDE.md |
+| CLAUDE.md conventions | Relevant sections quoted directly from the target repo's CLAUDE.md, filtered by convention map categories relevant to this task |
+| PKI context | If a PKI exists, relevant annotations (gotchas, patterns, conventions) merged into CONVENTIONS and relationships merged into CONTEXT under `[PKI]` labels. Omitted if no PKI or no matching files. |
 | Reference code | If the worker must follow an existing pattern, a working example is included |
 | Upstream results | For downstream tasks: summary, files changed, new exports, and deviations from each dependency |
+| Sibling tasks | (Optional) For same-wave tasks with related file areas: sibling IDs, titles, and file lists so the worker can avoid conflicts |
 | Success criteria | The worker can unambiguously determine when the task is done |
 | Critical details | Edge cases, gotchas, and non-obvious constraints are explicitly stated |
 | Instruction mode | FULL or LITE is selected based on task complexity |
 | Both paths | `{tracker_root}` and `{project_root}` are both present in the prompt |
+| Progress tracking | Progress file path, task ID, agent label, template_version, inline schema, MANDATORY first-write instruction |
 
 If any element is missing, add it before dispatch. Do not assume the worker will figure it out.
 

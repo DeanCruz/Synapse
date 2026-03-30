@@ -46,4 +46,17 @@ Filters can be combined: `!logs --level error --last 10`
 
 5. **If no entries match**, report: "No log entries match the filter."
 
-6. **Summary line:** `"{total} total entries, {info} info, {warn} warn, {error} error"`
+6. **Summary line:** `"{total} total entries, {info} info, {warn} warn, {error} error, {deviation} deviation"`
+
+---
+
+## Log Levels
+
+| Level | Description |
+|---|---|
+| `info` | General events (dispatches, completions, milestones) |
+| `warn` | Unexpected but non-fatal events |
+| `error` | Failures, blocking issues |
+| `debug` | Verbose/diagnostic information |
+| `permission` | Triggers amber popup on dashboard alerting user to check terminal |
+| `deviation` | Plan divergence — displayed with yellow badge in log panel |

@@ -1,6 +1,6 @@
 # Queue System
 
-When all 5 dashboard slots are occupied by active swarms, Synapse uses an **overflow queue** to hold additional swarm plans until a dashboard becomes available. The queue ensures no work is lost even when the system is at full capacity.
+When all active dashboards are occupied by running swarms, Synapse uses an **overflow queue** to hold additional swarm plans until a dashboard becomes available. The queue ensures no work is lost even when the system is at capacity.
 
 ---
 
@@ -26,13 +26,13 @@ Queue items are created dynamically as needed. Unlike dashboards (which have fix
 
 ## How Items Enter the Queue
 
-When the master agent runs `!p_track` and no dashboard slot is available (all 5 are in use with active swarms), the swarm plan is written to the queue instead of a dashboard:
+When the master agent runs `!p_track` and no dashboard is available (all existing dashboards are in use with active swarms), the swarm plan is written to the queue instead of a dashboard:
 
 1. Master completes planning and has a full `initialization.json` ready.
 2. Master attempts dashboard selection via `selectDashboard()`.
-3. All 5 dashboards are in use (at least one agent per dashboard is `pending` or `in_progress`).
-4. Instead of asking the user to pick a dashboard to overwrite, the plan is written to `{tracker_root}/queue/queue{N}/`.
-5. The user is notified that the swarm is queued and will be promoted when a slot opens.
+3. All dashboards are in use (at least one agent per dashboard is `pending` or `in_progress`).
+4. Instead of creating yet another dashboard, the plan is written to `{tracker_root}/queue/queue{N}/`.
+5. The user is notified that the swarm is queued and will be promoted when a dashboard becomes available.
 
 ---
 
@@ -130,7 +130,7 @@ Users can also manually promote a queue item using dashboard management commands
 
 ## Queue in the Dashboard UI
 
-The dashboard sidebar shows queue items below the 5 dashboard slots. Each queue entry displays:
+The dashboard sidebar shows queue items below the dashboard list. Each queue entry displays:
 
 - **Queue position** (queue1, queue2, ...)
 - **Task name** from the plan
@@ -145,7 +145,7 @@ Users can click a queue entry to view the plan details without promoting it. The
 
 | Aspect | Dashboard Slot | Queue Item |
 |---|---|---|
-| Count | Fixed at 5 | Dynamic (unlimited) |
+| Count | Dynamic (hex IDs, no fixed limit) | Dynamic (unlimited) |
 | Workers can execute | Yes | No (waiting for promotion) |
 | Has live progress | Yes (via `fs.watch`) | No (no workers running) |
 | Appears in sidebar | Primary section | Queue section (below dashboards) |

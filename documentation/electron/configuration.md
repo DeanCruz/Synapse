@@ -6,7 +6,7 @@ This document covers Synapse's Electron app settings, build configuration, and d
 
 ## Settings Store
 
-**File:** `electron/settings.js` (103 lines)
+**File:** `electron/settings.js` (105 lines)
 
 Settings are persisted as a JSON file at `{userData}/synapse-settings.json` (the Electron `userData` directory, e.g., `~/Library/Application Support/synapse/` on macOS). The store implements a simple get/set interface with in-memory caching and synchronous disk writes.
 
@@ -39,6 +39,18 @@ Window position and size are saved automatically on resize/move events (debounce
 | Key | Type | Default | Description |
 |---|---|---|---|
 | `dashboardCount` | `number` | `5` | Number of dashboard slots available |
+
+#### Dashboard Metadata
+
+| Key | Type | Default | Description |
+|---|---|---|---|
+| `dashboardMeta` | `object` | `{ order: [], names: {} }` | Sidebar ordering and custom display names for dashboards |
+
+The `dashboardMeta` object has two sub-fields:
+- `order` -- Array of dashboard IDs defining sidebar display order
+- `names` -- Object mapping dashboard IDs to custom display names
+
+Managed via IPC: `reorderDashboards(orderedIds)` and `renameDashboard(id, displayName)`.
 
 #### Performance / Polling Settings
 
@@ -117,6 +129,22 @@ export default defineConfig({
       '@': path.resolve(__dirname, 'src/ui'),
     },
   },
+  optimizeDeps: {
+    include: [
+      'monaco-editor/esm/vs/editor/editor.worker',
+      'monaco-editor/esm/vs/language/json/json.worker',
+      'monaco-editor/esm/vs/language/css/css.worker',
+      'monaco-editor/esm/vs/language/html/html.worker',
+      'monaco-editor/esm/vs/language/typescript/ts.worker',
+    ],
+  },
+  server: {
+    port: 5174,
+    strictPort: true,
+  },
+  worker: {
+    format: 'es',
+  },
 });
 ```
 
@@ -128,6 +156,10 @@ export default defineConfig({
 | `build.emptyOutDir` | `true` | Clean output directory before each build |
 | `resolve.alias.@` | `src/ui` | Import alias for UI source files |
 | `plugins` | `[react()]` | React support via `@vitejs/plugin-react` |
+| `optimizeDeps.include` | Monaco worker modules | Pre-bundle Monaco Editor web workers for faster dev startup |
+| `server.port` | `5174` | Dev server port (Electron loads from `http://localhost:5174` in dev mode) |
+| `server.strictPort` | `true` | Fail if port 5174 is already in use (prevents port mismatch with Electron) |
+| `worker.format` | `"es"` | Use ES module format for web workers (Monaco Editor compatibility) |
 
 ### npm Scripts
 
@@ -137,10 +169,11 @@ export default defineConfig({
 |---|---|---|
 | `build` | `vite build` | Build the React frontend to `dist/` |
 | `start` | `vite build && unset ELECTRON_RUN_AS_NODE && electron .` | Build and launch the Electron app |
-| `dev` | `vite build --watch` | Build with file watching (for development) |
+| `dev` | `concurrently -k "vite" "electron ."` | Run Vite dev server and Electron concurrently (full HMR) |
 | `dist` | `vite build && electron-builder --mac` | Build frontend and package as macOS DMG |
+| `postinstall` | `electron-rebuild -f -w node-pty` | Rebuild native `node-pty` module for current Electron version |
 
-The `start` script unsets `ELECTRON_RUN_AS_NODE` to prevent Electron from running as a plain Node.js process, which can happen if this environment variable is set by parent processes.
+The `start` script unsets `ELECTRON_RUN_AS_NODE` to prevent Electron from running as a plain Node.js process, which can happen if this environment variable is set by parent processes. The `dev` script uses `concurrently` to run Vite's dev server (with HMR on `http://localhost:5174`) alongside Electron, killing both when either exits (`-k` flag).
 
 ---
 
@@ -220,6 +253,10 @@ These files are copied into the `Resources/` directory of the packaged app:
 |---|---|---|
 | `react` | `^19.2.4` | UI framework |
 | `react-dom` | `^19.2.4` | React DOM renderer |
+| `@xterm/xterm` | `^6.0.0` | Terminal emulator for embedded terminal panels |
+| `@xterm/addon-fit` | `^0.11.0` | Auto-resize addon for xterm.js terminals |
+| `monaco-editor` | `^0.55.1` | Code editor component (IDE file editing) |
+| `node-pty` | `^1.1.0` | Native pseudo-terminal for spawning shell processes |
 | `nvm` | `^0.0.4` | Node version management helper |
 
 ### Dev Dependencies
@@ -228,8 +265,14 @@ These files are copied into the `Resources/` directory of the packaged app:
 |---|---|---|
 | `electron` | `^41.0.3` | Desktop app framework |
 | `electron-builder` | `^26.8.1` | App packaging and distribution |
+| `@electron/rebuild` | `^4.0.3` | Rebuild native modules (node-pty) for Electron's Node.js version |
 | `vite` | `^8.0.0` | Frontend build tool |
 | `@vitejs/plugin-react` | `^6.0.1` | React support for Vite |
+| `concurrently` | `^9.2.1` | Run Vite dev server and Electron in parallel during development |
+
+### Native Modules
+
+`node-pty` is a native C++ addon that must be compiled for the specific Electron/Node.js ABI. The `postinstall` script (`electron-rebuild -f -w node-pty`) handles this automatically after `npm install`. If `node-pty` fails to load at runtime, run `npx electron-rebuild -f -w node-pty` manually.
 
 ### Zero-Dependency Server
 

@@ -1,6 +1,6 @@
 # Dashboard Selection
 
-When a Synapse command needs to interact with a dashboard, it must determine which of the 5 dashboard slots to use. Synapse employs two distinct selection mechanisms: **claiming** (for write operations like starting a new swarm) and **detection** (for read operations like checking status).
+When a Synapse command needs to interact with a dashboard, it must determine which dashboard to use. Synapse employs two distinct selection mechanisms: **claiming** (for write operations like starting a new swarm) and **detection** (for read operations like checking status).
 
 ---
 
@@ -15,107 +15,50 @@ The selection follows a strict priority order. The first matching rule wins:
 ```
 1. Pre-assigned dashboard (system prompt directive)     ← Highest priority
 2. Explicit --dashboard flag
-3. Auto-selection (scan for first available slot)       ← Fallback
+3. No dashboard? Ask the user.                          ← Never scan or auto-select
 ```
 
-### Priority 1: Pre-Assigned Dashboard
+### Priority 1: Pre-Assigned Dashboard (MANDATORY ISOLATION)
 
 When an agent is spawned from the Synapse Electron app's chat view, its system prompt contains a `DASHBOARD ID:` directive identifying the dashboard bound to that chat. This is **always authoritative** and the agent uses it unconditionally.
 
 Each chat view in the Electron app is associated with exactly one dashboard. The agent spawned from that chat writes to that specific dashboard so the user sees the swarm in the correct panel.
 
-**Pre-assigned dashboards are never overridden by auto-selection.**
+**Rules for pre-assigned dashboards:**
+- **ALWAYS use this dashboard** — regardless of whether it is empty, full, or has an active swarm.
+- **The agent has NO read or write access to any other dashboard.** Other dashboards do not exist for this agent.
+- **If the dashboard is empty** — proceed directly to set up the new dashboard.
+- **If the dashboard has previous data** — the agent **asks the user** if they want to archive it and set up the new dashboard. The agent does NOT proceed without explicit user approval. If the user declines, the agent stops.
+- **Never "find the next free dashboard."** Ask the user, archive if approved, and reuse.
 
 ```
-System prompt contains:  DASHBOARD ID: dashboard3
-Result:                  Agent uses dashboard3 unconditionally
+System prompt contains:  DASHBOARD ID: a1b2c3
+Dashboard is empty:      Proceed directly
+Dashboard has data:      Ask user → Archive → Clear → Reuse a1b2c3
+User declines:           Stop. Do not proceed.
 ```
 
 ### Priority 2: Explicit `--dashboard` Flag
 
-The user can force a specific dashboard slot with a command-line flag:
+The user can force a specific dashboard with a command-line flag:
 
 ```
-!p_track --dashboard dashboard3 Implement user authentication
+!p_track --dashboard a1b2c3 Implement user authentication
 ```
 
-This bypasses auto-selection and uses `dashboard3` directly. If the specified dashboard is currently in use (has agents that are `pending` or `in_progress`), Synapse warns the user and requires confirmation before overwriting.
+This bypasses auto-selection and uses `a1b2c3` directly. If the specified dashboard is currently in use (has agents that are `pending` or `in_progress`), Synapse warns the user and requires confirmation before overwriting.
 
-### Priority 3: Auto-Selection
+### No Auto-Selection. No Scanning.
 
-When no dashboard is pre-assigned and no `--dashboard` flag is specified, the master scans all 5 dashboard slots in order to find the first available one.
-
-**Algorithm:**
-
-```
-for each dashboard in [dashboard1, dashboard2, ..., dashboard5]:
-    read initialization.json
-
-    if task is null:
-        → AVAILABLE. Use this dashboard.
-
-    if task exists but no progress files exist:
-        → STALE CLAIM (plan written, never dispatched).
-        → Treat as available. Use this dashboard.
-
-    if all progress files have status "completed" or "failed":
-        → FINISHED BUT UNCLEARED.
-        → Save a history summary to history/.
-        → Use this dashboard (overwrite).
-
-    if any agent is "pending" or "in_progress":
-        → IN USE. Skip.
-```
-
-If all 5 dashboards are in use, Synapse displays a summary table and asks the user to choose:
-
-```
-## All Dashboards In Use
-
-| Dashboard | Task            | Status      | Progress |
-|-----------|-----------------|-------------|----------|
-| dashboard1| Auth refactor   | in_progress | 5/12     |
-| dashboard2| Dark mode       | in_progress | 3/8      |
-| dashboard3| DB migration    | in_progress | 1/6      |
-| dashboard4| API endpoints   | in_progress | 7/10     |
-| dashboard5| Test suite      | in_progress | 2/5      |
-
-Pick a dashboard to overwrite, or run `!reset {dashboardId}` first.
-```
-
-### Auto-Selection: Finished Dashboards
-
-When auto-selection encounters a dashboard whose swarm has finished (all agents completed or failed), it automatically:
-
-1. Calls `saveHistorySummary()` to persist a lightweight summary to `{tracker_root}/history/`
-2. Archives the dashboard to `{tracker_root}/Archive/` (preserving all data)
-3. Clears the dashboard for reuse
-
-This means finished swarms are never lost -- they are always preserved in both history and archive before being overwritten.
+Every agent MUST have a dashboard assigned — either via system prompt (`DASHBOARD ID:` directive) or via `--dashboard` flag. There is no scanning or auto-selection algorithm. If an agent has no assigned dashboard and no `--dashboard` flag, it asks the user which dashboard to use.
 
 ---
 
-## Detecting a Dashboard (`detectDashboard`)
+## Dashboard Resolution for Read Commands
 
 Used by read commands (`!status`, `!logs`, `!inspect`, `!deps`) when no specific dashboard is given.
 
-### Algorithm
-
-1. Scan all dashboards returned by `listDashboards()`.
-2. For each, read `initialization.json`. Skip any where `task` is `null` (empty dashboard).
-3. For non-empty dashboards, derive `overallStatus` from progress files and find the latest activity timestamp.
-4. Collect all non-empty dashboards as candidates.
-
-### Selection Priority
-
-| Condition | Result |
-|---|---|
-| 0 candidates | Report: "No active swarms. Use `!p_track` to start one." |
-| 1 candidate | Use it |
-| Exactly 1 candidate is `in_progress` | Use it |
-| Multiple candidates | Use the one with the most recent activity timestamp |
-
-When auto-detection selects a dashboard, it announces the choice with a prefix: `"[dashboard3] ..."`.
+**Rule:** Use your assigned dashboard from the `DASHBOARD ID:` directive in your system prompt. You have no access to any other dashboard. This applies to both read and write commands. If no assignment exists and no explicit ID was provided, ask the user.
 
 ---
 
@@ -147,21 +90,21 @@ Since `initialization.json` stores no lifecycle fields, overall swarm status is 
 All commands accept an optional `{dashboardId}` as the **first positional argument**:
 
 ```
-!status                         → auto-detect
-!status dashboard3              → explicit: dashboard3
-!inspect 2.3                    → auto-detect + task_id "2.3"
-!inspect dashboard1 2.3         → explicit: dashboard1 + task_id "2.3"
-!logs --level error             → auto-detect + filter
-!logs dashboard2 --level error  → explicit: dashboard2 + filter
+!status                         → use your assigned dashboard
+!status a1b2c3                  → explicit: a1b2c3
+!inspect 2.3                    → use your assigned dashboard + task_id "2.3"
+!inspect a1b2c3 2.3             → explicit: a1b2c3 + task_id "2.3"
+!logs --level error             → use your assigned dashboard + filter
+!logs a1b2c3 --level error      → explicit: a1b2c3 + filter
 ```
 
-**Parsing rule:** If the first argument matches the pattern `dashboard\d+`, consume it as `{dashboardId}`. Otherwise, run auto-detection. Task IDs use `N.N` format and flags start with `--`, so there is no ambiguity.
+**Parsing rule:** If the first argument matches a dashboard ID format (6-character hex string), consume it as `{dashboardId}`. Otherwise, use your assigned dashboard. Task IDs use `N.N` format and flags start with `--`, so there is no ambiguity.
 
 ---
 
 ## Worker Dashboard Routing
 
-Workers do not auto-detect dashboards. The master includes the dashboard ID in every worker dispatch prompt:
+The master includes the dashboard ID in every worker dispatch prompt:
 
 ```
 Write your progress to: {tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json
@@ -169,11 +112,11 @@ Write your progress to: {tracker_root}/dashboards/{dashboardId}/progress/{task_i
 
 Every worker receives:
 - `{tracker_root}` — where to write progress files
-- `{dashboardId}` — which dashboard slot to write to
+- `{dashboardId}` — which dashboard to write to (6-character hex string)
 - `{task_id}` — which progress file to create
 - `{project_root}` — where to do code work
 
-Workers write exactly where instructed. There is no auto-detection at the worker level.
+Workers write exactly where instructed.
 
 ---
 

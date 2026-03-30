@@ -1,0 +1,423 @@
+/* ============================================================
+   IDE Search Panel
+   ============================================================ */
+
+/* ----- Container ----- */
+.ide-search {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--sans);
+}
+
+.ide-search-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ide-search-title {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.ide-search-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ----- Input Area ----- */
+.ide-search-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ide-search-query-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ide-search-input {
+  flex: 1;
+  min-width: 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--mono, monospace);
+  font-size: 0.78rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.ide-search-input:focus {
+  border-color: rgba(155, 124, 240, 0.55);
+}
+
+.ide-search-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ----- Toggle Buttons (Regex, Case, Word) ----- */
+.ide-search-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: var(--mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.ide-search-toggle:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.ide-search-toggle.active {
+  color: var(--color-accent, #9b7cf0);
+  background: rgba(155, 124, 240, 0.12);
+  border-color: rgba(155, 124, 240, 0.3);
+}
+
+/* ----- Replace Row ----- */
+.ide-search-replace-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ide-search-replace-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.ide-search-replace-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.ide-search-replace-btn:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.ide-search-replace-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ----- Mode Toggle (expand replace/filters) ----- */
+.ide-search-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: color 0.15s, transform 0.15s;
+  flex-shrink: 0;
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+.ide-search-mode-toggle:hover {
+  color: var(--text-secondary);
+}
+
+.ide-search-mode-toggle.expanded {
+  transform: rotate(90deg);
+}
+
+.ide-search-mode-toggle svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ----- Filters (Include/Exclude globs) ----- */
+.ide-search-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ide-search-filter-label {
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0.02em;
+}
+
+.ide-search-filter-input {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--mono, monospace);
+  font-size: 0.72rem;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.ide-search-filter-input:focus {
+  border-color: rgba(155, 124, 240, 0.55);
+}
+
+.ide-search-filter-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* ----- Results Area ----- */
+.ide-search-results {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 0;
+}
+
+.ide-search-results::-webkit-scrollbar {
+  width: 4px;
+}
+
+.ide-search-results::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ide-search-results::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* ----- Summary bar ----- */
+.ide-search-summary {
+  padding: 6px 12px;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.ide-search-summary-truncated {
+  color: var(--color-warning, #e2a93b);
+}
+
+/* ----- File Group ----- */
+.ide-search-file-group {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.ide-search-file-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.1s;
+}
+
+.ide-search-file-header:hover {
+  background: var(--surface-hover);
+}
+
+.ide-search-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  transition: transform 0.15s ease;
+}
+
+.ide-search-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.ide-search-chevron svg {
+  width: 12px;
+  height: 12px;
+}
+
+.ide-search-file-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.ide-search-file-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.ide-search-file-name {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.ide-search-file-path {
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40%;
+  flex-shrink: 1;
+}
+
+.ide-search-file-count {
+  font-size: 0.66rem;
+  color: var(--text-tertiary);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+/* ----- Individual Match ----- */
+.ide-search-match {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 2px 12px 2px 32px;
+  cursor: pointer;
+  transition: background 0.1s;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.ide-search-match:hover {
+  background: var(--surface-hover);
+}
+
+.ide-search-match-line-num {
+  color: var(--text-tertiary);
+  font-family: var(--mono, monospace);
+  font-size: 0.72rem;
+  flex-shrink: 0;
+  min-width: 28px;
+  text-align: right;
+  padding-top: 1px;
+}
+
+.ide-search-match-content {
+  font-family: var(--mono, monospace);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+}
+
+.ide-search-match-highlight {
+  background: rgba(155, 124, 240, 0.25);
+  color: var(--text);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+/* ----- Loading & Empty states ----- */
+.ide-search-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  gap: 8px;
+}
+
+.ide-search-loading-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--color-accent, #9b7cf0);
+  border-radius: 50%;
+  animation: ide-search-spin 0.8s linear infinite;
+}
+
+@keyframes ide-search-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.ide-search-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+/* ----- Replace highlight in results ----- */
+.ide-search-match-replace-preview {
+  background: rgba(76, 175, 80, 0.2);
+  color: var(--text);
+  border-radius: 2px;
+  padding: 0 1px;
+  text-decoration: none;
+}
+
+/* ----- Error state ----- */
+.ide-search-error {
+  padding: 12px;
+  color: var(--color-failed, #ef4444);
+  font-size: 0.75rem;
+  text-align: center;
+}

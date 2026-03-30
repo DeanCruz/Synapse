@@ -312,6 +312,8 @@ After constructing each worker's dispatch prompt, the master should estimate the
 
 After reading `{project_root}/CLAUDE.md`, categorize its conventions into a **convention_map** — a mental or written index that groups rules by domain. This map is used during prompt construction to filter conventions per-worker, ensuring each agent receives only the rules relevant to its specific task.
 
+If additional context directories are configured (in `.synapse/project.json` or the Electron app), also read their `CLAUDE.md` files and merge their conventions into the convention map. These directories provide read-only supplemental context — treat their conventions as additional project rules when constructing worker prompts.
+
 ### Convention Map Categories
 
 | Category | What it covers | Example rules |

@@ -28,14 +28,14 @@ Global directories (not per-dashboard):
 
 All commands accept an optional `{id}` as the **first positional argument**.
 
-**Rule:** If the first argument is a valid dashboard ID (any non-flag string that is not a task ID), consume it as `{id}`. Otherwise, run auto-detection. Valid IDs include `ide`, 6-char hex strings (e.g., `a3f7k2`), and legacy `dashboardN` format.
+**Rule:** If the first argument is a valid dashboard ID (any non-flag string that is not a task ID), consume it as `{id}`. Otherwise, use your assigned dashboard. Valid IDs include `ide`, 6-char hex strings (e.g., `a3f7k2`), and legacy `dashboardN` format.
 
 ```
-!status                     → auto-detect
+!status                     → use your assigned dashboard
 !status a3f7k2              → explicit: a3f7k2
-!inspect 2.3                → auto-detect + task_id "2.3"
+!inspect 2.3                → use your assigned dashboard + task_id "2.3"
 !inspect a3f7k2 2.3         → explicit: a3f7k2 + task_id "2.3"
-!logs --level error         → auto-detect + filter
+!logs --level error         → use your assigned dashboard + filter
 !logs ide --level error     → explicit: ide + filter
 ```
 
@@ -43,27 +43,11 @@ Task IDs use `N.N` format (e.g., `2.3`), flags start with `--` — neither confl
 
 ---
 
-## Auto-Detection — `detectDashboard()`
+## Dashboard Resolution for Read Commands
 
-Used by read commands (`!status`, `!logs`, `!inspect`, `!deps`) when no dashboard is specified.
+Used by read commands (`!status`, `!logs`, `!inspect`, `!deps`) when no explicit dashboard ID is given.
 
-**Algorithm:**
-
-1. Scan all dashboards returned by `listDashboards()` (excluding `ide`).
-2. For each, read `initialization.json`. Skip any where `task` is `null` (empty dashboard).
-3. For dashboards with a task, derive `overallStatus` (see below) and find the latest activity timestamp (most recent `started_at` or `completed_at` from progress files, or `task.created` as fallback).
-4. Collect all non-empty dashboards as candidates.
-
-**Selection priority:**
-
-| Condition | Result |
-|---|---|
-| 0 candidates | Report: "No active swarms. Use `!p_track` to start one." |
-| 1 candidate | Use it |
-| Exactly 1 candidate is `in_progress` | Use it |
-| Multiple candidates | Use the one with the most recent activity timestamp |
-
-If auto-detection selects a dashboard, announce it: `"[a3f7k2] ..."` prefix on output (using the dashboard's short ID).
+**Rule:** If your system prompt contains a `DASHBOARD ID:` directive, use that dashboard. You have no access to any other dashboard. This applies to both read and write commands.
 
 ---
 
@@ -73,43 +57,35 @@ Used by `!p_track` when starting a new swarm. The master must claim a dashboard 
 
 **Resolution order (first match wins):**
 
-### 1. Pre-assigned dashboard (highest priority)
+### 1. Pre-assigned dashboard (highest priority) — MANDATORY ISOLATION
 
-When an agent is spawned from the Synapse chat view, its system prompt contains a `DASHBOARD ID:` directive identifying the dashboard bound to that chat. **This is always authoritative** — the agent must use this dashboard unconditionally without scanning or auto-selecting.
+When an agent is spawned from the Synapse chat view, its system prompt contains a `DASHBOARD ID:` directive identifying the dashboard bound to that chat. **This binding is absolute and unconditional.**
 
-Each chat view in the Synapse Electron app is associated with exactly one dashboard. The agent spawned from that chat must write to that dashboard so the user sees the swarm in the correct panel. Pre-assigned dashboards are never overridden by auto-selection.
+**Rules for pre-assigned dashboards:**
+
+- **ALWAYS use this dashboard.** No scanning. No auto-selection. No fallback. No exceptions.
+- **You have NO read or write access to any other dashboard.** Treat all other dashboards as if they do not exist. Never scan, read, query, or write to any dashboard other than your assigned one. This is enforced by the `enforce-dashboard-isolation.sh` PreToolUse hook via the `SYNAPSE_DASHBOARD_ID` environment variable — writes to other dashboards will be blocked.
+- **If the dashboard is empty** (`initialization.json` has `task: null` or does not exist) — proceed directly to set up the new dashboard.
+- **If the dashboard contains previous data** (i.e., `initialization.json` has `task` not `null`), **auto-archive and proceed.** Follow the archive protocol in Step 11A of `p_track_planning.md`:
+    1. Copy the full dashboard contents to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/`
+    2. Delete all `.json` files in the progress directory (`rm -f {tracker_root}/dashboards/{id}/progress/*.json`)
+    3. Reset `logs.json` to `{ "entries": [] }`
+    4. **Verify** — run `ls {tracker_root}/dashboards/{id}/progress/` and confirm it is empty. If any `.json` files remain, delete them.
+    5. Log the archive action: `Auto-archived previous task '{task.name}' → Archive/{date}_{task_name}/`
+    6. Proceed with setting up the new dashboard — do NOT write `initialization.json` until step 4 passes
+
+  **Do NOT ask the user for confirmation** — archiving is automatic and non-destructive (the old data is preserved in `Archive/`). This ensures the dashboard is always ready for the new swarm without blocking on user input.
+- **Never "find the next free dashboard."** Your dashboard is your dashboard. Archive automatically and reuse.
+
+Each chat view in the Synapse Electron app is associated with exactly one dashboard. The agent spawned from that chat must write to that dashboard so the user sees the swarm in the correct panel.
 
 ### 2. Explicit `--dashboard` flag
 
-`!p_track --dashboard a3f7k2 {prompt}` bypasses auto-selection and uses `a3f7k2` directly. If it's in use, warn and require confirmation.
+`!p_track --dashboard a3f7k2 {prompt}` uses `a3f7k2` directly. If it's in use, warn and require confirmation.
 
-### 3. Auto-selection (fallback)
+### No auto-selection. No scanning. No fallback.
 
-Only used when no dashboard is pre-assigned and no `--dashboard` flag is specified.
-
-**Algorithm:**
-
-1. Scan all dashboards returned by `listDashboards()` in order, **excluding `ide`** (the IDE dashboard is never auto-selected for swarms).
-2. For each dashboard:
-   - Read `initialization.json`. If `task` is `null` → **available**. Return this dashboard.
-   - If `task` is not null, read all files in `progress/`.
-   - If no progress files exist → **stale claim** (plan was written but never dispatched). Treat as available.
-   - If every progress file has status `"completed"` or `"failed"` → **finished but uncleared**. Save a history summary to `{tracker_root}/history/` before overwriting. Return this dashboard.
-   - Otherwise (at least one agent is `"pending"` or `"in_progress"`) → **in use**. Skip.
-3. If all dashboards are in use, display a summary table and ask the user:
-
-```markdown
-## All Dashboards In Use
-
-| Dashboard | Task | Status | Progress |
-|---|---|---|---|
-| a3f7k2 | {task.name} | {overall_status} | {completed}/{total} |
-| ... | ... | ... | ... |
-
-Pick a dashboard to overwrite, or run `!reset {id}` first.
-```
-
-4. If the user picks a dashboard, save history before overwriting if it had data.
+Every agent MUST have a dashboard assigned — either via system prompt (`DASHBOARD ID:` directive) or via `--dashboard` flag. There is no scanning or auto-selection algorithm. If you have no assigned dashboard and no `--dashboard` flag, ask the user which dashboard to use. Never scan dashboards to find an available one.
 
 ---
 
@@ -172,28 +148,14 @@ For each wave in `initialization.json`:
 
 ---
 
-## Dashboard Availability Check
-
-A dashboard is considered **available** if ANY of these are true:
-- `initialization.json` has `task: null`
-- `initialization.json` does not exist
-- All progress files show terminal status (`completed` or `failed`) — the swarm finished but was never cleared
-
-A dashboard is **in use** if:
-- `initialization.json` has a `task` AND at least one agent is `pending` or `in_progress`
-
----
-
 ## IDE Dashboard Protocol
 
 The `ide` dashboard is permanently reserved for the IDE agent:
 
 - **Always exists** — auto-created on Electron app startup via `ensureIdeDashboard()`
 - **Cannot be deleted** — `DashboardService.deleteDashboard('ide')` returns false
-- **Never auto-selected for swarms** — the dashboard selection algorithm must skip `ide`
-- **Explicitly bindable** — IDE chat views bind to `ide` via the system prompt `DASHBOARD ID: ide`
-
-When a master agent needs to find the IDE dashboard, it checks for `ide`. If somehow missing, it creates it by running `mkdir -p {tracker_root}/dashboards/ide/progress`.
+- **Exclusively bound to IDE chat views** — IDE chat views bind to `ide` via the system prompt `DASHBOARD ID: ide`
+- **Never used by swarm agents** — swarm agents use their own assigned dashboard only
 
 ---
 
@@ -205,4 +167,4 @@ Workers must know their `{id}` to write progress files to the correct location. 
 Write your progress to: {tracker_root}/dashboards/{id}/progress/{task_id}.json
 ```
 
-Workers never auto-detect dashboards. They write exactly where the master tells them to.
+Workers write exactly where the master tells them to.

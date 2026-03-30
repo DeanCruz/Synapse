@@ -432,7 +432,7 @@ Server keeps connection open, sends events as files change:
 **Event format (SSE protocol):**
 ```
 event: agent_progress
-data: {"dashboardId":"dashboard1","task_id":"1.1","status":"in_progress","stage":"implementing",...}
+data: {"dashboardId":"2d84ac","task_id":"1.1","status":"in_progress","stage":"implementing",...}
 
 ```
 
@@ -448,8 +448,8 @@ In Electron mode, communication happens via Electron's IPC mechanism between the
 | `logs` | `{ dashboardId, entries }` |
 | `agent_progress` | `{ dashboardId, task_id, status, stage, ... }` |
 | `all_progress` | `{ dashboardId, [task_id]: progressData, ... }` |
-| `dashboards_list` | `{ dashboards: ["dashboard1", ...] }` |
-| `dashboards_changed` | `{ dashboards: ["dashboard1", ...] }` |
+| `dashboards_list` | `{ dashboards: ["2d84ac", ...] }` |
+| `dashboards_changed` | `{ dashboards: ["2d84ac", ...] }` |
 | `queue_changed` | `{ queue: [...] }` |
 | `tasks_unblocked` | `{ dashboardId, completedTaskId, unblocked: [...] }` |
 | `reload` | `{}` |
@@ -477,13 +477,13 @@ Over 60 IPC methods are exposed through the preload context bridge, covering:
 The `main.jsx` entry point patches `window.fetch` to intercept `/api/*` calls in Electron mode:
 
 ```
-Component calls fetch('/api/dashboards/dashboard1/initialization')
+Component calls fetch('/api/dashboards/2d84ac/initialization')
     |
     v
 Patched fetch() detects /api/ prefix
     |
     v
-Routes to IPC: window.electronAPI.getDashboardInit('dashboard1')
+Routes to IPC: window.electronAPI.getDashboardInit('2d84ac')
     |
     v
 IPC handler reads file and returns data
@@ -666,7 +666,7 @@ Electron launches main.js
    b. AppProvider wraps App with useReducer state
    c. App renders, useDashboardData hook initializes:
       - Fetches dashboard list and statuses via IPC pull
-      - Fetches data for default dashboard (dashboard1)
+      - Fetches data for default dashboard (first available hex-ID dashboard)
       - Subscribes to IPC push events
    d. mergeState() produces initial renderable state
    e. Dashboard renders with initial data
@@ -685,7 +685,7 @@ node src/server/index.js
     v
 1. startup():
    a. Ensure dashboards/ directory exists
-   b. Ensure at least dashboard1 exists
+   b. Ensure at least one dashboard directory exists
    c. Ensure Archive/, history/, queue/ directories exist
    d. Start file watchers for all dashboards
    e. Start dashboards directory watcher

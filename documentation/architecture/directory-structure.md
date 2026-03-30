@@ -38,7 +38,7 @@ Synapse/                                 <- {tracker_root}
 |
 +-- _commands/                           Command system (markdown specs)
 +-- agent/                               Agent instruction files
-+-- dashboards/                          Live dashboard data (up to 5 slots)
++-- dashboards/                          Live dashboard data (hex ID directories)
 +-- tasks/                               Generated task files per swarm
 +-- Archive/                             Full dashboard snapshots (archived swarms)
 +-- history/                             Lightweight summary JSON files
@@ -64,19 +64,24 @@ Synapse/                                 <- {tracker_root}
 
 ```
 electron/
-+-- main.js                              Main process entry point (172 lines)
-+-- preload.js                           Context bridge for IPC (136 lines)
-+-- settings.js                          JSON settings store (103 lines)
-+-- ipc-handlers.js                      IPC data bridge (905 lines)
++-- main.js                              Main process entry point (173 lines)
++-- preload.js                           Context bridge for IPC (244 lines)
++-- settings.js                          JSON settings store (105 lines)
++-- ipc-handlers.js                      IPC data bridge (~2,200 lines)
 +-- services/
-|   +-- SwarmOrchestrator.js             Self-managing dispatch engine (761 lines)
-|   +-- ClaudeCodeService.js             Claude CLI process management
-|   +-- CodexService.js                  Codex CLI process management
-|   +-- PromptBuilder.js                 Worker prompt construction
-|   +-- ProjectService.js               Project detection and context loading
-|   +-- CommandsService.js              Command file CRUD and generation
-|   +-- TaskEditorService.js            Swarm and task CRUD operations
-|   +-- ConversationService.js          Chat conversation persistence
+|   +-- SwarmOrchestrator.js             Self-managing dispatch engine (764 lines)
+|   +-- ClaudeCodeService.js             Claude CLI process management (370 lines)
+|   +-- CodexService.js                  Codex CLI process management (225 lines)
+|   +-- PromptBuilder.js                 Worker prompt construction (372 lines)
+|   +-- ProjectService.js               Project detection and context loading (193 lines)
+|   +-- CommandsService.js              Command file CRUD and generation (651 lines)
+|   +-- TaskEditorService.js            Swarm and task CRUD operations (377 lines)
+|   +-- ConversationService.js          Chat conversation persistence (143 lines)
+|   +-- DebugService.js                 IDE debug session management (796 lines)
+|   +-- TerminalService.js             Integrated terminal (PTY) management (182 lines)
+|   +-- InstrumentService.js          Project file instrumentation for Live Preview
+|   +-- PreviewService.js             Label-to-source file mapping for Live Preview
+|   +-- PreviewTextWriter.js          Text update writer for Live Preview edits
 +-- assets/
     +-- icon.icns                        macOS app icon
     +-- icon.iconset/                    Icon set with multiple resolutions
@@ -87,8 +92,8 @@ electron/
 | File | Description |
 |---|---|
 | `main.js` | Electron main process entry point. Registers the custom `app://synapse/` protocol scheme, creates the BrowserWindow, manages app lifecycle (ready, activate, window-all-closed), and saves window state (size, position) on resize/move. Loads `app://synapse/dist/index.html` as the app content. |
-| `preload.js` | Context bridge that exposes `window.electronAPI` to the renderer process. Defines a push channel whitelist (13 channels for main-to-renderer events) and 60+ `ipcRenderer.invoke()` methods for renderer-to-main requests. All methods are organized by domain: dashboards, archives, history, queue, settings, project, task editor, commands, workers, orchestration, conversations, and file handling. |
-| `settings.js` | A simple JSON file-backed settings store. Persists settings to `~/.synapse-settings.json`. Stores window dimensions, position, maximized state, recent projects, and user preferences. Provides `get()`, `set()`, `getAll()`, `reset()`, and `init()` methods. |
+| `preload.js` | Context bridge that exposes `window.electronAPI` to the renderer process. Defines a push channel whitelist (33 channels for main-to-renderer events) and ~140 `ipcRenderer.invoke()` methods for renderer-to-main requests. All methods are organized by domain: dashboards, archives, history, queue, settings, project, task editor, commands, workers, orchestration, conversations, terminal, IDE, debug, git, preview, and file handling. |
+| `settings.js` | A simple JSON file-backed settings store. Persists settings to `{userData}/synapse-settings.json` (where `{userData}` is the OS-specific user data directory, e.g., `~/Library/Application Support/synapse` on macOS). Stores window dimensions, position, maximized state, recent projects, and user preferences. Provides `get()`, `set()`, `getAll()`, `reset()`, and `init()` methods. |
 | `ipc-handlers.js` | The largest Electron file. Registers all `ipcMain.handle()` handlers that bridge renderer IPC requests to server-side services. Also creates the broadcast function that routes file watcher events to the renderer via `webContents.send()`, and feeds progress updates to the SwarmOrchestrator. Sets up file watchers on startup and sends initial data to the renderer once the window is ready. |
 
 ### Electron Services
@@ -103,6 +108,11 @@ electron/
 | `CommandsService.js` | CRUD operations for command files in `_commands/` directories. Supports listing, reading, saving, and deleting commands. Also supports generating new commands via CLI and loading project-specific commands from `{project_root}/_commands/`. |
 | `TaskEditorService.js` | Provides CRUD operations for swarm plans. Creates new swarms by writing `initialization.json`, adds/updates/removes individual tasks, manages wave definitions, generates task IDs, and validates dependency graphs for cycles and missing references. |
 | `ConversationService.js` | Manages chat conversation persistence. Stores conversations as JSON files in `{tracker_root}/conversations/`. Supports listing (optionally filtered by dashboard), loading, saving, creating, deleting, and renaming conversations. |
+| `DebugService.js` | Manages IDE debug sessions. Handles breakpoint management, debug session lifecycle (start, stop, step, continue), variable inspection, call stack retrieval, and debug console evaluation. Communicates debug state to the renderer via IPC events. |
+| `TerminalService.js` | Manages integrated terminal instances using node-pty. Spawns PTY processes, handles terminal input/output streaming via IPC, supports resize events, and manages terminal lifecycle (create, destroy, list active terminals). |
+| `InstrumentService.js` | Scans project JSX/TSX/HTML files and adds `data-synapse-label` attributes to text-bearing elements (headings, paragraphs, buttons, links) for Live Preview integration. |
+| `PreviewService.js` | Maps `data-synapse-label` attributes back to source file locations, enabling the Live Preview to identify which source file and position correspond to a given labeled element. |
+| `PreviewTextWriter.js` | Writes text edits from the Live Preview overlay back to the corresponding source files, updating the text content at the mapped location. |
 
 ---
 
@@ -110,20 +120,21 @@ electron/
 
 ```
 src/server/
-+-- index.js                             HTTP server entry point (219 lines)
-+-- SSEManager.js                        SSE client management (91 lines)
++-- index.js                             HTTP server entry point (218 lines)
++-- SSEManager.js                        SSE client management (108 lines)
 +-- routes/
-|   +-- apiRoutes.js                     REST API route handlers (465 lines)
+|   +-- apiRoutes.js                     REST API route handlers (507 lines)
 +-- services/
-|   +-- DashboardService.js              Dashboard CRUD operations (206 lines)
-|   +-- WatcherService.js                File system watchers (304 lines)
-|   +-- DependencyService.js             Dependency graph computation (199 lines)
-|   +-- ArchiveService.js                Dashboard archival (73 lines)
-|   +-- HistoryService.js                History summary generation (141 lines)
-|   +-- QueueService.js                  Overflow queue management (163 lines)
+|   +-- DashboardService.js              Dashboard CRUD operations (232 lines)
+|   +-- WatcherService.js                File system watchers (364 lines)
+|   +-- DependencyService.js             Dependency graph computation (198 lines)
+|   +-- ArchiveService.js                Dashboard archival (72 lines)
+|   +-- HistoryService.js                History summary generation (140 lines)
+|   +-- QueueService.js                  Overflow queue management (162 lines)
 +-- utils/
-    +-- constants.js                     Configuration constants (49 lines)
-    +-- json.js                          JSON read/write helpers
+    +-- constants.js                     Configuration constants (48 lines)
+    +-- json.js                          JSON read/write helpers (194 lines)
+    +-- validation.js                    Dashboard data validation (88 lines)
 ```
 
 ### File Descriptions
@@ -143,14 +154,15 @@ src/server/
 | `DependencyService.js` | Computes dependency relationships. Given a completed task ID, reads `initialization.json` for the dependency graph and all progress files for current status, then returns a list of task IDs that are newly unblocked (all dependencies satisfied, not yet started). Used by `WatcherService` to emit `tasks_unblocked` events. |
 | `ArchiveService.js` | Lists archives in the `Archive/` directory, creates archives by copying dashboard directories, and deletes archive directories. |
 | `HistoryService.js` | Lists history summary files from the `history/` directory. Builds history summaries from dashboard data (task name, type, counts, timing, agent details) for lightweight historical reference. |
-| `QueueService.js` | Manages the overflow queue for swarms that cannot fit into the 5 dashboard slots. Lists queue items with summaries, reads queue item data (init, logs, progress), and provides the queue directory path. |
+| `QueueService.js` | Manages the overflow queue for swarms waiting to be promoted to active dashboards. Lists queue items with summaries, reads queue item data (init, logs, progress), and provides the queue directory path. |
 
 ### Server Utilities
 
 | File | Description |
 |---|---|
 | `constants.js` | Central configuration constants. Defines `PORT` (default 3456), directory paths (`DASHBOARDS_DIR`, `QUEUE_DIR`, `ARCHIVE_DIR`, `HISTORY_DIR`, `CONVERSATIONS_DIR`), timing constants (poll intervals, retry delays, debounce periods), MIME types, and default data structures for empty `initialization.json` and `logs.json`. |
-| `json.js` | JSON file I/O helpers. Provides `readJSON()` (sync read with parse), `readJSONAsync()` (async read), `readJSONWithRetry()` (async read with retry on parse failure -- handles mid-write race), and validation functions (`isValidInitialization()`, `isValidProgress()`, `isValidLogs()`) that check for required fields and correct types. |
+| `json.js` | JSON file I/O helpers. Provides `readJSON()` (sync read with parse), `readJSONAsync()` (async read), `readJSONWithRetry()` (async read with retry on parse failure -- handles mid-write race). |
+| `validation.js` | Dashboard data validation functions. Provides `isValidInitialization()`, `isValidProgress()`, and `isValidLogs()` that check for required fields and correct types. Used by the server and IPC handlers to validate data before broadcasting. |
 
 ---
 
@@ -158,14 +170,15 @@ src/server/
 
 ```
 src/ui/
-+-- main.jsx                             Entry point + Electron fetch shim
-+-- App.jsx                              Root component
++-- main.jsx                             Entry point + Electron fetch shim (80 lines)
++-- App.jsx                              Root component (507 lines)
 +-- context/
-|   +-- AppContext.jsx                   State management (useReducer)
+|   +-- AppContext.jsx                   State management (useReducer) (957 lines)
 +-- hooks/
-|   +-- useDashboardData.js              IPC/SSE event subscription + state merge
-|   +-- useElectronAPI.js                API access hook
-+-- components/                          29 React components
+|   +-- useDashboardData.js              IPC/SSE event subscription + state merge (407 lines)
+|   +-- useElectronAPI.js                API access hook (10 lines)
+|   +-- useResize.js                     Resizable panel hook (155 lines)
++-- components/                          54 React components across 4 directories
 |   +-- Header.jsx                       Top navigation bar
 |   +-- Sidebar.jsx                      Dashboard list with status indicators
 |   +-- WavePipeline.jsx                 Wave layout (vertical columns)
@@ -173,32 +186,79 @@ src/ui/
 |   +-- AgentCard.jsx                    Individual task card
 |   +-- StatsBar.jsx                     Stat counter cards
 |   +-- LogPanel.jsx                     Collapsible event log drawer
-|   +-- Modal.jsx                        Base modal component
-|   +-- AgentDetails.jsx                 Agent detail popup with log viewer
-|   +-- TaskDetails.jsx                  Task detail information
-|   +-- CommandsModal.jsx               Command browser and editor
-|   +-- ProjectModal.jsx                Project selection and explorer
-|   +-- SettingsModal.jsx               Application settings
-|   +-- TaskEditorModal.jsx             Visual swarm plan editor
-|   +-- PlanningModal.jsx               Planning interface
-|   +-- ArchiveModal.jsx                Archive browser
-|   +-- HistoryModal.jsx                Swarm history browser
 |   +-- SwarmBuilder.jsx                Visual swarm creation tool
 |   +-- ClaudeView.jsx                  In-app agent chat interface
 |   +-- HomeView.jsx                    Overview/home dashboard
 |   +-- EmptyState.jsx                  Placeholder for empty dashboards
 |   +-- ConnectionIndicator.jsx         Connection status indicator
-|   +-- ... (additional utility components)
+|   +-- TerminalView.jsx               Integrated terminal emulator (xterm.js)
+|   +-- BottomPanel.jsx                Resizable bottom panel container
+|   +-- MetricsPanel.jsx               Swarm performance metrics
+|   +-- TimelinePanel.jsx              Task timeline visualization
+|   +-- ProgressBar.jsx                Progress bar component
+|   +-- QueuePopup.jsx                 Queue overflow popup
+|   +-- modals/                          14 modal components
+|   |   +-- Modal.jsx                    Base modal component
+|   |   +-- AgentDetails.jsx             Agent detail popup with log viewer
+|   |   +-- TaskDetails.jsx              Task detail information
+|   |   +-- CommandsModal.jsx           Command browser and editor
+|   |   +-- ProjectModal.jsx            Project selection and explorer
+|   |   +-- SettingsModal.jsx           Application settings
+|   |   +-- TaskEditorModal.jsx         Visual swarm plan editor
+|   |   +-- PlanningModal.jsx           Planning interface
+|   |   +-- ArchiveModal.jsx            Archive browser
+|   |   +-- HistoryModal.jsx            Swarm history browser
+|   |   +-- ConfirmModal.jsx            Confirmation dialog
+|   |   +-- ErrorModal.jsx              Error display dialog
+|   |   +-- PermissionModal.jsx         Permission request dialog
+|   |   +-- WorkerTerminal.jsx          Worker output terminal
+|   +-- ide/                             10 IDE components
+|   |   +-- IDEView.jsx                  IDE layout container
+|   |   +-- CodeEditor.jsx              Monaco-based code editor
+|   |   +-- FileExplorer.jsx            File tree browser
+|   |   +-- DebugToolbar.jsx            Debug controls toolbar
+|   |   +-- DebugPanels.jsx             Debug variable/callstack panels
+|   |   +-- DebugConsolePanel.jsx       Debug console output
+|   |   +-- ProblemsPanel.jsx           Problems/diagnostics panel
+|   |   +-- EditorTabs.jsx              Open file tab bar
+|   |   +-- WorkspaceTabs.jsx           Workspace tab bar
+|   |   +-- IDEWelcome.jsx              IDE welcome screen
+|   +-- preview/                         Live Preview components
+|   |   +-- PreviewView.jsx              Embedded webview with inline text editing
+|   +-- git/                             12 Git management components
+|       +-- GitManagerView.jsx           Git manager layout container
+|       +-- BranchPanel.jsx             Branch management
+|       +-- ChangesPanel.jsx            Staged/unstaged changes
+|       +-- CommitPanel.jsx             Commit creation
+|       +-- DiffViewer.jsx              File diff display
+|       +-- HistoryPanel.jsx            Commit history
+|       +-- RemotePanel.jsx             Remote repository management
+|       +-- QuickActions.jsx            Quick Git action buttons
+|       +-- RepoTabs.jsx               Repository tab bar
+|       +-- InitFlow.jsx               Git init wizard
+|       +-- SafetyDialogs.jsx          Destructive action confirmations
+|       +-- GitWelcome.jsx             Git welcome screen
 +-- utils/
-|   +-- constants.js                     UI constants (colors, labels)
-|   +-- format.js                        Formatting helpers (dates, durations)
-|   +-- markdown.js                      Markdown rendering utilities
-|   +-- dependencyLines.js              Canvas-based dependency line drawing
-|   +-- dashboardProjects.js            Dashboard-project association helpers
-+-- styles/
-|   +-- index.css                        Complete stylesheet (5,973 lines)
+|   +-- constants.js                     UI constants (colors, labels) (114 lines)
+|   +-- format.js                        Formatting helpers (dates, durations) (22 lines)
+|   +-- markdown.js                      Markdown rendering utilities (256 lines)
+|   +-- dependencyLines.js              Canvas-based dependency line drawing (664 lines)
+|   +-- dashboardProjects.js            Dashboard-project association helpers (61 lines)
+|   +-- ideWorkspaceManager.js          IDE workspace state management (142 lines)
+|   +-- monacoWorkerSetup.js            Monaco editor web worker setup (35 lines)
++-- styles/                              10 CSS files totaling ~13,776 lines
+|   +-- index.css                        Main stylesheet (8,071 lines)
+|   +-- git-manager.css                  Git manager styles (2,401 lines)
+|   +-- ide-debug.css                    IDE debug styles (1,124 lines)
+|   +-- ide-debug-panels.css            Debug panel styles (525 lines)
+|   +-- ide-editor.css                   Editor styles (297 lines)
+|   +-- ide-explorer.css                File explorer styles (345 lines)
+|   +-- ide-layout.css                   IDE layout styles (270 lines)
+|   +-- ide-debug-console.css           Debug console styles (288 lines)
+|   +-- ide-problems.css                Problems panel styles (233 lines)
+|   +-- ide-sidebar.css                  IDE sidebar styles (222 lines)
 +-- assets/
-    +-- logo.svg                         Synapse logo
+    +-- synapse-logo-mark.svg            Synapse logo
 ```
 
 ### Key UI Files
@@ -317,7 +377,7 @@ agent/instructions/
 | `tracker_master_instructions.md` | Maps every field in `initialization.json` to the UI panel it drives. The master agent must read this before writing any dashboard files to ensure the plan renders correctly. |
 | `tracker_worker_instructions.md` | Complete reference for worker progress reporting. Defines the progress file schema, fixed stages, mandatory write points, deviation reporting, upstream dependency reading, log formats, and the return format with EXPORTS. |
 | `tracker_multi_plan_instructions.md` | Guide for multi-stream orchestration via `!master_plan_track`. Covers decomposing large tasks into independent swarms across multiple dashboard slots. |
-| `dashboard_resolution.md` | Defines the priority chain for selecting a dashboard: pre-assigned via system prompt > `--dashboard` flag > auto-scan for first available slot. |
+| `dashboard_resolution.md` | Defines dashboard assignment: pre-assigned via system prompt (mandatory, no scanning) > `--dashboard` flag > ask user. |
 | `failed_task.md` | Analysis framework for failed tasks. Helps the master agent assess whether to retry, replan, or skip. |
 | `common_pitfalls.md` | Catalog of common mistakes agents make and how to avoid them. Covers issues like stale file reads, atomic write failures, dependency cycles, and over-sized tasks. |
 
@@ -327,26 +387,23 @@ agent/instructions/
 
 ```
 dashboards/
-+-- dashboard1/
++-- 2d84ac/
 |   +-- initialization.json              Static plan data (write-once by master)
 |   +-- logs.json                        Timestamped event log (appended by master)
 |   +-- progress/                        Worker progress files
 |       +-- 1.1.json                     Task 1.1 progress (written by worker)
 |       +-- 1.2.json                     Task 1.2 progress (written by worker)
 |       +-- 2.1.json                     Task 2.1 progress (written by worker)
-+-- dashboard2/
++-- 356dc5/
 |   +-- initialization.json
 |   +-- logs.json
 |   +-- progress/
-+-- dashboard3/
++-- 71894a/
 |   +-- ...
-+-- dashboard4/
-|   +-- ...
-+-- dashboard5/
-    +-- ...
++-- ...                                  (additional hex-ID dashboard directories)
 ```
 
-Each dashboard is a fully independent swarm instance. The directory structure is identical across all 5 slots.
+Each dashboard is a fully independent swarm instance identified by a 6-character hex ID. The directory structure is identical across all dashboards. There is no fixed upper limit on the number of concurrent dashboards.
 
 ### File Descriptions
 
@@ -430,7 +487,7 @@ queue/
     +-- ...
 ```
 
-The overflow queue holds swarm plans that cannot fit into the 5 available dashboard slots. Queue items have the same structure as dashboard directories. When a dashboard slot becomes available, a queue item can be promoted to the dashboard.
+The overflow queue holds swarm plans waiting to be promoted to an active dashboard. Queue items have the same structure as dashboard directories. When capacity allows, a queue item can be promoted to a new dashboard.
 
 ---
 
@@ -449,7 +506,7 @@ The overflow queue holds swarm plans that cannot fit into the 5 available dashbo
 }
 ```
 
-The settings file for window state and preferences is stored at `~/.synapse-settings.json` (outside the repository).
+The settings file for window state and preferences is stored at `{userData}/synapse-settings.json` (the OS-specific user data directory, outside the repository).
 
 ---
 

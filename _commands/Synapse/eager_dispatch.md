@@ -3,7 +3,7 @@
 **Purpose:** Run a standalone eager dispatch round on an active swarm. Reads current dashboard state, identifies all tasks whose dependencies are satisfied but haven't been dispatched, builds complete worker prompts, and dispatches them all immediately.
 
 **Syntax:**
-- `!eager_dispatch` — Auto-detect the active dashboard and dispatch all ready tasks
+- `!eager_dispatch` — Dispatch all ready tasks on your assigned dashboard
 - `!eager_dispatch --dashboard {id}` — Target a specific dashboard
 
 > **Dashboard resolution:** Use the standard resolution chain from `dashboard_resolution.md`: pre-assigned chat dashboard first, then explicit `--dashboard {id}` (hex IDs and legacy `dashboardN` both valid), then auto-detect the active/stalled swarm if neither is present.

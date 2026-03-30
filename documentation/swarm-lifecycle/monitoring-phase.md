@@ -18,7 +18,7 @@ Workers write progress files to {tracker_root}/dashboards/{dashboardId}/progress
 server.js detects file changes (fs.watch on progress/ directory)
     |
     v
-SSE pushes updates to browser in real-time (~100ms latency)
+SSE pushes updates to browser in real-time (~30-110ms latency)
     |
     v
 Dashboard merges initialization.json + progress files -> renders live status
@@ -251,37 +251,108 @@ The progress bar shows overall swarm completion as a percentage. Set `total_task
 
 ## SSE Event Flow
 
-The server watches dashboard files and broadcasts changes via Server-Sent Events. Every write becomes visible within approximately 100 milliseconds.
+The server watches dashboard files and broadcasts changes via Server-Sent Events (SSE). The broadcast mechanism (`SSEManager.js`) maintains a map of connected SSE clients, each optionally filtered to a specific dashboard ID. When a file change is detected, the server reads the file, validates it, and pushes the update to all applicable clients as a JSON payload.
+
+### Timing Constants
+
+All timing values are defined in `src/server/utils/constants.js`:
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `INIT_POLL_MS` | 100ms | `fs.watchFile` polling interval for `initialization.json` and `logs.json` |
+| `PROGRESS_READ_DELAY_MS` | 30ms | Initial delay before reading a changed progress file (lets the write settle) |
+| `PROGRESS_RETRY_MS` | 80ms | Retry delay if the progress file JSON is malformed on first read (mid-write) |
+| `RECONCILE_DEBOUNCE_MS` | 300ms | Debounce interval for the dashboards directory watcher |
+| `RECONCILE_INTERVAL_MS` | 5000ms | Periodic reconciliation scan interval (catches missed `fs.watch` events) |
+| `HEARTBEAT_MS` | 15000ms | SSE heartbeat ping interval to keep connections alive |
+| `DEPENDENCY_CHECK_DELAY_MS` | 100ms | Delay after task completion before checking for newly unblocked tasks |
+
+### How File Watching Works
+
+The server uses two different file watching strategies depending on the file type:
+
+- **`initialization.json` and `logs.json`** -- Watched via `fs.watchFile` with a polling interval of `INIT_POLL_MS` (100ms). The callback fires when `mtimeMs` changes. The file is read synchronously via `readJSON()` and validated against its schema (`isValidInitialization` or `isValidLogs`). If valid, the data is broadcast as an `initialization` or `logs` SSE event.
+
+- **`progress/` directory** -- Watched via `fs.watch` (OS-level event notification, not polling). When a `.json` file changes, the server waits `PROGRESS_READ_DELAY_MS` (30ms) for the write to settle, then reads the file using `readJSONWithRetry()` which retries after `PROGRESS_RETRY_MS` (80ms) if the JSON is malformed. This means progress updates reach the browser within approximately 30--110ms depending on whether a retry is needed. Before broadcast, the file is validated by `isValidProgress()` which checks that `task_id` matches the filename.
+
+### Progress File Validation (validateAndBroadcast)
+
+The `WatcherService.js` `validateAndBroadcast` function enforces two hard guards before broadcasting any progress update:
+
+1. **task_id must match filename** -- A progress file at `progress/2.1.json` must contain `"task_id": "2.1"`. Mismatches are hard-rejected and a `write_rejected` SSE event is broadcast with `reason: "task_id_mismatch"`.
+
+2. **dashboard_id must match directory** -- If the progress file contains a `dashboard_id` field, it must match the dashboard directory the file is in. Mismatches are hard-rejected with `reason: "dashboard_id_mismatch"`.
+
+Files missing the `dashboard_id` field are accepted with a console warning (backwards compatibility with older format files). Only after passing both guards is the data broadcast as an `agent_progress` SSE event.
+
+### SSE Event Types
 
 ```
 File System                    Server                    Browser
 ===========                    ======                    =======
 
 progress/1.1.json changes  -> fs.watch triggers       -> SSE: agent_progress
-                               server reads file          dashboard re-renders
-                               broadcasts event           card 1.1 updates
+                               30ms delay + read          dashboard re-renders
+                               validate + broadcast       card 1.1 updates
 
 initialization.json changes -> fs.watchFile triggers   -> SSE: initialization
-                               server reads file          full re-render
-                               broadcasts event
+                               (100ms polling)            full re-render
+                               read + broadcast
 
 logs.json changes           -> fs.watchFile triggers   -> SSE: logs
-                               server reads file          log panel updates
-                               broadcasts event
+                               (100ms polling)            log panel updates
+                               read + broadcast
 ```
+
+Additional SSE events:
+
+| Event | Trigger | Payload |
+|---|---|---|
+| `dashboards_list` | Client connects | List of all dashboard IDs |
+| `dashboards_changed` | Dashboard directory changes (debounced 300ms) | Updated list of dashboard IDs |
+| `all_progress` | Client connects | All progress files for a dashboard |
+| `init_state` | Client connects (reconnection catch-up) | Combined initialization + progress + logs |
+| `tasks_unblocked` | Task completes and unblocks dependents | Completed task ID + list of newly dispatchable tasks |
+| `write_rejected` | Progress file fails validation | Rejection reason, expected vs actual values |
+| `queue_changed` | Queue directory changes (debounced 300ms) | Updated queue summaries |
+
+### SSE Heartbeat
+
+The server sends a `: ping\n\n` comment to all connected SSE clients every `HEARTBEAT_MS` (15 seconds) to keep connections alive. Destroyed or ended connections are automatically cleaned up during heartbeat iteration.
+
+### Periodic Reconciliation
+
+OS-level `fs.watch` can occasionally miss events (especially under high write load or on certain platforms). To guarantee eventual consistency, the server runs a periodic reconciliation scan every `RECONCILE_INTERVAL_MS` (5 seconds).
+
+The reconciliation (`reconcileProgressFiles`) works by:
+1. Listing all `.json` files in each watched dashboard's `progress/` directory
+2. Comparing each file's `mtimeMs` against the last known value
+3. If the mtime is newer (or the file is new), reading and broadcasting the progress data
+4. Cleaning up stale entries for deleted progress files
+
+This ensures that even if `fs.watch` drops an event, the dashboard will be up to date within at most 5 seconds.
+
+### Dashboard Directory Reconciliation
+
+The server also watches the top-level `dashboards/` directory via `fs.watch`. When new dashboard subdirectories appear or existing ones are removed, the change is debounced with `RECONCILE_DEBOUNCE_MS` (300ms), then `reconcileDashboards()` starts watchers for new dashboards and stops watchers for removed ones. A `dashboards_changed` SSE event is broadcast with the updated list.
+
+### Queue Directory Watcher
+
+The `queue/` directory is watched with `fs.watch` (recursive mode). Changes are debounced with `RECONCILE_DEBOUNCE_MS` (300ms), after which the server reads all queue summaries and broadcasts a `queue_changed` SSE event.
 
 ### Automatic Dependency Alerts
 
 When a progress file changes to `status: "completed"`, the server provides proactive dependency tracking:
 
-1. `fs.watch` detects the completion
-2. After a 100ms delay (to let file writes settle), the server calls `DependencyService.computeNewlyUnblocked(dashboardId, completedTaskId)`
-3. This checks only tasks that depend on the completed task (efficient targeted scan)
-4. If any tasks become newly dispatchable, the server broadcasts a `tasks_unblocked` SSE event:
+1. `fs.watch` detects the completion via the progress directory watcher
+2. After `DEPENDENCY_CHECK_DELAY_MS` (100ms) -- to let file writes settle -- the server calls `DependencyService.computeNewlyUnblocked(dashboardId, completedTaskId)`
+3. `computeNewlyUnblocked` performs a targeted scan: it only examines tasks whose `depends_on` array includes the completed task ID (not a full scan of all tasks)
+4. For each candidate, it checks whether ALL dependencies are now completed and the task has no progress file yet (still pending)
+5. If any tasks become newly dispatchable, the server broadcasts a `tasks_unblocked` SSE event:
 
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "540931",
   "completedTaskId": "1.1",
   "unblocked": [
     {
@@ -295,7 +366,18 @@ When a progress file changes to `status: "completed"`, the server provides proac
 }
 ```
 
-The dashboard displays a green toast notification showing which tasks are ready for dispatch. This server-side tracking is a complement to the master's manual eager dispatch, not a replacement.
+The dashboard displays a green toast notification showing which tasks are ready for dispatch. This server-side dependency tracking is a complement to the master's manual eager dispatch scan, not a replacement -- both mechanisms operate independently to maximize responsiveness.
+
+### SSE Client Connection
+
+When a client connects to `/events`, the server sends an initial burst of data:
+1. `dashboards_list` -- All known dashboard IDs
+2. `initialization` -- Plan data for each dashboard (or the filtered dashboard)
+3. `all_progress` -- All existing progress files per dashboard
+4. `init_state` -- Combined initialization + progress + logs for reconnection catch-up
+5. `queue_changed` -- Current queue state (if non-empty)
+
+Clients can optionally filter to a single dashboard by passing `?dashboard={id}` as a query parameter. Filtered clients only receive events with a matching `dashboardId` (plus global events like `dashboards_list` and `queue_changed`).
 
 ---
 

@@ -107,6 +107,21 @@ Same-wave workers can optionally coordinate via `shared_context` and `sibling_re
 
 ---
 
+## Additional Context Directories — Summary
+
+Your dispatch prompt may include **Additional Context Directories (READ-ONLY)** — paths to reference material outside `{project_root}` and `{tracker_root}`. These directories contain documentation, design guidelines, coding standards, or architectural patterns provided by the user or master agent.
+
+**Key rules:**
+
+- **READ-ONLY** — never create, modify, or delete files in additional context directories. They are reference material only.
+- **CLAUDE.md applies** — if an additional context directory contains a `CLAUDE.md`, read it and follow its guidelines. Conventions from these files apply to your work alongside the project's own `CLAUDE.md`.
+- **Use for guidance** — reference these directories for design patterns, naming conventions, API styles, and domain knowledge. When your task involves decisions about structure or style, check additional context dirs for relevant guidance before defaulting to your own judgment.
+- **Cite what you use** — if an additional context directory influences your implementation, log it as an info-level entry describing what you referenced and how it shaped your approach.
+
+Additional context directories are supplementary. If none are listed in your dispatch prompt, ignore this section.
+
+---
+
 ## PKI Annotations — Contributing Knowledge
 
 **Optional but encouraged.** When you read a file deeply during your task, you can capture operational knowledge about it by adding an `annotations` field to your progress file. This feeds the **Project Knowledge Index (PKI)** — a persistent knowledge layer that gives future Claude sessions rich understanding of the codebase without redundant exploration.

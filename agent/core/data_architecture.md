@@ -16,7 +16,7 @@ This architecture dramatically reduces master agent context consumption:
 | Master outputs full terminal status table on every event | Master outputs one-line confirmations only |
 | No visibility into worker progress during execution | Live stage + milestone + log updates on dashboard |
 | Deviations only visible after completion | Deviations visible immediately |
-| Single swarm at a time | Unlimited concurrent swarms across dashboards with auto-selection |
+| Single swarm at a time | Unlimited concurrent swarms across dashboards (each chat bound to its own) |
 | Cascading failures require manual intervention | Circuit breaker triggers automatic replanning via CLI |
 | No sibling awareness between workers | shared_context + sibling_reads enable optional cross-worker data sharing |
 
@@ -136,16 +136,21 @@ Each worker writes to its own file exclusively.
 | Field | Type | Description |
 |---|---|---|
 | `task_id` | string | The task identifier (e.g., "2.1") |
+| `dashboard_id` | string | The dashboard ID this progress file belongs to. **Required** — the server rejects files where this does not match the dashboard directory |
 | `status` | string | `"in_progress"`, `"completed"`, or `"failed"` |
 | `started_at` | string | ISO 8601 UTC timestamp of task start |
 | `completed_at` | string/null | ISO 8601 UTC timestamp of task completion |
 | `summary` | string/null | Final summary of what was accomplished |
 | `assigned_agent` | string | Agent name (e.g., "Agent 1") |
+| `template_version` | string/null | The TEMPLATE_VERSION from the dispatch prompt (e.g., `"p_track_v2"`) |
 | `stage` | string | Current stage (see Stages below) |
 | `message` | string | Current status message for dashboard display |
 | `milestones[]` | array | Timestamped milestone entries (`at`, `msg`) |
 | `deviations[]` | array | Plan divergences (`at`, `severity`, `description`). Severity is one of `CRITICAL`, `MODERATE`, `MINOR` — see `agent/worker/deviations.md` for classification guide |
 | `logs[]` | array | Detailed log entries (`at`, `level`, `msg`) — feeds popup log box |
+| `files_changed[]` | array | Files the worker created, modified, or deleted (`path`, `action`). **Required from `implementing` stage onward** |
+| `annotations` | object/null | Optional per-file knowledge for the PKI (`{ "path": { "gotchas": [], "patterns": [], "conventions": [] } }`) |
+| `prompt_size` | object/null | Optional. `{ "total_chars": N, "estimated_tokens": N }` |
 | `shared_context` | object | Optional data for same-wave sibling coordination |
 | `shared_context.exports` | array | Exports created by this worker |
 | `shared_context.interfaces` | array | Interfaces/types defined |

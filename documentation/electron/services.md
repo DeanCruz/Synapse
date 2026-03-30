@@ -6,7 +6,7 @@ All services live under `electron/services/` and run in the Electron main proces
 
 ## SwarmOrchestrator
 
-**File:** `electron/services/SwarmOrchestrator.js` (761 lines)
+**File:** `electron/services/SwarmOrchestrator.js` (764 lines)
 
 The SwarmOrchestrator is the core dispatch engine that replaces the terminal-based master agent for orchestrating parallel agent swarms. It manages the full swarm lifecycle: reading the dependency graph, dispatching unblocked tasks, handling completions and failures, implementing circuit breaker logic, and triggering automatic replanning.
 
@@ -203,7 +203,7 @@ The replanner must return a JSON object with:
 
 ## ClaudeCodeService
 
-**File:** `electron/services/ClaudeCodeService.js` (288 lines)
+**File:** `electron/services/ClaudeCodeService.js` (370 lines)
 
 Manages Claude Code CLI worker processes. Each spawned worker is an independent `claude` CLI process running in `--print` mode with `stream-json` output.
 
@@ -246,6 +246,7 @@ Spawn a Claude Code CLI worker process.
 | `opts.cliPath` | `string` | Path to `claude` binary (default: `"claude"`) |
 | `opts.dangerouslySkipPermissions` | `boolean` | Add `--dangerously-skip-permissions` flag |
 | `opts.resumeSessionId` | `string` | Session ID for `--resume` (optional) |
+| `opts.additionalContextDirs` | `string[]` | Additional directories to add via `--add-dir` (optional) |
 
 **Returns:** `{ pid: number, taskId: string, dashboardId: string }`
 
@@ -288,6 +289,17 @@ List active workers with metadata.
 
 **Returns:** `{ pid, provider, taskId, dashboardId, startedAt }[]`
 
+#### `writeToWorker(pid, data)`
+
+Write data to a worker's stdin. Used for sending follow-up input to a running worker process.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `pid` | `number` | Worker process ID |
+| `data` | `string` | Data to write to stdin |
+
+**Returns:** `boolean`
+
 #### `getActiveCountForDashboard(dashboardId)`
 
 Count active workers for a specific dashboard.
@@ -298,7 +310,7 @@ Count active workers for a specific dashboard.
 
 ## CodexService
 
-**File:** `electron/services/CodexService.js` (226 lines)
+**File:** `electron/services/CodexService.js` (225 lines)
 
 Manages Codex CLI worker processes. Similar to ClaudeCodeService but uses Codex-specific CLI arguments and output handling.
 
@@ -354,7 +366,7 @@ Strips noise from stderr (empty lines, `"Reading prompt from stdin..."` messages
 
 ## PromptBuilder
 
-**File:** `electron/services/PromptBuilder.js` (334 lines)
+**File:** `electron/services/PromptBuilder.js` (372 lines)
 
 Constructs the prompts that worker agents receive. Handles system prompts (worker instructions), task prompts (description + context), and replan prompts (failure analysis context).
 
@@ -548,7 +560,7 @@ Dispatch to `detectClaudeCLI()` or `detectCodexCLI()` based on provider.
 
 ## CommandsService
 
-**File:** `electron/services/CommandsService.js` (461 lines)
+**File:** `electron/services/CommandsService.js` (651 lines)
 
 Manages the `_commands/` directory hierarchy -- listing, reading, creating, updating, deleting, and AI-generating command markdown files.
 
@@ -799,3 +811,73 @@ Delete a conversation file.
 Rename an existing conversation.
 
 **Returns:** Updated conversation object or `{ error: string }`.
+
+---
+
+## InstrumentService
+
+**File:** `electron/services/InstrumentService.js`
+
+Scans project files (JSX, TSX, HTML) and adds `data-synapse-label` attributes to text-bearing elements for Live Preview integration. This is the backend for the `!instrument` command.
+
+### Exported Methods
+
+#### `instrumentProject(projectDir, opts)`
+
+Scan a project directory and add `data-synapse-label` attributes to text elements.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `projectDir` | `string` | Root directory of the target project |
+| `opts` | `object` | Options (e.g., file filters, dry run) |
+
+**Returns:** `{ success: boolean, filesModified: number, labelsAdded: number }`
+
+**Behavior:**
+1. Scans for JSX/TSX/HTML files in the project
+2. Identifies text-bearing elements (headings, paragraphs, buttons, links, spans with text content)
+3. Adds `data-synapse-label` attributes with unique identifiers
+4. Writes modified files back to disk
+
+---
+
+## PreviewService
+
+**File:** `electron/services/PreviewService.js`
+
+Maps `data-synapse-label` attribute values back to source file locations. When a user double-clicks a labeled element in the Live Preview, this service identifies the corresponding source file and position.
+
+### Exported Methods
+
+#### `resolveLabel(projectDir, label)`
+
+Find the source file and position for a given label.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `projectDir` | `string` | Root directory of the target project |
+| `label` | `string` | The `data-synapse-label` value to resolve |
+
+**Returns:** `{ filePath: string, line: number, column: number }` or `null`
+
+---
+
+## PreviewTextWriter
+
+**File:** `electron/services/PreviewTextWriter.js`
+
+Writes text edits from the Live Preview overlay back to the corresponding source files. When a user edits text inline in the Preview tab, this service updates the source code at the mapped location.
+
+### Exported Methods
+
+#### `writeTextUpdate(projectDir, label, newText)`
+
+Update the text content at the source location identified by a label.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `projectDir` | `string` | Root directory of the target project |
+| `label` | `string` | The `data-synapse-label` identifying the element |
+| `newText` | `string` | The new text content to write |
+
+**Returns:** `{ success: boolean, filePath?: string, error?: string }`

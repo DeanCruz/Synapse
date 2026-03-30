@@ -49,6 +49,7 @@ Window geometry is saved automatically on resize and move events (debounced to 5
 | Key | Default | Type | Purpose |
 |---|---|---|---|
 | `dashboardCount` | `5` | number | Number of dashboard slots available in the sidebar |
+| `dashboardMeta` | `{ order: [], names: {} }` | object | Dashboard metadata controlling sidebar display order and custom names. `order` is an array of dashboard IDs; `names` maps IDs to user-defined display names. |
 
 ### Performance / Polling
 
@@ -84,7 +85,7 @@ These settings mirror the server-side timing constants but apply to the Electron
 
 ## API
 
-The settings module exports five functions:
+The settings module exports five functions and the `DEFAULTS` object:
 
 ### `init(electronApp)`
 
@@ -128,6 +129,15 @@ Clears the in-memory cache and deletes the settings file from disk. Returns the 
 
 ```js
 const defaults = settings.reset();
+```
+
+### `DEFAULTS`
+
+The `DEFAULTS` object is also exported directly, allowing external code to inspect the full set of recognized keys and their default values without calling `getAll()`.
+
+```js
+const { DEFAULTS } = require('./settings');
+// { windowWidth: 1400, windowHeight: 900, dashboardCount: 5, ... }
 ```
 
 ---
@@ -203,7 +213,16 @@ The protocol handler resolves file paths in this order:
 2. **Dist directory** — `{project_root}/dist/{pathname}` (Vite build output)
 3. **Public directory** — `{project_root}/public/{pathname}` (legacy fallback)
 
-The React app is loaded from `app://synapse/dist/index.html`.
+### Dev vs Production Loading
+
+The `BrowserWindow` loads from different sources depending on the environment:
+
+| Mode | URL | Source |
+|---|---|---|
+| **Development** (`npm run dev`) | `http://localhost:5174` | Vite dev server with HMR |
+| **Production** (`npm start` / packaged) | `app://synapse/dist/index.html` | Custom protocol serving built assets |
+
+The mode is determined by `app.isPackaged`. In development, the Vite dev server provides hot module replacement for instant UI updates.
 
 ---
 
@@ -249,8 +268,9 @@ Electron packaging is configured in `package.json` under the `"build"` key:
 |---|---|---|
 | `npm run build` | `vite build` | Build the React frontend to `dist/` |
 | `npm start` | `vite build && unset ELECTRON_RUN_AS_NODE && electron .` | Build frontend, then launch the Electron app |
-| `npm run dev` | `vite build --watch` | Watch mode — rebuild frontend on file changes |
+| `npm run dev` | `concurrently -k "vite" "electron ."` | Runs the Vite dev server (with HMR) and Electron in parallel for live development |
 | `npm run dist` | `vite build && electron-builder --mac` | Build frontend and package as macOS DMG |
+| `npm run postinstall` | `electron-rebuild -f -w node-pty` | Rebuilds native `node-pty` module for the installed Electron version (runs automatically after `npm install`) |
 
 The `unset ELECTRON_RUN_AS_NODE` in `npm start` ensures Electron launches as a GUI application. Without this, some environments may try to run Electron as a plain Node.js process.
 

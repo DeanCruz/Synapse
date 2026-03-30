@@ -11,7 +11,7 @@
 
 Resolve `{project_root}` using the standard resolution order (see `{tracker_root}/CLAUDE.md` — Path Convention section): explicit `--project` flag → stored config at `{tracker_root}/.synapse/project.json` → agent's CWD.
 
-Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/toc.md` exists, read it for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
+Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/toc.md` exists, read it for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If additional context directories are configured (in `.synapse/project.json`), read their `CLAUDE.md` files as well — these are read-only supplemental context whose conventions should be merged into worker prompts. If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
 
 ### Step 2: Read the tracker master instructions
 
@@ -398,41 +398,34 @@ If the plan has <3 agents and 1 wave, these are still included for `!p_track` �
 
 #### 11-PRE. Select a dashboard
 
-Before writing any plan data, the master must claim an available dashboard. This ensures new swarms never interfere with in-progress dashboards.
+Before writing any plan data, the master must claim a dashboard.
 
-**Resolution order (first match wins):**
+**Your dashboard is assigned. Use it. No exceptions.**
 
-1. **Pre-assigned dashboard from chat context (highest priority).** If your system prompt contains a `DASHBOARD ID:` directive, you are running inside a chat view that is bound to that specific dashboard. **Use it unconditionally** — do not scan, do not auto-select, do not override. Each chat view is associated with exactly one dashboard, and you must write to that dashboard. This is how the user sees your swarm in the correct panel.
+1. **Pre-assigned dashboard from system prompt (NON-NEGOTIABLE).**
+   Your system prompt contains a `DASHBOARD ID:` directive — this is the dashboard bound to your chat view.
+
+   - **Use this dashboard unconditionally** — regardless of whether it is empty, full, or has an active swarm.
+   - **You have NO read or write access to any other dashboard.** Other dashboards do not exist for you.
+   - **If the dashboard is empty** (`initialization.json` has `task: null` or does not exist) — proceed directly to set up the new dashboard.
+   - **If the dashboard has previous data** (i.e., `initialization.json` has `task` not `null`), **auto-archive and proceed.** Read `initialization.json` to get the task name, then immediately execute **Step 11A** (archive + clear) before setting up the new dashboard. Log the auto-archive action:
+
+     ```
+     Auto-archived previous task '{task.name}' from dashboard {dashboardId} → Archive/{date}_{task_name}/
+     ```
+
+     **Do NOT ask the user for confirmation** — archiving is automatic and non-destructive (the old data is preserved in `Archive/`). This ensures the dashboard is always ready for the new swarm without blocking on user input.
+   - **Never scan for available dashboards. Never use a different dashboard.**
 
 2. **Explicit `--dashboard {id}` flag.** If the user specified `--dashboard {id}` in the command, use that dashboard directly.
    - If it has an active swarm (in-progress agents), warn the user and require confirmation before overwriting.
    - If it has a completed swarm, save a history summary to `{tracker_root}/history/` before overwriting.
 
-3. **Auto-selection (fallback — only when no dashboard is pre-assigned or explicitly specified):**
-   1. Scan all dashboards in order (excluding `ide`).
-      > **The `ide` dashboard is always excluded from auto-selection** — it is reserved for the IDE agent and must never be claimed by a swarm.
-   2. For each dashboard, read `{tracker_root}/dashboards/{dashboardId}/initialization.json`:
-      - If `task` is `null` → **available**. Claim this dashboard.
-      - If `task` is not null, read all files in `progress/`:
-        - If no progress files exist → **stale** (plan written but never dispatched). Treat as available.
-        - If every progress file has status `"completed"` or `"failed"` → **finished but uncleared**. Save a history summary to `{tracker_root}/history/`, then claim this dashboard.
-        - Otherwise → **in use**. Skip to next dashboard.
-   3. If all dashboards are in use, display a summary table:
+3. **No dashboard?** If you have no assigned dashboard and no `--dashboard` flag, ask the user which dashboard to use. Do not scan or select one yourself.
 
-   ```markdown
-   ## All Dashboards In Use
+Set `{dashboardId}` to the selected dashboard. Announce: **"Using {dashboardId} for this swarm."**
 
-   | Dashboard | Task | Status | Progress |
-   |---|---|---|---|
-   | {dashboardId} | {task.name} | {overall_status} | {completed}/{total} |
-   | ... | ... | ... | ... |
-
-   Pick a dashboard to overwrite, or run `!reset {dashboardId}` first.
-   ```
-
-4. Set `{dashboardId}` to the selected dashboard. Announce: **"Using {dashboardId} for this swarm."**
-
-> **See `{tracker_root}/agent/instructions/dashboard_resolution.md`** for the full `selectDashboard()` algorithm and status derivation logic.
+> **See `{tracker_root}/agent/instructions/dashboard_resolution.md`** for the full protocol.
 
 ---
 
@@ -440,22 +433,34 @@ Before writing any plan data, the master must claim an available dashboard. This
 
 **Always use atomic read-modify-write:** Read the full file, parse JSON, modify the in-memory object, stringify with 2-space indent, write the full file back. Never write partial JSON.
 
-#### 11A. Archive and clear the dashboard
+#### 11A. Archive and clear the dashboard — HARD GATE
 
-**If the dashboard contains data from a previous swarm** (i.e., `initialization.json` has `task` not `null`), **archive it first** before clearing:
+> **STOP.** You MUST complete ALL steps below and verify the dashboard is clean BEFORE proceeding to 11B. Do NOT skip any step. Do NOT proceed to writing initialization.json until verification passes.
 
+**If the dashboard contains data from a previous swarm** (i.e., `initialization.json` has `task` not `null`), **archive it first** before clearing.
+
+**Step 1 — Archive the previous swarm (MANDATORY):**
 ```bash
-# 1. Archive the previous swarm (MANDATORY — never skip)
-TASK_NAME=$(cat {tracker_root}/dashboards/{dashboardId}/initialization.json | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4)
-ARCHIVE_NAME="$(date -u +%Y-%m-%d)_${TASK_NAME:-unnamed}"
-mkdir -p {tracker_root}/Archive/${ARCHIVE_NAME}
-cp -r {tracker_root}/dashboards/{dashboardId}/* {tracker_root}/Archive/${ARCHIVE_NAME}/
+TASK_NAME=$(cat {tracker_root}/dashboards/{dashboardId}/initialization.json | grep -o '"name":"[^"]*"' | head -1 | cut -d'"' -f4) && ARCHIVE_NAME="$(date -u +%Y-%m-%d)_${TASK_NAME:-unnamed}" && mkdir -p {tracker_root}/Archive/${ARCHIVE_NAME} && cp -r {tracker_root}/dashboards/{dashboardId}/* {tracker_root}/Archive/${ARCHIVE_NAME}/
+```
 
-# 2. Clear progress files
+**Step 2 — Clear ALL dashboard state (progress files AND logs):**
+```bash
 rm -f {tracker_root}/dashboards/{dashboardId}/progress/*.json
 ```
 
-Create the dashboard directory structure if it doesn't exist:
+Then reset `logs.json` to empty state by writing:
+```json
+{ "entries": [] }
+```
+
+**Step 3 — Verify the dashboard is clean:**
+```bash
+ls {tracker_root}/dashboards/{dashboardId}/progress/
+```
+The progress directory MUST be empty (no `.json` files). If any remain, delete them before proceeding.
+
+**If the dashboard is new or already empty**, just ensure the directory structure exists:
 
 ```bash
 mkdir -p {tracker_root}/dashboards/{dashboardId}/progress

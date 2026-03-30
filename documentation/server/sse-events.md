@@ -26,7 +26,7 @@ Connection: keep-alive
 
 **Example:**
 ```
-GET /events?dashboard=dashboard1
+GET /events?dashboard=2d84ac
 ```
 
 ### Connection Lifecycle
@@ -41,9 +41,9 @@ GET /events?dashboard=dashboard1
 
 Connections are managed by the SSEManager module:
 
-- `addClient(res)` -- adds the client's response object to the tracked `Set`
+- `addClient(res, options)` -- adds the client's response object to the tracked `Map` with optional `{ dashboardFilter }` metadata
 - `removeClient(res)` -- removes the client on connection close
-- `broadcast(eventName, data)` -- sends an event to all connected clients
+- `broadcast(eventName, data)` -- sends an event to all connected clients. If a client has a `dashboardFilter` set, it only receives events whose `data.dashboardId` matches the filter (or global events with no `dashboardId`).
 - Dead connections (destroyed or ended responses) are automatically cleaned up during broadcast and heartbeat cycles
 
 ---
@@ -77,7 +77,7 @@ Sent on initial connection. Contains the list of all dashboard IDs.
 **Data:**
 ```json
 {
-  "dashboards": ["dashboard1", "dashboard2", "dashboard3"]
+  "dashboards": ["2d84ac", "356dc5", "71894a"]
 }
 ```
 
@@ -94,7 +94,7 @@ Contains the static plan data from a dashboard's `initialization.json`.
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "task": {
     "name": "api-refactor",
     "type": "Waves",
@@ -141,7 +141,7 @@ Contains all progress files for a dashboard, sent as a single batch. Only sent d
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "1.1": {
     "task_id": "1.1",
     "status": "completed",
@@ -172,7 +172,7 @@ Combined state for a dashboard, providing all data needed for full reconnection 
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "initialization": {
     "task": { ... },
     "agents": [...],
@@ -205,7 +205,7 @@ Individual agent progress update. Broadcast whenever a worker writes to its prog
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "task_id": "1.2",
   "status": "in_progress",
   "started_at": "2026-03-20T14:01:00Z",
@@ -246,7 +246,7 @@ Updated log entries from a dashboard's `logs.json`.
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "entries": [
     {
       "timestamp": "2026-03-20T14:05:00Z",
@@ -276,7 +276,7 @@ Sent when a task completion unblocks downstream tasks. The WatcherService automa
 **Data:**
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "2d84ac",
   "completedTaskId": "1.1",
   "unblocked": [
     {
@@ -314,7 +314,7 @@ Sent when the set of dashboards changes (new dashboard created or existing one r
 **Data:**
 ```json
 {
-  "dashboards": ["dashboard1", "dashboard2", "dashboard3"]
+  "dashboards": ["2d84ac", "356dc5", "71894a"]
 }
 ```
 
@@ -347,6 +347,48 @@ Sent when the queue state changes (new item added or item removed).
   ]
 }
 ```
+
+---
+
+### `write_rejected`
+
+Sent when a progress file write is rejected by the WatcherService's validation guards. This event alerts the dashboard that a worker attempted to write invalid data (e.g., wrong `task_id` for the filename or wrong `dashboard_id` for the directory).
+
+**Trigger:** WatcherService `validateAndBroadcast()` detects a mismatch between the progress file contents and its expected location
+
+**Data (task_id mismatch):**
+```json
+{
+  "dashboardId": "2d84ac",
+  "filename": "1.1.json",
+  "task_id": "2.3",
+  "reason": "task_id_mismatch",
+  "details": "File contains task_id \"2.3\" but filename is \"1.1.json\" (expected task_id \"1.1\")",
+  "expected_task_id": "1.1",
+  "timestamp": "2026-03-20T14:05:00.000Z"
+}
+```
+
+**Data (dashboard_id mismatch):**
+```json
+{
+  "dashboardId": "2d84ac",
+  "filename": "1.1.json",
+  "task_id": "1.1",
+  "reason": "dashboard_id_mismatch",
+  "details": "File contains dashboard_id \"dashboard2\" but is in dashboard \"dashboard1\"",
+  "file_dashboard_id": "356dc5",
+  "expected_dashboard_id": "2d84ac",
+  "timestamp": "2026-03-20T14:05:00.000Z"
+}
+```
+
+**Rejection reasons:**
+
+| Reason | Description |
+|--------|-------------|
+| `task_id_mismatch` | The `task_id` field inside the progress file does not match the filename (e.g., file `1.1.json` contains `task_id: "2.3"`) |
+| `dashboard_id_mismatch` | The `dashboard_id` field inside the progress file does not match the dashboard directory it was written to |
 
 ---
 
@@ -386,7 +428,7 @@ Each event consists of:
 **Example on the wire:**
 ```
 event: agent_progress
-data: {"dashboardId":"dashboard1","task_id":"1.1","status":"completed","stage":"completed"}
+data: {"dashboardId":"2d84ac","task_id":"1.1","status":"completed","stage":"completed"}
 
 ```
 
@@ -411,7 +453,7 @@ evtSource.addEventListener('initialization', (event) => {
 });
 
 // Filter to single dashboard
-const filtered = new EventSource('http://localhost:3456/events?dashboard=dashboard1');
+const filtered = new EventSource('http://localhost:3456/events?dashboard=2d84ac');
 ```
 
 ### Reconnection
@@ -433,3 +475,4 @@ The browser's `EventSource` API automatically reconnects if the connection drops
 | `tasks_unblocked` | Task completion | When dependencies resolve | `{ dashboardId, completedTaskId, unblocked }` |
 | `dashboards_changed` | Dashboard dir change | On change (debounced) | `{ dashboards: string[] }` |
 | `queue_changed` | Queue dir change | On change (debounced) | `{ queue: QueueSummary[] }` |
+| `write_rejected` | Invalid progress write | On validation failure | `{ dashboardId, filename, task_id, reason, details, timestamp }` |

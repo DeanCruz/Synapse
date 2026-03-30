@@ -175,6 +175,15 @@ const initialState = {
   ideFileTrees: {}, // { [workspaceId]: treeData }
   ideSidebarView: 'explorer', // which sidebar panel is shown in IDE
   ideChatOpen: false, // whether IDE inline chat is open
+  // Search state
+  ideSearchQuery: '',
+  ideSearchOptions: { regex: false, caseSensitive: false, wholeWord: false, includeGlob: '', excludeGlob: '' },
+  ideSearchResults: null, // null = no search yet, [] = no results, [...] = results
+  ideSearchLoading: false,
+  ideSearchTotalMatches: 0,
+  ideSearchTruncated: false,
+  ideSearchReplaceMode: false,
+  ideSearchReplaceText: '',
   // Debug state — breakpoints, session, call stack, variables, scopes, watch expressions
   debugBreakpoints: {}, // { [filePath]: [lineNumber, ...] }
   debugSession: { status: 'idle', pausedFile: null, pausedLine: null, threadId: null }, // debug session state
@@ -448,6 +457,16 @@ function appReducerCore(state, action) {
       const stashKey = did + ':' + action.tabId;
       const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
       const updatedMsgs = trimMessages([...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }]);
+      const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
+      try { localStorage.setItem(claudeMessagesKey(did, action.tabId), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
+      return { ...state, claudeTabStash: newTabStash };
+    }
+    case 'CLAUDE_TAB_STASH_UPDATE_MESSAGES': {
+      if (!state.currentDashboardId) return state;
+      const did = state.currentDashboardId;
+      const stashKey = did + ':' + action.tabId;
+      const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
+      const updatedMsgs = trimMessages(action.updater(stashedMsgs));
       const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, action.tabId), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
       return { ...state, claudeTabStash: newTabStash };
@@ -735,6 +754,34 @@ function appReducerCore(state, action) {
       return { ...state, ideChatOpen: true, claudeViewMode: 'expanded', claudeEverOpened: true };
     case 'IDE_CLOSE_CHAT':
       return { ...state, ideChatOpen: false };
+    // --- IDE Search state ---
+    case 'IDE_SET_SEARCH_QUERY':
+      return { ...state, ideSearchQuery: action.query };
+    case 'IDE_SET_SEARCH_OPTIONS':
+      return { ...state, ideSearchOptions: { ...state.ideSearchOptions, ...action.options } };
+    case 'IDE_SET_SEARCH_RESULTS':
+      return {
+        ...state,
+        ideSearchResults: action.results,
+        ideSearchTotalMatches: action.totalMatches || 0,
+        ideSearchTruncated: action.truncated || false,
+        ideSearchLoading: false,
+      };
+    case 'IDE_SET_SEARCH_LOADING':
+      return { ...state, ideSearchLoading: action.value };
+    case 'IDE_CLEAR_SEARCH':
+      return {
+        ...state,
+        ideSearchQuery: '',
+        ideSearchResults: null,
+        ideSearchLoading: false,
+        ideSearchTotalMatches: 0,
+        ideSearchTruncated: false,
+      };
+    case 'IDE_SET_SEARCH_REPLACE_MODE':
+      return { ...state, ideSearchReplaceMode: action.value };
+    case 'IDE_SET_SEARCH_REPLACE_TEXT':
+      return { ...state, ideSearchReplaceText: action.text };
     // --- Git Manager state management ---
     case 'GIT_OPEN_REPO': {
       const repoId = action.id || String(Date.now());

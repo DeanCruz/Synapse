@@ -79,9 +79,9 @@ This registry is the meta-planner's internal state. It is NOT written to disk �
 
 ## Slot Management — The Core Protocol
 
-### Scanning Available Dashboards
+### Slot Assignment for Multi-Stream
 
-Use the standard `selectDashboard()` algorithm from `{tracker_root}/agent/instructions/dashboard_resolution.md`:
+`!master_plan_track` is the ONE exception where the meta-planner interacts with multiple dashboards — it needs additional dashboards for extra streams beyond S1.
 
 1. Scan the dashboards returned by `listDashboards()` in order.
 2. For each dashboard, read `initialization.json`:

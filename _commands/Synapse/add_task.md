@@ -3,7 +3,7 @@
 **Purpose:** Inject new tasks into an active swarm mid-flight. The master deeply analyzes the prompt, decomposes it into subtasks, resolves dependencies against all existing tasks (both directions), updates the dashboard, and dispatches any tasks whose dependencies are already satisfied.
 
 **Syntax:**
-- `!add_task {prompt}` — Add tasks to the active swarm (auto-detect dashboard)
+- `!add_task {prompt}` — Add tasks to the active swarm (uses your assigned dashboard)
 - `!add_task --dashboard a3f7k2 {prompt}` — Add tasks to a specific dashboard's swarm
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.

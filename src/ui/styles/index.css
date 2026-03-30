@@ -5811,6 +5811,18 @@ a:hover {
   background: rgba(59, 130, 246, 0.12);
 }
 
+.claude-view-dashboard-id {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
+}
+
 .claude-clear-btn {
   margin-left: auto;
   background: none;
@@ -6226,13 +6238,145 @@ a:hover {
   padding: 8px 12px;
 }
 
-.claude-system-msg.claude-compaction {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+/* Expandable compaction box */
+.claude-compaction-box {
+  border: 1px solid rgba(245, 158, 11, 0.3);
   border-radius: 6px;
+  background: rgba(245, 158, 11, 0.08);
+  overflow: hidden;
+  align-self: stretch;
+}
+
+.claude-compaction-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
   padding: 8px 12px;
-  font-weight: 500;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #f59e0b;
+  text-align: left;
+  font-family: inherit;
+}
+
+.claude-compaction-header:hover {
+  background: rgba(245, 158, 11, 0.06);
+}
+
+.claude-compaction-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.claude-compaction-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.claude-compaction-label {
+  white-space: nowrap;
+}
+
+.claude-compaction-hint {
+  color: rgba(245, 158, 11, 0.6);
+  font-weight: 400;
+  margin-left: auto;
+  font-size: 0.7rem;
+}
+
+.claude-compaction-body {
+  padding: 0 12px 10px;
+  border-top: 1px solid rgba(245, 158, 11, 0.15);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.claude-compaction-body p {
+  margin: 6px 0;
+}
+
+.claude-compaction-body p:first-child {
+  margin-top: 8px;
+}
+
+.claude-compaction-body code {
+  background: rgba(245, 158, 11, 0.1);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+}
+
+.claude-compaction-body ul, .claude-compaction-body ol {
+  padding-left: 18px;
+  margin: 4px 0;
+}
+
+.claude-compaction-body li {
+  margin: 2px 0;
+}
+
+/* ----- CLI Activity block (batched stderr output — background agent actions) ----- */
+.claude-activity-block {
+  align-self: stretch;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  overflow: hidden;
+}
+.claude-activity-block.expanded {
+  background: rgba(148, 163, 184, 0.1);
+}
+.claude-activity-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  min-height: 22px;
+}
+.claude-activity-icon {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.claude-activity-summary {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
+  font-size: 0.65rem;
+}
+.claude-activity-toggle {
+  font-size: 0.55rem;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.claude-activity-lines {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.claude-activity-line {
+  font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
+  font-size: 0.65rem;
+  padding: 1px 0;
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ----- Task event expandable box (task_progress, task_started, etc.) ----- */
@@ -6413,6 +6557,21 @@ a:hover {
   color: var(--color-completed);
 }
 
+.claude-tool-call.streaming {
+  border-color: var(--color-in-progress);
+  opacity: 0.85;
+}
+
+.claude-tool-spinning {
+  display: inline-block;
+  animation: tool-spin 1s linear infinite;
+}
+
+@keyframes tool-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .claude-tool-header {
   display: flex;
   align-items: center;
@@ -6536,6 +6695,68 @@ a:hover {
   overflow-wrap: break-word;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+/* ─── Activity block (batched stderr/background work) ─── */
+.claude-activity-block {
+  align-self: flex-start;
+  max-width: 90%;
+  margin: 4px 0;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  font-size: 0.75rem;
+}
+
+.claude-activity-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  user-select: none;
+}
+
+.claude-activity-header:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.claude-activity-icon {
+  font-size: 0.8rem;
+}
+
+.claude-activity-summary {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.claude-activity-toggle {
+  font-size: 0.6rem;
+  opacity: 0.5;
+}
+
+.claude-activity-lines {
+  display: none;
+  padding: 4px 10px 8px 28px;
+  border-top: 1px solid var(--border);
+}
+
+.claude-activity-block.expanded .claude-activity-lines {
+  display: block;
+}
+
+.claude-activity-line {
+  padding: 2px 0;
+  color: var(--text-tertiary);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* ─── Rich tool call formatting ─── */
@@ -8058,4 +8279,157 @@ a:hover {
 .bottom-panel-pane--output .log-panel .log-entries {
   flex: 1;
   overflow-y: auto;
+}
+
+/* ============================================================
+   Logs Modal
+   ============================================================ */
+.history-modal.logs-modal {
+  width: 820px;
+  max-width: 90vw;
+  height: 75vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-modal.logs-modal .history-modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  padding: 0;
+}
+
+.logs-modal-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.logs-modal-filters {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.logs-modal-filter-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.logs-modal-filter-btn:hover {
+  color: var(--text-secondary);
+  border-color: var(--border-hover, var(--text-tertiary));
+}
+
+.logs-modal-filter-btn.active {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--text-tertiary);
+}
+
+.logs-modal-filter-count {
+  opacity: 0.5;
+  font-size: 0.65rem;
+}
+
+.logs-modal-search {
+  flex: 1;
+  min-width: 120px;
+  padding: 5px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.75rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.logs-modal-search::placeholder {
+  color: var(--text-tertiary);
+}
+
+.logs-modal-search:focus {
+  border-color: var(--text-tertiary);
+}
+
+.logs-modal-entries {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 16px 16px;
+}
+
+.logs-modal-empty {
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 0.78rem;
+  padding: 40px 0;
+}
+
+.logs-modal-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.72rem;
+  font-family: var(--mono);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.logs-modal-row:last-child {
+  border-bottom: none;
+}
+
+.logs-modal-ts {
+  color: var(--text-tertiary);
+  min-width: 150px;
+  flex-shrink: 0;
+  font-size: 0.68rem;
+}
+
+.logs-modal-task {
+  color: var(--text-tertiary);
+  min-width: 45px;
+  flex-shrink: 0;
+  font-size: 0.68rem;
+}
+
+.logs-modal-agent {
+  color: var(--text-secondary);
+  min-width: 70px;
+  flex-shrink: 0;
+  font-size: 0.68rem;
+}
+
+.logs-modal-level {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  flex-shrink: 0;
+}
+
+.logs-modal-msg {
+  flex: 1;
+  color: var(--text);
+  word-break: break-word;
+  min-width: 0;
 }

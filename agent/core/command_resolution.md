@@ -29,7 +29,7 @@ When the user types `!{command}`, locate and execute the corresponding command f
 
 5. **If not found anywhere**, inform the user that `!{command}` does not exist and list available commands from all discovered locations.
 
-5. **Once found, read the command file in full and follow it exactly.** Command files are complete specs — do not improvise, skip steps, or partially execute.
+6. **Once found, read the command file in full and follow it exactly.** Command files are complete specs — do not improvise, skip steps, or partially execute.
 
 ---
 
@@ -76,9 +76,14 @@ When the user types a command prefixed with `!`, resolve it using the command re
 | `!dispatch {id}` | Manually dispatch a specific pending task. `!dispatch --ready` dispatches all unblocked tasks. |
 | `!retry {id}` | Re-dispatch a failed task with a fresh agent. |
 | `!resume` | Resume a chat session after interruption — reviews history and continues where it left off. |
+| `!add_task {prompt}` | Add tasks to an active swarm mid-flight. |
+| `!eager_dispatch` | Full eager dispatch round with complete worker prompts. |
 | `!track_resume` | Resume a stalled/interrupted swarm — re-dispatch all incomplete tasks with full context. |
+| `!p_track_resume` | Resume a stalled/interrupted `!p_track` swarm with full state reconstruction. |
 | `!cancel` | Cancel the active swarm. `!cancel --force` skips confirmation. |
 | `!cancel-safe` | Graceful shutdown — let running tasks finish, cancel pending. |
+| `!update_dashboard` | Generate a visual progress report of the current swarm. |
+| `!export` | Export a dashboard's swarm state as markdown or JSON. |
 
 ### Monitoring
 
@@ -102,6 +107,10 @@ When the user types a command prefixed with `!`, resolve it using the command re
 | `!contracts` | API contract audit — consistency between interfaces and implementations. |
 | `!env_check` | Environment variable audit — consistency across configs. |
 | `!plan {task}` | Implementation planning based on project context. |
+| `!prompt_audit` | Post-swarm prompt quality audit — analyzes worker performance and prompt effectiveness. |
+| `!learn` | Bootstrap the Project Knowledge Index (PKI) from scratch. |
+| `!learn_update` | Incrementally refresh the PKI (stale/new files only). |
+| `!instrument` | Add `data-synapse-label` attributes to project files for Live Preview. |
 
 ### Table of Contents
 
@@ -126,4 +135,4 @@ When the user types a command prefixed with `!`, resolve it using the command re
 |---|---|
 | `!start` | Start the dashboard server and open the browser. |
 | `!stop` | Stop the dashboard server. |
-| `!reset` | Clear all tracker data. `!reset --keep-history` preserves past tasks. |
+| `!reset` | Clear a dashboard and reset to empty state. Archives first, then saves history. `!reset --all` resets all dashboards. |

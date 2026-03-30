@@ -126,6 +126,32 @@ function ProcessingIndicator() {
   );
 }
 
+// CLI activity block — shows batched stderr activity (tool execution, background work)
+function ActivityBlock({ lines }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!lines || lines.length === 0) return null;
+  return (
+    <div className={'claude-activity-block' + (expanded ? ' expanded' : '')}>
+      <div className="claude-activity-header" onClick={() => setExpanded(e => !e)}>
+        <span className="claude-activity-icon">{'⚙'}</span>
+        <span className="claude-activity-summary">
+          {lines.length === 1 ? lines[0] : `Agent activity (${lines.length} actions)`}
+        </span>
+        {lines.length > 1 && (
+          <span className="claude-activity-toggle">{expanded ? '▼' : '▶'}</span>
+        )}
+      </div>
+      {expanded && lines.length > 1 && (
+        <div className="claude-activity-lines">
+          {lines.map((line, i) => (
+            <div key={i} className="claude-activity-line">{line}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Expandable pre block for tool input/result — click to toggle max-height
 function ExpandablePre({ className, children }) {
   const [contentExpanded, setContentExpanded] = useState(false);
@@ -415,14 +441,16 @@ function ToolInputFormatted({ name, input, onOpenFile }) {
 
 // Single collapsible tool call block
 function ToolCallBlock({ block, onOpenFile }) {
-  const [expanded, setExpanded] = useState(false);
+  const isCodeChange = block.name === 'Edit' || block.name === 'Write';
+  const isStreaming = block._streaming;
+  const [expanded, setExpanded] = useState(isCodeChange);
   const summary = toolInputSummary(block.name, block.input);
   const hasResult = block._result !== undefined && block._result !== null;
 
   return (
-    <div className={'claude-tool-call' + (expanded ? ' expanded' : '') + (hasResult ? ' has-result' : '')}>
+    <div className={'claude-tool-call' + (expanded ? ' expanded' : '') + (hasResult ? ' has-result' : '') + (isStreaming ? ' streaming' : '')}>
       <div className="claude-tool-header" onClick={() => setExpanded(e => !e)}>
-        <span className="claude-tool-icon">{hasResult ? '✓' : '⚙'}</span>
+        <span className={'claude-tool-icon' + (isStreaming ? ' claude-tool-spinning' : '')}>{hasResult ? '✓' : isStreaming ? '↻' : '⚙'}</span>
         <span className="claude-tool-name">{block.name}</span>
         {summary && (
           toolHasFilePath(block.name) && onOpenFile ? (
@@ -640,6 +668,24 @@ function CopyBubbleButton({ text }) {
   );
 }
 
+// Expandable compaction banner — yellow box that reveals compacted summary on click
+function CompactionMessage({ msg }) {
+  const [expanded, setExpanded] = useState(false);
+  const summary = msg.compactionSummary || '';
+  return (
+    <div className="claude-compaction-box">
+      <button className="claude-compaction-header" onClick={() => setExpanded(e => !e)}>
+        <svg className={'claude-compaction-chevron' + (expanded ? ' expanded' : '')} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9" /></svg>
+        <span className="claude-compaction-label">Context compacted</span>
+        <span className="claude-compaction-hint">{summary ? 'click to view summary' : 'earlier messages may be summarized'}</span>
+      </button>
+      {expanded && summary && (
+        <div className="claude-compaction-body" dangerouslySetInnerHTML={{ __html: renderMarkdown(summary) }} />
+      )}
+    </div>
+  );
+}
+
 // A single conversation message
 function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }) {
   if (msg.type === 'thinking') {
@@ -688,11 +734,17 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }
         return <TaskEventMessage data={parsed} />;
       } catch (_) { /* fall through to default rendering */ }
     }
+    if (msg.isCompaction) {
+      return <CompactionMessage msg={msg} />;
+    }
     return (
-      <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '') + (msg.isCompaction ? ' claude-compaction' : '')}>
+      <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '')}>
         {msg.text}
       </div>
     );
+  }
+  if (msg.type === 'activity') {
+    return <ActivityBlock lines={msg.lines || [msg.text]} />;
   }
   if (msg.type === 'tool_result_standalone') {
     return (
@@ -767,10 +819,17 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const streamingBlocksRef = useRef({});
   // Track whether we received streaming content_block events (to skip duplicate assistant summary)
   const sawStreamingRef = useRef(false);
+  // Track pending tool executions — between message_stop and tool_result, status should show activity
+  const pendingToolCountRef = useRef(0);
   // Track whether current task is a resumed session (history replay events should be ignored)
   const isResumedSessionRef = useRef(false);
   // Health check consecutive failure counter — only hard-reset after 3 consecutive IPC failures
   const healthFailCountRef = useRef(0);
+  // Streaming block tracking for stashed tabs/dashboards (keyed by "tab:{tabId}:{idx}" or "dash:{dashId}:{idx}")
+  const stashStreamingBlocksRef = useRef({});
+  // Track whether stashed contexts received streaming events (keyed by "tab:{tabId}" or "dash:{dashId}")
+  // Used to skip assistant summary event and avoid duplicate tool calls
+  const stashSawStreamingRef = useRef({});
   // Stable refs so IPC listeners always call latest functions
   const handleChunkRef = useRef(null);
   const finishRef = useRef(null);
@@ -980,7 +1039,9 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         if (!trimmed) continue;
         try {
           const evt = JSON.parse(trimmed);
+          const tabStreamKey = 'tab:' + targetTab;
           if (evt.type === 'assistant') {
+            const sawStreaming = stashSawStreamingRef.current[tabStreamKey];
             const content = evt.message?.content || evt.content || [];
             for (const block of content) {
               if (block.type === 'text') {
@@ -989,16 +1050,77 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
                   dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'assistant', text: cleaned } });
                 }
               } else if (block.type === 'tool_use' || block.type === 'server_tool_use') {
-                dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
+                // Skip tool_use if streaming events already added them (avoids duplicates)
+                if (!sawStreaming) {
+                  dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
+                }
               } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
                 dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'thinking', text: block.thinking || '' } });
+              }
+            }
+          } else if (evt.type === 'content_block_start') {
+            // Show tool calls immediately in stashed tabs
+            stashSawStreamingRef.current[tabStreamKey] = true;
+            const block = evt.content_block || {};
+            const idx = evt.index ?? 0;
+            if (block.type === 'tool_use' || block.type === 'server_tool_use') {
+              const stashKey = 'tab:' + targetTab + ':' + idx;
+              stashStreamingBlocksRef.current[stashKey] = { type: 'tool_use', id: block.id, name: block.name, input_json: '' };
+              dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: {}, _streaming: true } } });
+            }
+          } else if (evt.type === 'content_block_delta') {
+            const idx = evt.index ?? 0;
+            const stashKey = 'tab:' + targetTab + ':' + idx;
+            const acc = stashStreamingBlocksRef.current[stashKey];
+            if (acc && acc.type === 'tool_use' && evt.delta?.type === 'input_json_delta') {
+              acc.input_json += (evt.delta.partial_json || '');
+            }
+          } else if (evt.type === 'content_block_stop') {
+            const idx = evt.index ?? 0;
+            const stashKey = 'tab:' + targetTab + ':' + idx;
+            const acc = stashStreamingBlocksRef.current[stashKey];
+            if (acc && acc.type === 'tool_use') {
+              let input = {};
+              try { input = JSON.parse(acc.input_json); } catch (e) { /* partial */ }
+              const toolId = acc.id;
+              dispatch({ type: 'CLAUDE_TAB_STASH_UPDATE_MESSAGES', tabId: targetTab, updater: (prev) => {
+                // Find and update the matching streaming tool call
+                const idx2 = prev.findLastIndex(m => m.type === 'tool_call' && m.block?.id === toolId);
+                if (idx2 < 0) return prev;
+                const updated = prev.slice();
+                updated[idx2] = { ...updated[idx2], block: { ...updated[idx2].block, input, _streaming: false } };
+                return updated;
+              }});
+              delete stashStreamingBlocksRef.current[stashKey];
+            }
+          } else if (evt.type === 'user') {
+            // Capture tool results for stashed tabs
+            const content = evt.message?.content || [];
+            for (const block of content) {
+              if (block.type === 'tool_result') {
+                const resultContent = evt.tool_use_result || block.content;
+                const toolUseId = block.tool_use_id;
+                dispatch({ type: 'CLAUDE_TAB_STASH_UPDATE_MESSAGES', tabId: targetTab, updater: (prev) => {
+                  const idx2 = prev.findLastIndex(m => m.type === 'tool_call' && m.block?.id === toolUseId);
+                  if (idx2 < 0) return [...prev, { id: Date.now() + Math.random(), type: 'tool_result_standalone', content: resultContent }];
+                  const updated = prev.slice();
+                  updated[idx2] = { ...updated[idx2], block: { ...updated[idx2].block, _result: resultContent } };
+                  return updated;
+                }});
               }
             }
           } else if (evt.type === 'system') {
             if (evt.subtype === 'init') {
               dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'system', text: `Connected — model: ${evt.model || '?'}, ${(evt.tools || []).length} tools available` } });
+            } else if (evt.subtype === 'task_progress' || evt.subtype === 'task_started' || evt.subtype === 'task_completed' || evt.subtype === 'task_failed') {
+              dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'system', isTaskEvent: true, taskEventData: evt, text: evt.description || evt.subtype } });
             }
+          } else if (evt.type === 'error') {
+            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'system', text: evt.message || 'Agent error', isError: true } });
+          } else if (evt.type === 'message_stop') {
+            stashSawStreamingRef.current[tabStreamKey] = false;
           } else if (evt.type === 'result') {
+            stashSawStreamingRef.current[tabStreamKey] = false;
             if (evt.session_id) {
               const targetKey = prevDashboardRef.current + ':' + targetTab;
               const storedSession = sessionMapRef.current[targetKey] || {};
@@ -1033,34 +1155,89 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           if (!trimmed) continue;
           try {
             const evt = JSON.parse(trimmed);
-            // Only capture text and tool_use from assistant events for stashed dashboards
+            const dashStreamKey = 'dash:' + targetDash;
             if (evt.type === 'assistant') {
+              const sawStreaming = stashSawStreamingRef.current[dashStreamKey];
               const content = evt.message?.content || evt.content || [];
               for (const block of content) {
                 if (block.type === 'text') {
                   const cleaned = stripAnsi(block.text);
                   if (cleaned && cleaned.trim()) {
                     dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'assistant', text: cleaned } });
-                    // Also update preview for this stashed dashboard
                     dispatch({ type: 'SET_CHAT_PREVIEW', dashboardId: targetDash, text: cleaned.substring(0, 60), isStreaming: true });
                   }
                 } else if (block.type === 'tool_use' || block.type === 'server_tool_use') {
-                  dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
+                  // Skip tool_use if streaming events already added them (avoids duplicates)
+                  if (!sawStreaming) {
+                    dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
+                  }
                 } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
                   dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'thinking', text: block.thinking || '' } });
                 }
               }
+            } else if (evt.type === 'content_block_start') {
+              // Show tool calls immediately in stashed dashboards
+              stashSawStreamingRef.current[dashStreamKey] = true;
+              const block = evt.content_block || {};
+              const idx = evt.index ?? 0;
+              if (block.type === 'tool_use' || block.type === 'server_tool_use') {
+                const stashKey = 'dash:' + targetDash + ':' + idx;
+                stashStreamingBlocksRef.current[stashKey] = { type: 'tool_use', id: block.id, name: block.name, input_json: '' };
+                dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: {}, _streaming: true } } });
+              }
+            } else if (evt.type === 'content_block_delta') {
+              const idx = evt.index ?? 0;
+              const stashKey = 'dash:' + targetDash + ':' + idx;
+              const acc = stashStreamingBlocksRef.current[stashKey];
+              if (acc && acc.type === 'tool_use' && evt.delta?.type === 'input_json_delta') {
+                acc.input_json += (evt.delta.partial_json || '');
+              }
             } else if (evt.type === 'content_block_stop') {
-              // Handle streaming format for stashed dashboards (simplified — just capture the final block)
-              // Full streaming state for stashed dashboards isn't tracked, but content_block_stop
-              // with complete data will be handled when the assistant event arrives
+              const idx = evt.index ?? 0;
+              const stashKey = 'dash:' + targetDash + ':' + idx;
+              const acc = stashStreamingBlocksRef.current[stashKey];
+              if (acc && acc.type === 'tool_use') {
+                let input = {};
+                try { input = JSON.parse(acc.input_json); } catch (e) { /* partial */ }
+                const toolId = acc.id;
+                dispatch({ type: 'CLAUDE_STASH_UPDATE_MESSAGES', dashboardId: targetDash, updater: (prev) => {
+                  const idx2 = prev.findLastIndex(m => m.type === 'tool_call' && m.block?.id === toolId);
+                  if (idx2 < 0) return prev;
+                  const updated = prev.slice();
+                  updated[idx2] = { ...updated[idx2], block: { ...updated[idx2].block, input, _streaming: false } };
+                  return updated;
+                }});
+                delete stashStreamingBlocksRef.current[stashKey];
+              }
+            } else if (evt.type === 'user') {
+              // Capture tool results for stashed dashboards
+              const content = evt.message?.content || [];
+              for (const block of content) {
+                if (block.type === 'tool_result') {
+                  const resultContent = evt.tool_use_result || block.content;
+                  const toolUseId = block.tool_use_id;
+                  dispatch({ type: 'CLAUDE_STASH_UPDATE_MESSAGES', dashboardId: targetDash, updater: (prev) => {
+                    const idx2 = prev.findLastIndex(m => m.type === 'tool_call' && m.block?.id === toolUseId);
+                    if (idx2 < 0) return [...prev, { id: Date.now() + Math.random(), type: 'tool_result_standalone', content: resultContent }];
+                    const updated = prev.slice();
+                    updated[idx2] = { ...updated[idx2], block: { ...updated[idx2].block, _result: resultContent } };
+                    return updated;
+                  }});
+                }
+              }
             } else if (evt.type === 'system') {
               if (evt.subtype === 'init') {
                 dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: `Connected — model: ${evt.model || '?'}, ${(evt.tools || []).length} tools available` } });
+              } else if (evt.subtype === 'task_progress' || evt.subtype === 'task_started' || evt.subtype === 'task_completed' || evt.subtype === 'task_failed') {
+                dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', isTaskEvent: true, taskEventData: evt, text: evt.description || evt.subtype } });
               }
+            } else if (evt.type === 'error') {
+              dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: evt.message || 'Agent error', isError: true } });
+            } else if (evt.type === 'message_stop') {
+              stashSawStreamingRef.current[dashStreamKey] = false;
             } else if (evt.type === 'result') {
+              stashSawStreamingRef.current[dashStreamKey] = false;
               if (evt.session_id) {
-                // Stash the session ID for this dashboard:tab
                 const targetTab = taskTabMapRef.current[data.taskId] || 'default';
                 const targetKey = targetDash + ':' + targetTab;
                 const storedSession = sessionMapRef.current[targetKey] || {};
@@ -1090,6 +1267,14 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
             dispatch({
               type: 'CLAUDE_APPEND_MSG',
               msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true }
+            });
+          }
+          // If the process exited with a non-zero code and no visible response
+          // was produced, show feedback so the user isn't left staring at silence.
+          if (data.exitCode && data.exitCode !== 0 && !sawStreamingRef.current) {
+            dispatch({
+              type: 'CLAUDE_APPEND_MSG',
+              msg: { type: 'system', text: 'Agent process exited with code ' + data.exitCode + ' without producing a response. Try sending your message again.', isError: true }
             });
           }
           if (finishRef.current) finishRef.current(data.taskId);
@@ -1313,6 +1498,11 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const thinkingFlushTimerRef = useRef(null);
   const currentThinkingIndexRef = useRef(null);
 
+  // Activity buffer — batches stderr activity lines into grouped messages
+  const activityBufferRef = useRef([]);
+  const activityFlushTimerRef = useRef(null);
+  const ACTIVITY_FLUSH_MS = 500; // flush batched activity every 500ms
+
   function commitTextBuffer() {
     const buffered = textBufferRef.current;
     if (!buffered) return;
@@ -1385,6 +1575,28 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     currentThinkingIndexRef.current = null;
   }
 
+  function commitActivityBuffer() {
+    const lines = activityBufferRef.current;
+    if (lines.length === 0) return;
+    activityBufferRef.current = [];
+    activityFlushTimerRef.current = null;
+    appendMsg({ type: 'activity', lines });
+  }
+
+  function flushActivity() {
+    if (activityFlushTimerRef.current) {
+      clearTimeout(activityFlushTimerRef.current);
+      activityFlushTimerRef.current = null;
+    }
+    commitActivityBuffer();
+  }
+
+  function appendActivityLine(text) {
+    activityBufferRef.current.push(text);
+    if (activityFlushTimerRef.current) clearTimeout(activityFlushTimerRef.current);
+    activityFlushTimerRef.current = setTimeout(commitActivityBuffer, ACTIVITY_FLUSH_MS);
+  }
+
   function appendTextContent(text) {
     textBufferRef.current += text;
     if (!textFlushTimerRef.current) {
@@ -1401,6 +1613,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
 
   function appendToolResult(toolUseId, content) {
     flushText();
+    if (pendingToolCountRef.current > 0) pendingToolCountRef.current--;
     if (toolUseId && toolCallIndexRef.current[toolUseId] !== undefined) {
       dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
         const idx = toolCallIndexRef.current[toolUseId];
@@ -1418,12 +1631,29 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   function addToolCall(block) {
     flushText();
     flushThinking();
+    pendingToolCountRef.current++;
     dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
       if (block.id) {
         toolCallIndexRef.current[block.id] = prev.length;
       }
       return [...prev, { id: Date.now() + Math.random(), type: 'tool_call', block }];
     }});
+  }
+
+  function updateToolCall(toolUseId, input) {
+    if (toolUseId && toolCallIndexRef.current[toolUseId] !== undefined) {
+      dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
+        const idx = toolCallIndexRef.current[toolUseId];
+        if (idx >= prev.length) return prev;
+        const updated = prev.slice();
+        const block = { ...updated[idx].block, input, _streaming: false };
+        updated[idx] = { ...updated[idx], block };
+        return updated;
+      }});
+    } else {
+      // Fallback: add as new if tracking was lost
+      addToolCall({ id: toolUseId, name: 'unknown', input });
+    }
   }
 
   // Test if a line is purely CLI progress/spinner output (no meaningful text)
@@ -1438,6 +1668,21 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   function handleChunk(data) {
     const chunk = data.chunk;
     const pid = data.pid;
+
+    // stderr output — update status bar AND surface meaningful activity in conversation
+    if (data.isStderr) {
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        const cleaned = stripAnsi(line).trim();
+        if (cleaned && !isProgressBarLine(cleaned) && cleaned.length < 200) {
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: cleaned });
+          // Surface as activity in the conversation so background work is visible
+          appendActivityLine(cleaned);
+        }
+      }
+      return;
+    }
+
     const lines = chunk.split('\n');
     for (const line of lines) {
       const trimmed = line.trim();
@@ -1451,7 +1696,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         if (cleaned && /auto.?compact|compacting conversation/i.test(cleaned)) {
           flushText();
           flushThinking();
-          appendMsg({ type: 'system', text: 'Context is being compacted — earlier messages may be summarized', isCompaction: true });
+          appendMsg({ type: 'system', text: 'Context compacted', isCompaction: true, compactionSummary: cleaned });
           // Reset streaming state — compaction invalidates current message indices
           currentTextIndexRef.current = null;
           currentThinkingIndexRef.current = null;
@@ -1481,7 +1726,13 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           const msg = evt.message || JSON.stringify(evt);
           const isCompaction = /compact|context.*(truncat|compress|summar)/i.test(msg)
             || evt.subtype === 'auto_compact' || evt.subtype === 'compact';
-          appendMsg({ type: 'system', text: isCompaction ? 'Context is being compacted — earlier messages may be summarized' : msg, isCompaction });
+          if (isCompaction) {
+            // Capture the summary from the CLI event for expandable display
+            const summary = evt.summary || evt.message || '';
+            appendMsg({ type: 'system', text: 'Context compacted', isCompaction: true, compactionSummary: summary });
+          } else {
+            appendMsg({ type: 'system', text: msg });
+          }
         }
         break;
       }
@@ -1516,6 +1767,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       case 'content_block_start': {
         sawStreamingRef.current = true;
         isResumedSessionRef.current = false; // history replay is over, new content starts
+        flushActivity(); // flush any pending activity before the new content block
         const block = evt.content_block || {};
         const idx = evt.index ?? 0;
         if (block.type === 'tool_use' || block.type === 'server_tool_use') {
@@ -1523,6 +1775,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
             type: 'tool_use', id: block.id, name: block.name, input_json: '',
           };
           dispatch({ type: 'CLAUDE_SET_STATUS', value: `Tool: ${block.name}` });
+          // Show tool call in chat immediately (before input is fully streamed)
+          addToolCall({ id: block.id, name: block.name, input: {}, _streaming: true });
         } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
           streamingBlocksRef.current[idx] = { type: 'thinking', thinking: '' };
           dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
@@ -1559,7 +1813,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         if (acc.type === 'tool_use') {
           let input = {};
           try { input = JSON.parse(acc.input_json); } catch (e) { /* partial */ }
-          addToolCall({ id: acc.id, name: acc.name, input });
+          // Update the tool call added during content_block_start with full parsed input
+          updateToolCall(acc.id, input);
         } else if (acc.type === 'thinking') {
           flushThinking();
         } else if (acc.type === 'text') {
@@ -1570,18 +1825,28 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       }
 
       case 'message_start':
-      case 'message_delta':
-        // Message-level streaming events — session_id may appear here
+        // New assistant turn — reset pending tool counter (previous tools are done)
+        pendingToolCountRef.current = 0;
         if (evt.message?.id) { /* message started */ }
+        break;
+
+      case 'message_delta':
+        if (evt.message?.id) { /* message delta */ }
         break;
 
       case 'message_stop':
         flushText();
         flushThinking();
+        flushActivity();
         streamingBlocksRef.current = {};
         sawStreamingRef.current = false;
         isResumedSessionRef.current = false;
-        dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+        // Don't show 'Ready' while tools are still executing
+        if (pendingToolCountRef.current > 0) {
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Executing...' });
+        } else {
+          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+        }
         break;
 
       case 'user': {
@@ -1600,9 +1865,11 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
       case 'result': {
         flushText();
         flushThinking();
+        flushActivity();
         streamingBlocksRef.current = {};
         sawStreamingRef.current = false;
         isResumedSessionRef.current = false;
+        pendingToolCountRef.current = 0;
         if (evt.session_id) sessionIdRef.current = evt.session_id;
         dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
         break;
@@ -1705,6 +1972,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     currentTextIndexRef.current = null;
     flushText();
     flushThinking();
+    flushActivity();
 
     // Log completion to dashboard
     if (api && taskDashId) {
@@ -2211,6 +2479,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     commitTextBuffer();
     if (thinkingFlushTimerRef.current) { clearTimeout(thinkingFlushTimerRef.current); thinkingFlushTimerRef.current = null; }
     commitThinkingBuffer();
+    if (activityFlushTimerRef.current) { clearTimeout(activityFlushTimerRef.current); activityFlushTimerRef.current = null; }
+    commitActivityBuffer();
     // Save current tab's conversation to disk before switching
     saveTabToDisk(activeTabId);
     // Dispatch tab switch (stashes current messages, loads target)
@@ -2244,6 +2514,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     isResumedSessionRef.current = false;
     textBufferRef.current = '';
     thinkingBufferRef.current = '';
+    activityBufferRef.current = [];
     if (textFlushTimerRef.current) {
       clearTimeout(textFlushTimerRef.current);
       textFlushTimerRef.current = null;
@@ -2251,6 +2522,10 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     if (thinkingFlushTimerRef.current) {
       clearTimeout(thinkingFlushTimerRef.current);
       thinkingFlushTimerRef.current = null;
+    }
+    if (activityFlushTimerRef.current) {
+      clearTimeout(activityFlushTimerRef.current);
+      activityFlushTimerRef.current = null;
     }
     toolCallIndexRef.current = {};
 
@@ -2415,6 +2690,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           {projectDisplayName && <span className="claude-view-project">{projectDisplayName}</span>}
           <span className="claude-view-project">{activeModelLabel}</span>
           <span className={'claude-view-status' + (isProcessing ? ' active' : '')}>{status}</span>
+          <span className="claude-view-dashboard-id">{dashboardId}</span>
           <button
             className="claude-clear-btn"
             onClick={() => setShowHistory(h => !h)}

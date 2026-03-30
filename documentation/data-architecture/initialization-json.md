@@ -249,7 +249,7 @@ No additional data beyond `depends_on` is needed for line rendering.
 
 ## Real Example
 
-From a completed swarm on `dashboard1`:
+From a completed swarm on dashboard `71894a`:
 
 ```json
 {

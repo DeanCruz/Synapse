@@ -27,6 +27,7 @@ The master agent has exactly **five responsibilities** during a swarm. Nothing m
 - Read the Synapse `CLAUDE.md` for swarm protocols
 - Read `{project_root}/CLAUDE.md` for target project conventions, architecture, and constraints
 - If a project TOC exists at `{project_root}/.synapse/toc.md`, read it for semantic orientation
+- If additional context directories are configured (in `.synapse/project.json` or the Electron app), read their `CLAUDE.md` files alongside the project CLAUDE.md. These directories are read-only supplemental context — their conventions should be included in worker prompts.
 - Use Glob/Grep within `{project_root}` for targeted file discovery
 - Read source files, documentation, types, schemas, and configs needed to understand the task
 - Read relevant command files from `_commands/` directories
@@ -121,7 +122,8 @@ When the master needs to clear a dashboard (e.g., to start a new swarm on a dash
 
 1. **Check if the dashboard has data** — read `initialization.json`. If `task` is not `null`, the dashboard has a previous swarm.
 2. **Archive the dashboard** — copy the entire dashboard directory (`initialization.json`, `logs.json`, `progress/`) to `{tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/`.
-3. **Then clear** — delete progress files, reset `initialization.json` and `logs.json` to empty state.
+3. **Clear ALL state** — delete ALL `.json` files in `progress/`, reset `logs.json` to `{ "entries": [] }`.
+4. **Verify** — list `progress/` directory and confirm it is empty. If any `.json` files remain, delete them before proceeding. Do NOT write new `initialization.json` until the progress directory is confirmed empty.
 
 This applies everywhere a dashboard is cleared: `!p_track` initialization, `!reset`, `!master_plan_track` slot clearing, queue-to-dashboard promotion, and any other operation that overwrites dashboard state. **No exceptions.**
 

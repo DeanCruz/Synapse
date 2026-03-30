@@ -6,7 +6,7 @@ Display a formatted table of all available agent profiles, their roles, and when
 
 ## Execution
 
-1. **Scan `{tracker_root}/_commands/_profiles/`** for all `.md` files
+1. **Scan `{tracker_root}/_commands/profiles/`** for all `.md` files
 2. **For each profile found**, extract:
    - The profile name (filename without `.md`)
    - The role title (from the `## Role` section heading or first line)
@@ -25,12 +25,12 @@ Display a formatted table of all available agent profiles, their roles, and when
    Usage:
      !{profile} {prompt}                    — Profile + direct task
      !{profile} !{command} {prompt}         — Profile + command + task
-     !p !{profile} {prompt}                 — Parallel dispatch under profile
-     !p_track !{profile} {prompt}           — Tracked swarm under profile
+     !{profile} !p {prompt}                 — Profile + parallel dispatch
+     !{profile} !p_track {prompt}           — Profile + tracked swarm
    ```
 
 ## Rules
 
 - **Always scan the directory live** — do not hardcode the profile list. New profiles added to `_profiles/` should appear automatically.
 - **Read each profile file** to extract accurate role and usage information. Do not guess from filenames alone.
-- If the `_profiles/` directory is empty or missing, inform the user: *"No profiles found. Create one with: `create a new profile called {name}`"*
+- If the `profiles/` directory is empty or missing, inform the user: *"No profiles found. Create one with: `create a new profile called {name}`"*

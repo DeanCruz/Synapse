@@ -57,7 +57,7 @@ Both hooks throw errors if used outside `AppProvider`.
 ```javascript
 const initialState = {
   // Dashboard navigation
-  currentDashboardId: 'dashboard1',     // Active dashboard ID
+  currentDashboardId: null,              // Active dashboard ID (null until first switch)
   currentInit: null,                     // initialization.json data for current dashboard
   currentProgress: {},                   // { [taskId]: progressObject } for current dashboard
   currentLogs: null,                     // logs.json data for current dashboard
@@ -66,6 +66,8 @@ const initialState = {
   // Multi-dashboard state
   dashboardList: [],                     // Ordered list of dashboard IDs from server
   dashboardStates: {},                   // { [dashboardId]: statusSummary } for sidebar dots
+  dashboardNames: {},                    // { [dashboardId]: customName } for user-defined names
+  chatPreviews: {},                      // { [dashboardId]: { text, isStreaming } } for sidebar previews
 
   // View state
   homeViewActive: false,
@@ -79,9 +81,10 @@ const initialState = {
   activeLogFilter: 'all',               // Log panel filter: 'all' | 'info' | 'warn' | 'error' | 'deviation'
   activeStatFilter: null,                // Stats bar filter: null | 'completed' | 'in_progress' | 'failed' | 'pending'
   seenPermissionCount: 0,               // Permission popup tracking
+  pendingPermission: null,               // { pid, toolName, toolInput, requestId, toolUseId, timestamp }
 
   // View routing
-  activeView: 'dashboard',              // 'dashboard' | 'home' | 'swarmBuilder' | 'claude'
+  activeView: 'dashboard',              // 'dashboard' | 'home' | 'swarmBuilder' | 'claude' | 'ide' | 'git'
   activeModal: null,                     // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor'
   modalDashboardId: null,                // Which dashboard a modal was opened for
 
@@ -89,13 +92,17 @@ const initialState = {
   claudeDashboardId: null,               // Which dashboard the Claude view is associated with
   claudeViewMode: 'expanded',            // 'minimized' | 'collapsed' | 'expanded' | 'maximized'
   claudeEverOpened: false,               // Once true, Claude panel stays mounted
-  claudeMessages: [CLAUDE_WELCOME_MSG],  // Current dashboard's chat messages
-  claudeChatStash: {},                   // { [dashboardId]: messages } for fast switching
-  claudeProcessingStash: {},             // { [dashboardId]: { isProcessing, status, pendingAttachments } }
+  claudeMessages: [CLAUDE_WELCOME_MSG],  // Current dashboard's active tab messages
+  claudeTabStash: {},                    // { [dashboardId:tabId]: messages } in-memory cache for tab/dashboard switching
+  claudeProcessingStash: {},             // { [dashboardId]: { isProcessing, status, pendingAttachments, viewMode, chatOpen, ideChatOpen } }
+  claudeTabs: {},                        // { [dashboardId]: [{ id, name }] } tabs per dashboard
+  claudeActiveTabId: 'default',          // Active tab ID for current dashboard
+  claudeActiveTabMap: {},                // { [dashboardId]: tabId } stashed active tab for non-current dashboards
   claudeIsProcessing: false,             // Whether the Claude agent is currently processing
   claudeStatus: 'Ready',                 // Status text displayed in Claude panel
   claudeActiveTaskId: null,              // Active task ID for Claude session
   claudePendingAttachments: [],          // Pending file attachments: { id, name, type, dataUrl }
+  unreadChatCounts: {},                  // { [dashboardId]: number } unread message counts for sidebar glow
 
   // Per-dashboard caches
   allDashboardProgress: {},              // { [dashboardId]: progressMap }
@@ -103,6 +110,39 @@ const initialState = {
 
   // Connection state
   connected: false,                      // Whether IPC listeners are active
+
+  // IDE state
+  ideWorkspaces: [],                     // [{ id, path, name, dashboardId? }] persisted to localStorage
+  ideActiveWorkspaceId: null,            // Active workspace ID
+  ideOpenFiles: {},                      // { [workspaceId]: [{ id, path, name, isDirty }] }
+  ideActiveFileId: {},                   // { [workspaceId]: string }
+  ideFileTrees: {},                      // { [workspaceId]: treeData }
+  ideSidebarView: 'explorer',            // Which sidebar panel is shown in IDE
+  ideChatOpen: false,                    // Whether IDE inline chat is open
+
+  // Debug state
+  debugBreakpoints: {},                  // { [filePath]: [lineNumber, ...] }
+  debugSession: { status: 'idle', pausedFile: null, pausedLine: null, threadId: null },
+  debugCallStack: [],                    // [{ id, name, source, line, column }]
+  debugVariables: {},                    // { [scopeId]: [{ name, value, type, variablesReference }] }
+  debugScopes: [],                       // [{ name, variablesReference, expensive }]
+  debugWatchExpressions: [],             // [{ id, expression, value, error }]
+
+  // Diagnostics state
+  diagnostics: {},                       // { [filePath]: [{ line, column, endLine, endColumn, message, severity, source }] }
+
+  // Git Manager state
+  gitRepos: [],                          // [{ id, path, name }] persisted to localStorage
+  gitActiveRepoId: null,                 // Active repo ID
+  gitStatus: null,                       // { staged: [], unstaged: [], untracked: [] }
+  gitBranches: [],                       // [{ name, current, tracking, ahead, behind }]
+  gitCurrentBranch: null,                // string — name of current branch
+  gitLog: [],                            // [{ hash, abbrevHash, author, date, message, parents, refs }]
+  gitDiff: null,                         // string — current diff content
+  gitRemotes: [],                        // [{ name, fetchUrl, pushUrl }]
+  gitLoading: false,                     // boolean — global loading indicator
+  gitError: null,                        // string | null — last error message
+  gitSelectedFile: null,                 // string | null — currently selected file path for diff view
 };
 ```
 
@@ -165,6 +205,44 @@ These actions update chat state for non-active dashboards (e.g., when a worker s
 | `CLAUDE_STASH_UPDATE_MESSAGES` | `{ dashboardId, updater }` | Functional update on stashed messages |
 | `CLAUDE_STASH_SET_PROCESSING` | `{ dashboardId, value, status? }` | Updates stashed processing state |
 
+### Claude Tab Management Actions
+
+| Action | Payload | Effect |
+|---|---|---|
+| `CLAUDE_NEW_TAB` | -- | Creates a new chat tab in the current dashboard, stashes current tab messages, switches to new tab with welcome message |
+| `CLAUDE_SWITCH_TAB` | `{ tabId }` | Stashes current tab messages, restores target tab messages |
+| `CLAUDE_CLOSE_TAB` | `{ tabId }` | Closes a tab, removes stashed messages, switches to adjacent tab if closing the active one. Cannot close the last tab. |
+| `CLAUDE_RENAME_TAB` | `{ tabId, name }` | Renames a tab |
+| `CLAUDE_TAB_STASH_APPEND_MSG` | `{ tabId, msg }` | Appends a message to a non-active tab's stash on the same dashboard (for background worker output) |
+
+### Stashed Dashboard Chat Actions
+
+These actions update chat state for non-active dashboards (e.g., when a worker sends output to a background dashboard):
+
+| Action | Payload | Effect |
+|---|---|---|
+| `CLAUDE_STASH_APPEND_MSG` | `{ dashboardId, msg }` | Appends message to stashed chat for a specific dashboard. Tracks unread counts for assistant messages. |
+| `CLAUDE_STASH_UPDATE_MESSAGES` | `{ dashboardId, updater }` | Functional update on stashed messages |
+| `CLAUDE_STASH_SET_PROCESSING` | `{ dashboardId, value, status? }` | Updates stashed processing state |
+
+### Permission Request Actions
+
+| Action | Payload | Effect |
+|---|---|---|
+| `PERMISSION_REQUEST` | `{ permission }` | Sets `pendingPermission` with `{ pid, toolName, toolInput, requestId, toolUseId, timestamp }` |
+| `PERMISSION_RESOLVED` | `{ requestId }` | Clears `pendingPermission` (only if requestId matches) |
+
+### Dashboard Management Actions
+
+| Action | Payload | Effect |
+|---|---|---|
+| `SET_DASHBOARDS_LIST` | `{ value, names? }` | Updates `dashboardList` and optionally merges `dashboardNames`. Does not auto-switch dashboards. |
+| `SET_DASHBOARD_NAMES` | `{ names }` | Sets all dashboard names |
+| `REORDER_DASHBOARDS` | `{ orderedIds }` | Reorders `dashboardList` |
+| `RENAME_DASHBOARD` | `{ id, name }` | Sets or clears a custom name for a dashboard |
+| `SET_CHAT_PREVIEW` | `{ dashboardId, text, isStreaming? }` | Sets a chat preview for sidebar display |
+| `CLEAR_CHAT_PREVIEW` | `{ dashboardId }` | Clears a chat preview |
+
 ### Task Dispatch Actions
 
 | Action | Payload | Effect |
@@ -172,18 +250,76 @@ These actions update chat state for non-active dashboards (e.g., when a worker s
 | `SET_UNBLOCKED_TASKS` | `{ tasks }` | Sets `unblockedTasks` array |
 | `CLEAR_UNBLOCKED_TASKS` | -- | Clears `unblockedTasks` to `[]` |
 
+### IDE State Actions
+
+| Action | Payload | Effect |
+|---|---|---|
+| `IDE_OPEN_WORKSPACE` | `{ id?, path, name }` | Opens a workspace (or switches to it if already open). Persists to localStorage. |
+| `IDE_CLOSE_WORKSPACE` | `{ workspaceId }` | Closes a workspace, cleans up open files, file tree, active file. Auto-switches if closing active. |
+| `IDE_SWITCH_WORKSPACE` | `{ workspaceId }` | Switches to a different workspace |
+| `IDE_LINK_WORKSPACE_DASHBOARD` | `{ workspaceId, dashboardId }` | Associates a workspace with a dashboard ID |
+| `IDE_SET_FILE_TREE` | `{ workspaceId, tree }` | Sets the file tree for a workspace |
+| `IDE_UPDATE_FILE_TREE_NODE` | `{ workspaceId, nodePath, children }` | Updates children of a specific tree node (lazy loading) |
+| `IDE_OPEN_FILE` | `{ workspaceId, file: { path, name } }` | Opens a file (or switches to it if already open) |
+| `IDE_CLOSE_FILE` | `{ workspaceId, fileId }` | Closes a file tab, auto-switches to adjacent tab |
+| `IDE_SWITCH_FILE` | `{ workspaceId, fileId }` | Switches to a different open file |
+| `IDE_MARK_FILE_DIRTY` | `{ workspaceId, fileId }` | Marks a file as having unsaved changes |
+| `IDE_MARK_FILE_CLEAN` | `{ workspaceId, fileId }` | Marks a file as saved |
+| `IDE_OPEN_CHAT` | -- | Opens inline chat in IDE, sets `claudeViewMode` to expanded |
+| `IDE_CLOSE_CHAT` | -- | Closes inline IDE chat |
+
+### Debug State Actions
+
+| Action | Payload | Effect |
+|---|---|---|
+| `DEBUG_SET_SESSION` | `{ session }` | Merges session data into `debugSession` |
+| `DEBUG_TOGGLE_BREAKPOINT` | `{ filePath, line }` | Toggles a breakpoint at a specific line |
+| `DEBUG_SET_BREAKPOINTS` | `{ filePath, breakpoints }` | Sets all breakpoints for a file |
+| `DEBUG_SET_CALL_STACK` | `{ callStack }` | Sets the debug call stack |
+| `DEBUG_SET_VARIABLES` | `{ scopeId, variables }` | Sets variables for a scope |
+| `DEBUG_SET_SCOPES` | `{ scopes }` | Sets available scopes |
+| `DEBUG_CLEAR_SESSION` | -- | Resets debug session, call stack, variables, and scopes to defaults |
+
+### Diagnostics Actions
+
+| Action | Payload | Effect |
+|---|---|---|
+| `DIAGNOSTICS_SET` | `{ filePath, diagnostics }` | Sets diagnostics for a file |
+| `DIAGNOSTICS_CLEAR` | -- | Clears all diagnostics |
+| `DIAGNOSTICS_CLEAR_FILE` | `{ filePath }` | Clears diagnostics for a specific file |
+
+### Git Manager Actions
+
+| Action | Payload | Effect |
+|---|---|---|
+| `GIT_OPEN_REPO` | `{ id?, path, name }` | Opens a repo (or switches to it if already open). Persists to localStorage. |
+| `GIT_CLOSE_REPO` | `{ repoId }` | Closes a repo tab, auto-switches if closing active |
+| `GIT_SWITCH_REPO` | `{ repoId }` | Switches to a different repo, resets git data |
+| `GIT_SET_STATUS` | `{ status }` | Sets `gitStatus` (staged/unstaged/untracked) |
+| `GIT_SET_BRANCHES` | `{ branches }` | Sets `gitBranches` array |
+| `GIT_SET_CURRENT_BRANCH` | `{ branch }` | Sets `gitCurrentBranch` |
+| `GIT_SET_LOG` | `{ log }` | Sets `gitLog` (commit history) |
+| `GIT_SET_DIFF` | `{ diff }` | Sets `gitDiff` content |
+| `GIT_SET_REMOTES` | `{ remotes }` | Sets `gitRemotes` array |
+| `GIT_SET_LOADING` | `{ value }` | Sets global loading indicator |
+| `GIT_SET_ERROR` | `{ error }` | Sets last error message |
+| `GIT_SET_SELECTED_FILE` | `{ filePath }` | Sets selected file for diff view |
+| `GIT_NAVIGATE_TO_FILE` | `{ projectRoot, filePath }` | Switches to git view, opens repo at projectRoot, highlights filePath |
+
 ---
 
 ## Persistence
 
 ### Claude Chat Messages
 
-Chat messages are persisted to localStorage with debounced writes:
+Chat messages are persisted to localStorage with debounced writes, now with per-tab granularity:
 
-- **Key format:** `synapse-claude-messages-{dashboardId}` (e.g., `synapse-claude-messages-dashboard1`)
+- **Message key format:** `synapse-claude-messages-{dashboardId}` (default tab) or `synapse-claude-messages-{dashboardId}-{tabId}` (non-default tabs)
+- **Tab key format:** `synapse-claude-tabs-{dashboardId}` -- stores the tab list `[{ id, name }]`
 - **Trigger actions:** `CLAUDE_SET_MESSAGES`, `CLAUDE_APPEND_MSG`, `CLAUDE_UPDATE_MESSAGES`
 - **Debounce:** 500ms delay to avoid serializing on every streaming delta
-- **Migration:** Old global key `synapse-claude-messages` is migrated to `dashboard1` on first load
+- **Migration:** Old global key `synapse-claude-messages` is migrated to `dashboard1` default tab on first load
+- **Max messages:** Hard cap of 200 messages per tab. When exceeded, older messages are trimmed and a `[N older messages trimmed]` system notice is inserted.
 
 The persistence layer wraps `appReducerCore` in `appReducer`:
 
@@ -191,11 +327,19 @@ The persistence layer wraps `appReducerCore` in `appReducer`:
 function appReducer(state, action) {
   const newState = appReducerCore(state, action);
   if (CLAUDE_PERSIST_ACTIONS.has(action.type)) {
-    schedulePersist(newState.currentDashboardId, newState.claudeMessages);
+    schedulePersist(newState.currentDashboardId, newState.claudeActiveTabId, newState.claudeMessages);
   }
   return newState;
 }
 ```
+
+### IDE Workspaces
+
+Saved to `localStorage.getItem('synapse-ide-workspaces')` as JSON array of `[{ id, path, name }]`. Updated on open/close/link workspace actions.
+
+### Git Repos
+
+Saved to `localStorage.getItem('synapse-git-repos')` as JSON array of `[{ id, path, name }]`. Updated on open/close repo actions.
 
 ### Theme
 

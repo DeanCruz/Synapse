@@ -3,7 +3,7 @@
 **Purpose:** Cancel the active swarm on a dashboard. Marks all non-completed tasks as cancelled via their progress files.
 
 **Syntax:**
-- `!cancel` — Cancel the auto-detected active swarm
+- `!cancel` — Cancel the swarm on your assigned dashboard
 - `!cancel a3f7k2` — Cancel the swarm on a specific hex dashboard
 - `!cancel dashboard3` — Cancel the swarm on a specific dashboard
 - `!cancel --force` — Skip confirmation

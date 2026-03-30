@@ -4,11 +4,13 @@ When a worker task depends on other tasks that ran before it, the worker **must*
 
 This document covers the full upstream results protocol: how to read upstream progress files, what to extract, how to adapt, and how to log what was learned.
 
+**Source of truth:** `agent/worker/upstream_deps.md`
+
 ---
 
 ## Why Upstream Results Matter
 
-The master agent writes dispatch prompts during the **planning phase** — before any work is done. By the time a dependent task runs, upstream workers may have:
+The master agent writes dispatch prompts during the **planning phase** -- before any work is done. By the time a dependent task runs, upstream workers may have:
 
 - Deviated from the plan (different file names, different APIs, different approaches)
 - Encountered errors (partial completion, workarounds)
@@ -21,7 +23,7 @@ The master may include an UPSTREAM RESULTS section in the dispatch prompt summar
 
 ---
 
-## The Four Steps
+## The 4-Step Procedure
 
 ### Step 1: Read Upstream Progress Files
 
@@ -35,7 +37,7 @@ For each dependency task ID listed in the dispatch prompt, read the progress fil
 - `{tracker_root}/dashboards/{dashboardId}/progress/1.1.json`
 - `{tracker_root}/dashboards/{dashboardId}/progress/1.3.json`
 
-**Read these files in parallel** — they have no dependency on each other. Use the Read tool to read them all in a single parallel call.
+**Read these files in parallel** -- they have no dependency on each other. Use the Read tool to read them all in a single parallel call.
 
 This read happens immediately after the initial progress file write, during the `reading_context` stage.
 
@@ -48,18 +50,18 @@ From each upstream progress file, extract these fields:
 | Field | What to Look For |
 |---|---|
 | `status` | Did it complete successfully or fail? If `"failed"`, assess whether the current task can still proceed. |
-| `summary` | What the upstream task accomplished — the definitive one-line result. Cross-reference with what the dispatch prompt expects. |
-| `deviations[]` | Every plan divergence. Pay special attention to `CRITICAL` severity — these may change assumptions about interfaces, file locations, or APIs. |
+| `summary` | What the upstream task accomplished -- the definitive one-line result. Cross-reference with what the dispatch prompt expects. |
+| `deviations[]` | Every plan divergence. Pay special attention to `CRITICAL` severity -- these may change assumptions about interfaces, file locations, or APIs. |
 | `milestones[]` | What was actually built, in order. Cross-reference with what the dispatch prompt expects to exist. |
-| `logs[]` | The full narrative of what happened. Scan for `"error"` and `"warn"` level entries — these reveal issues that may affect the current task. |
-| `message` | Final state message — useful for understanding the last thing the upstream worker did. |
+| `logs[]` | The full narrative of what happened. Scan for `"error"` and `"warn"` level entries -- these reveal issues that may affect the current task. |
+| `message` | Final state message -- useful for understanding the last thing the upstream worker did. |
 
 ### Priority of Information
 
 When there is a conflict between the dispatch prompt and the upstream progress file:
 
-1. **Progress file wins** — it reflects what actually happened
-2. **Dispatch prompt is the original plan** — it reflects what was intended
+1. **Progress file wins** -- it reflects what actually happened
+2. **Dispatch prompt is the original plan** -- it reflects what was intended
 3. **The worker adapts to reality, not the plan**
 
 ---
@@ -78,7 +80,7 @@ Log a `"warn"` entry explaining which dependency failed and how the worker is pr
 
 **Example log entry:**
 ```json
-{ "at": "...", "level": "warn", "msg": "Upstream 1.1 FAILED — auth middleware does not exist. Attempting to create endpoint without auth, will note as deviation." }
+{ "at": "...", "level": "warn", "msg": "Upstream 1.1 FAILED -- auth middleware does not exist. Attempting to create endpoint without auth, will note as deviation." }
 ```
 
 #### If an Upstream Task Has CRITICAL Deviations
@@ -96,7 +98,7 @@ Log every adaptation as a deviation in the worker's own progress file.
 {
   "at": "...",
   "severity": "MODERATE",
-  "description": "Adapting to upstream 1.3 CRITICAL deviation: importing fetchUsers() instead of planned getUsers() — upstream renamed the export"
+  "description": "Adapting to upstream 1.3 CRITICAL deviation: importing fetchUsers() instead of planned getUsers() -- upstream renamed the export"
 }
 ```
 
@@ -106,7 +108,7 @@ Note them but they likely do not affect the worker's task. Log that they were re
 
 **Example log entry:**
 ```json
-{ "at": "...", "level": "info", "msg": "Upstream 1.3 has 1 MODERATE deviation (used async readFile instead of sync) — does not affect this task" }
+{ "at": "...", "level": "info", "msg": "Upstream 1.3 has 1 MODERATE deviation (used async readFile instead of sync) -- does not affect this task" }
 ```
 
 #### If an Upstream Task's Logs Contain Error Entries
@@ -115,7 +117,7 @@ Even if the task completed, errors may indicate partial issues. Review them to e
 
 **Example log entry:**
 ```json
-{ "at": "...", "level": "info", "msg": "Upstream 1.1 completed but logged 2 errors during testing — reviewed, both were transient test runner issues, not code problems" }
+{ "at": "...", "level": "info", "msg": "Upstream 1.1 completed but logged 2 errors during testing -- reviewed, both were transient test runner issues, not code problems" }
 ```
 
 ---
@@ -128,7 +130,7 @@ After reading all upstream progress files, add a summary log entry:
 {
   "at": "...",
   "level": "info",
-  "msg": "Read upstream dependencies: 1.1 (completed, no deviations), 1.3 (completed, 1 MODERATE deviation — used alternative API pattern)"
+  "msg": "Read upstream dependencies: 1.1 (completed, no deviations), 1.3 (completed, 1 MODERATE deviation -- used alternative API pattern)"
 }
 ```
 
@@ -138,9 +140,33 @@ If any upstream deviation requires the worker to adapt, log it immediately as bo
 {
   "at": "...",
   "level": "deviation",
-  "msg": "Adapting to upstream 1.3 deviation: using fetchUsers() instead of planned getUsers() — upstream changed the export name"
+  "msg": "Adapting to upstream 1.3 deviation: using fetchUsers() instead of planned getUsers() -- upstream changed the export name"
 }
 ```
+
+---
+
+## Handling Upstream Failures
+
+When an upstream task has `status: "failed"`, the downstream worker must make a viability assessment:
+
+1. **Can the task proceed without the upstream output?** If the current task only loosely depends on the upstream (e.g., it can create a stub or alternative), attempt a workaround and log it as a deviation.
+
+2. **Does the task fundamentally require the upstream output?** If a required file, API, or interface does not exist because the upstream failed, set the current task's status to `"failed"` with a clear explanation referencing the upstream failure.
+
+3. **Always log the failure.** Whether proceeding or failing, add a `"warn"` level log entry documenting the upstream failure and the decision made.
+
+---
+
+## Handling Upstream CRITICAL Deviations
+
+When an upstream task reports CRITICAL deviations, the downstream worker must:
+
+1. **Identify what changed** -- Read the deviation description to understand which interface, API, or contract was modified.
+2. **Compare against dispatch prompt assumptions** -- Determine if the dispatch prompt references the old interface.
+3. **Adapt the implementation** -- Use the actual interface/API as reported in the upstream progress file, not the planned version from the dispatch prompt.
+4. **Report the adaptation as a deviation** -- Add a MODERATE deviation to the worker's own progress file explaining the adaptation.
+5. **Log the adaptation** -- Add a `"deviation"` level log entry for dashboard visibility.
 
 ---
 
@@ -152,14 +178,14 @@ Consider a worker assigned task `2.1` which depends on tasks `1.1` and `1.3`.
 
 The worker reads both progress files in parallel:
 
-**`progress/1.1.json`** — status: `"completed"`, no deviations, summary: "Created User model with CRUD operations"
+**`progress/1.1.json`** -- status: `"completed"`, no deviations, summary: "Created User model with CRUD operations"
 
-**`progress/1.3.json`** — status: `"completed"`, 1 CRITICAL deviation:
+**`progress/1.3.json`** -- status: `"completed"`, 1 CRITICAL deviation:
 ```json
 {
   "at": "2026-02-25T14:10:00Z",
   "severity": "CRITICAL",
-  "description": "Changed createUser(name, email) to createUser(userData: CreateUserInput) — existing validation middleware required structured input"
+  "description": "Changed createUser(name, email) to createUser(userData: CreateUserInput) -- existing validation middleware required structured input"
 }
 ```
 
@@ -175,7 +201,7 @@ The worker:
    {
      "at": "...",
      "severity": "MODERATE",
-     "description": "Adapted createUser() call to use structured input (CreateUserInput) instead of positional args — upstream 1.3 changed the function signature"
+     "description": "Adapted createUser() call to use structured input (CreateUserInput) instead of positional args -- upstream 1.3 changed the function signature"
    }
    ```
 3. Logs the adaptation:
@@ -186,7 +212,7 @@ The worker:
 ### Summary Log
 
 ```json
-{ "at": "...", "level": "info", "msg": "Read upstream dependencies: 1.1 (completed, no deviations), 1.3 (completed, 1 CRITICAL deviation — changed createUser signature to structured input). Adapted implementation accordingly." }
+{ "at": "...", "level": "info", "msg": "Read upstream dependencies: 1.1 (completed, no deviations), 1.3 (completed, 1 CRITICAL deviation -- changed createUser signature to structured input). Adapted implementation accordingly." }
 ```
 
 ---
@@ -205,7 +231,7 @@ The worker:
 
 ---
 
-## Timing
+## Timing in the Worker Lifecycle
 
 The upstream results protocol happens at a specific point in the worker lifecycle:
 
@@ -225,10 +251,10 @@ This happens **before reading any project files** and **before planning the appr
 ## Rules Summary
 
 1. **Reading upstream progress files is NON-NEGOTIABLE** for any task with dependencies
-2. **Read in parallel** — upstream files have no dependency on each other
-3. **Progress files are ground truth** — they override the dispatch prompt when there is a conflict
-4. **CRITICAL deviations require adaptation** — change the implementation to match actual upstream output
-5. **Log everything** — what was read, what was found, how the worker adapted
+2. **Read in parallel** -- upstream files have no dependency on each other
+3. **Progress files are ground truth** -- they override the dispatch prompt when there is a conflict
+4. **CRITICAL deviations require adaptation** -- change the implementation to match actual upstream output
+5. **Log everything** -- what was read, what was found, how the worker adapted
 6. **Report adaptations as deviations** in the worker's own progress file
-7. **Upstream errors matter** even in completed tasks — review log entries for hidden issues
-8. **Failed upstreams require assessment** — can the current task proceed without the failed output?
+7. **Upstream errors matter** even in completed tasks -- review log entries for hidden issues
+8. **Failed upstreams require assessment** -- can the current task proceed without the failed output?

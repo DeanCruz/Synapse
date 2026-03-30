@@ -12,7 +12,8 @@ The Synapse Dashboard is a React-based single-page application that provides rea
 | State Management | React Context + `useReducer` (no external libraries) |
 | Desktop Shell | Electron |
 | Communication | Electron IPC (renderer-to-main process) |
-| Styling | Vanilla CSS with custom properties (no CSS-in-JS) |
+| Styling | Vanilla CSS with custom properties across 10 stylesheet files (no CSS-in-JS) |
+| Terminal | @xterm/xterm (PTY-backed terminal via Electron IPC) |
 | Bundling | Vite (import aliases via `@/`) |
 | Dependency Lines | Raw SVG + BFS pathfinding (no charting library) |
 
@@ -45,7 +46,15 @@ main.jsx
         {activeView === 'swarmBuilder' && <SwarmBuilder />}
         {activeView === 'dashboard' && <DashboardContent />}
         {activeView === 'claude' && <DashboardContent />}   -- Claude floats on top
+        {activeView === 'git' && <GitManagerView />}         -- Git manager view
+        {activeView === 'ide' && <IDEView />}                -- IDE view
+        {activeView === 'preview' && <PreviewView />}        -- Live Preview view
       </div>
+      {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
+      <ClaudeFloatingPanel>               -- useResize hook for drag-to-resize
+        <ClaudeFloatingHeader />          -- Title bar with minimize/maximize/close
+        <ClaudeView />                    -- Agent chat interface
+      </ClaudeFloatingPanel>
     </div>
 
     {/* Modals (conditionally rendered) */}
@@ -53,12 +62,6 @@ main.jsx
     <ProjectModal />
     <PlanningModal />
     <SettingsModal />
-
-    {/* Floating Claude chat panel */}
-    <ClaudeFloatingPanel>
-      <ClaudeFloatingHeader />
-      <ClaudeView />
-    </ClaudeFloatingPanel>
   </App>
 </AppProvider>
 ```
@@ -67,11 +70,12 @@ main.jsx
 
 ```
 <DashboardContent>
-  <dashboard-action-bar>               -- Project + Agent Chat buttons
+  <dashboard-action-bar>               -- Project button
   <ProgressSection>
     <ProgressBar />                     -- Thin fill bar
     <StatsBar />                        -- 6 stat cards
   </ProgressSection>
+  <ReplanningBanner />                  -- Circuit breaker notification
 
   {hasTask ? (
     {taskType === 'Chains'
@@ -83,7 +87,12 @@ main.jsx
   )}
 
   <TimelinePanel />                     -- Side panel with event timeline
-  <LogPanel />                          -- Fixed bottom drawer
+  <BottomPanel>                         -- VS Code-style bottom panel
+    <TerminalView />                    -- PTY-backed xterm terminal
+    <LogPanel />                        -- Event log drawer
+    <ProblemsPanel />                   -- Diagnostics panel
+    <DebugConsolePanel />               -- Debug console
+  </BottomPanel>
   <AgentDetails />                      -- Modal on agent card click
 </DashboardContent>
 ```
@@ -174,8 +183,11 @@ The application uses a simple view-switching model managed by the `activeView` s
 | `'home'` | `HomeView` | Overview of all dashboards, archives, history |
 | `'swarmBuilder'` | `SwarmBuilder` | Visual swarm plan editor |
 | `'claude'` | `DashboardContent` + `ClaudeFloatingPanel` | Dashboard with floating chat overlay |
+| `'git'` | `GitManagerView` | Git repository manager with branches, commits, diffs, remotes |
+| `'ide'` | `IDEView` | Multi-workspace code editor with file explorer, debug, and terminal |
+| `'preview'` | `PreviewView` | Live Preview with embedded webview and inline text editing |
 
-Views are switched via `dispatch({ type: 'SET_VIEW', view: 'dashboard' })`.
+Views are switched via `dispatch({ type: 'SET_VIEW', view: 'dashboard' })`. The Claude floating panel is visible in all views except `'git'`.
 
 ## Modal System
 
@@ -255,6 +267,8 @@ The `useDashboardData` hook includes a health monitoring system:
 
 4. **Stats derived from progress** -- All stat card values (completed, failed, in progress, pending, elapsed) are derived from progress file data at render time. There are no server-maintained counters to go stale.
 
-5. **CSS custom properties for theming** -- Status colors are defined as CSS variables and read by JavaScript via `getComputedStyle`. This allows themes to change colors without rebuilding components.
+5. **CSS custom properties for theming** -- Status colors are defined as CSS variables and read by JavaScript via `getComputedStyle`. This allows themes to change colors without rebuilding components. Styles are split across 10 CSS files in `/src/ui/styles/` (main `index.css` plus dedicated files for IDE and Git Manager features).
 
-6. **Claude panel always mounted** -- Once the Claude chat is opened, the `ClaudeFloatingPanel` stays mounted (hidden via `display: none`) to preserve IPC listener state and chat history across view switches.
+6. **Claude panel always mounted** -- The `ClaudeFloatingPanel` is always mounted (hidden via `display: none` when not visible) so IPC listeners stay alive during background Claude agent runs. It uses a floating panel architecture with minimize/maximize/collapse/expanded modes and a custom `useResize` hook for drag-to-resize.
+
+7. **Integrated terminal** -- The `BottomPanel` component provides a VS Code-style bottom panel with tabs for Terminal (PTY-backed via @xterm/xterm), Problems, Output, Debug Console, and Ports. Multiple terminal instances are supported via sub-tabs.

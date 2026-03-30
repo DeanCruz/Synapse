@@ -21,7 +21,7 @@
 **This command is the complete "pick up where we left off" operation.** It combines state reconstruction, agent health assessment, upstream result cache rebuilding, eager dispatch, failure recovery, and the full `!p_track` completion phase into a single command.
 
 **Syntax:**
-- `!p_track_resume` — Auto-detect the dashboard to resume
+- `!p_track_resume` — Resume the swarm on your assigned dashboard
 - `!p_track_resume --dashboard a3f7k2` — Resume a specific dashboard
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.
@@ -61,14 +61,9 @@ Read these files **in parallel** where possible:
 
 **If `{dashboardId}` was specified:** Use it directly.
 
-**If no dashboard was specified (auto-detect):**
-1. Scan all dashboards (excluding `ide`, which is reserved for the IDE agent).
-2. For each dashboard, read `{tracker_root}/dashboards/{dashboardId}/initialization.json`:
-   - If `task` is `null` → **empty**. Skip — nothing to resume.
-   - If `task` is not null → candidate. Read all progress files from `progress/`.
-     - If **every** progress file has `status: "completed"` → **fully done**. Skip.
-     - If **any** progress file has `status: "in_progress"`, `"failed"`, or is **missing** (task exists in `agents[]` but has no progress file) → **resumable**. Select this dashboard.
-3. If no resumable dashboard is found, report: "No dashboards have incomplete swarms to resume." and list all dashboard states.
+**If your system prompt contains a `DASHBOARD ID:` directive:** Use that dashboard unconditionally. You have no access to any other dashboard.
+
+**If none of the above apply:** Ask the user which dashboard to resume. Do not scan or select one yourself.
 
 ### Step 2: Read the full dashboard state
 

@@ -152,12 +152,24 @@ export function useDashboardData() {
       if (progress) {
         // Merge with existing cached progress to avoid overwriting more recent
         // push-event updates that arrived while this pull was in flight.
+        // BUT: if the init changed (new swarm), the cache was already flushed
+        // by the initialization handler, so the merge is a no-op / safe.
         const existing = progressRef.current[id] || {};
         const merged = { ...progress };
         for (const [taskId, existingEntry] of Object.entries(existing)) {
           const incoming = merged[taskId];
           if (!incoming) {
-            merged[taskId] = existingEntry;
+            // Only keep cached entries whose task IDs exist in the current init plan.
+            // This prevents stale progress from a previous swarm leaking through
+            // if the initialization handler's flush hasn't run yet.
+            const currentInit = initRef.current[id];
+            const validIds = currentInit && currentInit.agents
+              ? new Set(currentInit.agents.map(a => a.id))
+              : null;
+            if (validIds && validIds.has(taskId)) {
+              merged[taskId] = existingEntry;
+            }
+            // Otherwise drop it — it's from a previous swarm
           } else if (existingEntry.status === 'in_progress' && incoming.status === 'pending') {
             merged[taskId] = existingEntry;
           } else if (existingEntry.status === 'completed' && incoming.status !== 'completed') {
@@ -220,7 +232,24 @@ export function useDashboardData() {
     addListener('initialization', (data) => {
       if (!data.dashboardId) return;
       const { dashboardId, ...initData } = data;
+
+      // Detect new swarm: if the task name or created timestamp changed, flush
+      // the stale progress cache so old entries don't bleed into the new plan.
+      const prevInit = initRef.current[dashboardId];
+      const isNewSwarm = !prevInit
+        || (prevInit.task && initData.task && prevInit.task.name !== initData.task.name)
+        || (prevInit.task && initData.task && prevInit.task.created !== initData.task.created);
+
       initRef.current[dashboardId] = initData;
+
+      if (isNewSwarm) {
+        progressRef.current[dashboardId] = {};
+        dispatch({ type: 'SET_DASHBOARD_PROGRESS', dashboardId, progress: {} });
+        if (dashboardId === currentDashboardIdRef.current) {
+          dispatch({ type: 'SET_PROGRESS', data: {} });
+        }
+      }
+
       // Use ref (not stale state) to compare against current dashboard
       if (dashboardId === currentDashboardIdRef.current) {
         dispatch({ type: 'SET_INIT', data: initData });

@@ -36,9 +36,11 @@ Returns the list of all valid dashboard IDs.
 **Response (200):**
 ```json
 {
-  "dashboards": ["dashboard1", "dashboard2", "dashboard3"]
+  "dashboards": ["2d84ac", "356dc5", "71894a"]
 }
 ```
+
+Dashboard IDs are 6-character hexadecimal strings. There is no fixed upper limit on the number of concurrent dashboards.
 
 ---
 
@@ -54,7 +56,7 @@ Creates a new dashboard with the next available ID. The new dashboard is initial
 ```json
 {
   "success": true,
-  "id": "dashboard3"
+  "id": "a3f1b2"
 }
 ```
 
@@ -70,7 +72,7 @@ Deletes a dashboard directory entirely, including all files.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `:id` | `string` | Dashboard identifier (e.g., `dashboard1`) |
+| `:id` | `string` | Dashboard identifier (e.g., `2d84ac`) |
 
 **Response (200):**
 ```json
@@ -97,9 +99,9 @@ Returns a lightweight status summary for all dashboards. Designed for sidebar st
 ```json
 {
   "statuses": {
-    "dashboard1": "in_progress",
-    "dashboard2": "completed",
-    "dashboard3": "idle"
+    "2d84ac": "in_progress",
+    "356dc5": "completed",
+    "71894a": "idle"
   }
 }
 ```
@@ -359,13 +361,43 @@ Saves a history summary for the current swarm without clearing the dashboard. Pr
 
 ---
 
+### Get Dashboard Metrics
+
+```
+GET /api/dashboards/:id/metrics
+```
+
+Returns the `metrics.json` data for a dashboard, if it exists. Metrics are written by the master agent and contain timing and performance data for the swarm.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `:id` | `string` | Dashboard identifier |
+
+**Response (200, metrics exist):**
+```json
+{
+  "total_duration_ms": 180000,
+  "wave_durations": [...],
+  "...": "..."
+}
+```
+
+**Response (200, no metrics):**
+```json
+{
+  "metrics": null
+}
+```
+
+---
+
 ### Clear Dashboard
 
 ```
 POST /api/dashboards/:id/clear
 ```
 
-Saves a history summary, then clears the dashboard to default state. This is a destructive operation that resets all dashboard data.
+Archives the dashboard (if it has an active task), saves a history summary, then clears the dashboard to default state. This is a destructive operation that resets all dashboard data.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
@@ -374,15 +406,27 @@ Saves a history summary, then clears the dashboard to default state. This is a d
 **Response (200):**
 ```json
 {
-  "success": true
+  "success": true,
+  "archived": true,
+  "archiveName": "2026-03-20_api-refactor"
+}
+```
+
+**Response (200, no active task -- nothing to archive):**
+```json
+{
+  "success": true,
+  "archived": false,
+  "archiveName": null
 }
 ```
 
 **Side effects:**
-1. Builds and saves a history summary (if task exists)
-2. Re-initializes the dashboard directory structure
-3. Clears all progress files
-4. Resets `initialization.json` and `logs.json` to defaults
+1. Archives the dashboard directory to `Archive/` (if task exists)
+2. Builds and saves a history summary (if task exists)
+3. Re-initializes the dashboard directory structure
+4. Clears all progress files
+5. Resets `initialization.json` and `logs.json` to defaults
 
 ---
 
@@ -441,7 +485,7 @@ Returns a high-level overview of all dashboards, recent logs, archives, and hist
 {
   "dashboards": [
     {
-      "id": "dashboard1",
+      "id": "2d84ac",
       "status": "in_progress",
       "task": {
         "name": "api-refactor",
@@ -454,7 +498,7 @@ Returns a high-level overview of all dashboards, recent logs, archives, and hist
       }
     },
     {
-      "id": "dashboard2",
+      "id": "356dc5",
       "status": "idle",
       "task": null
     }
@@ -476,7 +520,7 @@ Returns a high-level overview of all dashboards, recent logs, archives, and hist
   ],
   "recentLogs": [
     {
-      "dashboardId": "dashboard1",
+      "dashboardId": "2d84ac",
       "timestamp": "2026-03-20T14:05:00Z",
       "level": "info",
       "message": "Agent completed task 1.1"
@@ -596,11 +640,37 @@ Returns all history summary files, sorted newest-first.
       "failed_tasks": 0,
       "duration": "15m 30s",
       "cleared_at": "2026-03-20T14:16:00Z",
-      "dashboard_id": "dashboard1",
+      "dashboard_id": "2d84ac",
       "agents": [...],
       "log_count": 24
     }
   ]
+}
+```
+
+---
+
+### Get History Analytics
+
+```
+GET /api/history/analytics
+```
+
+Returns the history analytics data from `history/analytics.json`. This file is generated externally and contains aggregated statistics across all historical swarms.
+
+**Response (200, analytics exist):**
+```json
+{
+  "total_swarms": 15,
+  "avg_duration_ms": 120000,
+  "...": "..."
+}
+```
+
+**Response (200, no analytics file):**
+```json
+{
+  "analytics": null
 }
 ```
 

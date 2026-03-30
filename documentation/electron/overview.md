@@ -34,7 +34,7 @@ Synapse ships as an Electron desktop application. The Electron layer wraps the R
 
 ## Main Process Entry Point
 
-**File:** `electron/main.js` (172 lines)
+**File:** `electron/main.js` (173 lines)
 
 The main process is responsible for:
 
@@ -70,7 +70,7 @@ This allows the renderer to load assets via `app://synapse/dist/index.html` with
 
 ## Preload Script and Context Bridge
 
-**File:** `electron/preload.js` (136 lines)
+**File:** `electron/preload.js` (244 lines)
 
 The preload script exposes `window.electronAPI` to the renderer via Electron's `contextBridge`. All communication between renderer and main process flows through this API. There are no direct `ipcRenderer` calls from the renderer -- everything is proxied through the bridge.
 
@@ -81,7 +81,7 @@ The preload script exposes `window.electronAPI` to the renderer via Electron's `
 | **Push Events** | Main -> Renderer | `ipcRenderer.on()` / `webContents.send()` | Real-time updates (file changes, worker output, swarm state) |
 | **Pull Requests** | Renderer -> Main | `ipcRenderer.invoke()` / `ipcMain.handle()` | Request-response data fetching and mutations |
 
-### Push Event Channels
+### Push Event Channels (33 channels)
 
 The preload script whitelists these channels for push events:
 
@@ -98,7 +98,20 @@ The preload script whitelists these channels for push events:
 | `worker-output` | `{ pid, provider, taskId, dashboardId, chunk, parsed }` | Worker CLI stdout |
 | `worker-complete` | `{ pid, provider, taskId, dashboardId, exitCode, output }` | Worker process exit |
 | `worker-error` | `{ pid, provider, taskId, dashboardId, error }` | Worker process error |
+| `worker-permission-request` | `{ pid, taskId, dashboardId, ... }` | Worker CLI permission prompt |
 | `swarm-state` | `{ dashboardId, state }` | Swarm state change (replanning, paused, etc.) |
+| `terminal-output` | `{ id, data }` | PTY terminal stdout data |
+| `terminal-exit` | `{ id, exitCode }` | PTY terminal session exit |
+| `ide-file-change` | `{ path, type }` | IDE file system change detected |
+| `heartbeat` | `{ timestamp }` | Periodic heartbeat for connection health |
+| `init_state` | `{ dashboardId, ...state }` | Initial state synchronization |
+| `tasks_unblocked` | `{ dashboardId, tasks }` | Tasks unblocked by dependency completion |
+| `debug-paused` | `{ reason, callStack, scopes, pausedFile, pausedLine }` | Debugger hit breakpoint or pause |
+| `debug-resumed` | `{}` | Debugger resumed execution |
+| `debug-stopped` | `{ code, signal, reason }` | Debug session ended |
+| `debug-output` | `{ type, text }` | Console/stdout/stderr from debuggee |
+| `settings-changed` | `{ settings }` | Settings updated (synced to renderer) |
+| `preview-edit-request` | `{ label, newText }` | Live Preview inline text edit request |
 
 ---
 
@@ -116,6 +129,11 @@ The main process delegates all business logic to service modules under `electron
 | **CommandsService** | `CommandsService.js` | `_commands/` directory management, command CRUD, AI generation |
 | **TaskEditorService** | `TaskEditorService.js` | Swarm/task/wave CRUD on `initialization.json` |
 | **ConversationService** | `ConversationService.js` | Chat conversation persistence (JSON files) |
+| **DebugService** | `DebugService.js` | Node.js debugger via Chrome DevTools Protocol (breakpoints, stepping, evaluation) |
+| **TerminalService** | `TerminalService.js` | PTY terminal session management via `node-pty` |
+| **InstrumentService** | `InstrumentService.js` | Project file instrumentation (`data-synapse-label` attributes) |
+| **PreviewService** | `PreviewService.js` | Label-to-source file mapping for Live Preview |
+| **PreviewTextWriter** | `PreviewTextWriter.js` | Text update writer for Live Preview edits |
 
 Additionally, the main process imports shared services from `src/server/services/`:
 
@@ -186,21 +204,26 @@ This mirrors the SSE initial data burst from the web server, ensuring the render
 
 ```
 electron/
-  main.js                          -- Main process entry point (172 lines)
-  preload.js                       -- Context bridge (136 lines)
-  settings.js                      -- JSON-backed settings store (103 lines)
-  ipc-handlers.js                  -- IPC handler registration + watchers (905 lines)
+  main.js                          -- Main process entry point (173 lines)
+  preload.js                       -- Context bridge (244 lines)
+  settings.js                      -- JSON-backed settings store (105 lines)
+  ipc-handlers.js                  -- IPC handler registration + watchers (~2200 lines)
   assets/
     icon.icns                      -- macOS app icon
     icon.iconset/
       icon_512x512.png             -- High-res PNG for dock icon
   services/
-    SwarmOrchestrator.js           -- Dispatch engine (761 lines)
-    ClaudeCodeService.js           -- Claude CLI management (288 lines)
-    CodexService.js                -- Codex CLI management (226 lines)
-    PromptBuilder.js               -- Prompt construction (334 lines)
-    ProjectService.js              -- Project detection (167 lines)
-    CommandsService.js             -- Command management (461 lines)
-    TaskEditorService.js           -- Swarm/task CRUD (378 lines)
-    ConversationService.js         -- Chat conversations (144 lines)
+    SwarmOrchestrator.js           -- Dispatch engine (764 lines)
+    ClaudeCodeService.js           -- Claude CLI management (370 lines)
+    CodexService.js                -- Codex CLI management (225 lines)
+    PromptBuilder.js               -- Prompt construction (372 lines)
+    ProjectService.js              -- Project detection (193 lines)
+    CommandsService.js             -- Command management (651 lines)
+    TaskEditorService.js           -- Swarm/task CRUD (377 lines)
+    ConversationService.js         -- Chat conversations (143 lines)
+    DebugService.js                -- Node.js CDP debugger (796 lines)
+    TerminalService.js             -- PTY terminal sessions (182 lines)
+    InstrumentService.js           -- Project instrumentation for Live Preview
+    PreviewService.js              -- Label-to-source mapper for Live Preview
+    PreviewTextWriter.js           -- Text update writer for Live Preview
 ```

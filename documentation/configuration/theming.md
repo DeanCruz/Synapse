@@ -47,6 +47,12 @@ Status colors are used throughout the dashboard to indicate task lifecycle state
 | `--color-claimed` | `rgba(200,255,62,0.7)` | Lime | Tasks claimed by an agent but not yet started |
 | `--color-blocked` | `#f97316` | Orange | Tasks blocked by unmet dependencies |
 
+### Layout
+
+| Variable | Value | Purpose |
+|---|---|---|
+| `--sidebar-width` | `220px` | Width of the dashboard sidebar panel |
+
 ### Gradient Accent Colors
 
 | Variable | Value | Purpose |
@@ -61,6 +67,67 @@ linear-gradient(135deg, #667eea, #9b7cf0)
 ```
 
 This gradient appears on the progress bar fill, active agent badges, and interactive highlights throughout the UI.
+
+### Terminal Colors
+
+The integrated terminal (Claude agent view) uses a dedicated color palette:
+
+| Variable | Value | Purpose |
+|---|---|---|
+| `--terminal-bg` | `#0b0b0f` | Terminal background |
+| `--terminal-fg` | `#e0e0e0` | Terminal foreground text |
+| `--terminal-cursor` | `#9b7cf0` | Cursor color (matches purple accent) |
+| `--terminal-selection` | `rgba(155, 124, 240, 0.3)` | Selection highlight |
+| `--terminal-black` | `#1a1a2e` | ANSI black |
+| `--terminal-red` | `#ff6b6b` | ANSI red |
+| `--terminal-green` | `#51cf66` | ANSI green |
+| `--terminal-yellow` | `#ffd43b` | ANSI yellow |
+| `--terminal-blue` | `#748ffc` | ANSI blue |
+| `--terminal-magenta` | `#da77f2` | ANSI magenta |
+| `--terminal-cyan` | `#66d9e8` | ANSI cyan |
+| `--terminal-white` | `#e0e0e0` | ANSI white |
+
+Bright variants (`--terminal-bright-*`) follow the same pattern with lighter values.
+
+### Editor Colors
+
+The code editor component uses these design tokens:
+
+| Variable | Value | Purpose |
+|---|---|---|
+| `--editor-bg` | `#0a0a0c` | Editor background (matches page background) |
+| `--editor-fg` | `#F5F5F7` | Editor text color |
+| `--editor-line-number` | `#555555` | Line number gutter color |
+| `--editor-line-number-active` | `#A1A1A6` | Active line number color |
+| `--editor-selection` | `rgba(155, 124, 240, 0.2)` | Selection highlight |
+| `--editor-line-highlight` | `rgba(255, 255, 255, 0.03)` | Current line highlight |
+| `--editor-cursor` | `#9b7cf0` | Cursor color (matches purple accent) |
+| `--editor-widget-bg` | `#121214` | Editor widget background (autocomplete, etc.) |
+| `--editor-widget-border` | `rgba(255, 255, 255, 0.08)` | Editor widget border |
+| `--editor-base` | `vs-dark` | Base Monaco/CodeMirror theme |
+
+### Semantic Inline Colors
+
+Used for badges, dots, and inline status indicators throughout the UI:
+
+| Variable | Value | Purpose |
+|---|---|---|
+| `--color-accent-bg` | `rgba(155, 124, 240, 0.1)` | Accent badge background |
+| `--color-accent` | `#9b7cf0` | Accent badge text/border |
+| `--color-type-bg` | `rgba(102, 126, 234, 0.1)` | Type badge background |
+| `--color-type` | `rgba(102, 126, 234, 0.8)` | Type badge text/border |
+| `--color-duration-bg` | `rgba(52, 211, 153, 0.08)` | Duration badge background |
+| `--color-duration` | `#34d399` | Duration badge text/border |
+| `--color-neutral-bg` | `rgba(255, 255, 255, 0.04)` | Neutral badge background |
+| `--color-neutral-border` | `rgba(255, 255, 255, 0.08)` | Neutral badge border |
+
+### File Icon Colors
+
+| Variable | Value | Purpose |
+|---|---|---|
+| `--icon-folder` | `#e8a74e` | Folder icon color (amber) |
+| `--icon-folder-bg` | `rgba(232, 167, 78, 0.15)` | Folder icon background |
+| `--icon-generic-bg` | `rgba(255, 255, 255, 0.04)` | Generic file icon background |
 
 ---
 
@@ -251,24 +318,54 @@ export const TIMELINE_COLORS = {
 
 ### CSS-to-JS Synchronization
 
-At runtime, `initStatusColorsFromCSS()` reads the CSS custom properties from the computed styles of `:root` and updates the JavaScript constants to match:
+At runtime, `initStatusColorsFromCSS()` reads the CSS custom properties from the computed styles of `:root` and updates all JavaScript color constants to match. This goes beyond just status colors -- it also synchronizes log level colors and timeline colors:
 
 ```js
 export function initStatusColorsFromCSS() {
   const styles = getComputedStyle(document.documentElement);
+  // 1. Sync STATUS_COLORS from CSS variables
   for (const varName in CSS_VAR_TO_STATUS_KEY) {
     const key = CSS_VAR_TO_STATUS_KEY[varName];
     const val = styles.getPropertyValue(varName).trim();
     if (val) STATUS_COLORS[key] = val;
   }
-  // Recompute background colors from updated status colors
+  // 2. Recompute STATUS_BG_COLORS from updated status colors
   for (const key in STATUS_BG_ALPHA) {
     STATUS_BG_COLORS[key] = colorWithAlpha(STATUS_COLORS[key], STATUS_BG_ALPHA[key]);
   }
+  // 3. Sync pending background from --surface
+  const surface = styles.getPropertyValue('--surface').trim();
+  if (surface) STATUS_BG_COLORS.pending = surface;
+
+  // 4. Sync LEVEL_COLORS from --color-accent or --color-in-progress
+  const accent = styles.getPropertyValue('--color-accent').trim()
+    || styles.getPropertyValue('--color-in-progress').trim();
+  if (accent) {
+    LEVEL_COLORS.info = accent;
+    LEVEL_BG_COLORS.info = colorWithAlpha(accent, 0.1);
+  }
+  if (STATUS_COLORS.failed) {
+    LEVEL_COLORS.error = STATUS_COLORS.failed;
+    LEVEL_BG_COLORS.error = colorWithAlpha(STATUS_COLORS.failed, 0.1);
+  }
+  const neutralBg = styles.getPropertyValue('--color-neutral-bg').trim();
+  if (neutralBg) LEVEL_BG_COLORS.debug = neutralBg;
+
+  // 5. Sync TIMELINE_COLORS from accent and status colors
+  if (accent) {
+    TIMELINE_COLORS.task_start = accent;
+    TIMELINE_COLORS.in_progress = colorWithAlpha(accent, 0.5);
+  }
+  if (STATUS_COLORS.completed) {
+    TIMELINE_COLORS.task_end = STATUS_COLORS.completed;
+    TIMELINE_COLORS.completed = STATUS_COLORS.completed;
+  }
+  if (STATUS_COLORS.failed) TIMELINE_COLORS.failed = STATUS_COLORS.failed;
+  if (STATUS_COLORS.pending) TIMELINE_COLORS.pending = STATUS_COLORS.pending;
 }
 ```
 
-This synchronization ensures that if CSS variables are ever overridden (e.g., by a future theme), the JavaScript colors automatically follow. The mapping is:
+This synchronization ensures that if CSS variables are ever overridden (e.g., by a future theme), all JavaScript colors automatically follow -- status colors, log level colors, and timeline colors. The status color mapping is:
 
 | CSS Variable | JS Key |
 |---|---|
@@ -301,6 +398,22 @@ Additional constants that control UI behavior:
 | `DEBOUNCE_MS` | `250` | General UI debounce interval for search, filter, and resize events |
 | `LOG_ROW_HEIGHT` | `32` | Fixed height (px) for each log entry row in the virtualized log panel |
 | `LOG_VIRTUAL_THRESHOLD` | `500` | Number of log entries before the log panel switches to virtualized rendering |
+
+### Dashboard Label Utility
+
+```js
+export function getDashboardLabel(id) {
+  // Backwards compat for legacy dashboardN format
+  if (id && id.startsWith('dashboard')) {
+    const num = id.replace('dashboard', '');
+    return `Dashboard ${num}`;
+  }
+  // New short hex IDs — display uppercase
+  return id ? id.toUpperCase() : 'Unknown';
+}
+```
+
+Dashboard labels are derived dynamically from dashboard IDs. No hardcoded list exists -- the sidebar is driven by `dashboardList` from the server. Legacy `dashboardN` format IDs are converted to "Dashboard N" for display. New short hex IDs are displayed in uppercase.
 
 ---
 

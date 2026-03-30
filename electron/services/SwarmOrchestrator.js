@@ -223,10 +223,24 @@ function dispatchReady(dashboardId) {
   var init = readDashboardInit(dashboardId);
   if (!init || !init.agents) return;
 
-  var projectContexts = ProjectService.getProjectContextWithFallback(
+  var allContexts = ProjectService.getProjectContextWithFallback(
     swarm.projectPath,
     swarm.additionalContextDirs
   );
+
+  // Partition combined contexts into primary project vs additional (read-only) dirs.
+  // Primary contexts render under "Project Context"; additional render under "Additional Context (READ-ONLY)".
+  var primaryContexts = [];
+  var additionalContexts = [];
+  var projectPrefix = swarm.projectPath ? path.resolve(swarm.projectPath) + path.sep : null;
+
+  for (var ci = 0; ci < allContexts.length; ci++) {
+    if (projectPrefix && allContexts[ci].path.indexOf(projectPrefix) === 0) {
+      primaryContexts.push(allContexts[ci]);
+    } else {
+      additionalContexts.push(allContexts[ci]);
+    }
+  }
 
   for (var i = 0; i < init.agents.length; i++) {
     var agent = init.agents[i];
@@ -266,8 +280,9 @@ function dispatchReady(dashboardId) {
     var taskPrompt = PromptBuilder.buildTaskPrompt({
       task: agent,
       taskDescription: agent.description || '',
-      projectContexts: projectContexts,
+      projectContexts: primaryContexts,
       upstreamResults: upstreamResults,
+      additionalContextPaths: additionalContexts,
     });
 
     appendLog(dashboardId, {

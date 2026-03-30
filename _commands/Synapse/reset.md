@@ -3,9 +3,9 @@
 **Purpose:** Clear a dashboard and reset it to empty state. Saves a history summary before clearing.
 
 **Syntax:**
-- `!reset` — Reset the auto-detected active dashboard
-- `!reset dashboard2` — Reset a specific dashboard
-- `!reset --all` — Reset all 5 dashboards
+- `!reset` — Reset your assigned dashboard
+- `!reset {dashboardId}` — Reset a specific dashboard
+- `!reset --all` — Reset all dashboards
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.
 

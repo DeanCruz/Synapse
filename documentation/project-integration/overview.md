@@ -31,7 +31,7 @@ These paths are always absolute. Workers receive **both** in their dispatch prom
 
 **At `{project_root}` (the target project):**
 - The project's own source code
-- `.synapse/` metadata directory (TOC, config)
+- `.synapse/` metadata directory (config, TOC, PKI knowledge)
 - `CLAUDE.md` (project conventions)
 - `_commands/` (optional project-specific commands)
 
@@ -64,7 +64,8 @@ cd /path/to/your/project
 When a swarm starts, the master agent reads:
 1. `{project_root}/CLAUDE.md` for conventions, architecture, and patterns
 2. `{project_root}/.synapse/toc.md` (if it exists) for file discovery
-3. Source files via Glob/Grep for task-specific context
+3. `{project_root}/.synapse/knowledge/` (if it exists) for PKI data -- gotchas, patterns, and conventions
+4. Source files via Glob/Grep for task-specific context
 
 ### Step 3: Workers Execute in the Project
 
@@ -132,8 +133,9 @@ Synapse writes only one directory into your project:
 ```
 {project_root}/
 └── .synapse/              # Add to .gitignore
+    ├── config.json        # Project-Synapse configuration
     ├── toc.md             # Project Table of Contents (semantic file index)
-    └── config.json        # Project-Synapse configuration
+    └── knowledge/         # Project Knowledge Index (PKI) — persistent knowledge layer
 ```
 
 ### `.synapse/config.json`
@@ -204,6 +206,7 @@ Synapse is designed to be fully portable:
 
 - [Project Setup](./project-setup.md) -- Step-by-step initialization guide
 - [TOC System](./toc-system.md) -- Table of Contents generation and management
+- [PKI Overview](./pki-overview.md) -- Project Knowledge Index (persistent knowledge layer)
 - [Conventions](./conventions.md) -- CLAUDE.md and .synapse/ directory conventions
 - [Multi-Dashboard Overview](../multi-dashboard/overview.md) -- Running multiple concurrent swarms
 

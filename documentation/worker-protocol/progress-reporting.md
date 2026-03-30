@@ -45,11 +45,13 @@ All three values are provided in the worker's dispatch prompt.
 ```json
 {
   "task_id": "1.1",
+  "dashboard_id": "{dashboardId}",
   "status": "in_progress",
   "started_at": "2026-02-25T14:05:00Z",
   "completed_at": null,
   "summary": null,
   "assigned_agent": "Agent 1",
+  "template_version": "p_track_v2",
   "stage": "implementing",
   "message": "Creating auth middleware — 2/3 endpoints done",
   "milestones": [
@@ -62,7 +64,27 @@ All three values are provided in the worker's dispatch prompt.
     { "at": "2026-02-25T14:05:00Z", "level": "info", "msg": "Starting task — reading context" },
     { "at": "2026-02-25T14:05:10Z", "level": "info", "msg": "Read CLAUDE.md — found auth patterns" },
     { "at": "2026-02-25T14:06:01Z", "level": "info", "msg": "Rate limiter created for /api/auth endpoint" }
-  ]
+  ],
+  "files_changed": [
+    { "path": "src/middleware/rateLimit.ts", "action": "created" }
+  ],
+  "prompt_size": {
+    "total_chars": 12500,
+    "estimated_tokens": 3571
+  },
+  "shared_context": {
+    "exports": [],
+    "interfaces": [],
+    "patterns": [],
+    "notes": ""
+  },
+  "sibling_reads": [],
+  "annotations": {
+    "src/middleware/cors.ts": {
+      "gotchas": ["CORS middleware must be registered before auth middleware — order matters"],
+      "patterns": ["Uses express-cors with allowlist from env variable"]
+    }
+  }
 }
 ```
 
@@ -71,16 +93,23 @@ All three values are provided in the worker's dispatch prompt.
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `task_id` | `string` | Yes | The task identifier (e.g., `"1.1"`, `"2.3"`). Provided in the dispatch prompt. Never changes after the initial write. |
+| `dashboard_id` | `string` | Yes | The dashboard ID (e.g., `"a3f2c1"`). Provided in the dispatch context. Include in every write. The server rejects progress files where `dashboard_id` does not match the dashboard directory. |
 | `status` | `string` | Yes | Current lifecycle status. One of: `"in_progress"`, `"completed"`, `"failed"`. See [Status Values](#status-values). |
 | `started_at` | `ISO 8601 string \| null` | Yes | Timestamp when the worker began work. Set on the first write. Never changes after being set. |
 | `completed_at` | `ISO 8601 string \| null` | Yes | Timestamp when the worker finished. Set only when `status` transitions to `"completed"` or `"failed"`. |
 | `summary` | `string \| null` | Yes | One-line summary of what was accomplished. Set on completion. Must be descriptive, not just `"Done"`. |
 | `assigned_agent` | `string` | Yes | The worker's agent label (e.g., `"Agent 1"`, `"Agent 5"`). Provided in the dispatch prompt. Never changes. |
+| `template_version` | `string \| null` | No | The version identifier from the TEMPLATE_VERSION field in the dispatch prompt. Set on first write. Helps the master identify which prompt template was used. |
 | `stage` | `string` | Yes | Current execution stage. One of the fixed stages listed in [Fixed Stages](#fixed-stages). |
 | `message` | `string` | Yes | What the worker is doing right now. One line, specific and actionable. Updated frequently. |
 | `milestones` | `array` | Yes | Significant accomplishments during execution. Append-only — never remove previous entries. |
 | `deviations` | `array` | Yes | Any divergences from the original plan. Append-only — never remove previous entries. See [Deviations](deviations.md). |
 | `logs` | `array` | Yes | Detailed log entries for the popup log box in the agent details modal. Append-only. |
+| `files_changed` | `array` | Yes (from `implementing` stage onward) | Every file the worker creates, modifies, or deletes. Each entry: `{ "path": "relative/path", "action": "created\|modified\|deleted" }`. Paths are relative to `{project_root}`. Updated incrementally as changes are made. The dashboard renders this as a clickable file list in the task popup. |
+| `prompt_size` | `object \| null` | No | Size metrics of the dispatch prompt. Contains `total_chars` (integer) and `estimated_tokens` (integer, calculated as `Math.ceil(totalChars / 3.5)`). |
+| `shared_context` | `object \| null` | No | Info this worker makes available to same-wave siblings. Sub-fields: `exports` (array), `interfaces` (array), `patterns` (array), `notes` (string). |
+| `sibling_reads` | `array` | No | Array of task ID strings of sibling progress files read. Used by the dashboard for sibling communication lines. |
+| `annotations` | `object \| null` | No | Operational knowledge about files the worker read deeply. Keys are relative file paths; values have optional `gotchas`, `patterns`, and `conventions` arrays. See [Annotations](#annotations). |
 
 ---
 
@@ -165,7 +194,15 @@ See [Deviations](deviations.md) for the full protocol.
 When an error occurs:
 - Add a log entry at `level: "error"` with details about what failed and why
 
-### 6. On Task Completion
+### 6. On Every File Change
+
+When creating, modifying, or deleting a project file:
+- Add it to `files_changed[]` with `{ "path": "relative/path", "action": "created|modified|deleted" }`
+- Add a log entry describing the change
+- Do this incrementally as you work -- do NOT wait until finalization
+- The dashboard renders this as a clickable file list in the task popup
+
+### 7. On Task Completion
 
 When the task finishes successfully:
 - Set `status` to `"completed"`
@@ -174,7 +211,7 @@ When the task finishes successfully:
 - Write a descriptive `summary` (not just "Done")
 - Add a final log entry
 
-### 7. On Task Failure
+### 8. On Task Failure
 
 When the task fails:
 - Set `status` to `"failed"`

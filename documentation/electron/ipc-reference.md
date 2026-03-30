@@ -1,6 +1,6 @@
 # IPC Channels and Handlers Reference
 
-This document provides a complete reference of every IPC channel in Synapse's Electron app. All IPC communication flows through the `window.electronAPI` context bridge defined in `electron/preload.js`, with handlers registered in `electron/ipc-handlers.js`.
+This document provides a complete reference of every IPC channel in Synapse's Electron app. All IPC communication flows through the `window.electronAPI` context bridge defined in `electron/preload.js` (244 lines), with handlers registered in `electron/ipc-handlers.js` (~2200 lines). There are **33 push event channels** and **~140 pull request handlers** organized into 17+ handler groups.
 
 ---
 
@@ -19,7 +19,7 @@ Synapse uses two IPC patterns:
 
 Push events are initiated by the main process (typically from file watchers or worker process events) and delivered to the renderer. The preload script whitelists allowed channels.
 
-### Channel Whitelist
+### Channel Whitelist (33 channels)
 
 ```javascript
 const PUSH_CHANNELS = [
@@ -34,7 +34,20 @@ const PUSH_CHANNELS = [
   'worker-output',
   'worker-complete',
   'worker-error',
+  'worker-permission-request',
   'swarm-state',
+  'terminal-output',
+  'terminal-exit',
+  'ide-file-change',
+  'heartbeat',
+  'init_state',
+  'tasks_unblocked',
+  'debug-paused',
+  'debug-resumed',
+  'debug-stopped',
+  'debug-output',
+  'settings-changed',
+  'preview-edit-request',
 ];
 ```
 
@@ -56,7 +69,7 @@ Fired when a dashboard's `initialization.json` changes on disk.
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   task: { name, type, directory, prompt, project, created, total_tasks, total_waves },
   agents: [{ id, title, wave, layer, directory, depends_on }],
   waves: [{ id, name, total }],
@@ -71,7 +84,7 @@ Fired when a dashboard's `logs.json` changes on disk.
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   entries: [
     { timestamp, task_id, agent, level, message, task_name }
   ]
@@ -84,7 +97,7 @@ Fired when a single worker's progress file changes. Also feeds into `SwarmOrches
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   task_id: "1.1",
   status: "in_progress",
   started_at: "2026-03-22T15:00:00Z",
@@ -105,7 +118,7 @@ Fired during initial data load. Contains all progress files for a dashboard keye
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   "1.1": { task_id, status, started_at, ... },
   "1.2": { task_id, status, started_at, ... }
 }
@@ -117,7 +130,7 @@ Fired once during initial data load. Contains the list of all dashboard IDs.
 
 ```javascript
 {
-  dashboards: ["dashboard1", "dashboard2", "dashboard3", "dashboard4", "dashboard5"]
+  dashboards: ["2d84ac", "356dc5", "71894a", "a1b2c3", "d4e5f6"]
 }
 ```
 
@@ -127,7 +140,7 @@ Fired when a dashboard is created or deleted.
 
 ```javascript
 {
-  dashboards: ["dashboard1", "dashboard2"]
+  dashboards: ["2d84ac", "356dc5"]
 }
 ```
 
@@ -158,7 +171,7 @@ Fired for each NDJSON line from a worker's stdout. Streamed in real-time.
   pid: 12345,
   provider: "claude",        // or "codex"
   taskId: "1.1",
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   chunk: "{\"type\":\"assistant\",...}\n",
   parsed: { type: "assistant", ... }  // or null if not valid JSON
 }
@@ -173,7 +186,7 @@ Fired when a worker process exits.
   pid: 12345,
   provider: "claude",
   taskId: "1.1",
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   exitCode: 0,
   output: "full accumulated stdout",
   errorOutput: "full accumulated stderr",
@@ -190,7 +203,7 @@ Fired when a worker process fails to spawn or encounters an OS-level error.
   pid: 12345,
   provider: "claude",
   taskId: "1.1",
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   error: "spawn ENOENT"
 }
 ```
@@ -201,8 +214,135 @@ Fired when the SwarmOrchestrator changes a swarm's state (e.g., entering replann
 
 ```javascript
 {
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   state: "replanning"    // "running" | "paused" | "replanning"
+}
+```
+
+#### `worker-permission-request`
+
+Fired when a worker CLI process encounters a permission prompt.
+
+```javascript
+{
+  pid: 12345,
+  taskId: "1.1",
+  dashboardId: "2d84ac",
+  ...                    // permission request details
+}
+```
+
+#### `terminal-output`
+
+Fired when a PTY terminal session produces output data.
+
+```javascript
+{
+  id: "term_1711123456789",
+  data: "$ ls\nfile1.txt  file2.txt\n"
+}
+```
+
+#### `terminal-exit`
+
+Fired when a PTY terminal session exits.
+
+```javascript
+{
+  id: "term_1711123456789",
+  exitCode: 0
+}
+```
+
+#### `ide-file-change`
+
+Fired when the IDE file watcher detects a file system change.
+
+```javascript
+{
+  path: "/path/to/changed/file",
+  type: "change"         // change type
+}
+```
+
+#### `heartbeat`
+
+Periodic heartbeat event for connection health monitoring.
+
+```javascript
+{
+  timestamp: 1711123456789
+}
+```
+
+#### `init_state`
+
+Fired for initial state synchronization during app startup.
+
+```javascript
+{
+  dashboardId: "2d84ac",
+  ...                    // state data
+}
+```
+
+#### `tasks_unblocked`
+
+Fired when dependency completion unblocks downstream tasks.
+
+```javascript
+{
+  dashboardId: "2d84ac",
+  tasks: ["2.1", "2.2"]  // task IDs that are now unblocked
+}
+```
+
+#### `debug-paused`
+
+Fired when the debugger hits a breakpoint or is paused.
+
+```javascript
+{
+  reason: "breakpoint",   // "breakpoint" | "step" | "exception" | "other"
+  callStack: [{ id, name, source, line, column, scriptId }],
+  scopes: [{ name, type, variablesReference, expensive }],
+  pausedFile: "/path/to/file.js",
+  pausedLine: 42,
+  hitBreakpoints: ["1:42"]
+}
+```
+
+#### `debug-resumed`
+
+Fired when the debugger resumes execution.
+
+```javascript
+{}
+```
+
+#### `debug-stopped`
+
+Fired when the debug session ends.
+
+```javascript
+{
+  code: 0,
+  signal: null,
+  reason: "exited"       // "exited" | "error"
+}
+```
+
+#### `debug-output`
+
+Fired for console output, stdout, stderr, and exceptions from the debuggee.
+
+```javascript
+{
+  type: "log",           // "log" | "error" | "warn" | "stdout" | "stderr"
+  text: "Hello from debuggee",
+  timestamp: 1711123456789,  // optional
+  line: 42,                  // optional, for exceptions
+  column: 5                  // optional, for exceptions
 }
 ```
 
@@ -216,9 +356,13 @@ Pull requests are initiated by the renderer and return a Promise. The renderer c
 
 | Renderer API | IPC Channel | Handler Service | Description |
 |---|---|---|---|
+| `ipcHeartbeat()` | `ipc-heartbeat` | -- | Verify IPC bridge is alive |
 | `getDashboards()` | `get-dashboards` | DashboardService | List all dashboard IDs |
 | `createDashboard()` | `create-dashboard` | DashboardService | Create a new dashboard, start watcher |
 | `deleteDashboard(id)` | `delete-dashboard` | DashboardService | Delete a dashboard, stop watcher |
+| `reorderDashboards(orderedIds)` | `reorder-dashboards` | settings | Persist sidebar dashboard order |
+| `renameDashboard(id, displayName)` | `rename-dashboard` | settings | Set custom display name for a dashboard |
+| `getDashboardMeta()` | `get-dashboard-meta` | settings | Get dashboard order and custom names |
 | `getDashboardStatuses()` | `get-dashboard-statuses` | DashboardService | Derive status for all dashboards |
 | `getDashboardInit(id)` | `get-dashboard-init` | DashboardService | Read `initialization.json` |
 | `getDashboardLogs(id)` | `get-dashboard-logs` | DashboardService | Read `logs.json` |
@@ -227,6 +371,7 @@ Pull requests are initiated by the renderer and return a Promise. The renderer c
 | `archiveDashboard(id)` | `archive-dashboard` | ArchiveService | Copy to Archive, then clear |
 | `saveDashboardHistory(id)` | `save-dashboard-history` | HistoryService | Save history summary JSON |
 | `exportDashboard(id)` | `export-dashboard` | DashboardService | Export init + logs + progress + summary |
+| `getDashboardMetrics(id)` | `get-dashboard-metrics` | DashboardService | Get metrics/analytics for a dashboard |
 
 #### `getDashboards()` -> `get-dashboards`
 
@@ -242,7 +387,7 @@ Creates the next available dashboard directory, starts a file watcher, and broad
 
 #### `deleteDashboard(id)` -> `delete-dashboard`
 
-**Parameters:** `id: string` (e.g., `"dashboard3"`)
+**Parameters:** `id: string` (e.g., `"71894a"`)
 
 **Returns:** `{ success: boolean, error?: string }`
 
@@ -309,11 +454,12 @@ Copies the full dashboard directory to `Archive/{YYYY-MM-DD}_{taskName}/`, then 
 | `getArchive(name)` | `get-archive` | Read full archive (init + logs + progress) |
 | `deleteArchive(name)` | `delete-archive` | Delete an archive directory |
 
-### History Handler
+### History Handlers
 
 | Renderer API | IPC Channel | Description |
 |---|---|---|
 | `getHistory()` | `get-history` | List all history summary files |
+| `getHistoryAnalytics()` | `get-history-analytics` | Get aggregated analytics across all history |
 
 ### Queue Handlers
 
@@ -374,7 +520,7 @@ Copies the full dashboard directory to `Archive/{YYYY-MM-DD}_{taskName}/`, then 
 
 | Renderer API | IPC Channel | Description |
 |---|---|---|
-| `getChatSystemPrompt(projectDir, dashboardId)` | `get-chat-system-prompt` | Build system prompt with directory refs + Synapse CLAUDE.md + project CLAUDE.md |
+| `getChatSystemPrompt(projectDir, dashboardId, additionalContextDirs)` | `get-chat-system-prompt` | Build system prompt with directory refs + Synapse CLAUDE.md + project CLAUDE.md |
 | `logChatEvent(dashboardId, entry)` | `log-chat-event` | Append an event to a dashboard's `logs.json` |
 
 ### Attachment Handlers
@@ -386,6 +532,16 @@ Copies the full dashboard directory to `Archive/{YYYY-MM-DD}_{taskName}/`, then 
 | `selectImageFile()` | `select-image-file` | Open native file picker, return base64 + metadata |
 | `readFileAsBase64(filePath)` | `read-file-as-base64` | Read any file and return as base64 data URI |
 
+### User Commands Handlers
+
+| Renderer API | IPC Channel | Handler Service | Description |
+|---|---|---|---|
+| `listUserCommands()` | `list-user-commands` | CommandsService | List commands from the user commands directory |
+| `getUserCommand(name, folderName)` | `get-user-command` | CommandsService | Get a user command by name and folder |
+| `saveUserCommand(name, content, folderName)` | `save-user-command` | CommandsService | Save a user command |
+| `deleteUserCommand(name, folderName)` | `delete-user-command` | CommandsService | Delete a user command |
+| `generateUserCommand(desc, folder, name, opts)` | `generate-user-command` | CommandsService | AI-generate a user command |
+
 ### Worker Handlers
 
 | Renderer API | IPC Channel | Handler Service | Description |
@@ -394,6 +550,7 @@ Copies the full dashboard directory to `Archive/{YYYY-MM-DD}_{taskName}/`, then 
 | `killWorker(pid)` | `kill-worker` | ClaudeCodeService / CodexService | Kill a worker by PID |
 | `killAllWorkers()` | `kill-all-workers` | ClaudeCodeService + CodexService | Kill all active workers |
 | `getActiveWorkers()` | `get-active-workers` | ClaudeCodeService + CodexService | List active worker metadata |
+| `writeWorker(pid, data)` | `write-worker` | ClaudeCodeService | Write data to a worker's stdin |
 
 #### `spawnWorker(opts)` -> `spawn-worker`
 
@@ -402,7 +559,7 @@ Copies the full dashboard directory to `Archive/{YYYY-MM-DD}_{taskName}/`, then 
 {
   provider: "claude" | "codex",
   taskId: "1.1",
-  dashboardId: "dashboard1",
+  dashboardId: "2d84ac",
   projectDir: "/path/to/project",
   prompt: "task prompt text",
   systemPrompt: "system prompt text",
@@ -452,6 +609,132 @@ Routes to `ClaudeCodeService.spawnWorker()` or `CodexService.spawnWorker()` base
 | `createConversation(name)` | `create-conversation` | ConversationService | Create a new named conversation |
 | `deleteConversation(filename)` | `delete-conversation` | ConversationService | Delete a conversation file |
 | `renameConversation(filename, newName)` | `rename-conversation` | ConversationService | Rename a conversation |
+
+### Terminal Handlers
+
+| Renderer API | IPC Channel | Handler Service | Description |
+|---|---|---|---|
+| `spawnTerminal(opts)` | `spawn-terminal` | TerminalService | Spawn a PTY terminal session |
+| `writeTerminal(id, data)` | `write-terminal` | TerminalService | Write input to a terminal |
+| `resizeTerminal(id, cols, rows)` | `resize-terminal` | TerminalService | Resize a terminal session |
+| `killTerminal(id)` | `kill-terminal` | TerminalService | Kill a terminal session |
+| `killAllTerminals()` | `kill-all-terminals` | TerminalService | Kill all active terminals |
+| `getActiveTerminals()` | `get-active-terminals` | TerminalService | List active terminal sessions |
+
+#### `spawnTerminal(opts)` -> `spawn-terminal`
+
+**Parameters:**
+```javascript
+{
+  cwd: "/path/to/directory",   // optional, defaults to process.cwd()
+  cols: 80,                    // optional, default 80
+  rows: 24,                    // optional, default 24
+  shell: "/bin/zsh"            // optional, defaults to $SHELL or /bin/zsh
+}
+```
+
+**Returns:** `{ id: string, pid: number, shell: string, cwd: string, cols: number, rows: number }`
+
+### IDE File System Handlers
+
+| Renderer API | IPC Channel | Description |
+|---|---|---|
+| `ideReadFile(filePath, workspaceRoot)` | `ide-read-file` | Read file contents with binary detection |
+| `ideWriteFile(filePath, content, workspaceRoot)` | `ide-write-file` | Write content to a file |
+| `ideReadDir(dirPath, options)` | `ide-read-dir` | Recursive directory tree |
+| `ideListDir(dirPath, options)` | `ide-list-dir` | Single-level directory listing (lazy load) |
+| `ideCreateFile(filePath, content, workspaceRoot)` | `ide-create-file` | Create a new file |
+| `ideCreateFolder(dirPath, workspaceRoot)` | `ide-create-folder` | Create a new directory |
+| `ideRename(oldPath, newPath, workspaceRoot)` | `ide-rename` | Rename a file or folder |
+| `ideDelete(targetPath, workspaceRoot)` | `ide-delete` | Delete a file or folder |
+| `ideSelectFolder()` | `ide-select-folder` | Native folder picker dialog |
+| `ideCheckSyntax(filePath, workspaceRoot)` | `ide-check-syntax` | Check syntax of a single file |
+| `ideCheckSyntaxBatch(filePaths, workspaceRoot)` | `ide-check-syntax-batch` | Check syntax of multiple files |
+
+### Debug Handlers
+
+| Renderer API | IPC Channel | Handler Service | Description |
+|---|---|---|---|
+| `debugLaunch(opts)` | `debug-launch` | DebugService | Start a debug session for a Node.js script |
+| `debugStop()` | `debug-stop` | DebugService | Stop the active debug session |
+| `debugSetBreakpoint(filePath, line, condition)` | `debug-set-breakpoint` | DebugService | Set a breakpoint at file:line |
+| `debugRemoveBreakpoint(breakpointId)` | `debug-remove-breakpoint` | DebugService | Remove a breakpoint by ID |
+| `debugContinue()` | `debug-continue` | DebugService | Resume execution |
+| `debugPause()` | `debug-pause` | DebugService | Pause execution |
+| `debugStepOver()` | `debug-step-over` | DebugService | Step over the current statement |
+| `debugStepInto()` | `debug-step-into` | DebugService | Step into the next function call |
+| `debugStepOut()` | `debug-step-out` | DebugService | Step out of the current function |
+| `debugEvaluate(expression, callFrameId)` | `debug-evaluate` | DebugService | Evaluate an expression in debug context |
+| `debugGetVariables(objectId)` | `debug-get-variables` | DebugService | Get variables for a scope/object |
+| `debugGetScopes(callFrameId)` | `debug-get-scopes` | DebugService | Get scopes for the current paused state |
+| `debugSessionInfo()` | `debug-session-info` | DebugService | Get current debug session info |
+
+#### `debugLaunch(opts)` -> `debug-launch`
+
+**Parameters:**
+```javascript
+{
+  scriptPath: "/path/to/script.js",  // required — absolute path to Node.js file
+  cwd: "/path/to/directory",         // optional, defaults to script's directory
+  args: ["--flag", "value"],         // optional, additional script arguments
+  env: { NODE_ENV: "development" }   // optional, additional environment variables
+}
+```
+
+**Returns:** `{ success: true, pid: number }` or `{ success: false, error: string }`
+
+Spawns a Node.js process with `--inspect-brk=0`, connects to the Chrome DevTools Protocol WebSocket, and enables the Debugger and Runtime domains.
+
+### Git Handlers
+
+| Renderer API | IPC Channel | Description |
+|---|---|---|
+| `gitIsRepo(repoPath)` | `git-is-repo` | Check if a directory is a git repository |
+| `gitInit(repoPath)` | `git-init` | Initialize a new git repository |
+| `gitStatus(repoPath)` | `git-status` | Get working tree status (porcelain v1) |
+| `gitDiff(repoPath, staged)` | `git-diff` | Get unstaged diff (or staged with flag) |
+| `gitDiffFile(repoPath, filePath, staged)` | `git-diff-file` | Get diff for a specific file |
+| `gitLog(repoPath, maxCount, extraArgs)` | `git-log` | Get commit log |
+| `gitBranches(repoPath)` | `git-branches` | List all branches |
+| `gitCurrentBranch(repoPath)` | `git-current-branch` | Get current branch name |
+| `gitStage(repoPath, files)` | `git-stage` | Stage specific files |
+| `gitUnstage(repoPath, files)` | `git-unstage` | Unstage specific files |
+| `gitStageAll(repoPath)` | `git-stage-all` | Stage all changes |
+| `gitUnstageAll(repoPath)` | `git-unstage-all` | Unstage all changes |
+| `gitCommit(repoPath, message)` | `git-commit` | Create a commit |
+| `gitPush(repoPath, remote, branch, setUpstream)` | `git-push` | Push to remote |
+| `gitPull(repoPath, remote, branch)` | `git-pull` | Pull from remote |
+| `gitFetch(repoPath, remote)` | `git-fetch` | Fetch from remote |
+| `gitCheckout(repoPath, target)` | `git-checkout` | Checkout a branch or commit |
+| `gitCreateBranch(repoPath, branchName, checkout)` | `git-create-branch` | Create and optionally checkout a new branch |
+| `gitDeleteBranch(repoPath, branchName, force)` | `git-delete-branch` | Delete a branch |
+| `gitMerge(repoPath, branchName)` | `git-merge` | Merge a branch into the current branch |
+| `gitStash(repoPath, message)` | `git-stash` | Stash current changes |
+| `gitStashPop(repoPath)` | `git-stash-pop` | Pop the most recent stash |
+| `gitRemotes(repoPath)` | `git-remotes` | List remotes with URLs |
+| `gitReset(repoPath, target, mode)` | `git-reset` | Reset to a specific commit |
+| `gitRevert(repoPath, commitHash)` | `git-revert` | Revert a specific commit |
+| `gitAheadBehind(repoPath, branch)` | `git-ahead-behind` | Count commits ahead/behind upstream |
+| `gitDiscardFile(repoPath, filePath)` | `git-discard-file` | Discard changes to a specific file |
+| `gitGraph(repoPath, maxCount)` | `git-graph` | Get commit graph with branch refs for visualization |
+
+All Git handlers execute `git` commands via `child_process.execFile` in the specified repository path. They are implemented directly in `ipc-handlers.js` without a separate service module.
+
+### Additional Context Handlers
+
+| Renderer API | IPC Channel | Description |
+|---|---|---|
+| `getAdditionalContextDirs(dashboardId)` | `get-additional-context-dirs` | Get additional context directories for a dashboard |
+| `setAdditionalContextDirs(dashboardId, dirs)` | `set-additional-context-dirs` | Set additional context directories for a dashboard |
+
+### Preview Handlers
+
+| Renderer API | IPC Channel | Handler Service | Description |
+|---|---|---|---|
+| `previewResolveLabel(projectDir, label)` | `preview-resolve-label` | PreviewService | Resolve a `data-synapse-label` to source file location |
+| `previewWriteText(projectDir, label, newText)` | `preview-write-text` | PreviewTextWriter | Write text edit back to source file |
+| `instrumentProject(projectDir, opts)` | `instrument-project` | InstrumentService | Add `data-synapse-label` attributes to project files |
+| `previewGetLabels(projectDir)` | `preview-get-labels` | PreviewService | Get all known labels and their source locations |
 
 ---
 
