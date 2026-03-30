@@ -6,7 +6,7 @@
 - `!eager_dispatch` — Auto-detect the active dashboard and dispatch all ready tasks
 - `!eager_dispatch --dashboard {id}` — Target a specific dashboard
 
-> **Dashboard resolution:** Auto-selects the first dashboard with an active/stalled swarm (excluding `ide`). Override with `--dashboard {id}`.
+> **Dashboard resolution:** Use the standard resolution chain from `dashboard_resolution.md`: pre-assigned chat dashboard first, then explicit `--dashboard {id}` (hex IDs and legacy `dashboardN` both valid), then auto-detect the active/stalled swarm if neither is present.
 
 ---
 

@@ -19,7 +19,7 @@
 **Syntax:** `!p_track [--dashboard {id}] {prompt}`
 
 - `{prompt}` — Natural-language description of the work to be done.
-- `--dashboard {id}` — (Optional) Force a specific dashboard by ID (e.g., `a3f7k2`). If omitted, the master auto-selects the first available dashboard.
+- `--dashboard {id}` — (Optional) Force a specific dashboard by ID (e.g., `a3f7k2` or `dashboard3`). If omitted, use the pre-assigned chat dashboard if one exists; otherwise auto-select per `dashboard_resolution.md`.
 
 **Examples:**
 ```
@@ -55,7 +55,7 @@
 
 > **`{tracker_root}`** refers to the Synapse directory (Synapse). Locate it relative to the project root — it may be at `./Synapse/`, `../Synapse/`, or wherever the user has placed it.
 >
-> **`{dashboardId}`** is automatically selected by scanning all available dashboards (excluding `ide`, which is reserved for the IDE agent) for the first available slot. A dashboard is "available" if its `initialization.json` has `task: null`, or if all its progress files show terminal status (completed/failed). The user can override with `--dashboard {id}`. See `{tracker_root}/agent/instructions/dashboard_resolution.md` for the full selection algorithm.
+> **`{dashboardId}`** resolution order is: (1) pre-assigned dashboard from the chat's `DASHBOARD ID:` binding, which is authoritative; (2) explicit `--dashboard {id}` flag, accepting both 6-char hex IDs and legacy `dashboardN`; (3) auto-selection via `{tracker_root}/agent/instructions/dashboard_resolution.md` when no binding or explicit flag exists.
 
 **Dashboard:** Synapse Electron app — live visualization powered by `initialization.json`, `logs.json`, and `progress/` files merged client-side.
 

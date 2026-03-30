@@ -4,6 +4,7 @@
 
 **Syntax:**
 - `!cancel-safe` — Graceful shutdown of the auto-detected active swarm
+- `!cancel-safe a3f7k2` — Graceful shutdown of a specific hex dashboard's swarm
 - `!cancel-safe dashboard3` — Graceful shutdown of a specific dashboard's swarm
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.
@@ -14,7 +15,7 @@
 
 ## Steps
 
-1. **Parse the optional `{dashboardId}` argument.** If the first argument matches `dashboard[1-5]`, use it. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
+1. **Parse the optional `{dashboardId}` argument.** If the first argument is a valid dashboard ID (any non-flag string that is not a task ID, including 6-char hex IDs like `a3f7k2`, `ide`, and legacy `dashboardN`), use it. Otherwise, run `detectDashboard()` per `dashboard_resolution.md`.
 
 2. **Read `{tracker_root}/dashboards/{dashboardId}/initialization.json`.** If `task` is `null`, report: "No active swarm on {dashboardId}."
 

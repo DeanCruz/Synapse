@@ -14,6 +14,7 @@
 
 **Syntax:**
 - `!track_resume` — Auto-detect the dashboard to resume
+- `!track_resume a3f7k2` — Resume a specific hex dashboard
 - `!track_resume dashboard3` — Resume a specific dashboard
 
 > **Dashboard resolution:** See `{tracker_root}/agent/instructions/dashboard_resolution.md` for how `{dashboardId}` is determined when not explicitly specified.
@@ -40,7 +41,7 @@ Read these files **in parallel** — all are required before any action:
 **If `{dashboardId}` was specified:** Use it directly.
 
 **If no dashboard was specified (auto-detect):**
-1. Scan `dashboard1` through `dashboard5` in order.
+1. Scan the dashboards returned by `listDashboards()` in order.
 2. For each dashboard, read `{tracker_root}/dashboards/{dashboardId}/initialization.json`:
    - If `task` is `null` → **empty**. Skip — nothing to resume.
    - If `task` is not null → candidate. Read all progress files from `progress/`.

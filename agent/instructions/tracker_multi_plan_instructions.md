@@ -39,7 +39,7 @@
 
 ### Dashboards
 
-Dashboards are live-visualized slots at `{tracker_root}/dashboards/dashboard[1-5]/`. The server watches them and pushes updates via SSE. Each dashboard holds exactly one swarm at a time.
+Dashboards are live-visualized slots at `{tracker_root}/dashboards/{id}/`. IDs may be 6-character hex strings (for IDE/workspace dashboards), legacy `dashboardN`, or future-compatible IDs returned by `listDashboards()`. The server watches them and pushes updates via SSE. Each dashboard holds exactly one swarm at a time.
 
 ### Queues
 
@@ -83,7 +83,7 @@ This registry is the meta-planner's internal state. It is NOT written to disk �
 
 Use the standard `selectDashboard()` algorithm from `{tracker_root}/agent/instructions/dashboard_resolution.md`:
 
-1. Scan `dashboard1` through `dashboard5` in order.
+1. Scan the dashboards returned by `listDashboards()` in order.
 2. For each dashboard, read `initialization.json`:
    - `task` is `null` or file doesn't exist → **available**
    - `task` is not null, no progress files → **stale claim, treat as available**
@@ -95,7 +95,7 @@ Use the standard `selectDashboard()` algorithm from `{tracker_root}/agent/instru
 
 When assigning streams to slots:
 
-1. **Available dashboards first** — fill in order of availability (`dashboard1` before `dashboard2`, etc.)
+1. **Available dashboards first** — fill in order of availability as returned by the dashboard selection algorithm.
 2. **Queue slots for overflow** — if more streams than available dashboards, assign `queue1`, `queue2`, etc.
 
 Create queue directories as needed:
@@ -502,7 +502,7 @@ Child masters follow `tracker_master_instructions.md` exactly:
 
 If the meta-planner's context is compacted and the stream registry is lost:
 
-1. **Scan all dashboards** (`dashboard1`–`dashboard5`):
+1. **Scan all dashboards** returned by `listDashboards()`:
    - Read `initialization.json` for task name, total tasks
    - Read all `progress/*.json` files to derive status
    - Reconstruct each dashboard's stream entry in the registry
