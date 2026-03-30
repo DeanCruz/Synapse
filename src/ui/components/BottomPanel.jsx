@@ -31,7 +31,7 @@ const HEADER_HEIGHT = 35;
  * @param {Function} props.onNavigate    - callback(filePath, line, column) for navigating to diagnostic locations
  * @param {boolean}  props.embedded      - true for IDE (flex child), false for dashboard (fixed overlay)
  */
-export default function BottomPanel({ logs, activeFilter, onFilterChange, projectDir, onNavigate, embedded = false }) {
+export default function BottomPanel({ logs, activeFilter, onFilterChange, projectDir, dashboardId, onNavigate, embedded = false }) {
   const appState = useAppState();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('terminal');
@@ -252,7 +252,7 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
               className="terminal-tab-body"
               style={{ display: activeTermTab === tab.id ? 'flex' : 'none' }}
             >
-              <TerminalView projectDir={projectDir} />
+              <TerminalView projectDir={projectDir} dashboardId={dashboardId} />
             </div>
           ))}
         </div>

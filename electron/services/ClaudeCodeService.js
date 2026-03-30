@@ -86,6 +86,11 @@ function spawnWorker(opts) {
   delete env.ELECTRON_RUN_AS_NODE;
   delete env.CLAUDECODE;
 
+  // Inject dashboard binding so PreToolUse hooks can enforce isolation
+  if (opts.dashboardId) {
+    env.SYNAPSE_DASHBOARD_ID = opts.dashboardId;
+  }
+
   console.log('[ClaudeCodeService] Spawning cliPath:', cliPath);
   console.log('[ClaudeCodeService] Full args:', JSON.stringify(args));
   console.log('[ClaudeCodeService] CWD:', opts.projectDir || process.cwd());

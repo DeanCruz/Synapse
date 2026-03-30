@@ -461,6 +461,16 @@ function appReducerCore(state, action) {
       try { localStorage.setItem(claudeMessagesKey(did, action.tabId), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
       return { ...state, claudeTabStash: newTabStash };
     }
+    case 'CLAUDE_TAB_STASH_UPDATE_MESSAGES': {
+      if (!state.currentDashboardId) return state;
+      const did = state.currentDashboardId;
+      const stashKey = did + ':' + action.tabId;
+      const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
+      const updatedMsgs = trimMessages(action.updater(stashedMsgs));
+      const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
+      try { localStorage.setItem(claudeMessagesKey(did, action.tabId), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
+      return { ...state, claudeTabStash: newTabStash };
+    }
     // --- Stashed dashboard updates (for non-active dashboards with running workers) ---
     case 'CLAUDE_STASH_APPEND_MSG': {
       const did = action.dashboardId;

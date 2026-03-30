@@ -35,6 +35,11 @@ function spawnTerminal(opts) {
   var env = Object.assign({}, process.env);
   delete env.ELECTRON_RUN_AS_NODE;
 
+  // Inject dashboard binding so PreToolUse hooks can enforce isolation
+  if (opts.dashboardId) {
+    env.SYNAPSE_DASHBOARD_ID = opts.dashboardId;
+  }
+
   console.log('[TerminalService] spawnTerminal() id:', id, 'shell:', shell, 'cwd:', cwd, 'cols:', cols, 'rows:', rows);
 
   var proc = pty.spawn(shell, [], {

@@ -56,7 +56,7 @@ const TERMINAL_OPTIONS = {
  * @param {object} props
  * @param {string} props.projectDir — working directory for the spawned shell
  */
-export default function TerminalView({ projectDir }) {
+export default function TerminalView({ projectDir, dashboardId }) {
   const containerRef = useRef(null);
   const terminalRef = useRef(null);
   const fitAddonRef = useRef(null);
@@ -78,7 +78,7 @@ export default function TerminalView({ projectDir }) {
 
     try {
       const cwd = projectDir || undefined;
-      const result = await window.electronAPI.spawnTerminal({ cwd });
+      const result = await window.electronAPI.spawnTerminal({ cwd, dashboardId });
       if (result && result.id) {
         terminalIdRef.current = result.id;
       }
@@ -87,7 +87,7 @@ export default function TerminalView({ projectDir }) {
         term.writeln(`\r\n\x1b[31mFailed to spawn terminal: ${err.message || err}\x1b[0m`);
       }
     }
-  }, [projectDir]);
+  }, [projectDir, dashboardId]);
 
   // Store latest spawnTerminal in ref for use in listeners
   spawnRef.current = spawnTerminal;

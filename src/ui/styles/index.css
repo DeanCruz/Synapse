@@ -6247,6 +6247,64 @@ a:hover {
   font-weight: 500;
 }
 
+/* ----- CLI Activity block (batched stderr output — background agent actions) ----- */
+.claude-activity-block {
+  align-self: stretch;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  overflow: hidden;
+}
+.claude-activity-block.expanded {
+  background: rgba(148, 163, 184, 0.1);
+}
+.claude-activity-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  user-select: none;
+  min-height: 22px;
+}
+.claude-activity-icon {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.claude-activity-summary {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
+  font-size: 0.65rem;
+}
+.claude-activity-toggle {
+  font-size: 0.55rem;
+  opacity: 0.5;
+  flex-shrink: 0;
+}
+.claude-activity-lines {
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.claude-activity-line {
+  font-family: var(--font-mono, 'JetBrains Mono', 'Fira Code', monospace);
+  font-size: 0.65rem;
+  padding: 1px 0;
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ----- Task event expandable box (task_progress, task_started, etc.) ----- */
 .claude-task-event {
   align-self: stretch;
@@ -6425,6 +6483,21 @@ a:hover {
   color: var(--color-completed);
 }
 
+.claude-tool-call.streaming {
+  border-color: var(--color-in-progress);
+  opacity: 0.85;
+}
+
+.claude-tool-spinning {
+  display: inline-block;
+  animation: tool-spin 1s linear infinite;
+}
+
+@keyframes tool-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .claude-tool-header {
   display: flex;
   align-items: center;
@@ -6548,6 +6621,68 @@ a:hover {
   overflow-wrap: break-word;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+/* ─── Activity block (batched stderr/background work) ─── */
+.claude-activity-block {
+  align-self: flex-start;
+  max-width: 90%;
+  margin: 4px 0;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  font-size: 0.75rem;
+}
+
+.claude-activity-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  user-select: none;
+}
+
+.claude-activity-header:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.claude-activity-icon {
+  font-size: 0.8rem;
+}
+
+.claude-activity-summary {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.claude-activity-toggle {
+  font-size: 0.6rem;
+  opacity: 0.5;
+}
+
+.claude-activity-lines {
+  display: none;
+  padding: 4px 10px 8px 28px;
+  border-top: 1px solid var(--border);
+}
+
+.claude-activity-block.expanded .claude-activity-lines {
+  display: block;
+}
+
+.claude-activity-line {
+  padding: 2px 0;
+  color: var(--text-tertiary);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 /* ─── Rich tool call formatting ─── */

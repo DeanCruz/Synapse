@@ -203,6 +203,7 @@ function DashboardContent() {
         activeFilter={activeLogFilter}
         onFilterChange={(level) => dispatch({ type: 'SET', key: 'activeLogFilter', value: level })}
         projectDir={projectPath}
+        dashboardId={dashboardId}
       />
 
       {selectedAgent && (
