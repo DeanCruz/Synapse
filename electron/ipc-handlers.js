@@ -604,6 +604,21 @@ function registerIPCHandlers(getMainWindow) {
     return result;
   });
 
+  ipcMain.handle('get-update-status', async () => {
+    const { getUpdateState } = require('./services/AutoUpdateService');
+    return getUpdateState();
+  });
+
+  ipcMain.handle('check-for-updates', async () => {
+    const { checkForUpdates } = require('./services/AutoUpdateService');
+    return checkForUpdates();
+  });
+
+  ipcMain.handle('install-update', async () => {
+    const { quitAndInstallUpdate } = require('./services/AutoUpdateService');
+    return quitAndInstallUpdate();
+  });
+
   // --- Additional context persistence handlers ---
   ipcMain.handle('get-additional-context', async (_event, dashboardId) => {
     var all = settings.get('dashboardAdditionalContext') || {};

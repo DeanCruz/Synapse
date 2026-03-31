@@ -3,19 +3,34 @@
   "version": "1.0.0",
   "description": "Synapse is a distributed control system for coordinating autonomous agent swarms. It optimizes context usage, parallelizes execution, and provides a centralized control plane for complex software development tasks.",
   "main": "electron/main.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DeanCruz/Synapse.git"
+  },
   "scripts": {
     "build": "vite build",
     "start": "vite build && unset ELECTRON_RUN_AS_NODE && electron .",
     "dev": "concurrently -k \"vite\" \"electron .\"",
-    "dist": "vite build && electron-builder --mac",
+    "dist": "vite build && electron-builder --mac dmg zip --publish never",
+    "release": "vite build && electron-builder --mac dmg zip --publish always",
     "postinstall": "electron-rebuild -f -w node-pty"
   },
   "build": {
     "appId": "com.synapse.app",
     "productName": "Synapse",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "DeanCruz",
+        "repo": "Synapse"
+      }
+    ],
     "mac": {
       "icon": "electron/assets/icon.icns",
-      "target": "dmg",
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "category": "public.app-category.developer-tools"
     },
     "files": [
@@ -47,6 +62,7 @@
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
     "@xterm/xterm": "^6.0.0",
+    "electron-updater": "^6.8.3",
     "monaco-editor": "^0.55.1",
     "node-pty": "^1.1.0",
     "nvm": "^0.0.4",

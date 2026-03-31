@@ -30,6 +30,7 @@ const PUSH_CHANNELS = [
   'debug-output',
   'preview-edit-request',
   'settings-changed',
+  'update-status',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -89,6 +90,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSettings: () => ipcRenderer.invoke('get-settings'),
   setSetting: (key, value) => ipcRenderer.invoke('set-setting', key, value),
   resetSettings: () => ipcRenderer.invoke('reset-settings'),
+  getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  installUpdate: () => ipcRenderer.invoke('install-update'),
 
   // Additional context persistence (disk fallback for localStorage)
   getAdditionalContext: (dashboardId) => ipcRenderer.invoke('get-additional-context', dashboardId),
