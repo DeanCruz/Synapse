@@ -2,6 +2,8 @@
 
 Synapse is a standalone distributed control system for coordinating autonomous agent swarms. It optimizes context usage, parallelizes execution across multiple AI agents, and provides a centralized control plane with a real-time dashboard for complex software development tasks. Synapse operates on a target project that lives at a separate location -- it does not need to be inside the project it manages.
 
+**Compatible with [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenAI Codex](https://openai.com/index/introducing-codex/).**
+
 This documentation covers every aspect of Synapse: its architecture, the server and dashboard UI, the Electron desktop app, the swarm lifecycle, the master/worker agent protocols, the command system, configuration, and more.
 
 ---
