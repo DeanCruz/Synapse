@@ -4,6 +4,10 @@
 # This file can be moved anywhere (Desktop, Dock, etc.)
 # On first use, right-click → Open if macOS blocks it
 
+# Load shell profile so npm/node are in PATH
+source "$HOME/.zshrc" 2>/dev/null || source "$HOME/.bash_profile" 2>/dev/null || true
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
 # On first run from the Synapse directory, remember where it lives
 CONFIG="$HOME/.synapse-path"
 
@@ -38,4 +42,4 @@ if [ ! -d "node_modules" ]; then
 fi
 
 # Build and launch
-npm start
+npm run dev
