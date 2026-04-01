@@ -5150,6 +5150,68 @@ a:hover {
   font-style: italic;
 }
 
+.settings-update-card {
+  margin-top: 8px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.settings-update-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.settings-update-row:last-of-type {
+  margin-bottom: 0;
+}
+
+.settings-update-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.settings-update-value {
+  font-size: 0.75rem;
+  color: var(--text);
+  font-family: var(--mono, monospace);
+  text-align: right;
+}
+
+.settings-update-progress {
+  margin-top: 10px;
+  font-size: 0.72rem;
+  color: var(--color-in-progress, #9b7cf0);
+}
+
+.settings-update-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.settings-update-primary-btn {
+  margin-top: 12px;
+  padding: 6px 14px;
+  background: var(--color-in-progress, #9b7cf0);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: #fff;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.settings-update-primary-btn:hover {
+  opacity: 0.92;
+}
+
 /* ----- Project Modal ----- */
 
 .project-current-display {
