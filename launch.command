@@ -12,4 +12,4 @@ if [ ! -d "node_modules" ]; then
 fi
 
 # Build and launch
-npm run dev
+npm start
