@@ -6,7 +6,7 @@
   "scripts": {
     "build": "vite build",
     "start": "vite build && unset ELECTRON_RUN_AS_NODE && electron .",
-    "dev": "concurrently -k \"vite\" \"electron .\"",
+    "dev": "concurrently -k \"vite\" \"VITE_DEV_SERVER_URL=http://localhost:5174 electron .\"",
     "dist": "vite build && electron-builder --mac",
     "postinstall": "electron-rebuild -f -w node-pty"
   },

@@ -1702,6 +1702,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           currentThinkingIndexRef.current = null;
           toolCallIndexRef.current = {};
           sawStreamingRef.current = false;
+          // Compaction ends any history replay — new content follows
+          isResumedSessionRef.current = false;
         } else if (cleaned && !isProgressBarLine(cleaned)) {
           appendTextContent(cleaned + '\n');
         }
@@ -1720,6 +1722,10 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
             type: 'system',
             text: `Connected — model: ${evt.model || '?'}, ${tools.length} tools available`,
           });
+          // CLI is initialized — any events after this are real, not history replay.
+          // --resume with --print does NOT replay history events; it loads context
+          // internally. Clearing this flag ensures assistant events aren't dropped.
+          isResumedSessionRef.current = false;
         } else if (evt.subtype === 'task_progress' || evt.subtype === 'task_started' || evt.subtype === 'task_completed' || evt.subtype === 'task_failed') {
           appendMsg({ type: 'system', isTaskEvent: true, taskEventData: evt, text: evt.description || evt.subtype });
         } else {
@@ -1727,9 +1733,18 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
           const isCompaction = /compact|context.*(truncat|compress|summar)/i.test(msg)
             || evt.subtype === 'auto_compact' || evt.subtype === 'compact';
           if (isCompaction) {
+            flushText();
+            flushThinking();
             // Capture the summary from the CLI event for expandable display
             const summary = evt.summary || evt.message || '';
             appendMsg({ type: 'system', text: 'Context compacted', isCompaction: true, compactionSummary: summary });
+            // Reset streaming state — compaction invalidates current message indices
+            currentTextIndexRef.current = null;
+            currentThinkingIndexRef.current = null;
+            toolCallIndexRef.current = {};
+            sawStreamingRef.current = false;
+            // Compaction ends any history replay — new content follows
+            isResumedSessionRef.current = false;
           } else {
             appendMsg({ type: 'system', text: msg });
           }
