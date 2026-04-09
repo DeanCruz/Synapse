@@ -155,6 +155,14 @@ app.whenReady().then(() => {
 
   createWindow();
 
+  const { initAutoUpdater } = require('./services/AutoUpdateService');
+  initAutoUpdater((eventName, data) => {
+    const win = getMainWindow();
+    if (win && !win.isDestroyed() && win.webContents && !win.webContents.isDestroyed()) {
+      win.webContents.send(eventName, data);
+    }
+  });
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow();
@@ -165,6 +173,10 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   const { stopWatchers } = require('./ipc-handlers');
   stopWatchers();
+  try {
+    const { disposeAutoUpdater } = require('./services/AutoUpdateService');
+    disposeAutoUpdater();
+  } catch (e) { /* ignore */ }
   try {
     const ClaudeCodeService = require('./services/ClaudeCodeService');
     ClaudeCodeService.killAllWorkers();

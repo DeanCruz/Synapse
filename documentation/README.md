@@ -133,6 +133,7 @@ The Electron desktop application that wraps the dashboard and provides native OS
 | [IPC Reference](electron/ipc-reference.md) | All 33 push channels and ~140 pull request handlers between main and renderer, organized into 17+ handler groups |
 | [Services](electron/services.md) | All 13 Electron services (SwarmOrchestrator, ClaudeCodeService, CodexService, PromptBuilder, ProjectService, CommandsService, TaskEditorService, ConversationService, DebugService, TerminalService, InstrumentService, PreviewService, PreviewTextWriter) with exported methods and responsibilities |
 | [Configuration](electron/configuration.md) | Settings system, Vite build config, electron-builder packaging, and `app://` protocol |
+| [Update on `master`](electron/update-on-master.md) | Recommended release flow for auto-building desktop artifacts from `master`, version bump strategy, and future app update behavior |
 
 ### Git Manager
 

@@ -70,6 +70,20 @@ const APP_FIELDS = [
   { key: 'reconcileDebounceMs', label: 'Reconcile Debounce (ms)', type: 'number', min: 100, max: 2000 },
 ];
 
+function formatUpdateTimestamp(value) {
+  if (!value) return 'Never checked';
+
+  try {
+    return new Date(value).toLocaleString();
+  } catch (e) {
+    return value;
+  }
+}
+
+function getUpdateVersion(updateState) {
+  return updateState?.updateInfo?.version || 'Unknown';
+}
+
 function getSavedCustomColors() {
   try {
     const saved = JSON.parse(localStorage.getItem('synapse-custom-colors'));
@@ -143,10 +157,20 @@ export default function SettingsModal({ onClose, currentTheme, onThemeChange }) 
     () => getSavedCustomColors() || { ...DEFAULT_CUSTOM_COLORS }
   );
   const [appSettings, setAppSettings] = useState({});
+  const [updateState, setUpdateState] = useState(null);
 
   useEffect(() => {
     if (api) {
       api.getSettings().then(settings => setAppSettings(settings || {}));
+      api.getUpdateStatus().then(status => setUpdateState(status || null)).catch(() => {});
+
+      const removeUpdateListener = api.on('update-status', (payload) => {
+        setUpdateState(payload || null);
+      });
+
+      return () => {
+        removeUpdateListener();
+      };
     }
   }, [api]);
 
@@ -194,6 +218,16 @@ export default function SettingsModal({ onClose, currentTheme, onThemeChange }) 
     api.resetSettings().then(defaults => {
       setAppSettings(defaults || {});
     });
+  }
+
+  function handleCheckForUpdates() {
+    if (!api) return;
+    api.checkForUpdates().catch(() => {});
+  }
+
+  function handleInstallUpdate() {
+    if (!api) return;
+    api.installUpdate().catch(() => {});
   }
 
   return (
@@ -296,6 +330,56 @@ export default function SettingsModal({ onClose, currentTheme, onThemeChange }) 
           <button className="settings-custom-reset-btn" onClick={handleResetAllSettings}>
             Reset All to Defaults
           </button>
+        </div>
+      )}
+
+      {api && (
+        <div className="settings-section">
+          <div className="settings-section-title">Updates</div>
+          <div className="settings-update-card">
+            <div className="settings-update-row">
+              <span className="settings-update-label">Current Version</span>
+              <span className="settings-update-value">{updateState?.currentVersion || 'Unknown'}</span>
+            </div>
+            <div className="settings-update-row">
+              <span className="settings-update-label">Latest Release</span>
+              <span className="settings-update-value">
+                {updateState?.available ? getUpdateVersion(updateState) : 'Current'}
+              </span>
+            </div>
+            <div className="settings-update-row">
+              <span className="settings-update-label">Last Checked</span>
+              <span className="settings-update-value">{formatUpdateTimestamp(updateState?.lastCheckedAt)}</span>
+            </div>
+            <div className="settings-app-note">
+              {updateState?.error || updateState?.message || 'Update status unavailable.'}
+            </div>
+
+            {updateState?.progress?.percent > 0 && !updateState?.downloaded && (
+              <div className="settings-update-progress">
+                Downloaded {Math.round(updateState.progress.percent)}%
+              </div>
+            )}
+
+            <div className="settings-update-actions">
+              <button
+                className="settings-custom-reset-btn"
+                onClick={handleCheckForUpdates}
+                disabled={!!updateState?.checking}
+              >
+                {updateState?.checking ? 'Checking...' : 'Check for Updates'}
+              </button>
+
+              {updateState?.downloaded && (
+                <button
+                  className="settings-update-primary-btn"
+                  onClick={handleInstallUpdate}
+                >
+                  Restart and Install
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </Modal>
