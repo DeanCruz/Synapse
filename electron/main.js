@@ -61,9 +61,10 @@ function createWindow() {
     console.log(prefix, msg);
   });
 
-  // Dev: load from Vite dev server (full HMR)
-  // Prod: load from built dist/ via app:// protocol
-  mainWindow.loadURL(app.isPackaged ? 'app://synapse/dist/index.html' : 'http://localhost:5174');
+  // Dev (npm run dev): load from Vite dev server (full HMR)
+  // Prod / start (npm start): load from built dist/ via app:// protocol
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  mainWindow.loadURL(devServerUrl || 'app://synapse/dist/index.html');
 
   mainWindow.on('closed', () => {
     mainWindow = null;
