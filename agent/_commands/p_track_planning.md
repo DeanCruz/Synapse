@@ -468,6 +468,8 @@ mkdir -p {tracker_root}/dashboards/{dashboardId}/progress
 
 #### 11B. Write initialization.json — static plan data
 
+> **PATH SAFETY:** Use the absolute path `{tracker_root}/dashboards/{dashboardId}/initialization.json`. Never use a relative `dashboards/` path — your CWD may be `{project_root}`, which would place the file in the target project instead of Synapse. A hook will block writes outside `{tracker_root}/dashboards/`.
+
 **`initialization.json` is write-once.** The master writes it during planning and **never updates it again**. All dynamic lifecycle data (agent status, started_at, completed_at, summary, counters) lives in worker progress files and is derived by the dashboard at render time.
 
 Set `task`:
@@ -549,6 +551,8 @@ Before writing `initialization.json`, validate the planned `agents[]` array:
 The master agent performs these checks by inspecting the planned `agents[]` array before writing it to `initialization.json`. This is a mental/logical check, not a code execution step — the master reviews the dependency graph it constructed and verifies these invariants hold. The `validateDependencyGraph` function in `src/server/utils/validation.js` documents the exact rules.
 
 #### 11C. Write logs.json — initialization entry
+
+> **PATH SAFETY:** Use the absolute path `{tracker_root}/dashboards/{dashboardId}/logs.json`. Never use a relative path. A hook will block writes outside `{tracker_root}/dashboards/`.
 
 Append to `entries` in `{tracker_root}/dashboards/{dashboardId}/logs.json`:
 ```json

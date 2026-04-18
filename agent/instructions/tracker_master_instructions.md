@@ -23,6 +23,8 @@
 **Who this is for:** The master orchestrator agent when running `!p_track` or any swarm command. This hub provides quick orientation and points to detailed module files for each concern.
 
 > **Portability:** This tracker works in any repository. All paths are relative to the Synapse directory (`{tracker_root}`). Dashboard files live under `{tracker_root}/dashboards/{id}/`. The tracker does not assume any specific project structure.
+>
+> **PATH SAFETY:** Always resolve `{tracker_root}` to an absolute path before any dashboard writes. NEVER use relative `dashboards/` paths — when your CWD is `{project_root}`, relative paths create dashboard files in the target project instead of Synapse. A PreToolUse hook enforces this and will block misplaced writes.
 
 ---
 

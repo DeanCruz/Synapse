@@ -28,6 +28,8 @@ Because the server re-reads the full file on every change, **atomic writes are m
 
 **IDE Dashboard (`ide`):** The `ide` dashboard exists permanently and is reserved for the IDE/Code Explorer agent. It is auto-created on Electron startup and cannot be deleted. Master agents must NEVER claim `ide` for swarm dispatch — always use other dashboards. Do not overwrite `ide`'s `initialization.json` with swarm plan data.
 
+> **PATH SAFETY — CRITICAL:** All dashboard writes MUST use absolute paths starting with `{tracker_root}`. NEVER use relative `dashboards/` paths — when your CWD is `{project_root}`, relative paths resolve to the wrong location and create dashboard files inside the target project instead of Synapse. A PreToolUse hook (`enforce-tracker-root-writes.sh`) enforces this and will block any dashboard file written outside `{tracker_root}/dashboards/`.
+
 ---
 
 ## initialization.json — Static Plan Data
