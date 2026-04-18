@@ -15,6 +15,8 @@ Your progress file path:
 {tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json
 ```
 
+> **PATH SAFETY:** Always use the absolute path provided in your dispatch context. Never construct a relative `dashboards/` path yourself. Your CWD is `{project_root}`, not `{tracker_root}` — a relative path would write progress files into the target project instead of Synapse. A hook will block writes outside `{tracker_root}/dashboards/`.
+
 ---
 
 ## Quick Start Checklist

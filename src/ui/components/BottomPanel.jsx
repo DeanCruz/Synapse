@@ -9,6 +9,7 @@ import LogPanel from './LogPanel.jsx';
 import TerminalView from './TerminalView.jsx';
 import ProblemsPanel from './ide/ProblemsPanel.jsx';
 import DebugConsolePanel from './ide/DebugConsolePanel.jsx';
+import { getDashboardProject } from '../utils/dashboardProjects.js';
 
 const PANEL_TABS = [
   { id: 'terminal', label: 'TERMINAL' },
@@ -53,10 +54,26 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
     return { errors, warnings, total: errors + warnings };
   }, [appState.diagnostics]);
 
-  // Multi-terminal sub-tabs
-  const [termTabs, setTermTabs] = useState([{ id: 1, label: 'Terminal 1' }]);
-  const [activeTermTab, setActiveTermTab] = useState(1);
-  const nextId = useRef(2);
+  // Per-dashboard terminal state: { [dashboardId]: { tabs, activeTab, nextId } }
+  const DEFAULT_TERM = { tabs: [{ id: 1, label: 'Terminal 1' }], activeTab: 1, nextId: 2 };
+  const [termState, setTermState] = useState(() => {
+    if (!dashboardId) return {};
+    return { [dashboardId]: { ...DEFAULT_TERM } };
+  });
+
+  // Ensure current dashboard has terminal state when switching
+  useEffect(() => {
+    if (!dashboardId) return;
+    setTermState(prev => {
+      if (prev[dashboardId]) return prev;
+      return { ...prev, [dashboardId]: { tabs: [{ id: 1, label: 'Terminal 1' }], activeTab: 1, nextId: 2 } };
+    });
+  }, [dashboardId]);
+
+  // Derived state for current dashboard's terminal tabs
+  const currentTermState = termState[dashboardId] || DEFAULT_TERM;
+  const termTabs = currentTermState.tabs;
+  const activeTermTab = currentTermState.activeTab;
 
   // Drag resize refs (avoid re-renders during drag)
   const dragStateRef = useRef(null);
@@ -64,27 +81,37 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
 
   const entries = (logs?.entries) || [];
 
-  // ---- Terminal tab management ----
+  // ---- Terminal tab management (per-dashboard) ----
   const addTermTab = useCallback(() => {
-    const id = nextId.current++;
-    setTermTabs(prev => {
-      if (prev.length >= MAX_TERMINAL_TABS) return prev;
-      return [...prev, { id, label: `Terminal ${id}` }];
+    if (!dashboardId) return;
+    setTermState(prev => {
+      const ds = prev[dashboardId] || { tabs: [], activeTab: 1, nextId: 1 };
+      if (ds.tabs.length >= MAX_TERMINAL_TABS) return prev;
+      const id = ds.nextId;
+      return { ...prev, [dashboardId]: { tabs: [...ds.tabs, { id, label: `Terminal ${id}` }], activeTab: id, nextId: id + 1 } };
     });
-    setActiveTermTab(id);
-  }, []);
+  }, [dashboardId]);
 
   const closeTermTab = useCallback((tabId) => {
-    setTermTabs(prev => {
-      if (prev.length <= 1) return prev;
-      const idx = prev.findIndex(t => t.id === tabId);
-      const remaining = prev.filter(t => t.id !== tabId);
-      setActiveTermTab(current =>
-        current !== tabId ? current : remaining[Math.min(idx, remaining.length - 1)].id
-      );
-      return remaining;
+    if (!dashboardId) return;
+    setTermState(prev => {
+      const ds = prev[dashboardId];
+      if (!ds || ds.tabs.length <= 1) return prev;
+      const idx = ds.tabs.findIndex(t => t.id === tabId);
+      const remaining = ds.tabs.filter(t => t.id !== tabId);
+      const newActive = ds.activeTab !== tabId ? ds.activeTab : remaining[Math.min(idx, remaining.length - 1)].id;
+      return { ...prev, [dashboardId]: { ...ds, tabs: remaining, activeTab: newActive } };
     });
-  }, []);
+  }, [dashboardId]);
+
+  const setActiveTermTab = useCallback((tabId) => {
+    if (!dashboardId) return;
+    setTermState(prev => {
+      const ds = prev[dashboardId];
+      if (!ds) return prev;
+      return { ...prev, [dashboardId]: { ...ds, activeTab: tabId } };
+    });
+  }, [dashboardId]);
 
   // ---- Tab click: toggle panel or switch tab ----
   const handleTabClick = useCallback((tabId) => {
@@ -246,15 +273,21 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
               <button className="terminal-tab-add" onClick={addTermTab} title="New terminal">+</button>
             )}
           </div>
-          {termTabs.map(tab => (
-            <div
-              key={tab.id}
-              className="terminal-tab-body"
-              style={{ display: activeTermTab === tab.id ? 'flex' : 'none' }}
-            >
-              <TerminalView projectDir={projectDir} dashboardId={dashboardId} />
-            </div>
-          ))}
+          {/* Render ALL dashboards' terminals — hidden when not current. Keeps PTY + xterm alive across switches. */}
+          {Object.entries(termState).map(([dbId, ds]) =>
+            ds.tabs.map(tab => (
+              <div
+                key={`${dbId}-${tab.id}`}
+                className="terminal-tab-body"
+                style={{ display: dbId === dashboardId && ds.activeTab === tab.id ? 'flex' : 'none' }}
+              >
+                <TerminalView
+                  projectDir={dbId === dashboardId ? projectDir : getDashboardProject(dbId)}
+                  dashboardId={dbId}
+                />
+              </div>
+            ))
+          )}
         </div>
 
         {/* PORTS */}

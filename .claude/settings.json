@@ -10,6 +10,10 @@
           },
           {
             "type": "command",
+            "command": ".claude/hooks/enforce-tracker-root-writes.sh"
+          },
+          {
+            "type": "command",
             "command": ".claude/hooks/validate-master-write.sh"
           },
           {
@@ -33,6 +37,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/enforce-dashboard-isolation-bash.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/enforce-tracker-root-writes-bash.sh"
           },
           {
             "type": "command",
