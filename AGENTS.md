@@ -6,26 +6,6 @@ Synapse operates on a **target project** that lives at `{project_root}` — comp
 
 ---
 
-## Quick Start
-
-```bash
-# 1. Point Synapse at your project (or just run from within the project directory)
-!project set /path/to/your/project
-
-# 2. Start the dashboard
-node {tracker_root}/src/server/index.js
-
-# 3. Open in browser
-npm start  # launches the Electron app
-
-# 4. Run a parallel task
-!p_track {your prompt here}
-```
-
-If you are already working inside the target project directory, Synapse will auto-detect it as `{project_root}` — no `!project set` needed.
-
----
-
 ## Path Convention
 
 Every path in Synapse uses one of two placeholders:

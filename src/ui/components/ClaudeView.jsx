@@ -842,6 +842,46 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   useEffect(() => { messagesRef.current = messages; }, [messages]);
   useEffect(() => { activeTabRef.current = activeTabId; }, [activeTabId]);
   useEffect(() => { promptRef.current = prompt; }, [prompt]);
+
+  // Auto-save the active chat to its history entry on every message change (debounced).
+  // Ensures user prompts, streaming responses, and partial completions are persisted even
+  // if Claude errors, is stopped, or the app closes before finishProcessing runs. Writes
+  // continuously to the same convId so each chat always updates its latest history item.
+  const autoSaveTimerRef = useRef(null);
+  useEffect(() => {
+    if (!api) return;
+    if (!messages || messages.length === 0) return;
+    // Skip welcome-only state and chats without any user input
+    if (messages.length === 1 && messages[0]?.id === 'welcome') return;
+    const firstUser = messages.find(m => m.type === 'user');
+    if (!firstUser) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    autoSaveTimerRef.current = setTimeout(() => {
+      const currentMsgs = messagesRef.current;
+      const first = currentMsgs.find(m => m.type === 'user');
+      if (!first) return;
+      const name = first.text.substring(0, 50) + (first.text.length > 50 ? '...' : '');
+      const now = new Date().toISOString();
+      if (!convIdRef.current) {
+        convIdRef.current = 'conv_' + Date.now();
+        convCreatedRef.current = now;
+      }
+      api.saveConversation({
+        id: convIdRef.current,
+        name,
+        created: convCreatedRef.current || now,
+        sessionId: sessionIdRef.current,
+        dashboardId,
+        messages: currentMsgs,
+      }).catch(() => {});
+    }, 500);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [messages, dashboardId, api]);
+
   // Auto-resize textarea when prompt changes programmatically (tab/dashboard switch)
   useEffect(() => {
     if (textareaRef.current) {
