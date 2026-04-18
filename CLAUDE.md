@@ -10,10 +10,6 @@ Synapse coordinates autonomous agent swarms for parallel software development. I
 npm start                              # Launch the Electron app (server starts automatically)
 !p_track {your prompt here}            # Run a parallel swarm
 
-# Standalone server (browser-only, no Electron)
-node {tracker_root}/src/server/index.js  # Start the SSE server on port 3456
-# Open browser to http://localhost:3456
-```
 
 ## Path Convention
 
@@ -48,7 +44,6 @@ WatcherService detects file changes --> broadcast bridge
 
 **Lightweight Parallel (`!p`):** Same as parallel but without dashboard overhead. Workers do NOT write progress files. Master writes minimal progress files from worker returns for file tracking. Good for simpler multi-task dispatches (<3 tasks, single wave only).
 
-**Multi-Stream (`!master_plan_track`):** Three-tier hierarchy: meta-planner decomposes work into independent swarms across dashboards, child masters each run their own `!p_track`-style swarm. Queue system handles overflow when all dashboard slots are occupied.
 
 **Auto-escalation:** If a task clearly decomposes into 3+ independent subtasks, proactively suggest parallel mode to the user rather than executing serially.
 
@@ -66,7 +61,6 @@ When a swarm has **3+ parallel agents** or **more than 1 wave**, the master MUST
 
 ### Decomposition
 
-- **Sweet spot:** 4-8 tasks for most swarms. Fewer than 3 doesn't justify orchestration overhead. More than 12 risks coordination complexity.
 - **Right-size tasks:** Each task should be self-contained, completable in 1-5 minutes, and independently verifiable. If a task description needs more than 2-3 sentences, it's probably too big.
 - **One concern per task:** A task that says "implement X and also update Y" should usually be two tasks.
 - **Invest in planning:** Spend proportionally more time planning than executing. A well-decomposed plan with clear dependencies prevents most swarm failures.

@@ -7,4 +7,4 @@ if [ -n "$PID" ]; then
   exit 1
 fi
 
-cd "$DIR" && npm start
+cd "$DIR" && npm run dev
