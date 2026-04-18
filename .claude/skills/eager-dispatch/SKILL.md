@@ -35,8 +35,8 @@ The master-protocol skill provides your core identity and constraints. Follow th
 !`echo "PROJECT_ROOT: $(cat .synapse/project.json 2>/dev/null | jq -r '.project_root' 2>/dev/null || echo 'UNSET — resolve before dispatch')"`
 !`echo "TRACKER_ROOT: $(pwd)"`
 !`echo "DATE: $(date -u +%Y-%m-%dT%H:%M:%SZ)"`
-!`echo "AVAILABLE_DASHBOARDS: $(ls dashboards/ 2>/dev/null | grep -v ide | tr '\n' ' ')"`
-!`echo "DASHBOARD_STATES: $(for d in $(ls dashboards/ 2>/dev/null | grep -v ide); do init=$(cat dashboards/$d/initialization.json 2>/dev/null | jq -r '.task.name // empty' 2>/dev/null); prog=$(ls dashboards/$d/progress/ 2>/dev/null | wc -l | tr -d ' '); echo \"$d:task=${init:-empty},progress=$prog\"; done | tr '\n' ' ')"`
+!`echo "ASSIGNED_DASHBOARD: ${SYNAPSE_DASHBOARD_ID:-UNSET — extract from your system prompt's \`DASHBOARD ID:\` directive, or ask the user. Never scan.}"`
+!`D="${SYNAPSE_DASHBOARD_ID:-}"; if [ -n "$D" ] && [ -d "dashboards/$D" ]; then init=$(cat "dashboards/$D/initialization.json" 2>/dev/null | jq -r '.task.name // "empty"' 2>/dev/null); prog=$(ls "dashboards/$D/progress/" 2>/dev/null | wc -l | tr -d ' '); echo "ASSIGNED_DASHBOARD_STATE: task=${init:-empty}, progress_files=$prog"; else echo "ASSIGNED_DASHBOARD_STATE: (none — no SYNAPSE_DASHBOARD_ID set)"; fi`
 
 ## Project Context
 

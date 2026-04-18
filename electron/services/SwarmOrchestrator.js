@@ -274,6 +274,7 @@ function dispatchReady(dashboardId) {
       taskId: taskId,
       dashboardId: dashboardId,
       trackerRoot: swarm.trackerRoot,
+      projectPath: swarm.projectPath,
       additionalContextDirs: swarm.additionalContextDirs,
     });
 

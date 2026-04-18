@@ -507,6 +507,8 @@ Multi-workspace code editor view with file explorer, editor tabs, debug support,
 | `DebugPanels` | `DebugPanels.jsx` | Variables, call stack, breakpoints, watch expressions |
 | `DebugConsolePanel` | `DebugConsolePanel.jsx` | Debug console output and input |
 | `ProblemsPanel` | `ProblemsPanel.jsx` | Diagnostics display (errors, warnings, info) |
+| `SearchPanel` | `SearchPanel.jsx` | IDE search sidebar with text/regex/case/word search, replace, and glob filters |
+| `SearchResults` | `SearchResults.jsx` | Grouped search results with highlighted matches and file navigation |
 
 **State:** Uses `IDE_*` and `DEBUG_*` action types in AppContext (see [State Management](./state-management.md)).
 
@@ -640,6 +642,7 @@ Swarm planning workflow modal.
 | `ConfirmModal` | `modals/ConfirmModal.jsx` | Generic confirmation dialog |
 | `ErrorModal` | `modals/ErrorModal.jsx` | Error display |
 | `HistoryModal` | `modals/HistoryModal.jsx` | History viewing |
+| `LogsModal` | `modals/LogsModal.jsx` | Full-screen log viewer with filter, search, and auto-scroll |
 | `PermissionModal` | `modals/PermissionModal.jsx` | Permission request popup |
 | `TaskDetails` | `modals/TaskDetails.jsx` | Task detail view |
 | `TaskEditorModal` | `modals/TaskEditorModal.jsx` | Individual task editor (used by SwarmBuilder) |

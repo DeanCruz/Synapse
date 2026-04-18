@@ -1,6 +1,6 @@
 # IPC Channels and Handlers Reference
 
-This document provides a complete reference of every IPC channel in Synapse's Electron app. All IPC communication flows through the `window.electronAPI` context bridge defined in `electron/preload.js` (244 lines), with handlers registered in `electron/ipc-handlers.js` (~2200 lines). There are **33 push event channels** and **~140 pull request handlers** organized into 17+ handler groups.
+This document provides a complete reference of every IPC channel in Synapse's Electron app. All IPC communication flows through the `window.electronAPI` context bridge defined in `electron/preload.js` (248 lines), with handlers registered in `electron/ipc-handlers.js` (~2925 lines). There are **26 push event channels** and **~140 pull request handlers** organized into 17+ handler groups.
 
 ---
 
@@ -19,7 +19,7 @@ Synapse uses two IPC patterns:
 
 Push events are initiated by the main process (typically from file watchers or worker process events) and delivered to the renderer. The preload script whitelists allowed channels.
 
-### Channel Whitelist (33 channels)
+### Channel Whitelist (26 channels)
 
 ```javascript
 const PUSH_CHANNELS = [
@@ -46,8 +46,9 @@ const PUSH_CHANNELS = [
   'debug-resumed',
   'debug-stopped',
   'debug-output',
-  'settings-changed',
   'preview-edit-request',
+  'settings-changed',
+  'update-status',
 ];
 ```
 
@@ -346,6 +347,24 @@ Fired for console output, stdout, stderr, and exceptions from the debuggee.
 }
 ```
 
+#### `update-status`
+
+Fired whenever the auto-update state changes (checking, downloading, downloaded, error).
+
+```javascript
+{
+  currentVersion: "1.2.3",
+  checking: false,
+  available: true,
+  downloaded: true,
+  updateInfo: { version: "1.3.0", ... },
+  progress: { percent: 100 },
+  error: null,
+  lastCheckedAt: "2026-04-18T10:00:00Z",
+  message: "Update downloaded. Restart Synapse to install it."
+}
+```
+
 ---
 
 ## Pull Requests (Renderer -> Main)
@@ -475,6 +494,14 @@ Copies the full dashboard directory to `Archive/{YYYY-MM-DD}_{taskName}/`, then 
 | `getSettings()` | `get-settings` | Get all settings (merged defaults + overrides) |
 | `setSetting(key, value)` | `set-setting` | Set a single setting |
 | `resetSettings()` | `reset-settings` | Reset all settings to defaults |
+
+### Auto-Update Handlers
+
+| Renderer API | IPC Channel | Handler Service | Description |
+|---|---|---|---|
+| `getUpdateStatus()` | `get-update-status` | AutoUpdateService | Get current update state snapshot |
+| `checkForUpdates()` | `check-for-updates` | AutoUpdateService | Manually trigger an update check |
+| `installUpdate()` | `install-update` | AutoUpdateService | Quit and install the downloaded update |
 
 ### Project Handlers
 

@@ -403,6 +403,31 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 
 ---
 
+## Instrumentation Commands
+
+### `!instrument`
+
+**Purpose:** Add `data-synapse-label` attributes to text-bearing JSX/TSX/HTML elements in the target project, making them compatible with Synapse's Live Preview inline editing.
+
+**Syntax:**
+```
+!instrument                      -- Instrument all JSX/TSX/HTML files
+!instrument --dry-run            -- Show what would be changed without modifying files
+!instrument --remove             -- Remove all data-synapse-label attributes
+```
+
+**Key Behavior:**
+- Scans `**/*.{jsx,tsx,html,htm}` files (skipping `node_modules/`, `.next/`, `dist/`, `build/`, `.git/`)
+- Finds text-bearing elements: headings (`h1`-`h6`), `p`, `span`, `button`, `a`, `label`, `li`, `td`, `th`, `caption`, `figcaption`, `blockquote`, `dt`, `dd`
+- Adds a `data-synapse-label` attribute with a globally unique UUID to each qualifying element
+- Already-labeled elements are skipped on re-runs (idempotent)
+- `--dry-run` reports what would change without modifying files
+- `--remove` strips all `data-synapse-label` attributes from the project
+- Reports: files scanned, files modified, labels added/removed, and any errors
+- Requires a target project to be set (`!project set`)
+
+---
+
 ## Audit Commands
 
 ### `!prompt_audit`

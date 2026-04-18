@@ -74,6 +74,7 @@ Everything else is a worker's job. The master writes **nothing** into `{project_
 | Module | Path | When to Read |
 |---|---|---|
 | Role & Constraints | `agent/master/role.md` | Before any swarm |
+| **initialization.json Blueprint** | **`agent/master/initialization_blueprint.md`** | **MANDATORY pre-read before writing `initialization.json`** |
 | Dashboard Writes | `agent/master/dashboard_writes.md` | When writing dashboard files |
 | UI Map | `agent/master/ui_map.md` | When writing dashboard files |
 | Eager Dispatch | `agent/master/eager_dispatch.md` | On every worker completion |

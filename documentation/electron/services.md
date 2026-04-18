@@ -6,7 +6,7 @@ All services live under `electron/services/` and run in the Electron main proces
 
 ## SwarmOrchestrator
 
-**File:** `electron/services/SwarmOrchestrator.js` (764 lines)
+**File:** `electron/services/SwarmOrchestrator.js` (780 lines)
 
 The SwarmOrchestrator is the core dispatch engine that replaces the terminal-based master agent for orchestrating parallel agent swarms. It manages the full swarm lifecycle: reading the dependency graph, dispatching unblocked tasks, handling completions and failures, implementing circuit breaker logic, and triggering automatic replanning.
 
@@ -203,7 +203,7 @@ The replanner must return a JSON object with:
 
 ## ClaudeCodeService
 
-**File:** `electron/services/ClaudeCodeService.js` (370 lines)
+**File:** `electron/services/ClaudeCodeService.js` (369 lines)
 
 Manages Claude Code CLI worker processes. Each spawned worker is an independent `claude` CLI process running in `--print` mode with `stream-json` output.
 
@@ -366,7 +366,7 @@ Strips noise from stderr (empty lines, `"Reading prompt from stdin..."` messages
 
 ## PromptBuilder
 
-**File:** `electron/services/PromptBuilder.js` (372 lines)
+**File:** `electron/services/PromptBuilder.js` (407 lines)
 
 Constructs the prompts that worker agents receive. Handles system prompts (worker instructions), task prompts (description + context), and replan prompts (failure analysis context).
 
@@ -478,7 +478,7 @@ Returns a short system prompt identifying the agent as a swarm replanner that mu
 
 ## ProjectService
 
-**File:** `electron/services/ProjectService.js` (167 lines)
+**File:** `electron/services/ProjectService.js` (193 lines)
 
 Handles project detection, metadata extraction, and CLI binary discovery.
 
@@ -656,7 +656,7 @@ List commands from a project's `_commands/` directory.
 
 ## TaskEditorService
 
-**File:** `electron/services/TaskEditorService.js` (378 lines)
+**File:** `electron/services/TaskEditorService.js` (377 lines)
 
 Provides CRUD operations on `initialization.json` for building and editing swarm plans through the UI task editor.
 
@@ -750,7 +750,7 @@ Uses Kahn's algorithm (BFS topological sort) to detect cycles. Also checks that 
 
 ## ConversationService
 
-**File:** `electron/services/ConversationService.js` (144 lines)
+**File:** `electron/services/ConversationService.js` (143 lines)
 
 Manages chat conversation persistence. Conversations are stored as individual JSON files in `{ROOT}/conversations/`.
 
@@ -811,6 +811,257 @@ Delete a conversation file.
 Rename an existing conversation.
 
 **Returns:** Updated conversation object or `{ error: string }`.
+
+---
+
+## TerminalService
+
+**File:** `electron/services/TerminalService.js` (187 lines)
+
+Manages PTY (pseudo-terminal) sessions using `node-pty`. Each terminal is an independent shell process with full TTY emulation, enabling the embedded terminal tabs in the Synapse UI.
+
+### State
+
+```javascript
+activeTerminals = {
+  "term_1711123456789": {       // Keyed by generated ID
+    id: "term_1711123456789",
+    process: <IPty>,
+    pid: 54321,
+    cols: 80,
+    rows: 24,
+    cwd: "/path/to/project",
+    shell: "/bin/zsh",
+    startedAt: "2026-03-22T15:00:00Z",
+  }
+}
+```
+
+### Exported Methods
+
+#### `init(broadcast)`
+
+Set the broadcast function for sending terminal events to the renderer.
+
+#### `spawnTerminal(opts)`
+
+Spawn a new PTY terminal session.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `opts.cwd` | `string` | Working directory (default: `process.cwd()`) |
+| `opts.cols` | `number` | Terminal columns (default: `80`) |
+| `opts.rows` | `number` | Terminal rows (default: `24`) |
+| `opts.shell` | `string` | Shell binary (default: `$SHELL` or `/bin/zsh`) |
+| `opts.dashboardId` | `string` | Dashboard binding for hook isolation (optional) |
+
+**Returns:** `{ id, pid, shell, cwd, cols, rows }`
+
+**Behavior:**
+1. Generates a unique ID (`term_{Date.now()}`)
+2. Inherits `process.env` with `ELECTRON_RUN_AS_NODE` removed
+3. If `dashboardId` is provided, sets `SYNAPSE_DASHBOARD_ID` in the child environment for PreToolUse hook isolation
+4. Spawns a PTY process with `xterm-256color` terminal type
+5. Streams output to the renderer via `terminal-output` push events
+6. On exit, broadcasts `terminal-exit` and removes from `activeTerminals`
+
+#### `writeTerminal(id, data)`
+
+Write user input data to a terminal's PTY process.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | `string` | Terminal session ID |
+| `data` | `string` | Input data from xterm.js `onData` |
+
+**Returns:** `boolean`
+
+#### `resizeTerminal(id, cols, rows)`
+
+Resize a terminal session. Updates the PTY dimensions and stored state.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `id` | `string` | Terminal session ID |
+| `cols` | `number` | New column count |
+| `rows` | `number` | New row count |
+
+**Returns:** `boolean`
+
+#### `killTerminal(id)`
+
+Kill a specific terminal session by ID.
+
+**Returns:** `boolean`
+
+#### `killAllTerminals()`
+
+Kill all active terminal sessions.
+
+**Returns:** `number` -- count of terminals killed
+
+#### `getActiveTerminals()`
+
+List active terminal sessions with metadata.
+
+**Returns:** `{ id, pid, shell, cwd, cols, rows, startedAt }[]`
+
+---
+
+## DebugService
+
+**File:** `electron/services/DebugService.js` (796 lines)
+
+Provides a full Node.js debugging experience via the Chrome DevTools Protocol (CDP). Manages a single debug session at a time: spawns a Node.js process with `--inspect-brk=0`, connects to the CDP WebSocket, and exposes debugger operations (breakpoints, stepping, evaluation, variable inspection) to the renderer.
+
+### State
+
+Only one debug session can be active at a time:
+
+```javascript
+activeSession = {
+  process: <ChildProcess>,         // Node.js debuggee process
+  ws: <WebSocket>,                 // CDP WebSocket connection
+  scriptPath: "/path/to/script.js",
+  cwd: "/path/to/dir",
+  breakpoints: {                   // { breakpointId: { file, line } }
+    "1:10:0:...": { file: "/path/to/file.js", line: 10 }
+  },
+  scriptSources: {                 // { scriptId: url } from Debugger.scriptParsed
+    "42": "file:///path/to/module.js"
+  },
+  nextId: 0,                       // Auto-incrementing CDP command ID
+}
+```
+
+### CDP Event Handling
+
+The service listens for these CDP events and broadcasts them to the renderer:
+
+| CDP Event | Push Channel | Description |
+|---|---|---|
+| `Debugger.paused` | `debug-paused` | Hit breakpoint or pause; includes call stack, scopes, paused file/line |
+| `Debugger.resumed` | `debug-resumed` | Execution resumed |
+| `Debugger.scriptParsed` | -- | Caches `scriptId` to URL mapping (internal) |
+| `Runtime.consoleAPICalled` | `debug-output` | Console output from the debuggee |
+| `Runtime.exceptionThrown` | `debug-output` | Uncaught exception in the debuggee |
+
+### Exported Methods
+
+#### `init(broadcast)`
+
+Set the broadcast function for sending debug events to the renderer.
+
+#### `launch(opts)`
+
+Launch a Node.js script with `--inspect-brk=0` and connect to the CDP WebSocket.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `opts.scriptPath` | `string` | Absolute path to the `.js` file to debug |
+| `opts.cwd` | `string` | Working directory (default: script's directory) |
+| `opts.args` | `string[]` | Additional arguments for the script (optional) |
+| `opts.env` | `object` | Additional environment variables (optional) |
+
+**Returns:** `Promise<{ success: true, pid: number } | { success: false, error: string }>`
+
+**Behavior:**
+1. Rejects if a session is already active
+2. Spawns the script with `--inspect-brk=0` (random port, break on first statement)
+3. Parses stderr for the `ws://` debugger URL
+4. Connects via WebSocket within a 5-second timeout
+5. Enables `Debugger` and `Runtime` CDP domains
+6. Calls `Runtime.runIfWaitingForDebugger` to start execution (pauses on first line)
+7. On process exit, broadcasts `debug-stopped` and cleans up
+
+#### `stop()`
+
+Stop the active debug session. Closes the WebSocket and kills the debuggee process (SIGTERM, then SIGKILL after 2 seconds).
+
+**Returns:** `{ success: boolean, error?: string }`
+
+#### `setBreakpoint(filePath, lineNumber, condition?)`
+
+Set a breakpoint by file path and line number.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `filePath` | `string` | Absolute file path |
+| `lineNumber` | `number` | 1-based line number |
+| `condition` | `string` | Optional conditional expression |
+
+**Returns:** `Promise<{ success: boolean, breakpointId?: string, actualLine?: number, error?: string }>`
+
+Resolves symlinks before setting the breakpoint (e.g., `/tmp` to `/private/tmp` on macOS) so paths match V8's internal URLs.
+
+#### `removeBreakpoint(breakpointId)`
+
+Remove a breakpoint by its CDP breakpoint ID.
+
+**Returns:** `Promise<{ success: boolean, error?: string }>`
+
+#### `resume()`
+
+Resume script execution (continue).
+
+**Returns:** `Promise<{ success: boolean, error?: string }>`
+
+#### `pause()`
+
+Pause script execution.
+
+**Returns:** `Promise<{ success: boolean, error?: string }>`
+
+#### `stepOver()`
+
+Step over the current statement.
+
+**Returns:** `Promise<{ success: boolean, error?: string }>`
+
+#### `stepInto()`
+
+Step into the next function call.
+
+**Returns:** `Promise<{ success: boolean, error?: string }>`
+
+#### `stepOut()`
+
+Step out of the current function.
+
+**Returns:** `Promise<{ success: boolean, error?: string }>`
+
+#### `evaluate(expression, callFrameId?)`
+
+Evaluate a JavaScript expression. If `callFrameId` is provided, evaluates on that call frame (when paused); otherwise evaluates in the global runtime context.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `expression` | `string` | JavaScript expression to evaluate |
+| `callFrameId` | `string` | Specific call frame ID (optional) |
+
+**Returns:** `Promise<{ success: boolean, result?: { type, subtype, value, description, objectId, preview }, exceptionDetails?, error?: string }>`
+
+#### `getVariables(objectId)`
+
+Get properties for a scope or object. Used for drilling into the variables panel.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `objectId` | `string` | CDP `Runtime.RemoteObject` objectId |
+
+**Returns:** `Promise<{ success: boolean, variables?: { name, value, type, subtype, variablesReference, preview }[], error?: string }>`
+
+#### `getScopes(callFrameId?)`
+
+Returns a hint that scopes are provided with the `debug-paused` push event. Use `getVariables()` with a scope's `objectId` to drill into specific scopes.
+
+**Returns:** `Promise<{ success: boolean, message: string }>`
+
+#### `getSessionInfo()`
+
+Check if a debug session is currently active.
+
+**Returns:** `{ active: boolean, scriptPath?: string, pid?: number, breakpoints?: { breakpointId, file, line }[] }`
 
 ---
 
@@ -881,3 +1132,85 @@ Update the text content at the source location identified by a label.
 | `newText` | `string` | The new text content to write |
 
 **Returns:** `{ success: boolean, filePath?: string, error?: string }`
+
+---
+
+## AutoUpdateService
+
+**File:** `electron/services/AutoUpdateService.js` (166 lines)
+
+Implements an auto-update state machine using `electron-updater`. Checks for updates on startup (after a 10-second delay), downloads them automatically, and prompts the user to restart to install. In development (non-packaged) builds, update checks are disabled with an informational message.
+
+### Configuration
+
+```javascript
+autoUpdater.autoDownload = true;          // Download updates automatically
+autoUpdater.autoInstallOnAppQuit = true;  // Install on app quit
+```
+
+### State
+
+The service maintains a reactive state object that is broadcast to the renderer on every change:
+
+```javascript
+{
+  currentVersion: "1.2.3",        // From app.getVersion()
+  checking: false,                // Currently checking for updates
+  available: false,               // An update is available
+  downloaded: false,              // Update has been downloaded and is ready to install
+  updateInfo: null,               // electron-updater UpdateInfo object
+  progress: null,                 // Download progress ({ percent, bytesPerSecond, ... })
+  error: null,                    // Error message string, if any
+  lastCheckedAt: null,            // ISO timestamp of last check
+  message: "...",                 // Human-readable status message
+}
+```
+
+### Update Lifecycle
+
+The state machine progresses through these stages:
+
+| Event | State Changes | Message |
+|---|---|---|
+| `checking-for-update` | `checking: true`, `error: null` | "Checking for updates..." |
+| `update-available` | `checking: false`, `available: true` | "Downloading {version}..." |
+| `download-progress` | `progress: { percent, ... }` | "Downloading update: {N}%" |
+| `update-downloaded` | `downloaded: true`, `progress: { percent: 100 }` | "Update downloaded. Restart Synapse to install it." |
+| `update-not-available` | `checking: false`, `available: false` | "You are on the latest version." |
+| `error` | `checking: false`, `error: message` | Error description |
+
+### Exported Methods
+
+#### `initAutoUpdater(broadcast)`
+
+Initialize the auto-update system. In packaged builds, registers all `electron-updater` event handlers and schedules an initial update check after 10 seconds. In development builds, emits a status message but does not check for updates.
+
+| Parameter | Type | Description |
+|---|---|---|
+| `broadcast` | `Function` | `(channel, data) => void` -- sends `update-status` events to renderer |
+
+Only initializes once (idempotent). Subsequent calls are no-ops.
+
+#### `checkForUpdates()`
+
+Manually trigger an update check. In development builds, returns immediately with an informational message.
+
+**Returns:** `Promise<{ currentVersion, checking, available, downloaded, updateInfo, progress, error, lastCheckedAt, message }>`
+
+#### `quitAndInstallUpdate()`
+
+Quit the application and install the downloaded update. Requires that an update has already been downloaded (`state.downloaded === true`).
+
+**Returns:** `{ success: boolean, error?: string }`
+
+Uses `setImmediate` to defer the quit/install call, allowing the IPC response to reach the renderer before the app restarts. Calls `autoUpdater.quitAndInstall(false, true)` -- does not force-close windows silently, but does restart after install.
+
+#### `getUpdateState()`
+
+Get the current snapshot of the update state.
+
+**Returns:** `{ currentVersion, checking, available, downloaded, updateInfo, progress, error, lastCheckedAt, message }`
+
+#### `disposeAutoUpdater()`
+
+Clean up resources. Clears the startup check timer if it has not yet fired. Called during app shutdown.
