@@ -818,8 +818,17 @@ function registerIPCHandlers(getMainWindow) {
     parts.push(communicationTransparency);
 
     // Path reference block — agent must always know both directories AND its dashboard
+    const ctxDirsJson = ctxDirs.length > 0
+      ? '[' + ctxDirs.map(d => '"' + d + '"').join(', ') + ']'
+      : '[]';
+
     let dirRef =
       '# Directory References\n\n' +
+      'Synapse_Instance_Location: ' + synapseRoot + '\n' +
+      'DashboardID: ' + dashboardId + '\n' +
+      'Synapse_Dashboard: ' + synapseRoot + '/dashboards/' + dashboardId + '\n' +
+      'Target_Directory: ' + (projectDir || synapseRoot) + '\n' +
+      'Context_Directories: ' + ctxDirsJson + '\n\n' +
       'TRACKER ROOT (Synapse): ' + synapseRoot + '\n' +
       'PROJECT ROOT (target project): ' + (projectDir || synapseRoot) + '\n' +
       '===DASHBOARD_BINDING_START===\n' +

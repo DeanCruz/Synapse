@@ -6,7 +6,7 @@ This document covers Synapse's Electron app settings, build configuration, and d
 
 ## Settings Store
 
-**File:** `electron/settings.js` (105 lines)
+**File:** `electron/settings.js` (108 lines)
 
 Settings are persisted as a JSON file at `{userData}/synapse-settings.json` (the Electron `userData` directory, e.g., `~/Library/Application Support/synapse/` on macOS). The store implements a simple get/set interface with in-memory caching and synchronous disk writes.
 

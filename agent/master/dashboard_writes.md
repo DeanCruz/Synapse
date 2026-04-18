@@ -36,6 +36,8 @@ Because the server re-reads the full file on every change, **atomic writes are m
 
 **Location:** `{tracker_root}/dashboards/{id}/initialization.json`
 
+> **Mandatory pre-read:** Before writing this file, read [`agent/master/initialization_blueprint.md`](./initialization_blueprint.md). It contains the authoritative schema, minimum/full/Chains worked examples, and a 13-item pre-write checklist. A PreToolUse hook (`.claude/hooks/validate-initialization-schema.sh`) enforces the blueprint and blocks malformed writes with a detailed reason — you will not silently corrupt a dashboard.
+
 ### Write-Once Rule — NON-NEGOTIABLE
 
 `initialization.json` is written **once** during the planning phase. After the plan is written, the master **never updates it** — with exactly three exceptions:

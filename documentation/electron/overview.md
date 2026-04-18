@@ -34,7 +34,7 @@ Synapse ships as an Electron desktop application. The Electron layer wraps the R
 
 ## Main Process Entry Point
 
-**File:** `electron/main.js` (173 lines)
+**File:** `electron/main.js` (187 lines)
 
 The main process is responsible for:
 
@@ -70,7 +70,7 @@ This allows the renderer to load assets via `app://synapse/dist/index.html` with
 
 ## Preload Script and Context Bridge
 
-**File:** `electron/preload.js` (244 lines)
+**File:** `electron/preload.js` (248 lines)
 
 The preload script exposes `window.electronAPI` to the renderer via Electron's `contextBridge`. All communication between renderer and main process flows through this API. There are no direct `ipcRenderer` calls from the renderer -- everything is proxied through the bridge.
 
@@ -81,7 +81,7 @@ The preload script exposes `window.electronAPI` to the renderer via Electron's `
 | **Push Events** | Main -> Renderer | `ipcRenderer.on()` / `webContents.send()` | Real-time updates (file changes, worker output, swarm state) |
 | **Pull Requests** | Renderer -> Main | `ipcRenderer.invoke()` / `ipcMain.handle()` | Request-response data fetching and mutations |
 
-### Push Event Channels (33 channels)
+### Push Event Channels (26 channels)
 
 The preload script whitelists these channels for push events:
 
@@ -112,6 +112,7 @@ The preload script whitelists these channels for push events:
 | `debug-output` | `{ type, text }` | Console/stdout/stderr from debuggee |
 | `settings-changed` | `{ settings }` | Settings updated (synced to renderer) |
 | `preview-edit-request` | `{ label, newText }` | Live Preview inline text edit request |
+| `update-status` | `{ currentVersion, checking, available, downloaded, ... }` | Auto-update state change |
 
 ---
 
@@ -134,6 +135,7 @@ The main process delegates all business logic to service modules under `electron
 | **InstrumentService** | `InstrumentService.js` | Project file instrumentation (`data-synapse-label` attributes) |
 | **PreviewService** | `PreviewService.js` | Label-to-source file mapping for Live Preview |
 | **PreviewTextWriter** | `PreviewTextWriter.js` | Text update writer for Live Preview edits |
+| **AutoUpdateService** | `AutoUpdateService.js` | Electron auto-update state machine via `electron-updater` |
 
 Additionally, the main process imports shared services from `src/server/services/`:
 
@@ -204,26 +206,27 @@ This mirrors the SSE initial data burst from the web server, ensuring the render
 
 ```
 electron/
-  main.js                          -- Main process entry point (173 lines)
-  preload.js                       -- Context bridge (244 lines)
-  settings.js                      -- JSON-backed settings store (105 lines)
-  ipc-handlers.js                  -- IPC handler registration + watchers (~2200 lines)
+  main.js                          -- Main process entry point (187 lines)
+  preload.js                       -- Context bridge (248 lines)
+  settings.js                      -- JSON-backed settings store (108 lines)
+  ipc-handlers.js                  -- IPC handler registration + watchers (~2925 lines)
   assets/
     icon.icns                      -- macOS app icon
     icon.iconset/
       icon_512x512.png             -- High-res PNG for dock icon
   services/
-    SwarmOrchestrator.js           -- Dispatch engine (764 lines)
-    ClaudeCodeService.js           -- Claude CLI management (370 lines)
+    SwarmOrchestrator.js           -- Dispatch engine (780 lines)
+    ClaudeCodeService.js           -- Claude CLI management (369 lines)
     CodexService.js                -- Codex CLI management (225 lines)
-    PromptBuilder.js               -- Prompt construction (372 lines)
+    PromptBuilder.js               -- Prompt construction (407 lines)
     ProjectService.js              -- Project detection (193 lines)
     CommandsService.js             -- Command management (651 lines)
     TaskEditorService.js           -- Swarm/task CRUD (377 lines)
     ConversationService.js         -- Chat conversations (143 lines)
     DebugService.js                -- Node.js CDP debugger (796 lines)
-    TerminalService.js             -- PTY terminal sessions (182 lines)
-    InstrumentService.js           -- Project instrumentation for Live Preview
-    PreviewService.js              -- Label-to-source mapper for Live Preview
-    PreviewTextWriter.js           -- Text update writer for Live Preview
+    TerminalService.js             -- PTY terminal sessions (187 lines)
+    InstrumentService.js           -- Project instrumentation (511 lines)
+    PreviewService.js              -- Label-to-source mapper (311 lines)
+    PreviewTextWriter.js           -- Text update writer (507 lines)
+    AutoUpdateService.js           -- Auto-update state machine (166 lines)
 ```

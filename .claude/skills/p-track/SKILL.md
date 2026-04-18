@@ -32,7 +32,7 @@ model: opus
 !`echo "TRACKER_ROOT: $(pwd)"`
 !`echo "DATE: $(date -u +%Y-%m-%dT%H:%M:%SZ)"`
 !`echo "TASK_DATE: $(date -u +%m_%d_%y)"`
-!`echo "AVAILABLE_DASHBOARDS: $(ls dashboards/ 2>/dev/null | grep -v ide | tr '\n' ' ')"`
+!`echo "ASSIGNED_DASHBOARD: ${SYNAPSE_DASHBOARD_ID:-UNSET — extract from your system prompt's \`DASHBOARD ID:\` directive, or ask the user. Never scan.}"`
 
 ## Project Context
 
@@ -74,7 +74,11 @@ Topological sort (detect cycles), compute critical path, identify bottleneck tas
 
 ### Step 11: Select Dashboard and Populate Plan
 
-See master-protocol for dashboard selection priority. **Archive before clear — NON-NEGOTIABLE.** Write `initialization.json`, `logs.json`, present plan to user, **execute the Approval Gate (Step 11E) — NON-NEGOTIABLE.**
+See master-protocol for dashboard selection priority. **Archive before clear — NON-NEGOTIABLE.**
+
+**Before writing `initialization.json`, read [`agent/master/initialization_blueprint.md`](../../../agent/master/initialization_blueprint.md) — NON-NEGOTIABLE.** It contains the authoritative schema, worked examples, and a pre-write checklist. The `validate-initialization-schema.sh` hook blocks any write that violates the blueprint. Skipping the blueprint means guessing — and a single missing field produces a dashboard with wave headers but no task cards.
+
+Write `initialization.json`, `logs.json`, present plan to user, **execute the Approval Gate (Step 11E) — NON-NEGOTIABLE.**
 
 ### Step 11E: Approval Gate — NON-NEGOTIABLE
 

@@ -6,6 +6,37 @@ All responses use `Content-Type: application/json`.
 
 ---
 
+## Endpoint Summary
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/events` | SSE connection (see [SSE Events](./sse-events.md)) |
+| `GET` | `/api/dashboards` | List all dashboard IDs |
+| `POST` | `/api/dashboards` | Create a new dashboard |
+| `DELETE` | `/api/dashboards/:id` | Delete a dashboard |
+| `GET` | `/api/dashboards/statuses` | Status dots for all dashboards |
+| `GET` | `/api/dashboards/:id/initialization` | Get dashboard plan data |
+| `GET` | `/api/dashboards/:id/logs` | Get dashboard log entries |
+| `GET` | `/api/dashboards/:id/progress` | Get all progress files |
+| `GET` | `/api/dashboards/:id/dispatchable` | Get tasks ready for dispatch |
+| `POST` | `/api/dashboards/:id/archive` | Archive dashboard and reset |
+| `POST` | `/api/dashboards/:id/save-history` | Save history without clearing |
+| `POST` | `/api/dashboards/:id/clear` | Archive, save history, and reset |
+| `GET` | `/api/dashboards/:id/metrics` | Get swarm performance metrics |
+| `GET` | `/api/dashboards/:id/export` | Full read-only swarm data export |
+| `GET` | `/api/overview` | Meta-view of all dashboards |
+| `GET` | `/api/history` | List history summaries |
+| `GET` | `/api/history/analytics` | History analytics data |
+| `GET` | `/api/archives` | List archived dashboards |
+| `GET` | `/api/archives/:name` | Get single archive data |
+| `DELETE` | `/api/archives/:name` | Delete an archive |
+| `GET` | `/api/queue` | List queued swarm tasks |
+| `GET` | `/api/queue/:id` | Get single queue item data |
+
+**Total: 22 endpoints** (21 REST + 1 SSE)
+
+---
+
 ## URL Routing
 
 The `handleApiRoute(req, res, url)` function processes all REST API requests. It returns `true` if the route was handled, `false` if not (caller falls through to 404).

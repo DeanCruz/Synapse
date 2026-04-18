@@ -16,10 +16,31 @@ var WORKER_INSTRUCTIONS_PATH = path.join(ROOT, 'agent', 'instructions', 'tracker
  * @param {string} opts.taskId
  * @param {string} opts.dashboardId
  * @param {string} opts.trackerRoot — path to Synapse root
+ * @param {string} [opts.projectPath] — target project directory
  * @param {string[]} [opts.additionalContextDirs] — additional read-only context directories
  * @returns {string}
  */
+// Known dashboard-ID shapes: `ide` (reserved), 6-char hex, or legacy `dashboardN`.
+// Garbage values here mean something upstream (master planning or IPC handler)
+// passed a made-up path instead of the assigned dashboard ID.
+var DASHBOARD_ID_SHAPE = /^(ide|[a-f0-9]{6}|dashboard[0-9]+)$/;
+
 function buildSystemPrompt(opts) {
+  // Defensive: the dashboardId threaded into the worker's system prompt must be
+  // a real dashboard ID. If the master picked a wrong or made-up ID during
+  // planning, we fail loudly here instead of silently routing every progress
+  // file into the wrong dashboard directory.
+  if (!opts || !opts.dashboardId) {
+    throw new Error('PromptBuilder.buildSystemPrompt: opts.dashboardId is required');
+  }
+  if (!DASHBOARD_ID_SHAPE.test(opts.dashboardId)) {
+    throw new Error(
+      'PromptBuilder.buildSystemPrompt: opts.dashboardId=' + JSON.stringify(opts.dashboardId) +
+      ' does not match a known dashboard ID shape (ide | 6-char hex | dashboardN). ' +
+      'Refusing to dispatch a worker bound to a non-existent dashboard.'
+    );
+  }
+
   var parts = [];
 
   // Load worker instructions
@@ -33,12 +54,27 @@ function buildSystemPrompt(opts) {
   // Add concrete paths
   parts.push('\n---\n');
   parts.push('## Your Dispatch Context\n');
+  parts.push('- **Synapse_Instance_Location:** `' + opts.trackerRoot + '`');
+  parts.push('- **DashboardID:** `' + opts.dashboardId + '`');
+  parts.push('- **Synapse_Dashboard:** `' + opts.trackerRoot + '/dashboards/' + opts.dashboardId + '`');
+  parts.push('- **Target_Directory:** `' + (opts.projectPath || 'N/A') + '`');
+
+  var ctxDirs = opts.additionalContextDirs || [];
+  if (ctxDirs.length > 0) {
+    parts.push('- **Context_Directories:** `[' + ctxDirs.map(function(d) { return '"' + d + '"'; }).join(', ') + ']`');
+  } else {
+    parts.push('- **Context_Directories:** `[]`');
+  }
+
+  parts.push('');
+  parts.push('### Path References (derived from above)');
   parts.push('- **tracker_root:** `' + opts.trackerRoot + '`');
-  parts.push('- **dashboardId:** `' + opts.dashboardId + '`');
   parts.push('- **dashboard_id:** `' + opts.dashboardId + '` — include this value as `"dashboard_id"` in every progress file write');
   parts.push('- **task_id:** `' + opts.taskId + '`');
   parts.push('- **progress_file:** `' + opts.trackerRoot + '/dashboards/' + opts.dashboardId + '/progress/' + opts.taskId + '.json`');
   parts.push('- **ide_dashboard:** `ide` (reserved — always exists, never use for swarms)');
+  parts.push('');
+  parts.push('**IMPORTANT:** Always use the Synapse_Instance_Location and Synapse_Dashboard paths above when writing progress files or updating dashboard state. Never assume a different Synapse directory.');
 
   // Additional context directories (read-only reference)
   var additionalDirs = opts.additionalContextDirs || [];

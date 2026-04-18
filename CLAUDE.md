@@ -113,12 +113,13 @@ Synapse/                              <-- {tracker_root}
 |       +-- failure-protocol/         <-- Auto-loaded failure recovery protocol
 |
 |-- _commands/
-|   |-- Synapse/                      <-- 24 swarm orchestration commands
-|   |   |-- p_track.md, p.md, master_plan_track.md, add_task.md, dispatch.md,
-|   |   |-- eager_dispatch.md, retry.md, resume.md, p_track_resume.md,
-|   |   |-- track_resume.md, update_dashboard.md, export.md, cancel.md,
-|   |   |-- cancel-safe.md, status.md, logs.md, inspect.md, deps.md,
-|   |   |-- history.md, start.md, stop.md, reset.md, guide.md, project.md
+|   |-- Synapse/                      <-- 25 swarm orchestration commands
+|   |   |-- p_track.md, p_track_plan.md, p.md, master_plan_track.md,
+|   |   |-- add_task.md, dispatch.md, eager_dispatch.md, retry.md,
+|   |   |-- resume.md, p_track_resume.md, track_resume.md,
+|   |   |-- update_dashboard.md, export.md, cancel.md, cancel-safe.md,
+|   |   |-- status.md, logs.md, inspect.md, deps.md, history.md,
+|   |   |-- start.md, stop.md, reset.md, guide.md, project.md
 |   |-- project/                      <-- 22 project analysis commands
 |   |   |-- initialize.md, onboard.md, scaffold.md, create_claude.md,
 |   |   |-- context.md, review.md, health.md, scope.md, trace.md,
@@ -139,10 +140,10 @@ Synapse/                              <-- {tracker_root}
 |   |   |-- tracker_worker_instructions_lite.md  <-- LITE worker protocol
 |   |   |-- tracker_multi_plan_instructions.md
 |   |   |-- failed_task.md, common_pitfalls.md, dashboard_resolution.md
-|   |-- master/                       <-- Master agent reference docs (9 files)
+|   |-- master/                       <-- Master agent reference docs (10 files)
 |   |   |-- role.md, dashboard_writes.md, ui_map.md, eager_dispatch.md,
 |   |   |-- failure_recovery.md, worker_prompts.md, compaction_recovery.md,
-|   |   +-- dashboard_protocol.md, pki_integration.md
+|   |   +-- dashboard_protocol.md, pki_integration.md, initialization_blueprint.md
 |   |-- worker/                       <-- Worker agent reference docs (5 files)
 |   |   |-- progress_reporting.md, return_format.md, deviations.md,
 |   |   +-- upstream_deps.md, sibling_comms.md
@@ -155,10 +156,11 @@ Synapse/                              <-- {tracker_root}
 |
 |-- electron/                         <-- Electron desktop app
 |   |-- main.js                       <-- App lifecycle, window creation, app:// protocol
-|   |-- preload.js                    <-- IPC bridge (33 push channels, ~140 pull methods)
-|   |-- ipc-handlers.js              <-- Central IPC registration (~2200 lines)
+|   |-- preload.js                    <-- IPC bridge (26 push channels, ~140 pull methods)
+|   |-- ipc-handlers.js              <-- Central IPC registration (~2925 lines)
 |   |-- settings.js                   <-- Persistent settings store (JSON file)
 |   +-- services/
+|       |-- AutoUpdateService.js      <-- Electron auto-update state machine
 |       |-- ClaudeCodeService.js      <-- Claude CLI process spawning/management
 |       |-- CodexService.js           <-- Codex CLI process spawning/management
 |       |-- SwarmOrchestrator.js      <-- GUI swarm dispatch engine + circuit breaker
@@ -209,18 +211,21 @@ Synapse/                              <-- {tracker_root}
 |   |   |-- git/                      <-- Git Manager (12 components)
 |   |   |   |-- GitManagerView.jsx, BranchPanel.jsx, ChangesPanel.jsx,
 |   |   |   |-- CommitPanel.jsx, DiffViewer.jsx, HistoryPanel.jsx,
-|   |   |   +-- RemotePanel.jsx, RepoTabs.jsx, ...
+|   |   |   |-- RemotePanel.jsx, RepoTabs.jsx, GitWelcome.jsx,
+|   |   |   +-- InitFlow.jsx, QuickActions.jsx, SafetyDialogs.jsx
 |   |   |-- ide/                      <-- Code Explorer (12 components)
-|   |   |   |-- IDEView.jsx, CodeEditor.jsx, FileExplorer.jsx,
-|   |   |   |-- EditorTabs.jsx, SearchPanel.jsx, DebugPanels.jsx,
-|   |   |   +-- DebugToolbar.jsx, ProblemsPanel.jsx, ...
+|   |   |   |-- IDEView.jsx, IDEWelcome.jsx, CodeEditor.jsx,
+|   |   |   |-- FileExplorer.jsx, EditorTabs.jsx, WorkspaceTabs.jsx,
+|   |   |   |-- SearchPanel.jsx, SearchResults.jsx, DebugPanels.jsx,
+|   |   |   +-- DebugToolbar.jsx, DebugConsolePanel.jsx, ProblemsPanel.jsx
 |   |   |-- preview/
 |   |   |   +-- PreviewView.jsx       <-- Live Preview tab
-|   |   +-- modals/                   <-- Modal dialogs (14 components)
-|   |       |-- CommandsModal.jsx, ProjectModal.jsx, SettingsModal.jsx,
-|   |       |-- PlanningModal.jsx, TaskEditorModal.jsx, ArchiveModal.jsx,
-|   |       |-- HistoryModal.jsx, PermissionModal.jsx, AgentDetails.jsx,
-|   |       +-- TaskDetails.jsx, WorkerTerminal.jsx, ...
+|   |   +-- modals/                   <-- Modal dialogs (15 components)
+|   |       |-- Modal.jsx, CommandsModal.jsx, ProjectModal.jsx,
+|   |       |-- SettingsModal.jsx, PlanningModal.jsx, TaskEditorModal.jsx,
+|   |       |-- ArchiveModal.jsx, ConfirmModal.jsx, ErrorModal.jsx,
+|   |       |-- HistoryModal.jsx, LogsModal.jsx, PermissionModal.jsx,
+|   |       +-- AgentDetails.jsx, TaskDetails.jsx, WorkerTerminal.jsx
 |   |-- preview/
 |   |   +-- inject-overlay.js        <-- Webview injection script for Live Preview
 |   |-- utils/                        <-- Utility modules
@@ -261,6 +266,7 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | | `!learn_update` | Incrementally refresh the PKI (stale/new files only) |
 | | `!instrument` | Add `data-synapse-label` attributes to project files for Live Preview |
 | **Swarm** | `!p_track {prompt}` | **Primary.** Full parallel swarm with live dashboard |
+| | `!p_track_plan {plan_path}` | Plan-driven swarm — reads a `.md` plan, populates dashboard, awaits approval |
 | | `!p {prompt}` | Lightweight parallel dispatch |
 | | `!master_plan_track` | Multi-stream orchestration across dashboards |
 | | `!add_task {prompt}` | Add tasks to an active swarm mid-flight |

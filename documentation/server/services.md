@@ -240,6 +240,37 @@ Manages file system watchers that detect changes in dashboard files and broadcas
 - `dashboardWatchers` -- `Map<string, { initFile, logsFile, progressWatcher }>` tracking active watchers per dashboard
 - `lastKnownProgress` -- `Map<string, Map<string, number>>` tracking last-known mtime per progress file for reconciliation
 
+### Write Rejection Validation
+
+Before broadcasting any progress file update, the WatcherService runs `validateAndBroadcast()` which performs two hard-rejection checks:
+
+1. **`task_id` mismatch** -- The `task_id` field inside the progress file must match the filename (e.g., file `1.2.json` must contain `task_id: "1.2"`). Prevents workers from accidentally writing to the wrong progress file.
+
+2. **`dashboard_id` mismatch** -- If the progress file contains a `dashboard_id` field, it must match the dashboard directory the file lives in. Prevents cross-dashboard writes.
+
+On rejection, instead of broadcasting `agent_progress`, the server broadcasts a `write_rejected` event:
+
+```json
+{
+  "dashboardId": "a3f7k2",
+  "filename": "1.2.json",
+  "task_id": "1.1",
+  "reason": "task_id_mismatch",
+  "details": "File contains task_id \"1.1\" but filename is \"1.2.json\" (expected task_id \"1.2\")",
+  "expected_task_id": "1.2",
+  "timestamp": "2026-03-20T14:05:00.000Z"
+}
+```
+
+**Rejection reasons:**
+
+| Reason | Description |
+|--------|-------------|
+| `task_id_mismatch` | Progress file `task_id` does not match the filename |
+| `dashboard_id_mismatch` | Progress file `dashboard_id` does not match the dashboard directory |
+
+Files missing a `dashboard_id` field are accepted with a console warning (backward compatibility with older format files).
+
 ### Functions
 
 #### `watchDashboard(id, broadcastFn)`
@@ -309,13 +340,26 @@ Starts watching the `queue/` directory recursively for new or removed queue item
 
 #### `startReconciliation(broadcastFn)`
 
-Starts a periodic timer (`RECONCILE_INTERVAL_MS`, default 5000ms) that scans all watched dashboards' progress directories for files that may have been missed by `fs.watch`. Compares file modification times against `lastKnownProgress` and broadcasts `agent_progress` events for any changes. Also performs dependency checks for newly completed tasks.
+Starts a periodic timer (`RECONCILE_INTERVAL_MS`, default 5000ms) that scans all watched dashboards' progress directories for files that may have been missed by `fs.watch`. This is a safety net -- `fs.watch` is not guaranteed to fire for every filesystem event (especially on network mounts, Docker volumes, or under heavy I/O).
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `broadcastFn` | `function` | `(eventName, data) => void` -- SSE broadcast function |
 
 **Returns:** `void`
+
+**How it works:**
+
+The internal `reconcileProgressFiles(id, broadcastFn)` function runs for each watched dashboard on every interval tick:
+
+1. Reads all `.json` files from the dashboard's `progress/` directory
+2. For each file, compares `stat.mtimeMs` against the `lastKnownProgress` map
+3. Skips files whose mtime has not changed since last check
+4. For changed files: reads the JSON, validates with `isValidProgress()`, broadcasts `agent_progress`
+5. If a newly completed task is detected, runs `computeNewlyUnblocked()` and broadcasts `tasks_unblocked`
+6. Cleans up stale entries from `lastKnownProgress` for deleted progress files
+
+This ensures the dashboard stays in sync even if `fs.watch` drops events. The 5-second interval balances responsiveness against disk I/O overhead.
 
 ---
 
@@ -810,3 +854,185 @@ Validates the dependency graph defined by the agents array. Checks for:
 | `dangling_ref` | Error | `depends_on` references a task ID not in the agents array |
 | `cycle` | Error | Circular dependency chain detected (lists all involved task IDs) |
 | `orphan` | Warning | Task has no connections to the dependency graph (Wave 1 exempt) |
+
+---
+
+## JSON Utilities
+
+**File:** `src/server/utils/json.js`
+
+Provides JSON file I/O with retry logic, atomic write operations, and schema validators for dashboard data files. Used throughout the server by DashboardService, WatcherService, and API routes.
+
+### Reading Functions
+
+#### `readJSON(filePath)`
+
+Reads and parses a JSON file synchronously. Returns `null` on any error (file missing, permission denied, malformed JSON). Malformed JSON is logged to stderr for debugging.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `filePath` | `string` | Absolute path to the JSON file |
+
+**Returns:** `Object | null` -- Parsed JSON, or `null` on error.
+
+---
+
+#### `readJSONAsync(filePath)`
+
+Async version of `readJSON` using `fs.promises.readFile`.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `filePath` | `string` | Absolute path to the JSON file |
+
+**Returns:** `Promise<Object | null>`
+
+---
+
+#### `readJSONWithRetry(filePath, retryDelayMs)`
+
+Reads a JSON file with a single retry after a delay. Designed for progress files that may be mid-write when read. On first attempt, if the file is missing or malformed, waits `retryDelayMs` (default: `PROGRESS_RETRY_MS` = 80ms) and tries once more.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `filePath` | `string` | Absolute path to the JSON file |
+| `retryDelayMs` | `number` (optional) | Delay before retry in milliseconds. Defaults to `PROGRESS_RETRY_MS` (80ms). |
+
+**Returns:** `Promise<Object | null>` -- Parsed JSON, or `null` if both attempts fail.
+
+**Usage context:** Called by `WatcherService.watchDashboard()` when reading progress files after an `fs.watch` event fires. The delay accounts for the window between a file being opened for writing and the write completing.
+
+---
+
+### Atomic Write Functions
+
+These functions prevent data corruption that can occur when a reader opens a file while a writer is mid-write. They work by writing to a temporary `.tmp` file first, then atomically renaming it to the target path. On POSIX systems, `rename()` is atomic -- readers either see the old complete file or the new complete file, never a partial write.
+
+#### `writeAtomic(filePath, data)`
+
+Writes data to a file atomically (synchronous). If `data` is an object, it is JSON-stringified with 2-space indentation. On error, cleans up the `.tmp` file and rethrows.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `filePath` | `string` | Target file path |
+| `data` | `string | Object` | Content to write. Objects are JSON-stringified. |
+
+**Returns:** `void`
+
+**Throws:** Rethrows any filesystem error after cleaning up the temp file.
+
+**Implementation:**
+1. Write content to `{filePath}.tmp`
+2. Rename `{filePath}.tmp` to `{filePath}` (atomic on POSIX)
+3. On error: delete `{filePath}.tmp` if it exists, then rethrow
+
+**Used by:** `DashboardService.ensureDashboard()` for creating default `initialization.json` and `logs.json` files.
+
+---
+
+#### `writeAtomicAsync(filePath, data)`
+
+Async version of `writeAtomic` using `fs.promises`. Same behavior and error handling.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `filePath` | `string` | Target file path |
+| `data` | `string | Object` | Content to write. Objects are JSON-stringified. |
+
+**Returns:** `Promise<void>`
+
+**Throws:** Rethrows any filesystem error after cleaning up the temp file.
+
+---
+
+### Schema Validators
+
+These functions validate the structure of dashboard JSON files. They enforce required fields and value constraints but are intentionally lenient on optional fields for backward compatibility. Used by `WatcherService` to reject invalid data before broadcasting SSE events.
+
+#### `isValidInitialization(data)`
+
+Validates an `initialization.json` object.
+
+**Checks:**
+- `task` must be `null` (empty dashboard) or an object with required fields
+- If `task` is non-null: `task.name` must be a non-empty string, `task.type` must be `"Waves"` or `"Chains"`
+- `agents` must be an array; each entry must have non-empty string `id` and `title`
+- `waves` (if present) must be an array; each entry must have `id` and non-empty string `name`
+
+**Returns:** `boolean`
+
+---
+
+#### `isValidProgress(data, expectedTaskId, expectedDashboardId)`
+
+Validates a progress file object. Enforces field types and optionally checks that `task_id` and `dashboard_id` match expected values (used to catch cross-worker write violations).
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `data` | `Object` | Progress data to validate |
+| `expectedTaskId` | `string` (optional) | Expected `task_id` value (derived from filename) |
+| `expectedDashboardId` | `string` (optional) | Expected `dashboard_id` value (derived from directory) |
+
+**Checks:**
+- `task_id` must be a non-empty string
+- `status` must be one of: `"in_progress"`, `"completed"`, `"failed"`
+- `stage` (if present) must be one of: `"reading_context"`, `"planning"`, `"implementing"`, `"testing"`, `"finalizing"`, `"completed"`, `"failed"`
+- `started_at` and `completed_at` (if present) must be strings or null
+- `completed_at` must be null when `status` is `"in_progress"`
+- `milestones`, `deviations`, `logs` (if present) must be arrays
+- If `expectedTaskId` is provided and `data.task_id` does not match, validation fails (logged as a cross-worker write violation)
+- If `expectedDashboardId` is provided and `data.dashboard_id` is present but does not match, validation fails
+
+**Returns:** `boolean`
+
+---
+
+#### `isValidLogs(data)`
+
+Validates a `logs.json` object.
+
+**Checks:**
+- Must be a non-null object
+- Must have an `entries` field that is an array
+
+**Returns:** `boolean`
+
+---
+
+## Named Constants
+
+**File:** `src/server/utils/constants.js`
+
+Defines all timing values, directory paths, and default data structures used across the server.
+
+### Directory Paths
+
+| Constant | Default | Description |
+|----------|---------|-------------|
+| `ROOT` | `path.resolve(__dirname, '..', '..', '..')` | Synapse repository root |
+| `DASHBOARDS_DIR` | `{ROOT}/dashboards` | Active dashboard data |
+| `QUEUE_DIR` | `{ROOT}/queue` | Queued swarm tasks |
+| `ARCHIVE_DIR` | `{ROOT}/Archive` | Archived dashboard snapshots |
+| `HISTORY_DIR` | `{ROOT}/history` | History summary files |
+| `CONVERSATIONS_DIR` | `{ROOT}/conversations` | Chat conversation files |
+
+### Timing Values
+
+| Constant | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `3456` | HTTP server port (overridable via `PORT` env var) |
+| `INIT_POLL_MS` | `100` | `fs.watchFile` polling interval for `initialization.json` and `logs.json` |
+| `PROGRESS_RETRY_MS` | `80` | Retry delay for reading progress files that may be mid-write |
+| `PROGRESS_READ_DELAY_MS` | `30` | Initial delay before reading a changed progress file (lets the write finish) |
+| `RECONCILE_DEBOUNCE_MS` | `300` | Debounce interval for directory-level reconciliation |
+| `RECONCILE_INTERVAL_MS` | `5000` | Periodic reconciliation scan interval (catches missed `fs.watch` events) |
+| `HEARTBEAT_MS` | `15000` | SSE heartbeat ping interval (15 seconds) |
+| `DEPENDENCY_CHECK_DELAY_MS` | `100` | Delay after a task completes before checking for unblocked downstream tasks |
+
+### Default Data Structures
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `DEFAULT_INITIALIZATION` | `{ task: null, agents: [], waves: [], chains: [], history: [] }` | Empty dashboard initialization state |
+| `DEFAULT_LOGS` | `{ entries: [] }` | Empty logs state |
+| `MIME_TYPES` | `{ .html, .css, .js, .json }` | Static file MIME type mapping |

@@ -42,6 +42,46 @@ All swarm commands are located at `{tracker_root}/_commands/Synapse/`. They mana
 
 ---
 
+### `!p_track_plan`
+
+**Purpose:** Plan-driven swarm execution. The invoking agent becomes the master agent -- reads a pre-written `.md` plan document, translates it into a dependency-aware swarm, populates the dashboard, waits for user approval, then dispatches and monitors workers. Unlike `!p_track` (which discovers and decomposes from a prompt), `!p_track_plan` faithfully translates an existing plan.
+
+**Syntax:**
+```
+!p_track_plan [--dashboard {id}] {plan_path}
+```
+
+**Arguments:**
+- `{plan_path}` -- Path to a `.md` plan document. Absolute path, or relative to `{tracker_root}`.
+- `--dashboard {id}` -- (Optional) Force a specific dashboard.
+
+**Key Behavior:**
+- Reads the plan document in full and analyzes its structure: phases, files, dependencies, constraints, risks
+- Translates plan phases to waves, bullet points to tasks, phase ordering to dependencies
+- Preserves plan structure -- the dependency graph mirrors the source document
+- Presents the translated plan with an approval gate before dispatching
+- After approval, runs the same execution and completion lifecycle as `!p_track`
+- The plan document is read-only -- the master never modifies it
+- Ambiguities are surfaced during the approval gate, not silently resolved
+
+**Translation Rules:**
+- Plan phases become waves; items within a phase with no interdependency become parallel tasks
+- Each concrete action item becomes a task (1-5 min, 1-2 files modified)
+- Phase ordering maps to task dependencies
+- Every task is traceable to a specific section of the source plan
+
+**When to use `!p_track_plan` vs `!p_track` vs `!plan`:**
+- `!p_track_plan` -- You have a pre-written plan document to execute
+- `!p_track` -- Starting from a prompt, no existing plan
+- `!plan` -- Want analysis only, no execution (produces a plan document)
+
+**Natural workflow:** `!plan {task}` --> review and refine --> `!p_track_plan {plan_path}` to execute
+
+**Produces:**
+- Same output files as `!p_track` (master task file, rationale, initialization.json, logs.json, progress files)
+
+---
+
 ### `!p`
 
 **Purpose:** Lightweight parallel dispatch. Deep planning and high-quality worker prompts without any dashboard tracking overhead.

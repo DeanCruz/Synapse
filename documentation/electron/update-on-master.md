@@ -96,19 +96,21 @@ If no marker is present, release as a patch.
 
 ## App Update Behavior
 
-Once release artifacts are being published consistently, the packaged app can:
+The auto-update flow is implemented in `electron/services/AutoUpdateService.js` using `electron-updater`. See [services.md](services.md#autoupdateservice) for the full API reference.
 
-1. check GitHub Releases on launch
-2. detect whether a newer version exists
-3. download the latest build
-4. prompt the user to restart and apply the update
+The packaged app currently:
 
-For a non-technical team, the best UX is:
+1. checks for updates 10 seconds after launch (via `electron-updater`)
+2. downloads the update automatically in the background
+3. broadcasts download progress to the renderer via `update-status` push events
+4. prompts the user to restart and apply the update
 
-- check on startup
-- show current version in Settings
-- show a simple "Update available" prompt
-- provide one button to restart into the new version
+The UX follows these principles:
+
+- check on startup (automatic, no user action needed)
+- show current version and update status in Settings
+- show a simple "Update available" prompt when a download completes
+- provide one button to restart into the new version (`quitAndInstallUpdate()`)
 
 ---
 
