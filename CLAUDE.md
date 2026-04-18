@@ -140,10 +140,10 @@ Synapse/                              <-- {tracker_root}
 |   |   |-- tracker_worker_instructions_lite.md  <-- LITE worker protocol
 |   |   |-- tracker_multi_plan_instructions.md
 |   |   |-- failed_task.md, common_pitfalls.md, dashboard_resolution.md
-|   |-- master/                       <-- Master agent reference docs (9 files)
+|   |-- master/                       <-- Master agent reference docs (10 files)
 |   |   |-- role.md, dashboard_writes.md, ui_map.md, eager_dispatch.md,
 |   |   |-- failure_recovery.md, worker_prompts.md, compaction_recovery.md,
-|   |   +-- dashboard_protocol.md, pki_integration.md
+|   |   +-- dashboard_protocol.md, pki_integration.md, initialization_blueprint.md
 |   |-- worker/                       <-- Worker agent reference docs (5 files)
 |   |   |-- progress_reporting.md, return_format.md, deviations.md,
 |   |   +-- upstream_deps.md, sibling_comms.md
@@ -160,6 +160,7 @@ Synapse/                              <-- {tracker_root}
 |   |-- ipc-handlers.js              <-- Central IPC registration (~2925 lines)
 |   |-- settings.js                   <-- Persistent settings store (JSON file)
 |   +-- services/
+|       |-- AutoUpdateService.js      <-- Electron auto-update state machine
 |       |-- ClaudeCodeService.js      <-- Claude CLI process spawning/management
 |       |-- CodexService.js           <-- Codex CLI process spawning/management
 |       |-- SwarmOrchestrator.js      <-- GUI swarm dispatch engine + circuit breaker
