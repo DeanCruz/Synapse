@@ -19,6 +19,9 @@ This document defines the JSON schemas for all PKI data files. It is the authori
 │   ├── a1b2c3d4.json
 │   ├── e5f6a7b8.json
 │   └── ...
+├── insights/                      ← Swarm-level lessons learned (auto-generated post-swarm)
+│   ├── 2026-04-19_add-rate-limiting.json
+│   └── ...
 ├── domains.json                   ← Auto-discovered domain taxonomy
 ├── patterns.json                  ← Cross-cutting patterns & conventions
 └── queries/                       ← Pre-computed domain bundles (cached, gitignored)
@@ -28,8 +31,9 @@ This document defines the JSON schemas for all PKI data files. It is the authori
 
 | File / Directory | Owner | Description |
 |---|---|---|
-| `manifest.json` | `!learn` / `!learn_update` | Master routing index mapping every annotated file to its annotation hash, domains, tags, and summary. Contains reverse indexes for fast lookup by domain or tag. |
-| `annotations/{hash}.json` | `!learn` / `!learn_update` | Deep per-file knowledge: purpose, exports, imports, gotchas, patterns, relationships. Filename is the first 8 hex characters of the SHA-256 hash of the relative file path. |
+| `manifest.json` | `!learn` / `!learn_update` / post-swarm extraction | Master routing index mapping every annotated file to its annotation hash, domains, tags, and summary. Contains reverse indexes for fast lookup by domain or tag, and `insights_index` for swarm-level knowledge. |
+| `annotations/{hash}.json` | `!learn` / `!learn_update` / post-swarm extraction | Deep per-file knowledge: purpose, exports, imports, gotchas, patterns, relationships. Filename is the first 8 hex characters of the SHA-256 hash of the relative file path. Post-swarm extraction merges worker-discovered annotations into these files. |
+| `insights/{date}_{slug}.json` | Post-swarm extraction (Step 17G) / `SwarmOrchestrator` | Swarm-level lessons learned: dependency insights, complexity surprises, failure patterns, effective patterns, architecture notes. Auto-generated after every swarm completion. |
 | `domains.json` | `!learn` / `!learn_update` | Auto-discovered domain taxonomy grouping files by functional area (e.g., "authentication", "database", "UI components"). |
 | `patterns.json` | `!learn` / `!learn_update` | Cross-cutting patterns and conventions observed across the codebase (e.g., "error handling pattern", "repository pattern", "event-driven architecture"). |
 | `queries/` | `!learn` (cached output) | Pre-computed domain bundles for fast retrieval. Gitignored -- regenerated on demand. |
@@ -672,6 +676,118 @@ The patterns file captures **cross-cutting patterns and conventions** observed a
   }
 }
 ```
+
+---
+
+## insights/{date}_{slug}.json
+
+The insights directory contains **swarm-level lessons learned** — knowledge that transcends individual file annotations. Each file captures what a swarm discovered about the project's architecture, dependencies, and failure modes. Insights are generated automatically after every swarm completion (Step 17G) and indexed in the manifest's `insights_index`.
+
+**Location:** `{project_root}/.synapse/knowledge/insights/{YYYY-MM-DD}_{task-slug}.json`
+
+**Owner:** Post-swarm knowledge extraction (Step 17G in `p_track_completion.md`) and `SwarmOrchestrator.extractSwarmKnowledge()`.
+
+### Complete Schema
+
+```json
+{
+  "swarm_name": "string",
+  "completed_at": "ISO 8601 string",
+  "dashboard_id": "string",
+  "total_tasks": "number",
+  "completed_tasks": "number",
+  "failed_tasks": "number",
+  "files_changed": ["string"],
+  "insights": {
+    "dependency_insights": [
+      {
+        "description": "string",
+        "discovered_by": "string (task_id)",
+        "severity": "string (CRITICAL | MODERATE | MINOR)",
+        "affected_files": ["string"]
+      }
+    ],
+    "complexity_surprises": [
+      {
+        "description": "string",
+        "discovered_by": "string (task_id)",
+        "affected_files": ["string"]
+      }
+    ],
+    "failure_patterns": [
+      {
+        "description": "string",
+        "task_id": "string",
+        "stage": "string"
+      }
+    ],
+    "effective_patterns": [
+      {
+        "description": "string",
+        "tasks_involved": ["string"]
+      }
+    ],
+    "architecture_notes": [
+      {
+        "description": "string",
+        "discovered_by": "string (task_id)",
+        "severity": "string"
+      }
+    ]
+  },
+  "worker_annotations_harvested": "number"
+}
+```
+
+### Field Definitions
+
+#### Top-Level Fields
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `swarm_name` | string | Yes | The task slug identifying this swarm run. |
+| `completed_at` | ISO 8601 | Yes | When the swarm completed. |
+| `dashboard_id` | string | Yes | Dashboard ID for traceability back to dashboard data. |
+| `total_tasks` | number | Yes | Total tasks in the swarm. |
+| `completed_tasks` | number | Yes | Successfully completed tasks. |
+| `failed_tasks` | number | Yes | Failed tasks. |
+| `files_changed` | array of strings | Yes | All project-relative file paths changed during this swarm. |
+| `insights` | object | Yes | Categorized insights extracted from swarm execution data. |
+| `worker_annotations_harvested` | number | Yes | Count of individual annotations harvested from worker progress files. |
+
+#### Insight Categories
+
+| Category | What It Captures | Source Data |
+|---|---|---|
+| `dependency_insights` | Dependencies not in the original plan — discovered during execution | CRITICAL deviations from workers |
+| `complexity_surprises` | Files/areas harder than expected | Task duration anomalies, worker warnings |
+| `failure_patterns` | Recurring failure modes and root causes | Failed task progress files |
+| `effective_patterns` | Approaches that worked well — worth repeating | Successful tasks with clean execution |
+| `architecture_notes` | Discovered architectural constraints or design decisions | MODERATE deviations, worker logs |
+
+### Manifest Integration
+
+The manifest's `insights_index` array tracks all insight files:
+
+```json
+{
+  "insights_index": [
+    {
+      "file": "insights/2026-04-19_add-rate-limiting.json",
+      "swarm_name": "add-rate-limiting",
+      "date": "2026-04-19",
+      "insight_count": 3,
+      "files_changed_count": 5
+    }
+  ]
+}
+```
+
+**Rules:**
+- Append-only — never overwrite previous entries
+- Capped at 50 entries (FIFO — oldest entries dropped when cap is reached)
+- `insight_count` is the sum of all items across all insight categories
+- `files_changed_count` is the length of `files_changed` in the insight file
 
 ---
 

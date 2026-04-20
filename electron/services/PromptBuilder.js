@@ -94,6 +94,251 @@ function buildSystemPrompt(opts) {
 }
 
 /**
+ * Read PKI knowledge relevant to a task's files from the project's knowledge index.
+ * Returns a formatted knowledge block for injection into worker prompts, or empty string if no PKI.
+ *
+ * @param {string} projectPath — target project directory
+ * @param {object} task — the agent entry from initialization.json (has title, description, id)
+ * @returns {string} formatted PKI knowledge block or ''
+ */
+function readPKIKnowledge(projectPath, task) {
+  if (!projectPath) return '';
+
+  var manifestPath = path.join(projectPath, '.synapse', 'knowledge', 'manifest.json');
+  var manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+  } catch (e) {
+    return '';
+  }
+
+  if (!manifest || !manifest.files) return '';
+
+  // Extract keywords from task title and description for domain/tag matching
+  var searchText = ((task.title || '') + ' ' + (task.description || '')).toLowerCase();
+  var relevantFiles = {};
+
+  // Match via domain_index
+  if (manifest.domain_index) {
+    for (var domain in manifest.domain_index) {
+      if (searchText.indexOf(domain.toLowerCase()) !== -1) {
+        var domainFiles = manifest.domain_index[domain];
+        for (var di = 0; di < domainFiles.length; di++) {
+          relevantFiles[domainFiles[di]] = (relevantFiles[domainFiles[di]] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  // Match via tag_index
+  if (manifest.tag_index) {
+    for (var tag in manifest.tag_index) {
+      if (searchText.indexOf(tag.toLowerCase()) !== -1) {
+        var tagFiles = manifest.tag_index[tag];
+        for (var ti = 0; ti < tagFiles.length; ti++) {
+          relevantFiles[tagFiles[ti]] = (relevantFiles[tagFiles[ti]] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  // Match via concept_map
+  if (manifest.concept_map) {
+    for (var concept in manifest.concept_map) {
+      var conceptWords = concept.toLowerCase().split(/[\s-_]+/);
+      var conceptMatch = false;
+      for (var cw = 0; cw < conceptWords.length; cw++) {
+        if (conceptWords[cw].length > 3 && searchText.indexOf(conceptWords[cw]) !== -1) {
+          conceptMatch = true;
+          break;
+        }
+      }
+      if (conceptMatch && manifest.concept_map[concept].files) {
+        var conceptFiles = manifest.concept_map[concept].files;
+        for (var cf = 0; cf < conceptFiles.length; cf++) {
+          relevantFiles[conceptFiles[cf]] = (relevantFiles[conceptFiles[cf]] || 0) + 2;
+        }
+      }
+    }
+  }
+
+  // Rank files by match count and complexity, cap at 8
+  var ranked = Object.keys(relevantFiles).map(function (f) {
+    var entry = manifest.files[f];
+    var score = relevantFiles[f];
+    if (entry && entry.complexity === 'high') score += 2;
+    if (entry && entry.stale) score -= 1;
+    return { file: f, score: score, entry: entry };
+  }).filter(function (r) { return r.entry; });
+
+  ranked.sort(function (a, b) { return b.score - a.score; });
+  ranked = ranked.slice(0, 8);
+
+  if (ranked.length === 0) return '';
+
+  // Read annotations and build knowledge block
+  var gotchas = [];
+  var patterns = [];
+  var conventions = [];
+  var staleWarnings = [];
+  var knowledgeDir = path.join(projectPath, '.synapse', 'knowledge', 'annotations');
+
+  for (var ri = 0; ri < ranked.length; ri++) {
+    var r = ranked[ri];
+    var annotationPath = path.join(knowledgeDir, r.entry.hash + '.json');
+    var annotation;
+    try {
+      annotation = JSON.parse(fs.readFileSync(annotationPath, 'utf-8'));
+    } catch (e) {
+      continue;
+    }
+
+    var fileLabel = r.file;
+    var isStale = r.entry.stale;
+
+    if (annotation.gotchas) {
+      for (var gi = 0; gi < annotation.gotchas.length; gi++) {
+        gotchas.push('[' + fileLabel + '] ' + annotation.gotchas[gi]);
+      }
+    }
+    if (annotation.patterns) {
+      for (var pi = 0; pi < annotation.patterns.length; pi++) {
+        patterns.push('[' + fileLabel + '] ' + annotation.patterns[pi]);
+      }
+    }
+    if (annotation.conventions) {
+      for (var ci = 0; ci < annotation.conventions.length; ci++) {
+        conventions.push('[' + fileLabel + '] ' + annotation.conventions[ci]);
+      }
+    }
+    if (isStale) {
+      staleWarnings.push('[' + fileLabel + '] Modified since last annotation — verify before relying');
+    }
+  }
+
+  if (gotchas.length === 0 && patterns.length === 0 && conventions.length === 0) return '';
+
+  // Build the block, respecting ~100 line budget
+  var block = [];
+  block.push('## PKI Knowledge (from project knowledge index)');
+  block.push('');
+
+  if (gotchas.length > 0) {
+    block.push('### GOTCHAS (respect these — discovered by previous agents):');
+    for (var g = 0; g < gotchas.length; g++) block.push('- ' + gotchas[g]);
+    block.push('');
+  }
+
+  if (patterns.length > 0) {
+    block.push('### PATTERNS (follow established patterns):');
+    var patternBudget = Math.min(patterns.length, 15);
+    for (var p = 0; p < patternBudget; p++) block.push('- ' + patterns[p]);
+    block.push('');
+  }
+
+  if (conventions.length > 0) {
+    block.push('### CONVENTIONS (maintain consistency):');
+    var conventionBudget = Math.min(conventions.length, 10);
+    for (var c = 0; c < conventionBudget; c++) block.push('- ' + conventions[c]);
+    block.push('');
+  }
+
+  if (staleWarnings.length > 0) {
+    block.push('### STALE (verify before relying):');
+    for (var s = 0; s < staleWarnings.length; s++) block.push('- ' + staleWarnings[s]);
+    block.push('');
+  }
+
+  // Read recent insights for this task area
+  var insightsBlock = readRelevantInsights(projectPath, manifest, searchText);
+  if (insightsBlock) {
+    block.push(insightsBlock);
+  }
+
+  return block.join('\n');
+}
+
+/**
+ * Read recent swarm insights relevant to the current task.
+ *
+ * @param {string} projectPath
+ * @param {object} manifest
+ * @param {string} searchText — lowercase task keywords
+ * @returns {string|null}
+ */
+function readRelevantInsights(projectPath, manifest, searchText) {
+  if (!manifest.insights_index || manifest.insights_index.length === 0) return null;
+
+  // Check the 5 most recent insights
+  var recent = manifest.insights_index.slice(-5);
+  var relevantInsights = [];
+
+  for (var i = 0; i < recent.length; i++) {
+    var insightPath = path.join(projectPath, '.synapse', 'knowledge', recent[i].file);
+    var insight;
+    try {
+      insight = JSON.parse(fs.readFileSync(insightPath, 'utf-8'));
+    } catch (e) {
+      continue;
+    }
+
+    if (!insight.insights) continue;
+
+    // Check if any insights are relevant by scanning affected files and descriptions
+    var categories = ['dependency_insights', 'complexity_surprises', 'failure_patterns', 'architecture_notes'];
+    for (var ci = 0; ci < categories.length; ci++) {
+      var cat = categories[ci];
+      var items = insight.insights[cat];
+      if (!items) continue;
+      for (var ii = 0; ii < items.length; ii++) {
+        var desc = (items[ii].description || '').toLowerCase();
+        var affectedFiles = items[ii].affected_files || [];
+        var isRelevant = false;
+
+        // Check description overlap
+        var descWords = desc.split(/\s+/);
+        for (var dw = 0; dw < descWords.length; dw++) {
+          if (descWords[dw].length > 4 && searchText.indexOf(descWords[dw]) !== -1) {
+            isRelevant = true;
+            break;
+          }
+        }
+
+        // Check file overlap
+        if (!isRelevant) {
+          for (var af = 0; af < affectedFiles.length; af++) {
+            if (searchText.indexOf(affectedFiles[af].toLowerCase()) !== -1) {
+              isRelevant = true;
+              break;
+            }
+          }
+        }
+
+        if (isRelevant) {
+          relevantInsights.push({
+            category: cat.replace(/_/g, ' '),
+            description: items[ii].description,
+            swarm: insight.swarm_name,
+          });
+        }
+      }
+    }
+  }
+
+  if (relevantInsights.length === 0) return null;
+
+  var lines = ['### INSIGHTS (from previous swarms):'];
+  var budget = Math.min(relevantInsights.length, 8);
+  for (var ri = 0; ri < budget; ri++) {
+    var ins = relevantInsights[ri];
+    lines.push('- [' + ins.category + '] ' + ins.description + ' (from swarm: ' + ins.swarm + ')');
+  }
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+/**
  * Build the task prompt for a worker agent.
  * This is the main prompt passed as the final argument to claude CLI.
  *
@@ -103,6 +348,7 @@ function buildSystemPrompt(opts) {
  * @param {{ path: string, content: string }[]} [opts.projectContexts] — CLAUDE.md contents
  * @param {{ taskId: string, summary: string, files?: string[] }[]} [opts.upstreamResults] — completed dependency results
  * @param {{ path: string, content: string }[]} [opts.additionalContextPaths] — read-only context from additional directories
+ * @param {string} [opts.projectPath] — target project path for PKI lookup
  * @returns {string}
  */
 function buildTaskPrompt(opts) {
@@ -121,6 +367,14 @@ function buildTaskPrompt(opts) {
     parts.push('## Task Description');
     parts.push(opts.taskDescription);
     parts.push('');
+  }
+
+  // PKI knowledge injection (auto-enrichment from project knowledge index)
+  if (opts.projectPath) {
+    var pkiBlock = readPKIKnowledge(opts.projectPath, opts.task);
+    if (pkiBlock) {
+      parts.push(pkiBlock);
+    }
   }
 
   // Project context (CLAUDE.md files)
@@ -404,4 +658,4 @@ function findAgentInInit(init, taskId) {
   return null;
 }
 
-module.exports = { buildSystemPrompt, buildTaskPrompt, readUpstreamResults, buildReplanPrompt, buildReplanSystemPrompt };
+module.exports = { buildSystemPrompt, buildTaskPrompt, readUpstreamResults, readPKIKnowledge, buildReplanPrompt, buildReplanSystemPrompt };
