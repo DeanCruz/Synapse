@@ -344,13 +344,14 @@ Overflow mechanism for `!master_plan_track` multi-stream orchestration. When all
 
 ## Commands
 
-Commands work in both the built-in chat and the terminal Claude Code CLI. Synapse has **46 commands** across two categories.
+Commands work in both the built-in chat and the terminal Claude Code CLI. Synapse has **47 commands** across two categories.
 
 ### Dispatching Work
 
 | Command | When to Use |
 |---|---|
 | **`!p_track {prompt}`** | Full orchestration -- live dashboard, dependency tracking, history. Use for 3+ tasks or complex dependencies. |
+| **`!p_track_plan {plan_path}`** | Plan-driven swarm -- reads a `.md` plan file, populates the dashboard, and awaits approval before dispatch. |
 | **`!p {prompt}`** | Lightweight parallel dispatch -- same planning, no dashboard overhead. Use for quick jobs under 3 tasks. |
 | **`!master_plan_track {prompt}`** | Multi-stream orchestration -- decomposes work into independent swarms across multiple dashboards. Use for large bodies of work. |
 
@@ -666,7 +667,7 @@ A single agent on a large task will exhaust its context window -- it forgets ear
 ```
 Electron Main Process (electron/)
 +-- main.js                          <- Window management, app lifecycle, app:// protocol
-+-- preload.js                       <- IPC bridge (window.electronAPI) -- ~140 methods, 33 push channels
++-- preload.js                       <- IPC bridge (window.electronAPI) -- ~140 methods, 26 push channels
 +-- ipc-handlers.js                  <- IPC handler registration, broadcast bridge, file watchers
 +-- settings.js                      <- Persisted settings (JSON in userData)
 +-- services/
@@ -683,6 +684,7 @@ Electron Main Process (electron/)
     +-- InstrumentService.js         <- Live Preview: add data-synapse-label to project files
     +-- PreviewService.js            <- Live Preview: label-to-source file mapping
     +-- PreviewTextWriter.js         <- Live Preview: write text changes back to source
+    +-- AutoUpdateService.js        <- Electron auto-update state machine
 
 React Renderer (src/ui/, Vite build)
 +-- main.jsx                         <- Entry point, IPC fetch shim, CSS imports
@@ -700,7 +702,7 @@ React Renderer (src/ui/, Vite build)
 |   +-- AgentCard.jsx                <- Per-task progress card
 |   +-- SwarmBuilder.jsx             <- Visual task graph editor
 |   +-- git/                         <- Git Manager (12 components)
-|   +-- ide/                         <- Code Explorer (6 components)
+|   +-- ide/                         <- Code Explorer (12 components)
 |   +-- preview/                     <- Live Preview tab
 |   +-- modals/                      <- Commands, Project, Settings, Planning, TaskEditor
 +-- hooks/                           <- useElectronData, useSSE, useGitActions, etc.
@@ -725,10 +727,10 @@ SSE Server (src/server/)
 
 Agent System (agent/, _commands/)
 +-- agent/instructions/              <- Master, worker, multi-plan, failure protocols (7 files)
-+-- agent/master/                    <- Master role, dashboard writes, eager dispatch, failure recovery (9 files)
++-- agent/master/                    <- Master role, dashboard writes, eager dispatch, failure recovery (10 files)
 +-- agent/worker/                    <- Progress reporting, return format, deviations, upstream deps (5 files)
 +-- agent/core/                      <- Command resolution, parallel principles, profiles, paths (7 files)
-+-- _commands/Synapse/               <- 24 swarm/orchestration command files
++-- _commands/Synapse/               <- 25 swarm/orchestration command files
 +-- _commands/project/               <- 22 project/analysis command files
 +-- _commands/profiles/              <- 15 role profiles (architect, security, qa, devops, etc.)
 +-- .claude/skills/                  <- 10 skills (7 user-invocable, 3 auto-loaded protocols)

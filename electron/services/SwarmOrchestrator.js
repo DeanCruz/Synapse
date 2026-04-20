@@ -110,6 +110,15 @@ function onTaskComplete(dashboardId, taskId) {
       level: 'info',
       message: 'Swarm completed — all tasks finished',
     });
+    // Auto-extract knowledge before cleaning up
+    try {
+      extractSwarmKnowledge(dashboardId, swarm.projectPath);
+    } catch (e) {
+      appendLog(dashboardId, {
+        level: 'warn',
+        message: 'Knowledge extraction failed (non-blocking): ' + (e.message || e),
+      });
+    }
     delete activeSwarms[dashboardId];
     return;
   }
@@ -203,6 +212,15 @@ function onTaskFailed(dashboardId, taskId) {
       level: failCount > 0 ? 'warn' : 'info',
       message: 'Swarm finished — ' + failCount + ' task(s) failed',
     });
+    // Auto-extract knowledge even from partially failed swarms
+    try {
+      extractSwarmKnowledge(dashboardId, swarm.projectPath);
+    } catch (e) {
+      appendLog(dashboardId, {
+        level: 'warn',
+        message: 'Knowledge extraction failed (non-blocking): ' + (e.message || e),
+      });
+    }
     delete activeSwarms[dashboardId];
     return;
   }
@@ -284,6 +302,7 @@ function dispatchReady(dashboardId) {
       projectContexts: primaryContexts,
       upstreamResults: upstreamResults,
       additionalContextPaths: additionalContexts,
+      projectPath: swarm.projectPath,
     });
 
     appendLog(dashboardId, {
@@ -736,6 +755,280 @@ function applyReplan(dashboardId, replan) {
   dispatchReady(dashboardId);
 }
 
+// --- Post-Swarm Knowledge Extraction ---
+
+/**
+ * Extract knowledge from a completed swarm and persist it to the project's PKI.
+ * Harvests worker annotations from progress files, generates swarm-level insights,
+ * and merges everything into the project's .synapse/knowledge/ directory.
+ *
+ * @param {string} dashboardId
+ * @param {string} projectPath — target project directory
+ */
+function extractSwarmKnowledge(dashboardId, projectPath) {
+  if (!projectPath) return;
+
+  var knowledgeDir = path.join(projectPath, '.synapse', 'knowledge');
+  var insightsDir = path.join(knowledgeDir, 'insights');
+  var annotationsDir = path.join(knowledgeDir, 'annotations');
+  var manifestPath = path.join(knowledgeDir, 'manifest.json');
+
+  // Ensure directories exist
+  try {
+    fs.mkdirSync(path.join(projectPath, '.synapse'), { recursive: true });
+    fs.mkdirSync(knowledgeDir, { recursive: true });
+    fs.mkdirSync(insightsDir, { recursive: true });
+    fs.mkdirSync(annotationsDir, { recursive: true });
+  } catch (e) {
+    // Best-effort — don't block completion
+    return;
+  }
+
+  var init = readDashboardInit(dashboardId);
+  var progress = readDashboardProgress(dashboardId);
+  if (!init || !progress) return;
+
+  var taskSlug = (init.task && init.task.name) || dashboardId;
+  var now = new Date().toISOString();
+  var datePrefix = now.substring(0, 10);
+
+  // 1. Harvest worker annotations from progress files
+  var harvestedAnnotations = {};
+  var annotationCount = 0;
+  var allDeviations = [];
+  var allFilesChanged = [];
+  var completedCount = 0;
+  var failedCount = 0;
+
+  for (var taskId in progress) {
+    var prog = progress[taskId];
+    if (!prog) continue;
+
+    if (prog.status === 'completed') completedCount++;
+    if (prog.status === 'failed') failedCount++;
+
+    // Collect annotations
+    if (prog.annotations) {
+      for (var filePath in prog.annotations) {
+        if (!harvestedAnnotations[filePath]) {
+          harvestedAnnotations[filePath] = { gotchas: [], patterns: [], conventions: [] };
+        }
+        var ann = prog.annotations[filePath];
+        if (ann.gotchas) {
+          for (var gi = 0; gi < ann.gotchas.length; gi++) {
+            if (harvestedAnnotations[filePath].gotchas.indexOf(ann.gotchas[gi]) === -1) {
+              harvestedAnnotations[filePath].gotchas.push(ann.gotchas[gi]);
+              annotationCount++;
+            }
+          }
+        }
+        if (ann.patterns) {
+          for (var pi = 0; pi < ann.patterns.length; pi++) {
+            if (harvestedAnnotations[filePath].patterns.indexOf(ann.patterns[pi]) === -1) {
+              harvestedAnnotations[filePath].patterns.push(ann.patterns[pi]);
+            }
+          }
+        }
+        if (ann.conventions) {
+          for (var ci = 0; ci < ann.conventions.length; ci++) {
+            if (harvestedAnnotations[filePath].conventions.indexOf(ann.conventions[ci]) === -1) {
+              harvestedAnnotations[filePath].conventions.push(ann.conventions[ci]);
+            }
+          }
+        }
+      }
+    }
+
+    // Collect deviations for insight extraction
+    if (prog.deviations) {
+      for (var di = 0; di < prog.deviations.length; di++) {
+        allDeviations.push({
+          task_id: taskId,
+          deviation: prog.deviations[di],
+        });
+      }
+    }
+
+    // Collect files changed
+    if (prog.files_changed) {
+      for (var fi = 0; fi < prog.files_changed.length; fi++) {
+        var fc = prog.files_changed[fi];
+        if (fc.path && allFilesChanged.indexOf(fc.path) === -1) {
+          allFilesChanged.push(fc.path);
+        }
+      }
+    }
+  }
+
+  // 2. Build swarm insights from deviations and execution data
+  var insights = {
+    dependency_insights: [],
+    complexity_surprises: [],
+    failure_patterns: [],
+    effective_patterns: [],
+    architecture_notes: [],
+  };
+
+  // Extract dependency insights from CRITICAL deviations
+  for (var dvi = 0; dvi < allDeviations.length; dvi++) {
+    var dev = allDeviations[dvi];
+    var desc = dev.deviation.description || '';
+    var severity = dev.deviation.severity || 'MINOR';
+
+    if (severity === 'CRITICAL') {
+      insights.dependency_insights.push({
+        description: desc,
+        discovered_by: dev.task_id,
+        severity: severity,
+        affected_files: dev.deviation.affected_files || [],
+      });
+    } else if (severity === 'MODERATE') {
+      insights.architecture_notes.push({
+        description: desc,
+        discovered_by: dev.task_id,
+        severity: severity,
+      });
+    }
+  }
+
+  // Extract failure patterns from failed tasks
+  for (var fpId in progress) {
+    var fpProg = progress[fpId];
+    if (fpProg && fpProg.status === 'failed') {
+      var failDesc = fpProg.summary || fpProg.message || 'Unknown failure';
+      insights.failure_patterns.push({
+        description: failDesc,
+        task_id: fpId,
+        stage: fpProg.stage || 'unknown',
+      });
+    }
+  }
+
+  // 3. Write insights file
+  var insightData = {
+    swarm_name: taskSlug,
+    completed_at: now,
+    dashboard_id: dashboardId,
+    total_tasks: (init.agents || []).length,
+    completed_tasks: completedCount,
+    failed_tasks: failedCount,
+    files_changed: allFilesChanged,
+    insights: insights,
+    worker_annotations_harvested: annotationCount,
+  };
+
+  var insightFilename = datePrefix + '_' + taskSlug.replace(/[^a-z0-9_-]/gi, '-') + '.json';
+  var insightFilePath = path.join(insightsDir, insightFilename);
+  try {
+    fs.writeFileSync(insightFilePath, JSON.stringify(insightData, null, 2));
+  } catch (e) { /* best-effort */ }
+
+  // 4. Merge worker annotations into PKI manifest
+  var manifest;
+  try {
+    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+  } catch (e) {
+    manifest = null;
+  }
+
+  if (manifest && manifest.files) {
+    var manifestChanged = false;
+
+    for (var annFile in harvestedAnnotations) {
+      var entry = manifest.files[annFile];
+      if (entry && entry.hash) {
+        // Merge into existing annotation
+        var annPath = path.join(annotationsDir, entry.hash + '.json');
+        var existing;
+        try {
+          existing = JSON.parse(fs.readFileSync(annPath, 'utf-8'));
+        } catch (e) {
+          existing = { file: annFile, gotchas: [], patterns: [], conventions: [] };
+        }
+
+        var harvested = harvestedAnnotations[annFile];
+        var changed = false;
+
+        // Merge gotchas (deduplicate)
+        if (harvested.gotchas.length > 0) {
+          if (!existing.gotchas) existing.gotchas = [];
+          for (var mg = 0; mg < harvested.gotchas.length; mg++) {
+            if (existing.gotchas.indexOf(harvested.gotchas[mg]) === -1) {
+              existing.gotchas.push(harvested.gotchas[mg]);
+              changed = true;
+            }
+          }
+        }
+
+        // Merge patterns
+        if (harvested.patterns.length > 0) {
+          if (!existing.patterns) existing.patterns = [];
+          for (var mp = 0; mp < harvested.patterns.length; mp++) {
+            if (existing.patterns.indexOf(harvested.patterns[mp]) === -1) {
+              existing.patterns.push(harvested.patterns[mp]);
+              changed = true;
+            }
+          }
+        }
+
+        // Merge conventions
+        if (harvested.conventions.length > 0) {
+          if (!existing.conventions) existing.conventions = [];
+          for (var mc = 0; mc < harvested.conventions.length; mc++) {
+            if (existing.conventions.indexOf(harvested.conventions[mc]) === -1) {
+              existing.conventions.push(harvested.conventions[mc]);
+              changed = true;
+            }
+          }
+        }
+
+        if (changed) {
+          existing.annotated_at = now;
+          existing.annotated_by = 'swarm:' + taskSlug;
+          try {
+            fs.writeFileSync(annPath, JSON.stringify(existing, null, 2));
+          } catch (e) { /* best-effort */ }
+          manifestChanged = true;
+        }
+      }
+    }
+
+    // Update insights_index in manifest
+    if (!manifest.insights_index) manifest.insights_index = [];
+    manifest.insights_index.push({
+      file: 'insights/' + insightFilename,
+      swarm_name: taskSlug,
+      date: datePrefix,
+      insight_count: insights.dependency_insights.length + insights.complexity_surprises.length +
+        insights.failure_patterns.length + insights.effective_patterns.length +
+        insights.architecture_notes.length,
+      files_changed_count: allFilesChanged.length,
+    });
+
+    // Cap at 50 entries
+    if (manifest.insights_index.length > 50) {
+      manifest.insights_index = manifest.insights_index.slice(-50);
+    }
+
+    manifest.updated_at = now;
+    manifestChanged = true;
+
+    if (manifestChanged) {
+      try {
+        fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+      } catch (e) { /* best-effort */ }
+    }
+  }
+
+  appendLog(dashboardId, {
+    level: 'info',
+    message: 'Knowledge extracted: ' + annotationCount + ' annotations harvested, ' +
+      (insights.dependency_insights.length + insights.failure_patterns.length +
+       insights.effective_patterns.length + insights.architecture_notes.length) +
+      ' insights captured, PKI updated at ' + knowledgeDir,
+  });
+}
+
 // --- Helpers ---
 
 function findAgent(init, taskId) {
@@ -777,4 +1070,5 @@ module.exports = {
   getSwarmStates,
   isActive,
   handleProgressUpdate,
+  extractSwarmKnowledge,
 };

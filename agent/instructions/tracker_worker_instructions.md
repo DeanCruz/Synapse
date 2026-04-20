@@ -24,15 +24,16 @@ Your progress file path:
 Follow these steps in order for every task:
 
 1. **Write initial progress file** at the path above with `dashboard_id` (from your dispatch context), `status: "in_progress"`, `stage: "reading_context"`, `started_at` (live timestamp), and a starting log entry. Include `template_version` from your dispatch prompt header. Write the full JSON file every time — you are the sole owner. The server rejects progress files where `dashboard_id` doesn't match the dashboard directory.
-2. **If you have dependencies:** Read upstream progress files at `{tracker_root}/dashboards/{dashboardId}/progress/{dep_id}.json`. Check `status`, `summary`, `deviations[]` (especially `CRITICAL`), and `logs[]` for errors. Adapt if upstream deviated. Log what you found. --> Read `agent/worker/upstream_deps.md`
-3. **Progress through fixed stages in order:** `reading_context` --> `planning` --> `implementing` --> `testing` --> `finalizing` --> `completed` | `failed`
-4. **Write on every stage transition** — update `stage`, `message`, and add a log entry. Append milestones for significant accomplishments.
-5. **Track every file change in `files_changed[]`** — NON-NEGOTIABLE. When you create, modify, or delete a project file, immediately add it to `files_changed` as `{ "path": "relative/path", "action": "created|modified|deleted" }`. Also add a log entry describing the change. Update incrementally — do NOT wait until finalization. The dashboard renders this as a clickable file list in the task popup.
-6. **Report deviations IMMEDIATELY** — add to both `deviations[]` (with severity) and `logs[]` (at `level: "deviation"`) the moment any divergence occurs. --> Read `agent/worker/deviations.md`
-7. **Populate `shared_context`** if you create exports, interfaces, or patterns that same-wave siblings could use. --> Read `agent/worker/sibling_comms.md`
-8. **Annotate files you read deeply** (optional but encouraged): When you gain non-obvious understanding of a file during `reading_context` or `implementing`, add an `annotations` field to your progress file. This feeds the PKI (Project Knowledge Index) and helps future sessions. --> See PKI Annotations section below.
-9. **On completion:** Set `status: "completed"`, `stage: "completed"`, `completed_at`, and a descriptive `summary`. Ensure `files_changed` is complete and matches your FILES CHANGED return. For partial completion (80%+ done), use `"completed"` with summary stating what remains blocked. Reserve `"failed"` for zero useful output.
-10. **Return structured summary** to the master. --> Read `agent/worker/return_format.md`
+2. **Query the PKI** (recommended): Read `{project_root}/.synapse/knowledge/manifest.json` and look up annotations for files in your task scope. Internalize gotchas, patterns, and conventions before implementing. Check insights for failure patterns in your area. --> See PKI Retrieval section below.
+3. **If you have dependencies:** Read upstream progress files at `{tracker_root}/dashboards/{dashboardId}/progress/{dep_id}.json`. Check `status`, `summary`, `deviations[]` (especially `CRITICAL`), and `logs[]` for errors. Adapt if upstream deviated. Log what you found. --> Read `agent/worker/upstream_deps.md`
+4. **Progress through fixed stages in order:** `reading_context` --> `planning` --> `implementing` --> `testing` --> `finalizing` --> `completed` | `failed`
+5. **Write on every stage transition** — update `stage`, `message`, and add a log entry. Append milestones for significant accomplishments.
+6. **Track every file change in `files_changed[]`** — NON-NEGOTIABLE. When you create, modify, or delete a project file, immediately add it to `files_changed` as `{ "path": "relative/path", "action": "created|modified|deleted" }`. Also add a log entry describing the change. Update incrementally — do NOT wait until finalization. The dashboard renders this as a clickable file list in the task popup.
+7. **Report deviations IMMEDIATELY** — add to both `deviations[]` (with severity) and `logs[]` (at `level: "deviation"`) the moment any divergence occurs. --> Read `agent/worker/deviations.md`
+8. **Populate `shared_context`** if you create exports, interfaces, or patterns that same-wave siblings could use. --> Read `agent/worker/sibling_comms.md`
+9. **Annotate files you read deeply** (optional but encouraged): When you gain non-obvious understanding of a file during `reading_context` or `implementing`, add an `annotations` field to your progress file. This feeds the PKI (Project Knowledge Index) and helps future sessions. --> See PKI Annotations section below.
+10. **On completion:** Set `status: "completed"`, `stage: "completed"`, `completed_at`, and a descriptive `summary`. Ensure `files_changed` is complete and matches your FILES CHANGED return. For partial completion (80%+ done), use `"completed"` with summary stating what remains blocked. Reserve `"failed"` for zero useful output.
+11. **Return structured summary** to the master. --> Read `agent/worker/return_format.md`
 
 ```
 STATUS: completed | failed
@@ -67,6 +68,7 @@ Detailed instructions are organized into focused modules. Read the ones relevant
 | Moment | Module to Read |
 |---|---|
 | Starting any task | `agent/worker/progress_reporting.md` |
+| Before reading source files | See PKI Retrieval section below |
 | Your task has upstream dependencies | `agent/worker/upstream_deps.md` |
 | Something deviates from the plan | `agent/worker/deviations.md` |
 | Same-wave sibling awareness needed | `agent/worker/sibling_comms.md` |
@@ -79,7 +81,7 @@ Detailed instructions are organized into focused modules. Read the ones relevant
 
 Your progress file is the full lifecycle record of your task — status, timestamps, stage, message, milestones, deviations, logs, files_changed, and optional shared context. The dashboard watches this file and broadcasts changes in real-time (~50ms). Write the full JSON on every update. Use the Write tool for atomic writes.
 
-**8 mandatory writes** (skipping any is a failure): (1) before starting work, (2) after reading upstream dependencies, (3) on every stage transition, (4) on any deviation, (5) on any error, (6) on every file change (add to `files_changed[]`), (7) on completion, (8) on failure.
+**8 mandatory writes** (skipping any is a failure): (1) before starting work, (2) after PKI retrieval and/or reading upstream dependencies, (3) on every stage transition, (4) on any deviation, (5) on any error, (6) on every file change (add to `files_changed[]`), (7) on completion, (8) on failure.
 
 --> Full details: `agent/worker/progress_reporting.md`
 
@@ -121,6 +123,69 @@ Your dispatch prompt may include **Additional Context Directories (READ-ONLY)** 
 - **Cite what you use** — if an additional context directory influences your implementation, log it as an info-level entry describing what you referenced and how it shaped your approach.
 
 Additional context directories are supplementary. If none are listed in your dispatch prompt, ignore this section.
+
+---
+
+## PKI Retrieval — Consuming Knowledge Before You Work
+
+**Recommended.** Before diving into implementation, check the Project Knowledge Index (PKI) for existing knowledge about the files you'll be working with. The PKI accumulates gotchas, patterns, and conventions discovered by previous agents — using it prevents you from re-learning things the hard way.
+
+### When to Query the PKI
+
+Query the PKI during **`reading_context`** stage — before you start implementing. This is a lightweight operation (1-3 file reads) that can save significant time by surfacing hidden constraints early.
+
+### Retrieval Procedure
+
+**Step 1 — Check if PKI exists:**
+```
+Read: {project_root}/.synapse/knowledge/manifest.json
+```
+If the file doesn't exist or fails to parse, skip PKI retrieval entirely — proceed with normal context reading. Do NOT treat this as an error.
+
+**Step 2 — Identify your task's files:**
+From your dispatch prompt, identify the files you expect to read or modify. Also extract relevant keywords from your task description (e.g., "authentication", "API", "middleware").
+
+**Step 3 — Look up files in the manifest:**
+For each file in your task scope, check if it exists in the manifest's `files` object. Note the `hash` field for any matches.
+
+Also scan `domain_index` and `tag_index` for your task keywords — this may surface related files you didn't know about.
+
+**Step 4 — Read relevant annotations:**
+For matched files (max 3-5 to stay within budget), read:
+```
+{project_root}/.synapse/knowledge/annotations/{hash}.json
+```
+
+Extract and internalize:
+- **`gotchas`** — These are foot-guns. Respect them. They were discovered by previous agents who hit these issues.
+- **`patterns`** — Follow established patterns for consistency. Don't invent a new approach if one already exists.
+- **`conventions`** — Maintain project conventions in any new code you write.
+- **`relationships`** — Understand which files depend on yours and which yours depends on.
+
+**Step 5 — Check for swarm insights:**
+Read the `insights_index` in the manifest (if it exists). Scan for insights related to your task area. If a recent insight mentions your files or domain, read the insight file at:
+```
+{project_root}/.synapse/knowledge/insights/{filename}.json
+```
+Look for `dependency_insights`, `complexity_surprises`, and `failure_patterns` — these warn you about pitfalls previous swarms encountered.
+
+**Step 6 — Log what you found:**
+Add a log entry describing what PKI knowledge you consumed:
+```json
+{
+  "timestamp": "{ISO 8601}",
+  "level": "info",
+  "msg": "PKI retrieval: read annotations for 3 files, found 2 gotchas and 1 pattern relevant to my task"
+}
+```
+
+### Rules for PKI Retrieval
+
+- **Never block on PKI** — if any read fails, continue without it. PKI is an optimization, not a requirement.
+- **Budget: max 3-5 annotation reads** — don't read the entire knowledge base. Focus on files directly in your task scope.
+- **Trust but verify** — if an annotation is marked `stale: true` in the manifest, the knowledge may be outdated. Verify stale gotchas by reading the actual file.
+- **PKI supplements, never replaces, file reading** — you must still read the actual source files. PKI tells you what to watch out for, not what the code currently looks like.
+- **Log what influenced you** — if a PKI gotcha or pattern changed your implementation approach, log it. This helps the master understand your decisions.
 
 ---
 
