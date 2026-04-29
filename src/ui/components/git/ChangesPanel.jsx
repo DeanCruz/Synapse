@@ -72,17 +72,15 @@ function FileItem({ filePath, status, isStaged, isUntracked, isSelected, onSelec
                 <line x1="3" y1="8" x2="13" y2="8" />
               </svg>
             </button>
-            {!isUntracked && (
-              <button
-                className="git-manager-file-action-btn danger"
-                title="Discard changes (irreversible)"
-                onClick={(e) => { e.stopPropagation(); onDiscard(filePath); }}
-              >
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5.5 2h5M3 4h10M12 4l-.5 8.5a1.5 1.5 0 01-1.5 1.5H6a1.5 1.5 0 01-1.5-1.5L4 4" />
-                </svg>
-              </button>
-            )}
+            <button
+              className="git-manager-file-action-btn danger"
+              title={isUntracked ? "Remove file (irreversible)" : "Discard changes (irreversible)"}
+              onClick={(e) => { e.stopPropagation(); onDiscard(filePath); }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M5.5 2h5M3 4h10M12 4l-.5 8.5a1.5 1.5 0 01-1.5 1.5H6a1.5 1.5 0 01-1.5-1.5L4 4" />
+              </svg>
+            </button>
           </>
         )}
       </span>
@@ -351,6 +349,7 @@ export default function ChangesPanel({ repoPath }) {
                   isSelected={gitSelectedFile === filePath}
                   onSelect={handleSelectFile}
                   onStage={handleStageFile}
+                  onDiscard={handleDiscardFile}
                 />
               ))}
             </div>

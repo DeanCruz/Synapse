@@ -135,10 +135,10 @@ PREPARATION — REQUIRED BEFORE STARTING WORK
 
 Before writing any code, complete these steps in order:
 
-1. READ YOUR TASK IN THE MASTER TASK FILE:
-   Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` — specifically your task at id="{id}".
-   Focus on: your task's full description, context, critical details, and dependency relationships.
-   Do NOT read the entire file — only your task entry and any tasks listed in your depends_on.
+1. READ YOUR TASK IN THE CANONICAL PLAN:
+   Read `{tracker_root}/dashboards/{dashboardId}/plan.json` — specifically `context` (shared prompt + conventions
+   for ALL agents) and the `tasks[]` entry where `id == "{id}"`. That entry has the deeply-thought `approach` and `files`.
+   Also read entries for tasks in your `depends_on` (their summaries are in their progress files).
 
 2. READ PROJECT INSTRUCTIONS (only if not already provided above):
    If the CONVENTIONS section above is empty or says "no CLAUDE.md", check if a CLAUDE.md file

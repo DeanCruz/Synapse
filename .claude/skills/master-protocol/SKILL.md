@@ -47,14 +47,15 @@ The ONLY files the master writes during a swarm:
 
 | File | Purpose |
 |---|---|
-| `dashboards/{id}/initialization.json` | Static plan data (written ONCE during planning) |
+| `dashboards/{id}/plan.json` | **Canonical planning artifact** — deep-thinking output (context + per-task approach). MUST be written BEFORE `initialization.json`. Hook-enforced. |
+| `dashboards/{id}/initialization.json` | Static plan data (written ONCE during planning, after `plan.json`) |
 | `dashboards/{id}/logs.json` | Timestamped event log |
 | `dashboards/{id}/master_state.json` | State checkpoint for compaction recovery |
 | `dashboards/{id}/metrics.json` | Post-swarm performance metrics (written once at end) |
-| `tasks/{date}/parallel_{name}.json` | Master task record |
-| `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
 Everything else is a worker's job. The master writes **nothing** into `{project_root}`.
+
+> **Legacy paths removed:** `tasks/{date}/parallel_{name}.json` and `tasks/{date}/parallel_plan_{name}.md` are deprecated. All planning context (prompt, conventions, per-task approach + files) lives in `dashboards/{id}/plan.json`.
 
 ---
 
@@ -181,14 +182,16 @@ Written once after all tasks complete. Schema: `swarm_name`, `computed_at`, `ela
 
 ---
 
-## Approval Gate
+## Approval Gate (Hook-Enforced)
 
-After writing `initialization.json` and before dispatching any workers, the master MUST:
-1. Present the full plan on the dashboard
-2. Wait for explicit user approval
-3. Only then begin dispatching agents
+After writing `plan.json` + `initialization.json` and before dispatching any workers, the master MUST:
+1. Write a `permission`-level entry to `logs.json` with message **"Plan ready for review"**
+2. Present the full plan on the dashboard
+3. Wait for explicit user approval
+4. On approval, write an `info`-level entry to `logs.json` with message **"Approval granted"**
+5. Only then begin dispatching agents
 
-Never dispatch before the user approves the plan. The plan review step is mandatory.
+`validate-approval-gate.sh` is a PreToolUse hook on the `Task` matcher. It blocks every worker dispatch until the `Approval granted` log entry exists for the dashboard ID extracted from the worker's prompt. Bypassing the gate is impossible — the hook will reject the dispatch.
 
 ---
 
@@ -197,10 +200,11 @@ Never dispatch before the user approves the plan. The plan review step is mandat
 1. Never write application code -- NON-NEGOTIABLE
 2. Read the command file every time -- NON-NEGOTIABLE
 3. Dashboard is mandatory -- NON-NEGOTIABLE
-4. Populate dashboard before presenting plan -- NON-NEGOTIABLE
-5. Wait for user approval before dispatching -- NON-NEGOTIABLE
-6. Eager dispatch on every completion -- scan ALL tasks, ALL waves
-7. Waves are visual only -- dependencies drive dispatch
-8. Include both `{tracker_root}` and `{project_root}` in every worker prompt
-9. Archive before clear -- always
-10. initialization.json is write-once after planning
+4. **Write `plan.json` BEFORE `initialization.json`** -- hook-enforced (validate-plan-required.sh)
+5. Populate dashboard before presenting plan -- NON-NEGOTIABLE
+6. **Wait for user approval before dispatching** -- hook-enforced (validate-approval-gate.sh)
+7. Eager dispatch on every completion -- scan ALL tasks, ALL waves
+8. Waves are visual only -- dependencies drive dispatch
+9. Include both `{tracker_root}` and `{project_root}` in every worker prompt, and the `plan.json` path
+10. Archive before clear -- always
+11. initialization.json is write-once after planning

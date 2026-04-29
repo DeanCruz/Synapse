@@ -24,6 +24,7 @@ function stripAnsi(str) {
 
 const MODEL_OPTIONS = {
   claude: [
+    { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
     { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
     { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
     { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
@@ -763,7 +764,14 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }
   );
 }
 
-export default function ClaudeView({ onClose, hideHeader, viewMode }) {
+// `tab` is 'chat' when rendered inside ChatInstanceView (chat mode's main pane)
+// and 'code' when rendered inside ClaudeFloatingPanel (code mode's floating panel).
+// `chatAgentId` is the 4-hex chat agent's pseudo-id ("chat-agent-XXXX"); when
+// supplied it stands in for `currentDashboardId` so chat-mode tabs key their
+// per-context state (messages, tabs, attachments) off the agent rather than a
+// code dashboard. Use it to branch behavior that should differ between the
+// two surfaces.
+export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code', chatAgentId = null }) {
   const api = window.electronAPI || null;
   const state = useAppState();
   const dispatch = useDispatch();
@@ -772,8 +780,17 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
   const messages = state.claudeMessages;
   const isProcessing = state.claudeIsProcessing;
   const status = state.claudeStatus;
-  const dashboardId = state.currentDashboardId;
-  if (!dashboardId) return <div className="claude-view-empty">Select a dashboard to begin</div>;
+  // In chat mode the chat tab provides its own agent context, so prefer
+  // chatAgentId. The downstream code treats this as an opaque string id —
+  // storage keys and tab maps don't care whether it points at a dashboard
+  // or a chat agent.
+  const dashboardId = (tab === 'chat' && chatAgentId) ? chatAgentId : state.currentDashboardId;
+  if (!dashboardId) {
+    if (tab === 'chat') {
+      return <div className="claude-view-empty">Create a new chat to begin</div>;
+    }
+    return <div className="claude-view-empty">Select a dashboard to begin</div>;
+  }
   const pendingAttachments = state.claudePendingAttachments;
   const pendingPermission = state.pendingPermission;
   const tabs = state.claudeTabs[dashboardId] || [{ id: 'default', name: 'Chat 1' }];
@@ -2245,7 +2262,13 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
     try {
       const settings = await api.getSettings();
       const perDashboardPath = getDashboardProject(dashboardId);
-      const projectDir = perDashboardPath || settings.activeProjectPath || null;
+      // Chat mode: never fall back to the globally-active project. A chat with no
+      // associated project must run with no project context, otherwise the user
+      // sees the wrong project bleed in from the code-mode default.
+      const isChatMode = tab === 'chat';
+      const projectDir = isChatMode
+        ? (perDashboardPath || null)
+        : (perDashboardPath || settings.activeProjectPath || null);
       const additionalContextDirs = getDashboardAdditionalContext(dashboardId) || [];
       const provider = settings.agentProvider || 'claude';
       const selectedModel = resolveModel(provider, model || settings.defaultModel);
@@ -2280,10 +2303,18 @@ export default function ClaudeView({ onClose, hideHeader, viewMode }) {
         }).catch(() => {});
       }
 
+      // chatAgentId format is `chat-agent-{4hex}` for properly-allocated chat
+      // tabs; legacy tabs fall through with no agentHex, and the IPC handler
+      // skips folder validation.
+      const chatAgentHex = (isChatMode && typeof chatAgentId === 'string' && chatAgentId.startsWith('chat-agent-'))
+        ? chatAgentId.slice('chat-agent-'.length)
+        : undefined;
       const spawnResult = await api.spawnWorker({
         provider,
         taskId,
         dashboardId,
+        chatMode: isChatMode,
+        agentHex: chatAgentHex,
         prompt: finalPrompt,
         systemPrompt: systemPrompt || undefined,
         resumeSessionId: sessionIdRef.current || undefined,

@@ -169,7 +169,7 @@ After all tasks complete (and after verification, if run), compute swarm perform
 
 1. **Read `{tracker_root}/dashboards/{dashboardId}/logs.json` in full** — analyze all entries for the current task.
 2. **Read every progress file** in `{tracker_root}/dashboards/{dashboardId}/progress/` — extract summaries, deviations, milestones, warnings, and logs from each worker.
-3. **Read the master task file** at `{tracker_root}/tasks/{date}/parallel_{task_name}.json` — cross-reference planned vs. actual outcomes.
+3. **Read the canonical plan** at `{tracker_root}/dashboards/{dashboardId}/plan.json` — cross-reference planned vs. actual outcomes (the `tasks[]` array contains each task's planned `approach` and `files`).
 4. **Read `{tracker_root}/dashboards/{dashboardId}/metrics.json`** (written in Step 17D) — include performance data.
 
 **Synthesize all gathered data into a report with the following structure. Every section marked REQUIRED must appear. Sections marked CONDITIONAL appear only when their trigger condition is met.**
@@ -284,8 +284,7 @@ The implementation is self-contained and fully integrated."}
 
 ### Artifacts
 
-- **Task file:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
-- **Plan:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
+- **Plan:** `{tracker_root}/dashboards/{dashboardId}/plan.json`
 - **Dashboard:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
 - **Logs:** `{tracker_root}/dashboards/{dashboardId}/logs.json`
 - **Metrics:** `{tracker_root}/dashboards/{dashboardId}/metrics.json`

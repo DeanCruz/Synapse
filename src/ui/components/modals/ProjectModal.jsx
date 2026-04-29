@@ -6,6 +6,7 @@ import Modal from './Modal.jsx';
 import {
   getDashboardProject,
   saveDashboardProject,
+  clearDashboardProject,
   getDashboardAdditionalContext,
   addDashboardAdditionalContext,
   removeDashboardAdditionalContext,
@@ -13,6 +14,7 @@ import {
 
 const MODEL_OPTIONS = {
   claude: [
+    { value: 'claude-opus-4-7', label: 'Claude Opus 4.7' },
     { value: 'claude-opus-4-6', label: 'Claude Opus 4.6' },
     { value: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6' },
     { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
@@ -47,10 +49,16 @@ function dirBasename(dirPath) {
   return segments[segments.length - 1] || dirPath;
 }
 
-export default function ProjectModal({ onClose, onProjectSelected, dashboardId }) {
+export default function ProjectModal({ onClose, onSave, onProjectSelected, dashboardId, pristine = false }) {
   const api = window.electronAPI || null;
   const targetDashboard = dashboardId || 'dashboard1';
   const dashboardLabel = targetDashboard.replace('dashboard', 'Dashboard ');
+  // Chat-mode dashboards own their project independently. They must NOT inherit
+  // the global activeProjectPath default — that would resurface a stale code-mode
+  // project after the user clears it, and would surface a bogus default for new
+  // chats and chats that have never had a project set.
+  const isChatDashboard = targetDashboard.startsWith('chat-agent-')
+    || targetDashboard.startsWith('pending-chat');
 
   const [currentProject, setCurrentProject] = useState(null);
   const [recentProjects, setRecentProjects] = useState([]);
@@ -65,11 +73,14 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
   useEffect(() => {
     if (!api) return;
 
-    // Load per-dashboard project path first, then fall back to global
-    const perDashboardPath = getDashboardProject(targetDashboard);
+    // Load per-dashboard project path first, then fall back to global.
+    // In `pristine` mode (e.g. new-chat flow) skip both lookups so the
+    // picker opens with no active project pre-selected.
+    const perDashboardPath = pristine ? null : getDashboardProject(targetDashboard);
 
     api.getSettings().then(settings => {
-      const projectPath = perDashboardPath || settings.activeProjectPath;
+      const globalFallback = isChatDashboard ? null : settings.activeProjectPath;
+      const projectPath = pristine ? null : (perDashboardPath || globalFallback);
       if (projectPath) {
         api.loadProject(projectPath).then(project => {
           setCurrentProject(project);
@@ -101,9 +112,10 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
       }
     });
 
-    // Load additional context directories from localStorage
-    setAdditionalDirs(getDashboardAdditionalContext(targetDashboard));
-  }, [api, provider, targetDashboard]);
+    // Load additional context directories from localStorage.
+    // Pristine mode opens with an empty list so the new-chat picker is fully clear.
+    setAdditionalDirs(pristine ? [] : getDashboardAdditionalContext(targetDashboard));
+  }, [api, provider, targetDashboard, pristine]);
 
   function handleSelectDirectory() {
     if (!api) return;
@@ -112,7 +124,6 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
       api.loadProject(dirPath).then(project => {
         setCurrentProject(project);
         api.addRecentProject({ path: project.path, name: project.name });
-        saveDashboardProject(targetDashboard, project.path);
         setRecentProjects(prev => {
           const filtered = prev.filter(p => p.path !== project.path);
           return [{ path: project.path, name: project.name }, ...filtered];
@@ -120,6 +131,21 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
         if (onProjectSelected) onProjectSelected({ ...project, dashboardId: targetDashboard });
       });
     });
+  }
+
+  function handleClearProject() {
+    setCurrentProject(null);
+    if (onProjectSelected) onProjectSelected(null);
+  }
+
+  function handleSaveAndClose() {
+    if (currentProject) {
+      saveDashboardProject(targetDashboard, currentProject.path);
+    } else {
+      clearDashboardProject(targetDashboard);
+    }
+    if (onSave) onSave(currentProject);
+    onClose();
   }
 
   function handleAddAdditionalDir() {
@@ -142,7 +168,6 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
     if (!api) return;
     api.loadProject(recent.path).then(project => {
       setCurrentProject(project);
-      saveDashboardProject(targetDashboard, project.path);
       if (onProjectSelected) onProjectSelected({ ...project, dashboardId: targetDashboard });
     }).catch(() => {});
   }
@@ -183,8 +208,27 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
     );
   }
 
+  const footer = (
+    <>
+      <button
+        type="button"
+        className="modal-footer-btn"
+        onClick={onClose}
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        className="modal-footer-btn modal-footer-btn-primary"
+        onClick={handleSaveAndClose}
+      >
+        Save
+      </button>
+    </>
+  );
+
   return (
-    <Modal title={'Project Configuration — ' + dashboardLabel} onClose={onClose}>
+    <Modal title={'Project Configuration — ' + dashboardLabel} onClose={onClose} footer={footer}>
       {/* Active Project */}
       <div className="settings-section">
         <div className="settings-section-title">Active Project</div>
@@ -209,6 +253,15 @@ export default function ProjectModal({ onClose, onProjectSelected, dashboardId }
         <button className="project-pick-btn" onClick={handleSelectDirectory}>
           Select Project Directory
         </button>
+        {currentProject && (
+          <button
+            type="button"
+            className="project-pick-btn project-pick-btn-clear"
+            onClick={handleClearProject}
+          >
+            Clear Project
+          </button>
+        )}
       </div>
 
       {/* Additional Context */}

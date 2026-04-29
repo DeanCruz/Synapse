@@ -220,8 +220,7 @@ Your plan has already been created and written to the dashboard. The dashboard
 in the Synapse Electron app already shows your tasks as pending cards.
 
 YOUR FILES:
-- Task File:        {tracker_root}/tasks/{MM_DD_YY}/parallel_{stream_slug}.json
-- Plan:             {tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{stream_slug}.md
+- Canonical Plan:   {tracker_root}/dashboards/{dashboardId}/plan.json
 - Dashboard Init:   {tracker_root}/dashboards/{dashboardId}/initialization.json
 - Dashboard Logs:   {tracker_root}/dashboards/{dashboardId}/logs.json
 - Progress Dir:     {tracker_root}/dashboards/{dashboardId}/progress/
@@ -237,9 +236,10 @@ Before dispatching ANY worker agents, read these two files:
    fields that drive it. It documents eager dispatch, failure recovery, write timing,
    and every common mistake. Follow it exactly.
 
-2. {tracker_root}/tasks/{MM_DD_YY}/parallel_{stream_slug}.json
-   This is YOUR master task file — the single source of truth for your swarm's tasks,
-   dependencies, and status.
+2. {tracker_root}/dashboards/{dashboardId}/plan.json
+   This is YOUR canonical plan — the single source of truth for your swarm's tasks.
+   It contains shared `context` (prompt + conventions) and a `tasks[]` array where each
+   entry has the deeply-thought `approach`, `files`, `description`, and `depends_on`.
 
 ═══════════════════════════════════════
 STREAM: {stream_slug}
@@ -474,8 +474,10 @@ Worker failures within a stream are handled entirely by the child master using t
 ### What Child Masters Write
 
 Child masters follow `tracker_master_instructions.md` exactly:
+- `dashboards/{id}/plan.json` — write FIRST during planning (deep-thinking artifact, hook-enforced)
+- `dashboards/{id}/initialization.json` — write ONCE during planning, AFTER plan.json
 - `dashboards/{id}/logs.json` — append on every dispatch, completion, failure, deviation
-- `tasks/{date}/parallel_{slug}.json` — update on every completion
+- `dashboards/{id}/master_state.json` — update on every dispatch/completion/failure
 - They also instruct workers to write `dashboards/{id}/progress/{task_id}.json`
 
 ---

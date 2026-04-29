@@ -8,9 +8,10 @@ import React, { useEffect } from 'react';
  * @param {string}     props.title     - modal header title text
  * @param {Function}   props.onClose   - callback to close the modal
  * @param {React.node} props.children  - modal body content
+ * @param {React.node} [props.footer]  - optional fixed footer drawer (sits below the scrollable body)
  * @param {string}     [props.className] - optional extra class on .history-modal
  */
-export default function Modal({ title, onClose, children, className }) {
+export default function Modal({ title, onClose, children, footer, className }) {
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === 'Escape' && onClose) onClose();
@@ -47,6 +48,11 @@ export default function Modal({ title, onClose, children, className }) {
         <div className="history-modal-body">
           {children}
         </div>
+        {footer && (
+          <div className="history-modal-footer">
+            {footer}
+          </div>
+        )}
       </div>
     </div>
   );

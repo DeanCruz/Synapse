@@ -63,12 +63,11 @@ Read in parallel:
 3. **`logs.json`** — Event history. Note last timestamp and highest agent number.
 4. **`master_state.json`** (if exists) — Previous master cache: completed/in-progress/failed tasks, upstream results, `next_agent_number`, permanently failed.
 
-### Step 3: Locate and Read Master Task File
+### Step 3: Read the Canonical Plan
 
-1. Extract `task.name` (slug) and `task.created` (date) from `initialization.json`.
-2. Look for: `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
-   - Fallback: `{tracker_root}/tasks/*/parallel_{task_name}.json`
-3. **Read the full master task file** — you need every task's `description`, `context`, `critical`, `files`, `tags`, `depends_on`.
+1. Read `{tracker_root}/dashboards/{dashboardId}/plan.json` — `context` (shared) + `tasks[]` (each task's `id`, `title`, `description`, `approach`, `files`, `depends_on`).
+2. If `plan.json` is missing or invalid (legacy swarm), regenerate it: redo the deep-thinking pass over `initialization.json`'s `task.prompt` and write a fresh `plan.json` BEFORE re-dispatching. The `validate-plan-required.sh` and `validate-approval-gate.sh` hooks block dispatch otherwise.
+3. Index tasks by `id` for fast per-agent lookup during dispatch.
 
 ### Step 4: Read Project Context
 

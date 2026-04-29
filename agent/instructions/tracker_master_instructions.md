@@ -142,16 +142,15 @@ After all tasks complete, compute `metrics.json` with elapsed time, parallel eff
 │   │   ├── logs.json
 │   │   └── progress/
 │   └── {hex-id}/                             ← e.g., a3f7k2 (6-char hex)
+│       ├── plan.json                         ← REQUIRED before initialization.json (deep-thinking artifact)
 │       ├── initialization.json
 │       ├── logs.json
 │       ├── master_state.json
 │       ├── metrics.json
 │       └── progress/
-└── tasks/
-    └── {MM_DD_YY}/
-        ├── parallel_{name}.json
-        └── parallel_plan_{name}.md
 ```
+
+> **Note:** `plan.json` is the canonical planning artifact and MUST be written first. The `validate-plan-required.sh` hook blocks `initialization.json` writes when `plan.json` is missing or invalid. Legacy `tasks/{MM_DD_YY}/parallel_*.{json,md}` files are deprecated — all planning context lives in `dashboards/{hex-id}/plan.json`.
 
 ---
 

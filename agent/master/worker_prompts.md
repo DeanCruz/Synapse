@@ -35,6 +35,7 @@ Omit if no PKI or no relationship data exists for task files.}
 
 PROJECT ROOT: {project_root}
 TRACKER ROOT: {tracker_root}
+PLAN FILE: {tracker_root}/dashboards/{dashboardId}/plan.json
 
 CONVENTIONS:
 {Filtered from the convention_map (Step 5A) — include ONLY categories relevant to this
@@ -120,15 +121,22 @@ PREPARATION — REQUIRED BEFORE STARTING WORK
 
 Before writing any code, complete these steps in order:
 
-1. READ YOUR TASK IN THE MASTER TASK FILE:
-   Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` — specifically your task at id="{id}".
-   Focus on: your task's full description, context, critical details, and dependency relationships.
-   Do NOT read the entire task file — only your task section and any tasks listed in your depends_on.
+1. READ YOUR TASK IN THE PLAN FILE:
+   Read `{tracker_root}/dashboards/{dashboardId}/plan.json` — your task lives at `tasks[]`
+   where `id == "{id}"`. Read the entire `context` object (shared across all workers in this
+   swarm: prompt, project_root, tracker_root, conventions, reference_code, architectural
+   decisions, edge cases, shared constraints) plus your single task entry plus the entries
+   for every id listed in your `depends_on`.
+   Focus on: `description`, `approach` (the deep-thought how-to), `files`, `critical`,
+   `success_criteria`, and dependency relationships.
+   Do NOT read other tasks' entries beyond your own and your dependencies.
 
 2. READ PROJECT INSTRUCTIONS (only if not already provided above):
    If the CONVENTIONS section above is empty or says "no CLAUDE.md", check if a CLAUDE.md file
    exists at {project_root}/CLAUDE.md or in the target directory and read it. If conventions were
    already provided above, skip this step — do not re-read what the master already extracted for you.
+   The plan file's `context.conventions` already mirrors the convention_map; prefer it over
+   re-reading CLAUDE.md.
    NOTE: Your code work happens in {project_root}. Your progress reporting goes to {tracker_root}.
 
 3. READINESS CHECKLIST — verify each item before writing code:
@@ -469,6 +477,7 @@ Before dispatching each agent, verify the prompt contains all of these. A missin
 
 | Required Element | Check |
 |---|---|
+| **Plan file pointer** | `PLAN FILE: {tracker_root}/dashboards/{dashboardId}/plan.json` is included so the worker can read shared context and its task entry |
 | **File paths** | Every file to read/modify/create is listed with its full relative path |
 | **CLAUDE.md conventions** | Relevant sections quoted directly (not paraphrased) from the target repo's CLAUDE.md |
 | **Conventions filtered by relevance** | Only convention categories relevant to this specific task are included (per the Convention Relevance Checklist and convention_map) — no full CLAUDE.md dumps |

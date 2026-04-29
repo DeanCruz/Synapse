@@ -4,6 +4,10 @@
 
 **Key paths:** Progress files go to `{tracker_root}`. Code work happens in `{project_root}`. Do NOT confuse them.
 
+## Task Spec (read first)
+
+Your canonical task spec lives at `{tracker_root}/dashboards/{dashboardId}/plan.json`. Read `context` (shared prompt + conventions for ALL agents) and the `tasks[]` entry whose `id` matches your `task_id` (deeply-thought `approach` + `files`) before doing anything else. Your dispatch prompt summarizes this, but `plan.json` is the source of truth.
+
 ## Progress File
 
 Write to: `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — write the **full file** on every update (sole writer, no read-modify-write). Always use the Write tool, not shell echo/cat.

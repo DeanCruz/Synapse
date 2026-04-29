@@ -30,6 +30,11 @@ import { getDashboardProject } from './utils/dashboardProjects.js';
 import GitManagerView from './components/git/GitManagerView.jsx';
 import PreviewView from './components/preview/PreviewView.jsx';
 
+import ChatSidebar from './components/chat/ChatSidebar.jsx';
+import ChatDashboardView from './components/chat/ChatDashboardView.jsx';
+import ChatMakePage from './components/chat/ChatMakePage.jsx';
+import ChatInstanceView from './components/chat/ChatInstanceView.jsx';
+
 function useAgentProviderLabel() {
   const [provider, setProvider] = useState('claude');
 
@@ -279,7 +284,7 @@ export default function App() {
   }, [fetchInitialData]);
 
   const { activeView, activeModal, currentStatus, currentLogs, dashboardStates, dashboardList,
-          allDashboardLogs, currentDashboardId } = state;
+          allDashboardLogs, currentDashboardId, appMode, chatActiveView } = state;
 
   function closeModal() {
     dispatch({ type: 'CLOSE_MODAL' });
@@ -307,6 +312,18 @@ export default function App() {
   const claudeDashboardId = state.claudeDashboardId || currentDashboardId;
   const showClaudeFloat = activeView === 'claude';
   const ideChatActive = activeView === 'ide' && state.ideChatOpen;
+
+  function renderChatContent() {
+    switch (chatActiveView) {
+      case 'make':
+        return <ChatMakePage />;
+      case 'chat-instance':
+        return <ChatInstanceView tab="chat" />;
+      case 'dashboard':
+      default:
+        return <ChatDashboardView />;
+    }
+  }
 
   function renderMainContent() {
     switch (activeView) {
@@ -346,34 +363,45 @@ export default function App() {
     <>
       <Header />
       <div className="dashboard-layout">
-        <Sidebar />
-        <div className="dashboard-content">
-          {renderMainContent()}
-        </div>
-        {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
-        <ClaudeFloatingPanel
-          isVisible={activeView !== 'git' && activeView !== 'preview'}
-          dashboardId={claudeDashboardId}
-          viewMode={ideChatActive ? claudeViewMode : (showClaudeFloat ? claudeViewMode : 'minimized')}
-          onOpen={() => {
-            if (activeView === 'ide') {
-              dispatch({ type: 'IDE_OPEN_CHAT' });
-            } else {
-              dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode: 'expanded' });
-              dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId: claudeDashboardId || currentDashboardId });
-            }
-          }}
-          onSetMode={(mode) => {
-            dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode });
-            if (mode === 'minimized') {
-              if (activeView === 'ide') {
-                dispatch({ type: 'IDE_CLOSE_CHAT' });
-              } else {
-                dispatch({ type: 'SET_VIEW', view: 'dashboard' });
-              }
-            }
-          }}
-        />
+        {appMode === 'chat' ? (
+          <>
+            <ChatSidebar />
+            <div className="dashboard-content">
+              {renderChatContent()}
+            </div>
+          </>
+        ) : (
+          <>
+            <Sidebar />
+            <div className="dashboard-content">
+              {renderMainContent()}
+            </div>
+            {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
+            <ClaudeFloatingPanel
+              isVisible={activeView !== 'git' && activeView !== 'preview'}
+              dashboardId={claudeDashboardId}
+              viewMode={ideChatActive ? claudeViewMode : (showClaudeFloat ? claudeViewMode : 'minimized')}
+              onOpen={() => {
+                if (activeView === 'ide') {
+                  dispatch({ type: 'IDE_OPEN_CHAT' });
+                } else {
+                  dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode: 'expanded' });
+                  dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId: claudeDashboardId || currentDashboardId });
+                }
+              }}
+              onSetMode={(mode) => {
+                dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode });
+                if (mode === 'minimized') {
+                  if (activeView === 'ide') {
+                    dispatch({ type: 'IDE_CLOSE_CHAT' });
+                  } else {
+                    dispatch({ type: 'SET_VIEW', view: 'dashboard' });
+                  }
+                }
+              }}
+            />
+          </>
+        )}
       </div>
 
       {activeModal === 'commands' && (
@@ -500,7 +528,7 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMo
             onSetMode={onSetMode}
           />
         )}
-        <ClaudeView hideHeader viewMode={viewMode} />
+        <ClaudeView hideHeader viewMode={viewMode} tab="code" />
       </div>
     </div>
   );

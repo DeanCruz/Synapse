@@ -19,7 +19,7 @@
 
 3. **Read `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`** for the full lifecycle data. If no progress file exists, the task is `"pending"` with no lifecycle data.
 
-4. **Read the master task file** at `{tracker_root}/tasks/{date}/parallel_{task_name}.json`. Find the task entry for `{task_id}`.
+4. **Read the canonical plan** at `{tracker_root}/dashboards/{dashboardId}/plan.json`. Find the `tasks[]` entry whose `id == "{task_id}"`.
 
 5. **Read `{tracker_root}/dashboards/{dashboardId}/logs.json`** and filter for entries where `task_id` matches.
 

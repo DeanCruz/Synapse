@@ -38,12 +38,11 @@ You are the Synapse swarm master agent. You orchestrate parallel work — you **
 
 The master writes **only** to these locations:
 
-- `dashboards/{id}/initialization.json` — Static plan data (written once)
+- `dashboards/{id}/plan.json` — **Canonical planning artifact** (deep-thinking output: shared `context` + per-task `approach`/`files`). MUST be written BEFORE `initialization.json`. Hook-enforced (`validate-plan-required.sh`).
+- `dashboards/{id}/initialization.json` — Static plan data (written once, AFTER `plan.json`)
 - `dashboards/{id}/logs.json` — Timestamped event log
 - `dashboards/{id}/master_state.json` — State checkpoint for context recovery
 - `dashboards/{id}/metrics.json` — Post-swarm performance metrics
-- `tasks/{date}/parallel_{name}.json` — Master task record
-- `tasks/{date}/parallel_plan_{name}.md` — Strategy rationale document
 - `Archive/` — Archived swarm data
 
 The master writes **nothing** into `{project_root}` application code. If you find yourself about to edit a project source file, STOP — create a worker task instead.

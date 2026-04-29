@@ -956,7 +956,27 @@ function registerIPCHandlers(getMainWindow) {
       dangerouslySkipPermissions: opts.dangerouslySkipPermissions,
     }));
     try {
-      if (opts.dashboardId) {
+      if (opts.chatMode) {
+        // Chat-mode workers live under Chat/chat{N}/agent{XXXX}/, not dashboards/.
+        // When an agentHex is supplied, sanity-check the on-disk agent folder
+        // exists. Legacy tabs without an allocated hex fall through.
+        if (opts.agentHex) {
+          const synapseRoot = path.resolve(__dirname, '..');
+          const chatRoot = path.join(synapseRoot, 'Chat');
+          let found = false;
+          try {
+            for (const entry of fs.readdirSync(chatRoot, { withFileTypes: true })) {
+              if (!entry.isDirectory() || !/^chat\d+$/i.test(entry.name)) continue;
+              if (fs.existsSync(path.join(chatRoot, entry.name, 'agent' + opts.agentHex))) {
+                found = true; break;
+              }
+            }
+          } catch { /* chat root missing — fall through */ }
+          if (!found) {
+            throw new Error('Chat agent folder not found for agentHex: ' + opts.agentHex);
+          }
+        }
+      } else if (opts.dashboardId) {
         const dashDir = path.join(DASHBOARDS_DIR, opts.dashboardId);
         if (!fs.existsSync(dashDir)) {
           throw new Error('Dashboard directory does not exist: ' + dashDir);
@@ -2838,6 +2858,96 @@ function registerIPCHandlers(getMainWindow) {
     }
   });
 
+  // --- Chat Dashboard handlers ---
+
+  // Read all agent task files from Chat/Dashboard/Agent*/ and return aggregated lanes.
+  // Returns { agents: [{ name, tasks: [...] }] } or { agents: [] } if directory missing.
+  ipcMain.handle('get-chat-dashboard-data', async () => {
+    const synapseRoot = path.resolve(__dirname, '..');
+    const baseDir = path.join(synapseRoot, 'Chat', 'Dashboard');
+    if (!fs.existsSync(baseDir)) return { agents: [] };
+
+    const lanes = [];
+    let entries;
+    try {
+      entries = fs.readdirSync(baseDir, { withFileTypes: true });
+    } catch {
+      return { agents: [] };
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || !entry.name.startsWith('Agent')) continue;
+      const agentDir = path.join(baseDir, entry.name);
+      const tasks = [];
+      try {
+        const files = fs.readdirSync(agentDir).filter(f => f.endsWith('.json'));
+        for (const file of files) {
+          try {
+            const raw = fs.readFileSync(path.join(agentDir, file), 'utf-8');
+            tasks.push(JSON.parse(raw));
+          } catch { /* skip malformed file */ }
+        }
+      } catch { continue; }
+      lanes.push({ name: entry.name, tasks });
+    }
+
+    lanes.sort((a, b) => a.name.localeCompare(b.name));
+    return { agents: lanes };
+  });
+
+  // Create a new chat-tab folder and a unique 4-hex agent under it.
+  // Layout: Chat/chat{N}/agent{XXXX}/  (chat agents are 4 hex; code agents are 6 hex.)
+  // Optional projectPath is recorded inside the agent folder as project.json.
+  // Returns { chatNumber, agentHex, agentDir, chatDir }.
+  ipcMain.handle('create-chat-agent', async (_event, opts = {}) => {
+    const synapseRoot = path.resolve(__dirname, '..');
+    const chatRoot = path.join(synapseRoot, 'Chat');
+    if (!fs.existsSync(chatRoot)) fs.mkdirSync(chatRoot, { recursive: true });
+
+    // Gather all existing 4-hex agent IDs across every Chat/chat*/ folder so the
+    // new ID is unique across all chats (the user's explicit requirement).
+    const usedHex = new Set();
+    let maxChatNum = 0;
+    try {
+      for (const entry of fs.readdirSync(chatRoot, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const m = /^chat(\d+)$/i.exec(entry.name);
+        if (!m) continue;
+        const n = parseInt(m[1], 10);
+        if (n > maxChatNum) maxChatNum = n;
+        const chatDir = path.join(chatRoot, entry.name);
+        try {
+          for (const sub of fs.readdirSync(chatDir, { withFileTypes: true })) {
+            if (!sub.isDirectory()) continue;
+            const am = /^agent([0-9a-f]{4})$/i.exec(sub.name);
+            if (am) usedHex.add(am[1].toLowerCase());
+          }
+        } catch { /* unreadable chat dir — skip */ }
+      }
+    } catch { /* chatRoot empty — fall through */ }
+
+    let agentHex;
+    for (let i = 0; i < 1000; i++) {
+      const candidate = Math.floor(Math.random() * 0x10000)
+        .toString(16)
+        .padStart(4, '0');
+      if (!usedHex.has(candidate)) { agentHex = candidate; break; }
+    }
+    if (!agentHex) throw new Error('Could not allocate a unique 4-hex chat agent id');
+
+    const chatNumber = maxChatNum + 1;
+    const chatDir = path.join(chatRoot, 'chat' + chatNumber);
+    const agentDir = path.join(chatDir, 'agent' + agentHex);
+    fs.mkdirSync(agentDir, { recursive: true });
+
+    if (opts.projectPath) {
+      const meta = { projectPath: opts.projectPath, createdAt: new Date().toISOString() };
+      fs.writeFileSync(path.join(agentDir, 'project.json'), JSON.stringify(meta, null, 2));
+    }
+
+    return { chatNumber, agentHex, agentDir, chatDir };
+  });
+
 
   // --- 3. Set up file watchers with IPC broadcast ---
 
@@ -2853,6 +2963,9 @@ function registerIPCHandlers(getMainWindow) {
 
   // Start queue watcher
   startQueueWatcher(broadcastFn);
+
+  // Start chat dashboard watcher — emits chat_dashboard_changed on file changes
+  startChatDashboardWatcher(broadcastFn);
 
   // Start reconciliation loop — catches fs.watch events dropped by the OS
   startReconciliation(broadcastFn);
@@ -2912,6 +3025,39 @@ function sendInitialData(getMainWindow, dashboards) {
 }
 
 // ---------------------------------------------------------------------------
+// Chat dashboard watcher — pushes change events when Chat/Dashboard/ files change
+// ---------------------------------------------------------------------------
+
+let chatDashboardWatcher = null;
+let chatDashboardDebounceTimer = null;
+
+function startChatDashboardWatcher(broadcastFn) {
+  const synapseRoot = path.resolve(__dirname, '..');
+  const baseDir = path.join(synapseRoot, 'Chat', 'Dashboard');
+  if (!fs.existsSync(baseDir)) return;
+
+  try {
+    chatDashboardWatcher = fs.watch(baseDir, { recursive: true }, (_eventType, filename) => {
+      if (!filename) return;
+      clearTimeout(chatDashboardDebounceTimer);
+      chatDashboardDebounceTimer = setTimeout(() => {
+        broadcastFn('chat_dashboard_changed', { timestamp: Date.now() });
+      }, 200);
+    });
+  } catch (err) {
+    console.error('[chat-dashboard-watcher] Failed to start:', err.message);
+  }
+}
+
+function stopChatDashboardWatcher() {
+  if (chatDashboardWatcher) {
+    try { chatDashboardWatcher.close(); } catch {}
+    chatDashboardWatcher = null;
+  }
+  clearTimeout(chatDashboardDebounceTimer);
+}
+
+// ---------------------------------------------------------------------------
 // Cleanup
 // ---------------------------------------------------------------------------
 
@@ -2920,6 +3066,7 @@ function sendInitialData(getMainWindow, dashboards) {
  */
 function stopWatchers() {
   stopAllWatchers();
+  stopChatDashboardWatcher();
 }
 
 module.exports = { registerIPCHandlers, stopWatchers };

@@ -57,16 +57,13 @@ Read these **in parallel**:
 2. **All progress files** from `{tracker_root}/dashboards/{dashboardId}/progress/` — Build a status map: `{ task_id → { status, summary, deviations, logs } }`.
 3. **`{tracker_root}/dashboards/{dashboardId}/logs.json`** — Event history for context.
 
-### Step 4: Locate and read the master task file
+### Step 4: Read the canonical plan
 
-The master task file contains the full task descriptions, context, critical details, and file lists that workers need.
+`{tracker_root}/dashboards/{dashboardId}/plan.json` contains the deeply-thought plan: shared `context` and the `tasks[]` array with each task's `id`, `title`, `description`, `approach`, `files`, and `depends_on`.
 
-1. Extract `task.name` from `initialization.json` (the task slug).
-2. Extract `task.created` to determine the date directory.
-3. Look for the task file at: `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
-   - If not found, search: `{tracker_root}/tasks/*/parallel_{task_name}.json`
-   - If still not found, check `{tracker_root}/tasks/` for any task files matching the task name pattern.
-4. **Read the full master task file.** You need every task's `description`, `context`, `critical`, `files`, `tags`, and `depends_on`.
+1. Read `{tracker_root}/dashboards/{dashboardId}/plan.json`.
+2. If the file is missing or invalid (legacy swarm), regenerate it now: redo the deep-thinking pass over the original prompt (from `initialization.json`'s `task.prompt`) and write a fresh `plan.json` BEFORE re-dispatching any worker. Hooks block dispatch otherwise.
+3. Index the tasks by `id` so you can look up each agent's spec quickly during dispatch.
 
 ### Step 5: Read project context
 
@@ -228,10 +225,10 @@ PREPARATION — REQUIRED BEFORE STARTING WORK
 
 Before writing any code, complete these steps in order:
 
-1. READ YOUR TASK IN THE MASTER TASK FILE:
-   Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` — specifically your task at id="{id}".
-   Focus on: your task's full description, context, critical details, and dependency relationships.
-   Do NOT read the entire task file — only your task section and any tasks listed in your depends_on.
+1. READ YOUR TASK IN THE CANONICAL PLAN:
+   Read `{tracker_root}/dashboards/{dashboardId}/plan.json` — specifically `context` (shared prompt + conventions)
+   and the `tasks[]` entry where `id == "{id}"`. That entry has the deeply-thought `approach` and `files`.
+   Also read entries for tasks listed in your `depends_on` (their summaries are in upstream progress files).
 
 2. READ PROJECT INSTRUCTIONS (only if not already provided above):
    If the CONVENTIONS section above is empty or says "no CLAUDE.md", check if a CLAUDE.md file

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 import { useIsElectron } from '../hooks/useElectronAPI.js';
 import logoMark from '../assets/synapse-logo-mark.svg';
+import ModeMenu from './ModeMenu.jsx';
 
 export default function Header() {
   const state = useAppState();
@@ -84,6 +85,7 @@ export default function Header() {
     <header className="header-bar">
       {/* Left — logo */}
       <div className="header-left">
+        <ModeMenu />
         <button
           type="button"
           className="header-brand"
