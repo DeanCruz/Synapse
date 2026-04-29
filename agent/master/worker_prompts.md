@@ -174,6 +174,7 @@ If you cannot read the instruction file at the path above, use the inline PROGRE
 PROGRESS FILE SCHEMA (fallback — use this if you cannot read the instruction file above):
 {
   "task_id": "{id}",
+  "dashboard_id": "{dashboardId}",
   "template_version": "p_track_v2",
   "status": "in_progress | completed | failed",
   "started_at": "ISO-8601",
@@ -182,9 +183,12 @@ PROGRESS FILE SCHEMA (fallback — use this if you cannot read the instruction f
   "assigned_agent": "Agent {N}",
   "stage": "reading_context | planning | implementing | testing | finalizing | completed | failed",
   "message": "what you are doing right now",
+  "files_changed": [{ "path": "relative/path", "action": "created|modified|deleted" }],
   "milestones": [{ "at": "ISO-8601", "msg": "significant accomplishment" }],
   "deviations": [{ "at": "ISO-8601", "description": "plan divergence" }],
-  "logs": [{ "at": "ISO-8601", "level": "info|warn|error|deviation", "msg": "event" }]
+  "logs": [{ "at": "ISO-8601", "level": "info|warn|error|deviation", "msg": "event" }],
+  "shared_context": null,
+  "annotations": null
 }
 Write the FULL file on every update. Mandatory writes: (1) before starting work, (2) on every stage transition, (3) on any deviation, (4) on completion/failure. Timestamps: always `date -u +"%Y-%m-%dT%H:%M:%SZ"`.
 
