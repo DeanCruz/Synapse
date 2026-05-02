@@ -10,7 +10,7 @@ import {
   getDashboardAdditionalContext,
   addDashboardAdditionalContext,
   removeDashboardAdditionalContext,
-} from '../../utils/dashboardProjects.js';
+} from '@/utils/dashboardProjects.js';
 
 const MODEL_OPTIONS = {
   claude: [

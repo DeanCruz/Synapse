@@ -6,10 +6,10 @@
 // Allows sending follow-up messages while an agent is still running.
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAppState, useDispatch, getClaudeSlice } from '../context/AppContext.jsx';
-import { renderMarkdown } from '../utils/markdown.js';
-import { getDashboardProject, getDashboardAdditionalContext } from '../utils/dashboardProjects.js';
-import PermissionModal from './modals/PermissionModal.jsx';
+import { useAppState, useDispatch, getClaudeSlice } from '@/context/AppContext.jsx';
+import { renderMarkdown } from '@/utils/markdown.js';
+import { getDashboardProject, getDashboardAdditionalContext } from '@/utils/dashboardProjects.js';
+import PermissionModal from '@/shared/modals/PermissionModal.jsx';
 
 // Strip ANSI escape codes and terminal control characters from text
 function stripAnsi(str) {

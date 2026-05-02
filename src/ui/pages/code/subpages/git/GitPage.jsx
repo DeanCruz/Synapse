@@ -1,27 +1,27 @@
-// GitManagerView — main Git Manager layout component
+// GitPage — main Git Manager layout component
 // Assembles RepoTabs, sidebar (ChangesPanel + CommitPanel), content area
 // (DiffViewer / HistoryPanel / BranchPanel), and QuickActions.
 // Follows the IDEView.jsx container pattern with resizable sidebar.
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import RepoTabs from './RepoTabs.jsx';
-import GitWelcome from './GitWelcome.jsx';
-import InitFlow from './InitFlow.jsx';
-import ChangesPanel from './ChangesPanel.jsx';
-import DiffViewer from './DiffViewer.jsx';
-import CommitPanel from './CommitPanel.jsx';
-import RemotePanel from './RemotePanel.jsx';
-import BranchPanel from './BranchPanel.jsx';
-import HistoryPanel from './HistoryPanel.jsx';
-import QuickActions from './QuickActions.jsx';
-import '../../styles/git-manager.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import RepoTabs from './components/RepoTabs.jsx';
+import GitWelcome from './components/GitWelcome.jsx';
+import InitFlow from './components/InitFlow.jsx';
+import ChangesPanel from './components/ChangesPanel.jsx';
+import DiffViewer from './components/DiffViewer.jsx';
+import CommitPanel from './components/CommitPanel.jsx';
+import RemotePanel from './components/RemotePanel.jsx';
+import BranchPanel from './components/BranchPanel.jsx';
+import HistoryPanel from './components/HistoryPanel.jsx';
+import QuickActions from './components/QuickActions.jsx';
+import '@/pages/code/subpages/git/styles/git-manager.css';
 
 const MIN_SIDEBAR_WIDTH = 220;
 const MAX_SIDEBAR_WIDTH = 500;
 const DEFAULT_SIDEBAR_WIDTH = 300;
 
-export default function GitManagerView() {
+export default function GitPage() {
   const {
     gitRepos,
     gitActiveRepoId,

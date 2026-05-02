@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
-import { colorWithAlpha, initStatusColorsFromCSS } from '../../utils/constants.js';
+import { colorWithAlpha, initStatusColorsFromCSS } from '@/utils/constants.js';
 
 const THEMES = [
   {

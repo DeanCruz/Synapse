@@ -2,9 +2,9 @@
 // Replaces the file explorer in the sidebar when ideSidebarView === 'search'.
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 import SearchResults from './SearchResults.jsx';
-import '../../styles/ide-search.css';
+import '@/pages/code/subpages/code-explorer/styles/ide-search.css';
 
 // ── SVG Icons ──────────────────────────────────────────────────
 

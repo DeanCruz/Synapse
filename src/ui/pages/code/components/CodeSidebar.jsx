@@ -1,13 +1,13 @@
-// Sidebar — Dashboard selector with status dots, per-dashboard Project/Agent buttons,
+// CodeSidebar — Dashboard selector with status dots, per-dashboard Project/Agent buttons,
 // add/delete dashboard controls, collapse toggle, drag-and-drop reorder, inline rename,
 // and queue section
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useAppState, useDispatch } from '../context/AppContext.jsx';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 import { getDashboardLabel } from '@/utils/constants.js';
-import { getDashboardProject, saveDashboardProject } from '../utils/dashboardProjects.js';
-import { isIdeDashboard, getWorkspaceForDashboard, getWorkspaceDashboard, getAllWorkspaceDashboards, removeWorkspaceDashboard } from '../utils/ideWorkspaceManager.js';
-import '../styles/ide-sidebar.css';
+import { getDashboardProject, saveDashboardProject } from '@/utils/dashboardProjects.js';
+import { isIdeDashboard, getWorkspaceForDashboard, getWorkspaceDashboard, getAllWorkspaceDashboards, removeWorkspaceDashboard } from '@/utils/ideWorkspaceManager.js';
+import '@/pages/code/subpages/code-explorer/styles/ide-sidebar.css';
 
 function StatusDot({ status }) {
   let cls = 'dashboard-item-status idle';
@@ -42,7 +42,7 @@ function getDisplayName(id, dashboardNames) {
   return getDashboardLabel(id);
 }
 
-export default function Sidebar() {
+export default function CodeSidebar() {
   const state = useAppState();
   const dispatch = useDispatch();
   const { currentDashboardId, dashboardStates, dashboardList, dashboardNames, queueItems, activeView, chatPreviews, unreadChatCounts, claudeIsProcessing, claudeProcessingStash, ideWorkspaces } = state;

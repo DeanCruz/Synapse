@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { useAppState } from '../../context/AppContext.jsx';
-import '../../styles/git-manager.css';
+import { useAppState } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/git/styles/git-manager.css';
 
 function isBinaryDiff(raw) {
   if (!raw || typeof raw !== 'string') return false;

@@ -4,12 +4,12 @@
 // Can be embedded (IDE) or overlay (dashboard).
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useAppState } from '../context/AppContext.jsx';
+import { useAppState } from '@/context/AppContext.jsx';
 import LogPanel from './LogPanel.jsx';
 import TerminalView from './TerminalView.jsx';
-import ProblemsPanel from './ide/ProblemsPanel.jsx';
-import DebugConsolePanel from './ide/DebugConsolePanel.jsx';
-import { getDashboardProject } from '../utils/dashboardProjects.js';
+import ProblemsPanel from '@/pages/code/subpages/code-explorer/components/ProblemsPanel.jsx';
+import DebugConsolePanel from '@/pages/code/subpages/code-explorer/components/DebugConsolePanel.jsx';
+import { getDashboardProject } from '@/utils/dashboardProjects.js';
 
 const PANEL_TABS = [
   { id: 'terminal', label: 'TERMINAL' },

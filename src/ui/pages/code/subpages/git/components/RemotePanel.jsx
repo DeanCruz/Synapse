@@ -5,8 +5,8 @@
 // force push requires double confirmation.
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import '../../styles/git-manager.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/git/styles/git-manager.css';
 
 const PROTECTED_BRANCHES = ['main', 'master'];
 

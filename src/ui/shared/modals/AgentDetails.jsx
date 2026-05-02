@@ -3,9 +3,9 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import Modal from './Modal.jsx';
-import { useDispatch } from '../../context/AppContext.jsx';
-import { STATUS_COLORS, STATUS_BG_COLORS, colorWithAlpha } from '../../utils/constants.js';
-import { formatTime, calcDuration, formatElapsed } from '../../utils/format.js';
+import { useDispatch } from '@/context/AppContext.jsx';
+import { STATUS_COLORS, STATUS_BG_COLORS, colorWithAlpha } from '@/utils/constants.js';
+import { formatTime, calcDuration, formatElapsed } from '@/utils/format.js';
 
 function StatusBadge({ status }) {
   const label = (status || '').replace(/_/g, ' ');

@@ -4,8 +4,8 @@
 import React, { useRef, useEffect } from 'react';
 import { STATUS_COLORS, STATUS_BG_COLORS } from '@/utils/constants.js';
 import AgentCard, { StatusBadge } from './AgentCard.jsx';
-import { drawDependencyLines, drawSiblingLines, setupCardHoverEffects } from '../utils/dependencyLines.js';
-import { useAppState, useDispatch } from '../context/AppContext.jsx';
+import { drawDependencyLines, drawSiblingLines, setupCardHoverEffects } from '@/utils/dependencyLines.js';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 
 // ---------------------------------------------------------------------------
 // WaveHeader

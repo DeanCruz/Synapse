@@ -4,7 +4,7 @@
 // Mirrors the WorkspaceTabs.jsx pattern from the IDE view.
 
 import React, { useCallback } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 
 export default function RepoTabs() {
   const { gitRepos, gitActiveRepoId, gitCurrentBranch } = useAppState();

@@ -4,7 +4,7 @@
   "stats": {
     "total_files": 333,
     "annotated": 333,
-    "stale": 0
+    "stale": 1
   },
   "files": {
     "electron/main.js": {
@@ -2366,7 +2366,7 @@
       "summary": "Root React component that owns view routing, IPC bootstrap, modal hosting, and the floating Claude chat panel.",
       "complexity": "complex",
       "last_annotated": "2026-05-02T06:27:25.130Z",
-      "stale": false
+      "stale": true
     },
     "src/ui/main.jsx": {
       "hash": "3da85f9e",

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import ProjectModal from '../modals/ProjectModal.jsx';
-import { saveDashboardProject, clearDashboardProject, getDashboardProject } from '../../utils/dashboardProjects.js';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import ProjectModal from '@/shared/modals/ProjectModal.jsx';
+import { saveDashboardProject, clearDashboardProject, getDashboardProject } from '@/utils/dashboardProjects.js';
 
 function getChatProjectName(agentHex) {
   if (!agentHex) return null;

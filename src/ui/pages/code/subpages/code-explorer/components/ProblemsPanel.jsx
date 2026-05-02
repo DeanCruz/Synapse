@@ -3,8 +3,8 @@
 // Designed to be embedded inside BottomPanel's "Problems" tab.
 
 import React, { useState, useMemo, useCallback } from 'react';
-import { useAppState } from '../../context/AppContext.jsx';
-import '../../styles/ide-debug.css';
+import { useAppState } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/code-explorer/styles/ide-debug.css';
 
 const SEVERITY_ORDER = { error: 0, warning: 1, info: 2, hint: 3 };
 

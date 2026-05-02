@@ -3,7 +3,7 @@
 // Buttons are disabled/enabled based on debugStatus prop.
 
 import React, { useState, useCallback } from 'react';
-import '../../styles/ide-debug.css';
+import '@/pages/code/subpages/code-explorer/styles/ide-debug.css';
 
 // ── SVG Icon Components ──────────────────────────────────────
 

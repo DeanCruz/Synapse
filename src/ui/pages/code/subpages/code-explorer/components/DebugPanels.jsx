@@ -3,8 +3,8 @@
 // Reads from AppContext debug state. Standalone component for IDEView integration (task 4.1).
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import '../../styles/ide-debug.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/code-explorer/styles/ide-debug.css';
 
 // ── SVG Icon Components ──────────────────────────────────────
 

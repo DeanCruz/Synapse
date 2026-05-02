@@ -1,9 +1,9 @@
 // Header — top navigation bar with task badge, archive dropdown, and swarm controls
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useAppState, useDispatch } from '../context/AppContext.jsx';
-import { useIsElectron } from '../hooks/useElectronAPI.js';
-import logoMark from '../assets/synapse-logo-mark.svg';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import { useIsElectron } from '@/hooks/useElectronAPI.js';
+import logoMark from '@/assets/synapse-logo-mark.svg';
 import ModeMenu from './ModeMenu.jsx';
 
 export default function Header() {

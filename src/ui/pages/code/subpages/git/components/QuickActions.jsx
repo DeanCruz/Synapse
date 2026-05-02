@@ -6,7 +6,7 @@
 // Every destructive action shows a confirmation dialog via SafetyDialogs.
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 import { ConfirmDialog, DoubleConfirmDialog } from './SafetyDialogs.jsx';
 
 // ── Helper: generate a smart auto-commit message ───────────────

@@ -4,8 +4,8 @@
 // Standalone component — will be mounted in BottomPanel.jsx by task 4.1.
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { useAppState } from '../../context/AppContext.jsx';
-import '../../styles/ide-debug.css';
+import { useAppState } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/code-explorer/styles/ide-debug.css';
 
 const MAX_OUTPUT_ENTRIES = 1000;
 

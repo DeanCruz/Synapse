@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Modal from './Modal.jsx';
-import { getDashboardAdditionalContext } from '../../utils/dashboardProjects.js';
+import { getDashboardAdditionalContext } from '@/utils/dashboardProjects.js';
 
 function buildPlanningPrompt(userPrompt) {
   return (

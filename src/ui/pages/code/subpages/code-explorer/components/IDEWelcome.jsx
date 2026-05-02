@@ -2,10 +2,10 @@
 // Provides "Open Folder" and "Create New Folder" action buttons.
 
 import React, { useCallback } from 'react';
-import { useDispatch } from '../../context/AppContext.jsx';
-import { createWorkspaceDashboard } from '../../utils/ideWorkspaceManager.js';
-import { saveDashboardProject } from '../../utils/dashboardProjects.js';
-import '../../styles/ide-explorer.css';
+import { useDispatch } from '@/context/AppContext.jsx';
+import { createWorkspaceDashboard } from '@/utils/ideWorkspaceManager.js';
+import { saveDashboardProject } from '@/utils/dashboardProjects.js';
+import '@/pages/code/subpages/code-explorer/styles/ide-explorer.css';
 
 // ── SVG Icons ────────────────────────────────────────────────
 

@@ -3,7 +3,7 @@
 // Mirrors IDEWelcome.jsx pattern, uses git-manager-empty-* classes.
 
 import React, { useCallback } from 'react';
-import { useDispatch } from '../../context/AppContext.jsx';
+import { useDispatch } from '@/context/AppContext.jsx';
 
 function GitBranchIcon() {
   return (

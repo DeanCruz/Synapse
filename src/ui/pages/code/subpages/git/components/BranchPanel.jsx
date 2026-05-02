@@ -3,8 +3,8 @@
 // and actions: create, switch, delete, merge, move changes to new branch.
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import '../../styles/git-manager.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/git/styles/git-manager.css';
 
 // ── SVG Icons (inline for zero-dep) ──────────────────────────────
 

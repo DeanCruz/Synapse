@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import '../../styles/git-manager.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/git/styles/git-manager.css';
 
 const STATUS_MAP = {
   M: { label: 'M', cls: 'modified' },

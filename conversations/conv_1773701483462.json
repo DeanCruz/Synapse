@@ -322,5 +322,5 @@
       "text": "Two changes made:\n\n1. **`preload.js`** — added `createConversation: (name) => ipcRenderer.invoke('create-conversation', name)` to the context bridge\n2. **`ipc-handlers.js`** — imported `createConversation` from `ConversationService` and registered the `'create-conversation'` IPC handler\n\nWith these in place, `createNewConversation()` in `ClaudeView.js` will no longer bail out early, conversations will be created on disk, and `listConversations` will return them properly. Restart the Electron app to pick up the changes."
     }
   ],
-  "updated": "2026-05-02T06:00:20.027Z"
+  "updated": "2026-05-02T07:31:14.378Z"
 }

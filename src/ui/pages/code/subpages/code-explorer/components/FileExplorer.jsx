@@ -3,8 +3,8 @@
 // Clicking a file dispatches IDE_OPEN_FILE; clicking a folder loads its children on demand.
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import '../../styles/ide-explorer.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/code-explorer/styles/ide-explorer.css';
 
 // ── SVG Icon Components ──────────────────────────────────────
 

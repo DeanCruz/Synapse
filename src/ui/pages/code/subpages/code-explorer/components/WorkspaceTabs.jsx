@@ -2,9 +2,9 @@
 // Each tab shows a folder name with a close button. A "+" button opens new folders.
 
 import React, { useCallback, useEffect, useRef } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import { createWorkspaceDashboard, getWorkspaceDashboard, removeWorkspaceDashboard } from '../../utils/ideWorkspaceManager.js';
-import { saveDashboardProject } from '../../utils/dashboardProjects.js';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import { createWorkspaceDashboard, getWorkspaceDashboard, removeWorkspaceDashboard } from '@/utils/ideWorkspaceManager.js';
+import { saveDashboardProject } from '@/utils/dashboardProjects.js';
 
 export default function WorkspaceTabs() {
   const { ideWorkspaces, ideActiveWorkspaceId, currentDashboardId, dashboardList } = useAppState();

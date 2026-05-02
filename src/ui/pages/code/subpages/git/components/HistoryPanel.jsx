@@ -4,8 +4,8 @@
 // filtering by branch, author, and date range.
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import '../../styles/git-manager.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/git/styles/git-manager.css';
 
 // ── Constants ────────────────────────────────────────────────────
 const BATCH_SIZE = 50;

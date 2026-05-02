@@ -3,8 +3,8 @@
 
 import React from 'react';
 import Modal from './Modal.jsx';
-import { STATUS_COLORS, STATUS_BG_COLORS, colorWithAlpha } from '../../utils/constants.js';
-import { formatTime } from '../../utils/format.js';
+import { STATUS_COLORS, STATUS_BG_COLORS, colorWithAlpha } from '@/utils/constants.js';
+import { formatTime } from '@/utils/format.js';
 
 function StatusBadge({ status }) {
   const label = (status || '').replace(/_/g, ' ');

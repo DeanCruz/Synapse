@@ -2,8 +2,8 @@
 // Functional React component. Manages task list grouped by wave with add/edit/delete.
 
 import React, { useState, useCallback } from 'react';
-import { useDispatch } from '../context/AppContext.jsx';
-import TaskEditorModal from './modals/TaskEditorModal.jsx';
+import { useDispatch } from '@/context/AppContext.jsx';
+import TaskEditorModal from '@/shared/modals/TaskEditorModal.jsx';
 
 export default function SwarmBuilder({ onLaunch, onCancel, initData, dashboardId }) {
   const dispatch = useDispatch();

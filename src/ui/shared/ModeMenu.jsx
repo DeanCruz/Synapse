@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAppState, useDispatch } from '../context/AppContext.jsx';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 
 export default function ModeMenu() {
   const { appMode } = useAppState();

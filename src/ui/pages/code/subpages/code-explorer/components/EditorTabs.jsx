@@ -12,8 +12,8 @@
  */
 
 import React, { useRef, useCallback } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import '../../styles/ide-editor.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/code-explorer/styles/ide-editor.css';
 
 export default function EditorTabs({ workspaceId }) {
   const state = useAppState();

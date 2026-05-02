@@ -10,9 +10,9 @@
 // non-Electron envs.
 
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import AgentCard, { StatusBadge } from '../AgentCard.jsx';
-import AgentDetails from '../modals/AgentDetails.jsx';
-import { drawDependencyLines, setupCardHoverEffects } from '../../utils/dependencyLines.js';
+import AgentCard, { StatusBadge } from '@/pages/code/subpages/dashboards/components/AgentCard.jsx';
+import AgentDetails from '@/shared/modals/AgentDetails.jsx';
+import { drawDependencyLines, setupCardHoverEffects } from '@/utils/dependencyLines.js';
 
 function shapeAgent(name, tasks) {
   const safeTasks = (tasks || []).map((t) => ({

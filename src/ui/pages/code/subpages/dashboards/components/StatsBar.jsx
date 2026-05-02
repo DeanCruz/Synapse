@@ -2,7 +2,7 @@
 // Each card is clickable to filter agents. Elapsed card opens the timeline panel.
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAppState, useDispatch } from '../context/AppContext.jsx';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 import { formatElapsed, calcDuration } from '@/utils/format.js';
 
 function StatCard({ id, value, label, numberClass, isActive, onClick }) {

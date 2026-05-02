@@ -17,8 +17,8 @@ import '@/utils/monacoWorkerSetup';
 import * as monaco from 'monaco-editor';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import '../../styles/ide-editor.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/code-explorer/styles/ide-editor.css';
 
 /* ── Language detection map ─────────────────────────────────── */
 const EXT_TO_LANGUAGE = {

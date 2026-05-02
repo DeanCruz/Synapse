@@ -1,16 +1,16 @@
-// PreviewView — Live preview of a running web app via Electron webview
+// PreviewPage — Live preview of a running web app via Electron webview
 // Provides URL bar, navigation controls, overlay injection for inline editing,
 // edit flow back to source files, and dev server auto-detection.
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import { getDashboardProject, saveDashboardProject } from '../../utils/dashboardProjects.js';
-import '../../styles/preview-view.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import { getDashboardProject, saveDashboardProject } from '@/utils/dashboardProjects.js';
+import './styles/preview-view.css';
 
 // Inline the overlay script at build time via Vite's ?raw import.
 // The previous fetch-based approach broke in the bundled Electron app because
 // the relative URL resolved to a nonexistent path in the dist directory.
-import OVERLAY_SCRIPT_RAW from '../../preview/inject-overlay.js?raw';
+import OVERLAY_SCRIPT_RAW from './inject-overlay.js?raw';
 
 /**
  * Bridge script injected alongside inject-overlay.js.
@@ -54,7 +54,7 @@ function normalizePreviewLabel(rawLabel) {
   return label;
 }
 
-export default function PreviewView() {
+export default function PreviewPage() {
   const state = useAppState();
   const dispatch = useDispatch();
   const { previewUrl, previewIsLoading, previewError, currentDashboardId } = state;

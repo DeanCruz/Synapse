@@ -12,8 +12,8 @@
 // instance from the code-mode (floating panel) instance.
 
 import React, { useMemo } from 'react';
-import ClaudeView from '../ClaudeView.jsx';
-import { useAppState } from '../../context/AppContext.jsx';
+import ClaudeView from '@/shared/claude/ClaudeView.jsx';
+import { useAppState } from '@/context/AppContext.jsx';
 
 export default function ChatInstanceView({ tab = 'chat', surface = 'chat' }) {
   const { chatTabs, chatActiveTabId } = useAppState();

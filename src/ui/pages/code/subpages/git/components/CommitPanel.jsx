@@ -4,8 +4,8 @@
 // commit button disabled when no staged files or empty message.
 
 import React, { useState, useCallback, useRef } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import '../../styles/git-manager.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import '@/pages/code/subpages/git/styles/git-manager.css';
 
 const SUBJECT_SOFT_LIMIT = 50;
 const BODY_WRAP_LIMIT = 72;

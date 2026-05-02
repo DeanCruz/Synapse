@@ -1,31 +1,31 @@
-// IDEView — main IDE layout component
+// CodeExplorerPage — main IDE layout component
 // Assembles WorkspaceTabs, FileExplorer, EditorTabs, CodeEditor, IDEWelcome,
 // DebugToolbar, DebugPanels, and a VS Code-style BottomPanel (Terminal, Output,
 // Problems, Debug Console, etc.)
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { useAppState, useDispatch } from '../../context/AppContext.jsx';
-import WorkspaceTabs from './WorkspaceTabs.jsx';
-import FileExplorer from './FileExplorer.jsx';
-import SearchPanel from './SearchPanel.jsx';
-import EditorTabs from './EditorTabs.jsx';
-import CodeEditor from './CodeEditor.jsx';
-import IDEWelcome from './IDEWelcome.jsx';
-import DebugToolbar from './DebugToolbar.jsx';
-import DebugPanels from './DebugPanels.jsx';
-import BottomPanel from '../BottomPanel.jsx';
-import { getDashboardProject } from '../../utils/dashboardProjects.js';
-import { getWorkspaceDashboard } from '../../utils/ideWorkspaceManager.js';
-import '../../styles/ide-layout.css';
-import '../../styles/ide-debug.css';
-import '../../styles/ide-debug-panels.css';
-import '../../styles/ide-debug-console.css';
+import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import WorkspaceTabs from './components/WorkspaceTabs.jsx';
+import FileExplorer from './components/FileExplorer.jsx';
+import SearchPanel from './components/SearchPanel.jsx';
+import EditorTabs from './components/EditorTabs.jsx';
+import CodeEditor from './components/CodeEditor.jsx';
+import IDEWelcome from './components/IDEWelcome.jsx';
+import DebugToolbar from './components/DebugToolbar.jsx';
+import DebugPanels from './components/DebugPanels.jsx';
+import BottomPanel from '@/pages/code/subpages/dashboards/components/BottomPanel.jsx';
+import { getDashboardProject } from '@/utils/dashboardProjects.js';
+import { getWorkspaceDashboard } from '@/utils/ideWorkspaceManager.js';
+import './styles/ide-layout.css';
+import './styles/ide-debug.css';
+import './styles/ide-debug-panels.css';
+import './styles/ide-debug-console.css';
 
 const MIN_EXPLORER_WIDTH = 180;
 const MAX_EXPLORER_WIDTH = 500;
 const DEFAULT_EXPLORER_WIDTH = 250;
 
-export default function IDEView() {
+export default function CodeExplorerPage() {
   const state = useAppState();
   const {
     ideWorkspaces,
