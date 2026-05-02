@@ -14,7 +14,10 @@ export default function LogsModal({ onClose, logs, dashboardId }) {
   const entriesRef = useRef(null);
   const prevLengthRef = useRef(0);
 
-  const entries = (logs && logs.entries) ? logs.entries : [];
+  // Note: Array.prototype.entries is a method, so `logs.entries` is truthy
+  // even when logs is itself an array. Must check Array.isArray to avoid
+  // returning the entries() iterator function as our entries list.
+  const entries = (logs && Array.isArray(logs.entries)) ? logs.entries : [];
 
   const filtered = useMemo(() => {
     let result = entries;

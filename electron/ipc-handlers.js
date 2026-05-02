@@ -911,6 +911,13 @@ function registerIPCHandlers(getMainWindow) {
     } catch (e) {
       logs = { entries: [] };
     }
+    // Normalize: tolerate legacy schemas where the file is a raw array or an
+    // object missing the entries key. Without this guard, .push() throws.
+    if (Array.isArray(logs)) {
+      logs = { entries: logs };
+    } else if (!logs || typeof logs !== 'object' || !Array.isArray(logs.entries)) {
+      logs = { entries: [] };
+    }
     logs.entries.push({
       timestamp: new Date().toISOString(),
       task_id: entry.task_id || null,
