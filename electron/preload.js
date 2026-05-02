@@ -215,6 +215,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Git Operations
   gitIsRepo: (repoPath) => ipcRenderer.invoke('git-is-repo', repoPath),
+  gitDiscoverRepos: (rootPath, options) => ipcRenderer.invoke('git-discover-repos', rootPath, options),
   gitInit: (repoPath) => ipcRenderer.invoke('git-init', repoPath),
   gitStatus: (repoPath) => ipcRenderer.invoke('git-status', repoPath),
   gitDiff: (repoPath, staged) => ipcRenderer.invoke('git-diff', repoPath, staged),

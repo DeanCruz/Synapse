@@ -2,7 +2,6 @@
 // The page entry component (DashboardsPage.jsx) is created by Wave 3 (T3.1)
 // when DashboardContent is extracted from App.jsx.
 
-export { default as HomeView } from './components/HomeView.jsx';
 export { default as SwarmBuilder } from './components/SwarmBuilder.jsx';
 export { default as WavePipeline } from './components/WavePipeline.jsx';
 export { default as ChainPipeline } from './components/ChainPipeline.jsx';

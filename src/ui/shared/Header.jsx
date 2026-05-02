@@ -37,7 +37,7 @@ export default function Header() {
   }, [archiveOpen]);
 
   function handleHomeClick() {
-    dispatch({ type: 'SET_VIEW', view: 'home' });
+    dispatch({ type: 'SET_VIEW', view: 'dashboard' });
   }
 
   function handleArchiveTask() {
@@ -48,11 +48,11 @@ export default function Header() {
 
   function handleViewArchive() {
     setArchiveOpen(false);
-    dispatch({ type: 'SET_VIEW', view: 'home' });
+    dispatch({ type: 'SET_VIEW', view: 'dashboard' });
   }
 
   function handleHistory() {
-    dispatch({ type: 'SET_VIEW', view: 'home' });
+    dispatch({ type: 'SET_VIEW', view: 'dashboard' });
   }
 
   function handleCommands() {

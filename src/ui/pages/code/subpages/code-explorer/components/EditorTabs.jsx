@@ -7,25 +7,26 @@
  *   - Close button on each tab (with dirty confirmation)
  *   - Horizontal scrolling for overflow
  *
- * Props:
- *   workspaceId — ID of the active workspace
+ * State is keyed by currentDashboardId — each dashboard maintains its own
+ * independent set of open files and active file selection.
  */
 
 import React, { useRef, useCallback } from 'react';
 import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 import '@/pages/code/subpages/code-explorer/styles/ide-editor.css';
 
-export default function EditorTabs({ workspaceId }) {
+export default function EditorTabs() {
   const state = useAppState();
   const dispatch = useDispatch();
   const tabsBarRef = useRef(null);
 
-  const openFiles = state.ideOpenFiles[workspaceId] || [];
-  const activeFileId = state.ideActiveFileId[workspaceId];
+  const currentDashboardId = state.currentDashboardId;
+  const openFiles = (currentDashboardId && state.ideOpenFiles[currentDashboardId]) || [];
+  const activeFileId = currentDashboardId ? state.ideActiveFileId[currentDashboardId] : null;
 
   const handleTabClick = useCallback((fileId) => {
-    dispatch({ type: 'IDE_SWITCH_FILE', workspaceId, fileId });
-  }, [dispatch, workspaceId]);
+    dispatch({ type: 'IDE_SWITCH_FILE', dashboardId: currentDashboardId, fileId });
+  }, [dispatch, currentDashboardId]);
 
   const handleTabClose = useCallback((e, file) => {
     e.stopPropagation(); // Don't trigger tab switch
@@ -35,8 +36,8 @@ export default function EditorTabs({ workspaceId }) {
       );
       if (!confirmed) return;
     }
-    dispatch({ type: 'IDE_CLOSE_FILE', workspaceId, fileId: file.id });
-  }, [dispatch, workspaceId]);
+    dispatch({ type: 'IDE_CLOSE_FILE', dashboardId: currentDashboardId, fileId: file.id });
+  }, [dispatch, currentDashboardId]);
 
   // Scroll active tab into view when it changes
   const scrollToActive = useCallback((el) => {

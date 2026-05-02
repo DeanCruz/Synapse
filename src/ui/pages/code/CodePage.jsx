@@ -7,7 +7,6 @@ import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 import CodeSidebar from '@/pages/code/components/CodeSidebar.jsx';
 import ClaudeFloatingPanel from '@/shared/claude/ClaudeFloatingPanel.jsx';
 
-import HomeView from '@/pages/code/subpages/dashboards/components/HomeView.jsx';
 import SwarmBuilder from '@/pages/code/subpages/dashboards/components/SwarmBuilder.jsx';
 import DashboardsPage from '@/pages/code/subpages/dashboards/DashboardsPage.jsx';
 import CodeExplorerPage from '@/pages/code/subpages/code-explorer/CodeExplorerPage.jsx';
@@ -21,9 +20,6 @@ export default function CodePage() {
   const {
     activeView,
     currentDashboardId,
-    dashboardStates,
-    dashboardList,
-    allDashboardLogs,
   } = state;
 
   const claudeViewMode = state.claudeViewMode;
@@ -31,36 +27,8 @@ export default function CodePage() {
   const showClaudeFloat = activeView === 'claude';
   const ideChatActive = activeView === 'ide' && state.ideChatOpen;
 
-  function handleSwitchDashboard(id) {
-    dispatch({ type: 'SWITCH_DASHBOARD', id });
-  }
-
-  async function handleArchiveClick(archive) {
-    try {
-      const res = await fetch('/api/archives/' + encodeURIComponent(archive.name));
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.error) return;
-      dispatch({ type: 'SET_INIT', data: data.initialization });
-      dispatch({ type: 'SET_PROGRESS', data: data.progress });
-      dispatch({ type: 'SET_LOGS', data: data.logs });
-      dispatch({ type: 'SET', key: 'archiveViewActive', value: true });
-      dispatch({ type: 'SET_VIEW', view: 'dashboard' });
-    } catch (_) {}
-  }
-
   function renderMainContent() {
     switch (activeView) {
-      case 'home':
-        return (
-          <HomeView
-            dashboardStates={dashboardStates}
-            dashboardList={dashboardList}
-            allDashboardLogs={allDashboardLogs}
-            onSwitchDashboard={handleSwitchDashboard}
-            onArchiveClick={handleArchiveClick}
-          />
-        );
       case 'swarmBuilder':
         return (
           <SwarmBuilder

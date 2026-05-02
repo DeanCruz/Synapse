@@ -84,7 +84,6 @@ TRACKER_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 # Only care about files under {tracker_root}/dashboards/
 case "$FILE_PATH" in
   "$TRACKER_ROOT"/dashboards/*) ;;
-  */dashboards/*) ;;
   *) allow ;;
 esac
 

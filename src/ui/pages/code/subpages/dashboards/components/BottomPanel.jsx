@@ -6,10 +6,16 @@
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { useAppState } from '@/context/AppContext.jsx';
 import LogPanel from './LogPanel.jsx';
-import TerminalView from './TerminalView.jsx';
+import TerminalView, { destroyTerminalSession } from './TerminalView.jsx';
 import ProblemsPanel from '@/pages/code/subpages/code-explorer/components/ProblemsPanel.jsx';
 import DebugConsolePanel from '@/pages/code/subpages/code-explorer/components/DebugConsolePanel.jsx';
 import { getDashboardProject } from '@/utils/dashboardProjects.js';
+
+// Module-level cache of terminal tabs per dashboard. Survives BottomPanel
+// remounts (e.g. switching activeView in CodePage, or rendering a different
+// branch in CodeExplorerPage) so terminal tabs/state persist for the app
+// session.
+let cachedTermState = null;
 
 const PANEL_TABS = [
   { id: 'terminal', label: 'TERMINAL' },
@@ -57,9 +63,15 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
   // Per-dashboard terminal state: { [dashboardId]: { tabs, activeTab, nextId } }
   const DEFAULT_TERM = { tabs: [{ id: 1, label: 'Terminal 1' }], activeTab: 1, nextId: 2 };
   const [termState, setTermState] = useState(() => {
+    if (cachedTermState) return cachedTermState;
     if (!dashboardId) return {};
     return { [dashboardId]: { ...DEFAULT_TERM } };
   });
+
+  // Mirror state into the module-level cache so it survives remounts.
+  useEffect(() => {
+    cachedTermState = termState;
+  }, [termState]);
 
   // Ensure current dashboard has terminal state when switching
   useEffect(() => {
@@ -100,6 +112,9 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
       const idx = ds.tabs.findIndex(t => t.id === tabId);
       const remaining = ds.tabs.filter(t => t.id !== tabId);
       const newActive = ds.activeTab !== tabId ? ds.activeTab : remaining[Math.min(idx, remaining.length - 1)].id;
+      // Sessions are kept alive across unmounts in the module-level cache, so
+      // tab close is the only path that should kill the PTY + dispose xterm.
+      destroyTerminalSession(dashboardId, tabId);
       return { ...prev, [dashboardId]: { ...ds, tabs: remaining, activeTab: newActive } };
     });
   }, [dashboardId]);
@@ -284,6 +299,7 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
                 <TerminalView
                   projectDir={dbId === dashboardId ? projectDir : getDashboardProject(dbId)}
                   dashboardId={dbId}
+                  tabId={tab.id}
                 />
               </div>
             ))

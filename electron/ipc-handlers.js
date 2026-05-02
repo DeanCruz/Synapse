@@ -2290,6 +2290,62 @@ function registerIPCHandlers(getMainWindow) {
     }
   });
 
+  // --- git-discover-repos: Recursively find git repos under a root directory ---
+  // Returns the root itself (if a repo) plus any nested repos, each as { path, name, isRoot }.
+  // Stops descending once a .git directory is found at a level (a repo's interior is not searched).
+  ipcMain.handle('git-discover-repos', async (_event, rootPath, options = {}) => {
+    const SKIP_DIRS = new Set([
+      'node_modules', '.git', 'dist', 'build', '.next', '.nuxt', '.cache',
+      '.turbo', 'out', 'coverage', '.synapse', 'Archive', 'venv', '.venv',
+      '__pycache__', 'target', '.idea', '.vscode',
+    ]);
+    const maxDepth = typeof options.maxDepth === 'number' ? options.maxDepth : 5;
+
+    try {
+      const resolved = await gitValidateRepoPath(rootPath);
+      const repos = [];
+
+      async function walk(dir, depth, isRoot) {
+        // Probe this directory: if it has a .git child, it's a repo — record and stop descending.
+        let hasGit = false;
+        try {
+          const gitStat = await fsPromises.stat(path.join(dir, '.git'));
+          hasGit = gitStat.isDirectory() || gitStat.isFile(); // .git can be a file (worktree/submodule)
+        } catch (_) {}
+
+        if (hasGit) {
+          repos.push({
+            path: dir,
+            name: path.basename(dir) || dir,
+            isRoot,
+          });
+          return; // do not descend into a repo's contents
+        }
+
+        if (depth >= maxDepth) return;
+
+        let entries;
+        try {
+          entries = await fsPromises.readdir(dir, { withFileTypes: true });
+        } catch (_) {
+          return;
+        }
+
+        for (const entry of entries) {
+          if (!entry.isDirectory()) continue;
+          if (entry.name.startsWith('.') && entry.name !== '.') continue;
+          if (SKIP_DIRS.has(entry.name)) continue;
+          await walk(path.join(dir, entry.name), depth + 1, false);
+        }
+      }
+
+      await walk(resolved, 0, true);
+      return { success: true, data: repos };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   // --- git-init: Initialize a new git repository ---
   ipcMain.handle('git-init', async (_event, repoPath) => {
     try {

@@ -1,21 +1,22 @@
 // CodeExplorerPage — main IDE layout component
-// Assembles WorkspaceTabs, FileExplorer, EditorTabs, CodeEditor, IDEWelcome,
+// Assembles FileExplorer, EditorTabs, CodeEditor,
 // DebugToolbar, DebugPanels, and a VS Code-style BottomPanel (Terminal, Output,
 // Problems, Debug Console, etc.)
+//
+// IDE context is keyed entirely by currentDashboardId — the orthogonal sidebar
+// dashboard list now drives which project is active. There is no separate
+// workspace tab bar.
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useAppState, useDispatch } from '@/context/AppContext.jsx';
-import WorkspaceTabs from './components/WorkspaceTabs.jsx';
 import FileExplorer from './components/FileExplorer.jsx';
 import SearchPanel from './components/SearchPanel.jsx';
 import EditorTabs from './components/EditorTabs.jsx';
 import CodeEditor from './components/CodeEditor.jsx';
-import IDEWelcome from './components/IDEWelcome.jsx';
 import DebugToolbar from './components/DebugToolbar.jsx';
 import DebugPanels from './components/DebugPanels.jsx';
 import BottomPanel from '@/pages/code/subpages/dashboards/components/BottomPanel.jsx';
-import { getDashboardProject } from '@/utils/dashboardProjects.js';
-import { getWorkspaceDashboard } from '@/utils/ideWorkspaceManager.js';
+import { getDashboardProject, saveDashboardProject } from '@/utils/dashboardProjects.js';
 import './styles/ide-layout.css';
 import './styles/ide-debug.css';
 import './styles/ide-debug-panels.css';
@@ -28,19 +29,18 @@ const DEFAULT_EXPLORER_WIDTH = 250;
 export default function CodeExplorerPage() {
   const state = useAppState();
   const {
-    ideWorkspaces,
-    ideActiveWorkspaceId,
     ideOpenFiles,
     ideActiveFileId,
     currentDashboardId,
     dashboardList,
+    dashboardNames,
     currentLogs,
     activeLogFilter,
     debugSession,
   } = state;
   const dispatch = useDispatch();
 
-  const projectPath = getDashboardProject(currentDashboardId);
+  const projectPath = currentDashboardId ? getDashboardProject(currentDashboardId) : null;
 
   // ---- Debug launch config ref (persists across restarts) ----
   const debugLaunchConfigRef = useRef({ scriptPath: '', cwd: '' });
@@ -48,6 +48,9 @@ export default function CodeExplorerPage() {
   const [explorerWidth, setExplorerWidth] = useState(DEFAULT_EXPLORER_WIDTH);
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startWidth: 0 });
+  // Tick state used to force a re-render after saveDashboardProject writes to
+  // localStorage (since localStorage isn't reactive).
+  const [, setProjectTick] = useState(0);
 
   // NOTE: File tree loading is handled exclusively by FileExplorer.jsx, which
   // uses the lazy-load pattern (ideListDir per directory). A previous recursive
@@ -56,29 +59,33 @@ export default function CodeExplorerPage() {
   // completed (often several seconds later), it overwrote the populated tree
   // with a malformed object, visually collapsing the explorer.
 
-  // NOTE: Workspace-dashboard creation is handled exclusively by WorkspaceTabs.jsx.
-  // handleAddWorkspace() creates dashboards for new workspaces, and a mount-time
-  // recovery effect recreates dashboards for persisted workspaces after app restart.
-  // Sidebar.jsx only handles display, sorting, and orphan cleanup — never creation.
+  // NOTE: Dashboards are now created from the sidebar's "+" button. The IDE
+  // workspace concept has been removed; switching the active dashboard
+  // (via the sidebar) is the only way to switch the IDE's active project.
 
-  // Sync currentDashboardId to active workspace's dashboard when workspace changes
-  useEffect(() => {
-    if (!ideActiveWorkspaceId) return;
-    const dashId = getWorkspaceDashboard(ideActiveWorkspaceId);
-    if (dashId && dashId !== currentDashboardId) {
-      dispatch({ type: 'SWITCH_DASHBOARD', id: dashId });
+  // ---- Set Project handler (folder picker + saveDashboardProject) ----
+  const handleSetProject = useCallback(async () => {
+    if (!currentDashboardId) return;
+    if (!window.electronAPI?.ideSelectFolder) return;
+    try {
+      const picked = await window.electronAPI.ideSelectFolder();
+      if (!picked) return;
+      saveDashboardProject(currentDashboardId, picked);
+      // Force a re-render so the new project path is read from localStorage.
+      setProjectTick(t => t + 1);
+    } catch (e) {
+      // Silently ignore — user cancellation or IPC error
     }
-  }, [ideActiveWorkspaceId, currentDashboardId, dispatch]);
+  }, [currentDashboardId]);
 
   // ---- Debug IPC callbacks ----
   const handleDebugLaunch = useCallback((scriptPath, args) => {
-    const ws = ideWorkspaces.find(w => w.id === ideActiveWorkspaceId);
-    const cwd = ws?.path || projectPath || '';
+    const cwd = projectPath || '';
     debugLaunchConfigRef.current = { scriptPath, cwd };
     if (window.electronAPI?.debugLaunch) {
       window.electronAPI.debugLaunch({ scriptPath, args, cwd });
     }
-  }, [ideWorkspaces, ideActiveWorkspaceId, projectPath]);
+  }, [projectPath]);
 
   const handleDebugContinue = useCallback(() => {
     window.electronAPI?.debugContinue?.();
@@ -126,11 +133,11 @@ export default function CodeExplorerPage() {
 
   // ---- Debug panel navigation callbacks ----
   const handleDebugNavigate = useCallback((filePath, line) => {
-    if (!filePath || !ideActiveWorkspaceId) return;
+    if (!filePath || !currentDashboardId) return;
     // Open the file in the editor
     dispatch({
       type: 'IDE_OPEN_FILE',
-      workspaceId: ideActiveWorkspaceId,
+      dashboardId: currentDashboardId,
       file: { path: filePath, name: filePath.split('/').pop() },
     });
     // Store a navigation target so CodeEditor can jump to the line
@@ -139,13 +146,13 @@ export default function CodeExplorerPage() {
       key: 'ideNavigateToLine',
       value: { filePath, line, column: 1, ts: Date.now() },
     });
-  }, [ideActiveWorkspaceId, dispatch]);
+  }, [currentDashboardId, dispatch]);
 
   const handleDebugNavigateToFrame = useCallback((source, line, column) => {
-    if (!source || !ideActiveWorkspaceId) return;
+    if (!source || !currentDashboardId) return;
     dispatch({
       type: 'IDE_OPEN_FILE',
-      workspaceId: ideActiveWorkspaceId,
+      dashboardId: currentDashboardId,
       file: { path: source, name: source.split('/').pop() },
     });
     dispatch({
@@ -153,7 +160,7 @@ export default function CodeExplorerPage() {
       key: 'ideNavigateToLine',
       value: { filePath: source, line, column: column || 1, ts: Date.now() },
     });
-  }, [ideActiveWorkspaceId, dispatch]);
+  }, [currentDashboardId, dispatch]);
 
   // ---- Subscribe to debug push events ----
   useEffect(() => {
@@ -263,22 +270,73 @@ export default function CodeExplorerPage() {
     };
   }, [isDragging]);
 
-  // Derive current workspace and file info
-  const activeWorkspace = ideWorkspaces.find(w => w.id === ideActiveWorkspaceId) || null;
-  const activeWsOpenFiles = ideActiveWorkspaceId
-    ? (ideOpenFiles[ideActiveWorkspaceId] || [])
+  // Derive current open files / active file using the dashboard-keyed slices
+  const activeWsOpenFiles = currentDashboardId
+    ? (ideOpenFiles[currentDashboardId] || [])
     : [];
-  const activeFileId = ideActiveWorkspaceId
-    ? (ideActiveFileId[ideActiveWorkspaceId] || null)
+  const activeFileId = currentDashboardId
+    ? (ideActiveFileId[currentDashboardId] || null)
     : null;
   const activeFile = activeWsOpenFiles.find(f => f.id === activeFileId) || null;
-  const hasWorkspaces = ideWorkspaces.length > 0;
 
-  // When no workspaces are open, show the welcome screen with bottom panel
-  if (!hasWorkspaces) {
+  const hasDashboards = Array.isArray(dashboardList) && dashboardList.length > 0;
+  const hasActiveDashboard = !!currentDashboardId;
+  const hasProject = !!projectPath;
+
+  // ---- Empty state: no dashboard selected (or none exist) ----
+  if (!hasActiveDashboard) {
     return (
       <div className="ide-view">
-        <IDEWelcome />
+        <div className="ide-empty-state">
+          <svg className="ide-empty-state-icon" viewBox="0 0 48 48" fill="none">
+            <rect x="8" y="6" width="32" height="36" rx="3" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M16 16h16M16 22h12M16 28h8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
+          <div className="ide-empty-state-title">
+            {hasDashboards ? 'Select a dashboard' : 'Select or create a dashboard'}
+          </div>
+          <div className="ide-empty-state-text">
+            {hasDashboards
+              ? 'Choose a dashboard from the sidebar to open its Code Explorer.'
+              : 'Create a dashboard from the sidebar to start exploring code.'}
+          </div>
+        </div>
+        <BottomPanel
+          logs={currentLogs}
+          activeFilter={activeLogFilter}
+          onFilterChange={(level) => dispatch({ type: 'SET', key: 'activeLogFilter', value: level })}
+          projectDir={projectPath}
+          dashboardId={currentDashboardId}
+          embedded
+        />
+      </div>
+    );
+  }
+
+  // ---- Empty state: dashboard has no project bound ----
+  if (!hasProject) {
+    const dashName =
+      (dashboardNames && dashboardNames[currentDashboardId]) || currentDashboardId;
+    return (
+      <div className="ide-view">
+        <div className="ide-empty-state">
+          <svg className="ide-empty-state-icon" viewBox="0 0 48 48" fill="none">
+            <rect x="8" y="6" width="32" height="36" rx="3" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M16 16h16M16 22h12M16 28h8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+          </svg>
+          <div className="ide-empty-state-title">Project not set</div>
+          <div className="ide-empty-state-text">
+            Dashboard <strong>{dashName}</strong> doesn't have a project folder yet.
+            Pick one to start browsing code.
+          </div>
+          <button
+            type="button"
+            className="ide-empty-state-button"
+            onClick={handleSetProject}
+          >
+            Set Project
+          </button>
+        </div>
         <BottomPanel
           logs={currentLogs}
           activeFilter={activeLogFilter}
@@ -293,14 +351,15 @@ export default function CodeExplorerPage() {
 
   return (
     <div className="ide-view">
-      <WorkspaceTabs />
       <div className="ide-main">
         {/* File Explorer / Search Panel */}
         <div
           className="ide-explorer-panel"
           style={{ width: explorerWidth }}
         >
-          {state.ideSidebarView === 'search' ? <SearchPanel /> : <FileExplorer />}
+          {state.ideSidebarView === 'search'
+            ? <SearchPanel dashboardId={currentDashboardId} />
+            : <FileExplorer dashboardId={currentDashboardId} />}
         </div>
 
         {/* Draggable Divider */}
@@ -313,7 +372,7 @@ export default function CodeExplorerPage() {
         <div className="ide-editor-area">
           {activeWsOpenFiles.length > 0 ? (
             <>
-              <EditorTabs workspaceId={ideActiveWorkspaceId} />
+              <EditorTabs dashboardId={currentDashboardId} />
               {/* Debug Toolbar — shown when debug session is active (not idle) */}
               {debugSession.status !== 'idle' && (
                 <DebugToolbar
@@ -334,8 +393,8 @@ export default function CodeExplorerPage() {
                     {activeFile ? (
                       <CodeEditor
                         filePath={activeFile.path}
-                        workspaceId={ideActiveWorkspaceId}
-                        workspacePath={activeWorkspace ? activeWorkspace.path : ''}
+                        dashboardId={currentDashboardId}
+                        workspacePath={projectPath}
                       />
                     ) : (
                       <div className="ide-editor-empty">
@@ -376,7 +435,7 @@ export default function CodeExplorerPage() {
         logs={currentLogs}
         activeFilter={activeLogFilter}
         onFilterChange={(level) => dispatch({ type: 'SET', key: 'activeLogFilter', value: level })}
-        projectDir={activeWorkspace?.path || projectPath}
+        projectDir={projectPath}
         dashboardId={currentDashboardId}
         onNavigate={handleDebugNavigate}
         embedded

@@ -1,7 +1,7 @@
 /* ============================================================
    Git Manager — Distributed Git Control View
    ============================================================
-   Layout: repo tabs (top) → sidebar (left) + main content (right)
+   Layout: sidebar (left) + main content (right)
    Mirrors IDE layout structure (ide-layout.css)
    All classes prefixed: .git-manager-*
    ============================================================ */
@@ -14,147 +14,6 @@
   height: 100%;
   background: var(--bg);
   overflow: hidden;
-}
-
-/* ============================================================
-   Repo Tab Bar — top row of repository tabs
-   ============================================================ */
-.git-manager-repo-tabs {
-  display: flex;
-  align-items: center;
-  height: 36px;
-  min-height: 36px;
-  padding: 0 4px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.git-manager-repo-tabs-scroll {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
-
-.git-manager-repo-tabs-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-/* Individual repo tab */
-.git-manager-repo-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-tertiary);
-  font-family: var(--sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-  white-space: nowrap;
-  line-height: 1;
-  flex-shrink: 0;
-  height: 28px;
-  user-select: none;
-}
-
-.git-manager-repo-tab:hover {
-  color: var(--text-secondary);
-  background: var(--surface-hover);
-}
-
-.git-manager-repo-tab.active {
-  color: var(--text);
-  background: var(--surface);
-}
-
-.git-manager-repo-tab.active:hover {
-  background: var(--surface-hover);
-}
-
-/* Repo tab icon (folder/git icon) */
-.git-manager-repo-tab-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  opacity: 0.7;
-}
-
-.git-manager-repo-tab.active .git-manager-repo-tab-icon {
-  opacity: 1;
-}
-
-/* Branch badge inside repo tab */
-.git-manager-repo-tab-branch {
-  font-size: 0.65rem;
-  color: var(--color-in-progress);
-  opacity: 0.8;
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  letter-spacing: 0.02em;
-}
-
-/* Close button on repo tab */
-.git-manager-repo-tab-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border: none;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  padding: 0;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s, color 0.15s;
-  flex-shrink: 0;
-}
-
-.git-manager-repo-tab:hover .git-manager-repo-tab-close,
-.git-manager-repo-tab.active .git-manager-repo-tab-close {
-  opacity: 1;
-}
-
-.git-manager-repo-tab-close:hover {
-  background: var(--border);
-  color: var(--text);
-}
-
-/* Add repo button */
-.git-manager-repo-tab-add {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.15s, background 0.15s;
-  flex-shrink: 0;
-  margin-left: 2px;
-}
-
-.git-manager-repo-tab-add:hover {
-  color: var(--text-secondary);
-  background: var(--surface-hover);
 }
 
 /* ============================================================
@@ -1723,6 +1582,47 @@
   user-select: none;
 }
 
+/* ----- Per-dashboard empty states (no dashboard / no project) -----
+   Class names introduced by GitPage Wave 2 — modeled after
+   .ide-empty-state in ide-layout.css for visual consistency. */
+.git-manager-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+  user-select: none;
+}
+
+.git-manager-set-project-btn {
+  margin-top: 8px;
+  padding: 6px 14px;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-elevated, #2a2a2e);
+  border: 1px solid var(--border, #444);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.git-manager-set-project-btn:hover {
+  background: var(--bg-hover, #34343a);
+  border-color: var(--border-strong, #666);
+}
+
+.git-manager-set-project-btn:active {
+  transform: translateY(1px);
+}
+
 .git-manager-empty-icon {
   width: 48px;
   height: 48px;
@@ -2398,4 +2298,102 @@
   font-size: 0.72rem;
   color: var(--color-failed);
   line-height: 1.4;
+}
+
+/* ============================================================
+   Repo Tabs — multi-repo selector at the top of the Git Manager
+   ============================================================ */
+.git-manager-repo-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  padding: 0 8px;
+  height: 34px;
+  min-height: 34px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.git-manager-repo-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+.git-manager-repo-tabs::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+.git-manager-repo-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: var(--sans);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  position: relative;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+}
+
+.git-manager-repo-tab:hover {
+  color: var(--text-secondary);
+  background: var(--surface-hover);
+}
+
+.git-manager-repo-tab.active {
+  color: var(--text);
+  background: var(--bg);
+}
+
+.git-manager-repo-tab.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--color-in-progress);
+}
+
+.git-manager-repo-tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.git-manager-repo-tab-label {
+  font-family: var(--mono, var(--sans));
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+}
+
+.git-manager-repo-tab.is-root .git-manager-repo-tab-label {
+  font-family: var(--sans);
+  font-size: 0.75rem;
+}
+
+.git-manager-repo-tab-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(155, 124, 240, 0.12);
+  color: var(--color-in-progress);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
 }

@@ -29,6 +29,36 @@ export function clearDashboardProject(dashboardId) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
 }
 
+// Per-dashboard active git repo storage — uses localStorage
+// Tracks which nested git repo (under the project root) is currently selected
+// in the Git Manager. Falls back to the project path itself when unset.
+
+const ACTIVE_REPO_KEY = 'synapse-dashboard-active-repo';
+
+export function getDashboardActiveRepo(dashboardId) {
+  try {
+    const map = JSON.parse(localStorage.getItem(ACTIVE_REPO_KEY)) || {};
+    return map[dashboardId] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function saveDashboardActiveRepo(dashboardId, repoPath) {
+  let map = {};
+  try { map = JSON.parse(localStorage.getItem(ACTIVE_REPO_KEY)) || {}; } catch (e) {}
+  map[dashboardId] = repoPath;
+  localStorage.setItem(ACTIVE_REPO_KEY, JSON.stringify(map));
+}
+
+export function clearDashboardActiveRepo(dashboardId) {
+  let map = {};
+  try { map = JSON.parse(localStorage.getItem(ACTIVE_REPO_KEY)) || {}; } catch (e) { return; }
+  if (map[dashboardId] === undefined) return;
+  delete map[dashboardId];
+  localStorage.setItem(ACTIVE_REPO_KEY, JSON.stringify(map));
+}
+
 // Per-dashboard additional context directories storage — uses localStorage
 // Each dashboard can have an array of additional context directory paths.
 

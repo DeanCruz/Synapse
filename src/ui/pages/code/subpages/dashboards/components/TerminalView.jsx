@@ -2,11 +2,73 @@
 // Renders a PTY-backed terminal inside the dashboard bottom panel.
 // Communicates with the Electron main process via IPC for spawning,
 // writing, resizing, and killing terminal sessions.
+//
+// Sessions (xterm instance + PTY id) live in a module-level cache keyed by
+// `${dashboardId}-${tabId}`. Mount/unmount only attaches/detaches DOM, so
+// terminal history persists across view changes and dashboard switches for
+// the lifetime of the app session. Sessions are only destroyed via the
+// exported `destroyTerminalSession()` when a tab is explicitly closed.
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
+
+const termSessions = new Map();
+let globalListenersAttached = false;
+
+function attachGlobalListenersOnce() {
+  if (globalListenersAttached) return;
+  if (typeof window === 'undefined' || !window.electronAPI?.on) return;
+
+  window.electronAPI.on('terminal-output', (payload) => {
+    if (!payload) return;
+    const { id, data } = payload;
+    for (const session of termSessions.values()) {
+      if (session.terminalId === id) {
+        try { session.terminal.write(data); } catch (_) { /* disposed */ }
+        return;
+      }
+    }
+  });
+
+  window.electronAPI.on('terminal-exit', (payload) => {
+    if (!payload) return;
+    const { id, exitCode } = payload;
+    for (const session of termSessions.values()) {
+      if (session.terminalId === id) {
+        try {
+          session.terminal.writeln(`\r\n\x1b[90m[Process exited with code ${exitCode ?? 0}]\x1b[0m`);
+          session.terminal.writeln('\x1b[90mPress any key to restart...\x1b[0m');
+        } catch (_) { /* disposed */ }
+        session.exited = true;
+        session.terminalId = null;
+        if (session.onExit) session.onExit();
+        return;
+      }
+    }
+  });
+
+  globalListenersAttached = true;
+}
+
+/**
+ * Tear down a cached terminal session — kills the PTY and disposes the xterm
+ * instance. Call when a user explicitly closes a tab.
+ */
+export function destroyTerminalSession(dashboardId, tabId) {
+  const key = `${dashboardId}-${tabId}`;
+  const session = termSessions.get(key);
+  if (!session) return;
+  try {
+    if (session.terminalId && window.electronAPI?.killTerminal) {
+      window.electronAPI.killTerminal(session.terminalId);
+    }
+  } catch (_) {}
+  try { if (session.dataDisposable) session.dataDisposable.dispose(); } catch (_) {}
+  try { if (session.terminal) session.terminal.dispose(); } catch (_) {}
+  termSessions.delete(key);
+}
 
 function getTerminalThemeFromCSS() {
   const s = getComputedStyle(document.documentElement);
@@ -55,44 +117,41 @@ const TERMINAL_OPTIONS = {
  *
  * @param {object} props
  * @param {string} props.projectDir — working directory for the spawned shell
+ * @param {string} props.dashboardId — dashboard owning this terminal
+ * @param {number|string} props.tabId — terminal tab id (unique within dashboard)
  */
-export default function TerminalView({ projectDir, dashboardId }) {
+export default function TerminalView({ projectDir, dashboardId, tabId = 1 }) {
   const containerRef = useRef(null);
-  const terminalRef = useRef(null);
-  const fitAddonRef = useRef(null);
-  const terminalIdRef = useRef(null);
+  const sessionRef = useRef(null);
   const isDisposedRef = useRef(false);
   const [noElectron, setNoElectron] = useState(false);
   const [exited, setExited] = useState(false);
 
-  // Stable ref for the spawn function so cleanup/restart can use it
   const spawnRef = useRef(null);
 
   const spawnTerminal = useCallback(async () => {
     if (!window.electronAPI || !window.electronAPI.spawnTerminal) return;
-
-    const term = terminalRef.current;
-    if (!term) return;
+    const session = sessionRef.current;
+    if (!session) return;
 
     setExited(false);
+    session.exited = false;
 
     try {
       const cwd = projectDir || undefined;
       const result = await window.electronAPI.spawnTerminal({ cwd, dashboardId });
       if (result && result.id) {
-        terminalIdRef.current = result.id;
+        session.terminalId = result.id;
       }
     } catch (err) {
-      if (term && !isDisposedRef.current) {
-        term.writeln(`\r\n\x1b[31mFailed to spawn terminal: ${err.message || err}\x1b[0m`);
+      if (session.terminal && !isDisposedRef.current) {
+        session.terminal.writeln(`\r\n\x1b[31mFailed to spawn terminal: ${err.message || err}\x1b[0m`);
       }
     }
   }, [projectDir, dashboardId]);
 
-  // Store latest spawnTerminal in ref for use in listeners
   spawnRef.current = spawnTerminal;
 
-  // Initialize terminal on mount
   useEffect(() => {
     if (!window.electronAPI) {
       setNoElectron(true);
@@ -103,77 +162,66 @@ export default function TerminalView({ projectDir, dashboardId }) {
     if (!container) return;
 
     isDisposedRef.current = false;
+    attachGlobalListenersOnce();
 
-    // Create terminal instance
-    const terminal = new Terminal(TERMINAL_OPTIONS);
-    const fitAddon = new FitAddon();
-    terminal.loadAddon(fitAddon);
+    const key = `${dashboardId}-${tabId}`;
+    let session = termSessions.get(key);
+    const isNew = !session;
 
-    terminalRef.current = terminal;
-    fitAddonRef.current = fitAddon;
+    if (!session) {
+      const terminal = new Terminal(TERMINAL_OPTIONS);
+      const fitAddon = new FitAddon();
+      terminal.loadAddon(fitAddon);
+      session = {
+        terminal,
+        fitAddon,
+        terminalId: null,
+        exited: false,
+        dataDisposable: null,
+        onExit: null,
+      };
+      termSessions.set(key, session);
 
-    // Open terminal in the container
-    terminal.open(container);
+      terminal.open(container);
 
-    // Fit after open (small delay to let layout settle)
-    requestAnimationFrame(() => {
-      if (!isDisposedRef.current) {
-        try { fitAddon.fit(); } catch (_) { /* container not ready */ }
-      }
-    });
-
-    // Route user input to PTY via IPC
-    const dataDisposable = terminal.onData((data) => {
-      const id = terminalIdRef.current;
-      if (id && window.electronAPI.writeTerminal) {
-        window.electronAPI.writeTerminal(id, data);
-      }
-    });
-
-    // Handle PTY output → xterm
-    const handleOutput = (payload) => {
-      if (!payload) return;
-      const { id, data } = payload;
-      if (id === terminalIdRef.current && !isDisposedRef.current) {
-        terminal.write(data);
-      }
-    };
-
-    // Handle PTY exit
-    const handleExit = (payload) => {
-      if (!payload) return;
-      const { id, exitCode } = payload;
-      if (id === terminalIdRef.current && !isDisposedRef.current) {
-        terminal.writeln(`\r\n\x1b[90m[Process exited with code ${exitCode ?? 0}]\x1b[0m`);
-        terminal.writeln('\x1b[90mPress any key to restart...\x1b[0m');
-        setExited(true);
-        terminalIdRef.current = null;
-      }
-    };
-
-    // Register push event listeners
-    let removeOutputListener = null;
-    let removeExitListener = null;
-
-    if (window.electronAPI.on) {
-      removeOutputListener = window.electronAPI.on('terminal-output', handleOutput);
-      removeExitListener = window.electronAPI.on('terminal-exit', handleExit);
+      // Persistent input handler: closure reads session.terminalId at call
+      // time so it stays correct after a restart-after-exit assigns a new id.
+      session.dataDisposable = terminal.onData((data) => {
+        const id = session.terminalId;
+        if (id && window.electronAPI?.writeTerminal) {
+          window.electronAPI.writeTerminal(id, data);
+        }
+      });
+    } else if (session.terminal.element && session.terminal.element.parentElement !== container) {
+      // Move the existing xterm element into the new container — keeps the
+      // entire scrollback buffer and cursor state intact.
+      container.appendChild(session.terminal.element);
     }
 
-    // Spawn the PTY process
-    spawnRef.current();
+    sessionRef.current = session;
 
-    // ResizeObserver for auto-fitting when the panel resizes
+    if (session.exited) setExited(true);
+    session.onExit = () => setExited(true);
+
+    requestAnimationFrame(() => {
+      if (!isDisposedRef.current) {
+        try { session.fitAddon.fit(); } catch (_) { /* container not ready */ }
+      }
+    });
+
+    if (isNew) {
+      spawnRef.current();
+    }
+
     let resizeObserver = null;
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => {
-        if (!isDisposedRef.current && fitAddonRef.current) {
+        if (!isDisposedRef.current && session.fitAddon) {
           try {
-            fitAddonRef.current.fit();
-            // Notify PTY of new dimensions
-            const id = terminalIdRef.current;
+            session.fitAddon.fit();
+            const id = session.terminalId;
             if (id && window.electronAPI.resizeTerminal) {
-              window.electronAPI.resizeTerminal(id, terminal.cols, terminal.rows);
+              window.electronAPI.resizeTerminal(id, session.terminal.cols, session.terminal.rows);
             }
           } catch (_) { /* ignore fit errors during transitions */ }
         }
@@ -181,68 +229,45 @@ export default function TerminalView({ projectDir, dashboardId }) {
       resizeObserver.observe(container);
     }
 
-    // Cleanup on unmount
     return () => {
       isDisposedRef.current = true;
-
-      // Remove push event listeners
-      if (removeOutputListener) removeOutputListener();
-      if (removeExitListener) removeExitListener();
-
-      // Dispose xterm data handler
-      dataDisposable.dispose();
-
-      // Kill PTY
-      const id = terminalIdRef.current;
-      if (id && window.electronAPI.killTerminal) {
-        window.electronAPI.killTerminal(id);
-        terminalIdRef.current = null;
-      }
-
-      // Disconnect resize observer
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
-
-      // Dispose terminal
-      terminal.dispose();
-      terminalRef.current = null;
-      fitAddonRef.current = null;
+      session.onExit = null;
+      if (resizeObserver) resizeObserver.disconnect();
+      // Intentionally do NOT dispose xterm or kill the PTY — the session
+      // lives on in termSessions until destroyTerminalSession() is called.
     };
-  }, []); // Mount once — projectDir changes don't re-create the terminal
+  }, [dashboardId, tabId]);
 
-  // Handle restart after exit — listen for keypress
+  // Restart on keypress after exit
   useEffect(() => {
     if (!exited) return;
-    const terminal = terminalRef.current;
-    if (!terminal) return;
-
-    const restartDisposable = terminal.onData(() => {
+    const session = sessionRef.current;
+    if (!session) return;
+    const restartDisposable = session.terminal.onData(() => {
       setExited(false);
-      terminal.clear();
+      session.terminal.clear();
+      session.exited = false;
       spawnRef.current();
     });
-
     return () => restartDisposable.dispose();
   }, [exited]);
 
   // Re-fit when projectDir changes (panel might have resized)
   useEffect(() => {
-    if (fitAddonRef.current && !isDisposedRef.current) {
-      try { fitAddonRef.current.fit(); } catch (_) {}
+    const session = sessionRef.current;
+    if (session?.fitAddon && !isDisposedRef.current) {
+      try { session.fitAddon.fit(); } catch (_) {}
     }
   }, [projectDir]);
 
   // Watch for theme changes and update terminal colors
   useEffect(() => {
-    const terminal = terminalRef.current;
-    if (!terminal || isDisposedRef.current) return;
-
     const observer = new MutationObserver((mutations) => {
       for (const m of mutations) {
         if (m.attributeName === 'data-theme' || m.attributeName === 'style') {
-          if (!isDisposedRef.current && terminalRef.current) {
-            terminalRef.current.options.theme = getTerminalThemeFromCSS();
+          const session = sessionRef.current;
+          if (!isDisposedRef.current && session?.terminal) {
+            session.terminal.options.theme = getTerminalThemeFromCSS();
           }
           break;
         }
