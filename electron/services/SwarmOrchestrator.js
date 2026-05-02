@@ -1047,6 +1047,14 @@ function appendLog(dashboardId, entry) {
   } catch (e) {
     logs = { entries: [] };
   }
+  // Normalize: tolerate legacy/external schemas where the file is a raw array
+  // or an object missing the entries key. Without this guard, .push() throws
+  // and the orchestrator crashes mid-write.
+  if (Array.isArray(logs)) {
+    logs = { entries: logs };
+  } else if (!logs || typeof logs !== 'object' || !Array.isArray(logs.entries)) {
+    logs = { entries: [] };
+  }
 
   logs.entries.push({
     timestamp: new Date().toISOString(),

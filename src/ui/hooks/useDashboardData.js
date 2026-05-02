@@ -60,7 +60,7 @@ export function mergeState(init, progress, logs) {
   }
 
   // Check for replanning state from circuit breaker
-  if (task.overall_status === 'in_progress' && logs && logs.entries) {
+  if (task.overall_status === 'in_progress' && logs && Array.isArray(logs.entries)) {
     const hasCircuitBreaker = logs.entries.some(e =>
       e.level === 'warn' && e.message && e.message.includes('Circuit breaker triggered')
     );

@@ -79,7 +79,9 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
   const dragStateRef = useRef(null);
   const rafRef = useRef(null);
 
-  const entries = (logs?.entries) || [];
+  // Array.prototype.entries is a method — must use Array.isArray to handle
+  // legacy logs.json files that are themselves an array.
+  const entries = Array.isArray(logs?.entries) ? logs.entries : [];
 
   // ---- Terminal tab management (per-dashboard) ----
   const addTermTab = useCallback(() => {
