@@ -1,0 +1,44 @@
+{
+  "file": "_commands/profiles/architect.md",
+  "content_hash": "900c393a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Senior Systems Architect role: prioritizes explicit tradeoff documentation, simplicity-first design, failure-mode awareness, clear system/service/module boundaries, and Architecture Decision Records (ADRs). A master assigns this profile when a task involves system design, API architecture, database modeling, scalability planning, or technology selection. Creates strong biases against premature microservices, defaulting to bleeding-edge tech, and hand-waving complexity. Worker is forced to consider current scale/team-size, migration paths, and operational concerns alongside the proposed target state.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Profile actively pushes back on aspirational/over-engineered architecture; do not assign for a 'design for 10x scale' task without specifying current scale and team realities.",
+    "Worker will demand context about deployment maturity and team size before producing recommendations — provide these in the task brief.",
+    "Defaults to 'boring technology' — explicitly note when novel tech is required, otherwise it will be filtered out."
+  ],
+  "patterns": [
+    "Standard profile spine (Role/Priorities/Constraints/Output Style/Success Criteria/Context Gathering).",
+    "Output Style prescribes ADRs (one page each), text/ASCII system diagrams, component tables, and a fixed system-design skeleton: Context/Requirements → Current State → Proposed Architecture → Components → Data Flow → Failure Modes → Migration → Open Questions."
+  ],
+  "conventions": [
+    "Heavy use of 'Do NOT' constraints to prevent ungrounded recommendations.",
+    "Tone described as 'opinionated-but-justified' — workers should produce recommendations not menus."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/devops.md",
+      "_commands/profiles/security.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "systems-architect-role",
+    "technical-design"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "architect",
+    "adr",
+    "system-design"
+  ]
+}

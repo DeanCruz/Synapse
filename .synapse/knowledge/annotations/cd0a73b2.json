@@ -1,0 +1,60 @@
+{
+  "file": "agent/core/dashboard_features.md",
+  "content_hash": "dc0771c7",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The user-and-agent-facing reference for what the Synapse dashboard does, how it merges initialization.json (static plan) with per-worker progress files (dynamic lifecycle) into the live UI, and what the worker progress protocol implies for that rendering. Covers layout modes (Waves vs Chains), dependency lines (BFS pathfinding through corridor gaps in Wave mode), the multi-dashboard sidebar with its strict dashboard-selection priority chain (chat-spawned MANDATORY ISOLATION > explicit --dashboard flag > ask user), the reserved 'ide' dashboard, the six stat cards (Total/Completed/In Progress/Failed/Pending/Elapsed) all derived from progress files, the log panel with deviation filter, the popup log box, the amber permission popup tied to logs at level 'permission', the seven worker stages, and the context-savings comparison between old (single status.json) and new (dashboards/{id}/) architectures. Also includes the canonical Synapse directory structure.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Chat-spawned agents are bound UNCONDITIONALLY to their chat's dashboard via system prompt directive — they have NO access to any other dashboard. The --dashboard flag does NOT override this binding.",
+    "Dashboard IDs are 6-character hex strings (crypto.randomBytes(3).toString('hex')) — legacy 'dashboardN' IDs still supported for backward compatibility.",
+    "The 'ide' dashboard is permanently reserved and cannot be deleted or used for swarm execution. It always exists. Never write swarm initialization data there.",
+    "All stats are DERIVED from progress files — counter maintenance was deliberately eliminated. The dashboard counts progress files by status; there is no completed_tasks/failed_tasks counter to update.",
+    "Elapsed timer freezes only when ALL workers have completed_at set — even one in-progress worker keeps the timer running.",
+    "Progress files are EPHEMERAL — they exist only during the active swarm. They're cleared by the master when initializing a new swarm.",
+    "Initialization.json is write-once except for the documented circuit-breaker auto-replan exception — never update it during normal execution.",
+    "The amber permission popup is triggered ONLY by master-written logs at level 'permission' — workers don't write permission logs."
+  ],
+  "patterns": [
+    "Dashboard merge: initialization.json (plan) + progress/{id}.json (lifecycle) merged client-side to render agent cards.",
+    "Dashboard selection priority: chat-spawned directive > explicit --dashboard flag > ask user (never auto-scan/auto-select).",
+    "Dependency lines drawn via BFS pathfinding through corridor gaps; lines never cross cards or title headers.",
+    "Hover interaction model: hover line → blue glow; hover card → its needs blue, things it blocks red, unrelated lines dim.",
+    "Live update flow: worker writes progress file → server fs.watch detects → SSE 'agent_progress' broadcast → React re-render."
+  ],
+  "conventions": [
+    "Layout type stored in task.type field of initialization.json: 'Waves' or 'Chains'.",
+    "task.project_root field on initialization.json identifies which project a swarm targets (multi-project support).",
+    "Log levels: info, warn, error, debug, permission, deviation — with permission and deviation triggering distinct UI behaviors."
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/core/data_architecture.md"
+    ],
+    "depended_by": [
+      "CLAUDE.md",
+      "agent/instructions/dashboard_resolution.md",
+      "agent/master/dashboard_protocol.md",
+      "agent/master/ui_map.md"
+    ],
+    "related": [
+      "agent/worker/progress_reporting.md",
+      "agent/master/dashboard_writes.md",
+      "src/server/services/WatcherService.js",
+      "src/ui/App.jsx"
+    ]
+  },
+  "domains": [
+    "core-conventions",
+    "dashboard-architecture"
+  ],
+  "tags": [
+    "markdown",
+    "core",
+    "dashboard",
+    "ui",
+    "sse",
+    "rendering"
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "file": "Stop Synapse.command",
+  "content_hash": "9272d575",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "End-user-friendly macOS double-clickable shutdown counterpart to `Start Synapse.command`. Same logic as stop.sh — find the SSE server PID by port and the Electron PID by pgrep, kill both — but with a banner-style header, blank-line padding for readability, and a 'Press any key to close...' final prompt so the Terminal popup window doesn't disappear before the user sees the success message.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Filename CONTAINS A SPACE — quote when referencing from other scripts.",
+    "Sends SIGTERM only — same caveat as stop.sh; stuck processes survive.",
+    "`pgrep -f 'Synapse.*electron'` false-positive risk: any process with both 'Synapse' and 'electron' in its argv will be killed (e.g., a developer's grep search).",
+    "Uses `read -n 1` at the end — this is unrelated to the kill operation, but it means the script never exits cleanly on its own; if invoked non-interactively (e.g., from CI), it will hang forever waiting for input."
+  ],
+  "patterns": [
+    "Same two-phase shutdown pattern as stop.sh.",
+    "Banner + keypress-to-close pattern: optimized for double-click UX where the Terminal window must stay open long enough for the user to read the result."
+  ],
+  "conventions": [
+    "Shebang `#!/bin/bash`.",
+    "Title bar formatting matches `Start Synapse.command` for visual consistency.",
+    "Trailing `read -n 1` is required because Terminal.app closes the window when a .command exits."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "Start Synapse.command",
+      "stop.sh",
+      "launch_synapse.command"
+    ]
+  },
+  "domains": [
+    "launcher-script",
+    "macos-launcher"
+  ],
+  "tags": [
+    "shell",
+    "bash",
+    "macos",
+    "command-file",
+    "shutdown",
+    "process-management"
+  ]
+}

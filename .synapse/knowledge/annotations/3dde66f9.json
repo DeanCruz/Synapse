@@ -1,0 +1,42 @@
+{
+  "file": "documentation/dashboard/overview.md",
+  "content_hash": "3db80184",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top-level introduction to the React 18 dashboard architecture. Describes the component hierarchy, data flow from IPC/SSE into AppContext, the role of useDashboardData, and how progress files merge with the static plan to render live agent state.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "Renderer never talks directly to the file system — all data flows via IPC/SSE through hooks"
+  ],
+  "patterns": [
+    "Single global Context + useReducer state machine",
+    "Push-driven UI updates via subscription hooks",
+    "Dashboard-scoped data isolation"
+  ],
+  "conventions": [
+    "Components, hooks, context, and styles each live in distinct subfolders under src/ui/"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/dashboard/components.md",
+      "documentation/dashboard/hooks.md",
+      "documentation/dashboard/state-management.md",
+      "documentation/dashboard/layout-modes.md",
+      "documentation/dashboard/styling.md"
+    ],
+    "related": [
+      "documentation/electron/overview.md",
+      "documentation/server/overview.md"
+    ]
+  },
+  "domains": [
+    "dashboard-ui"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "overview"
+  ]
+}

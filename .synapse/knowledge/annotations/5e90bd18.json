@@ -1,0 +1,44 @@
+{
+  "file": "documentation/commands/overview.md",
+  "content_hash": "642c7c3f",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top-level reference for Synapse's !{command} invocation system. Explains the three-tier command resolution hierarchy, path placeholders ({tracker_root}/{project_root}), categorized command groups (Swarm Lifecycle, Monitoring, Server Control, Project Setup, Analysis, TOC, PKI, Audit, Discovery), how command files work, and dashboard resolution semantics. Includes a quick-reference table of every command grouped by category.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Command files are read fresh on every invocation -- the agent does not 'remember' command behavior",
+    "Project root resolution priority: --project flag > .synapse/project.json > CWD",
+    "Agents have a fixed DASHBOARD ID directive in their system prompt -- no auto-detection or scanning"
+  ],
+  "patterns": [
+    "Command files are complete specifications -- agents follow them exactly without improvising",
+    "Commands organized by functional groups (Swarm Lifecycle, Monitoring, Setup, Analysis, etc.)"
+  ],
+  "conventions": [
+    "First-match-wins resolution starting from highest-priority Synapse commands",
+    "Dashboard arguments default to assigned dashboard, override with --dashboard {id}"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/commands/creating-commands.md",
+      "documentation/commands/swarm-commands.md",
+      "documentation/commands/project-commands.md"
+    ],
+    "related": [
+      "agent/instructions/dashboard_resolution.md",
+      "CLAUDE.md"
+    ]
+  },
+  "domains": [
+    "command-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "commands",
+    "overview",
+    "resolution-hierarchy"
+  ]
+}

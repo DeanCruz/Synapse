@@ -1,0 +1,73 @@
+{
+  "file": "src/ui/components/ide/IDEWelcome.jsx",
+  "content_hash": "1034a421",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Welcome screen rendered when ideWorkspaces is empty. Two action buttons: 'Open Folder' (uses window.electronAPI.ideSelectFolder native picker) and 'Create New Folder' (picker for parent + window.prompt for name + ideCreateFolder IPC). After picking/creating, generates a workspace ID (String(Date.now())), dispatches IDE_OPEN_WORKSPACE { id, path, name }, then calls createWorkspaceDashboard(wsId) and saveDashboardProject(dashboardId, folderPath) to ensure a dashboard exists for chat/swarm context.",
+  "exports": [
+    {
+      "name": "IDEWelcome",
+      "kind": "component",
+      "signature": "()"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useCallback"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useDispatch"
+    ],
+    "src/ui/utils/ideWorkspaceManager.js": [
+      "createWorkspaceDashboard"
+    ],
+    "src/ui/utils/dashboardProjects.js": [
+      "saveDashboardProject"
+    ],
+    "src/ui/styles/ide-explorer.css": [
+      "default-side-effect"
+    ]
+  },
+  "gotchas": [
+    "Workspace ID is String(Date.now()) — two simultaneous 'Open Folder' clicks within 1ms could collide (rare but theoretically possible).",
+    "Create New Folder uses window.prompt() — synchronous, blocks UI, no validation beyond non-empty trim.",
+    "Path concatenation strips trailing slashes via .replace(/\\/+$/, '') then appends '/' + name — assumes POSIX paths; on Windows the picker should still return forward slashes through Electron, but subdirectories would still mix separators if user enters '\\\\'.",
+    "Does NOT dispatch IDE_LINK_WORKSPACE_DASHBOARD — relies on getWorkspaceDashboard(wsId) lookup later. Compare to WorkspaceTabs.handleAddWorkspace which DOES dispatch IDE_LINK_WORKSPACE_DASHBOARD — divergent behavior between the two folder-open paths.",
+    "Errors in createWorkspaceDashboard are logged but not surfaced to user — workspace opens with no dashboard silently."
+  ],
+  "patterns": [
+    "Dual entry point for opening workspaces: this component (cold-start welcome) and WorkspaceTabs (when workspaces exist). Both should use the same IDE_OPEN_WORKSPACE + createWorkspaceDashboard sequence.",
+    "Folder name extraction via .split(/[/\\\\]/).pop() — handles both POSIX and Windows.",
+    "createWorkspaceDashboard call wrapped in inner try/catch so welcome action doesn't fail if dashboard creation fails."
+  ],
+  "conventions": [
+    "Inline SVG icons (CodeBracketIcon, FolderOpenActionIcon, FolderPlusIcon).",
+    "CSS class 'ide-welcome-' prefix."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/utils/ideWorkspaceManager.js",
+      "src/ui/utils/dashboardProjects.js",
+      "electron/preload.js (electronAPI.ideSelectFolder, ideCreateFolder)"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": [
+      "src/ui/components/ide/WorkspaceTabs.jsx"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "workspace",
+    "welcome"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "welcome",
+    "workspace-creation"
+  ]
+}

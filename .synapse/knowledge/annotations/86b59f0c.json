@@ -1,0 +1,64 @@
+{
+  "file": ".claude/skills/eager-dispatch/SKILL.md",
+  "content_hash": "4690af9d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "User-invocable forked-context Opus skill (`!eager_dispatch`). Runs a single comprehensive eager dispatch round on an active swarm: reads dashboard state, reconstructs the dependency graph, identifies all tasks with satisfied deps that haven't been dispatched, builds full worker prompts, and dispatches all simultaneously. Three phases: State Reconstruction (Steps 1-5: resolve dashboard, read state, read plan.json — regenerating if missing, read project context, build upstream cache), Identify Dispatchable (Step 6: completed/in-progress/failed sets, find ready tasks, present summary, await approval), Dispatch (Steps 7-9: launch agents, log dispatches, write master_state.json, report). Explicitly NOT a replacement for the !p_track execution loop — runs a single dispatch pass and exits.",
+  "exports": [],
+  "imports_from": {
+    "skills": [
+      "master-protocol"
+    ],
+    "agent_modules": [
+      "agent/master/eager_dispatch.md",
+      "agent/master/worker_prompts.md",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/master/failure_recovery.md",
+      "agent/master/dashboard_writes.md"
+    ]
+  },
+  "gotchas": [
+    "Single-pass: dispatches once and exits, does NOT monitor completions or run circuit breaker",
+    "Failed tasks are NOT auto-retried here — must use !retry {id}",
+    "If plan.json is missing/invalid, REGENERATES it via deep-thinking pass before dispatch (validate-plan-required.sh + validate-approval-gate.sh would block otherwise)",
+    "context: fork — runs in a forked Claude context; model: opus — uses Opus model",
+    "Dashboard resolution: SYNAPSE_DASHBOARD_ID env var > DASHBOARD ID directive > ask user; never scan",
+    "Shell preprocessing line at the top reads .synapse/project.json and dashboard state to inject runtime context"
+  ],
+  "patterns": [
+    "Forked-context skill: spawns a separate Claude instance for the work",
+    "Eager dispatch 5-step mechanism: completed set + in-progress set + failed set + dispatchable filter + parallel launch",
+    "Plan regeneration fallback: if plan.json missing, redo the deep-thinking pass before dispatch"
+  ],
+  "conventions": [
+    "Steps 1-9 numbered and grouped into 3 phases",
+    "Awaits user approval before dispatching"
+  ],
+  "relationships": {
+    "depends_on": [
+      ".claude/skills/master-protocol/SKILL.md",
+      "agent/master/eager_dispatch.md",
+      "agent/master/worker_prompts.md"
+    ],
+    "depended_by": [],
+    "related": [
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/skills/p-track-resume/SKILL.md",
+      ".claude/hooks/validate-plan-required.sh",
+      ".claude/hooks/validate-approval-gate.sh"
+    ]
+  },
+  "domains": [
+    "skill-definition",
+    "eager-dispatch",
+    "swarm-recovery"
+  ],
+  "tags": [
+    "skill",
+    "user-invocable",
+    "fork",
+    "opus",
+    "eager-dispatch",
+    "single-pass"
+  ]
+}

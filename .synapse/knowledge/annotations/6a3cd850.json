@@ -1,0 +1,60 @@
+{
+  "file": "agent/core/data_architecture.md",
+  "content_hash": "b71e1745",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The canonical schema reference for every Synapse data file at {tracker_root}: initialization.json (write-once static plan store with task/agents/waves/chains/history objects), logs.json (timestamped event log with info/warn/error/debug/permission/deviation levels), the master task file at {tracker_root}/tasks/{date}/parallel_{name}.json (authoritative task record), the progress/ directory (per-worker progress files — the 17-field lifecycle schema), master_state.json (master's checkpoint for context-compaction recovery), and metrics.json (post-swarm performance metrics). Specifies write rules for each file: who writes it, when, atomic write semantics, ephemerality, and which files the server watches. The 'Context Savings' table contrasts the new per-dashboard model with the legacy single-status.json model.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "initialization.json is WRITE-ONCE except for circuit-breaker auto-replanning — the orchestrator may modify it when adding repair tasks (r-suffixed IDs), removing tasks, or updating pending tasks. Never update it during normal execution.",
+    "Lifecycle fields (status, started_at, completed_at, summary, assigned_agent, completed_tasks, failed_tasks, overall_status) are DELIBERATELY ABSENT from initialization.json — they live exclusively in progress files. Adding them is an architectural violation.",
+    "dashboard_id is required in every progress file write — the server REJECTS files where this field doesn't match the directory name. This prevents dashboard cross-contamination.",
+    "Progress files are EPHEMERAL — they exist only during the active swarm and are cleared by the master when initializing a new swarm. Don't rely on them post-completion (use Archive/ snapshots).",
+    "master_state.json is NOT watched by the server — purely for master self-recovery after context compaction. It's invisible to the dashboard.",
+    "metrics.json is written ONCE at end of swarm and never updated during execution — also not watched by the server.",
+    "Workers write the FULL progress file every time (sole-writer model) — no read-modify-write needed. The server uses fs.watch to broadcast SSE 'agent_progress' events.",
+    "Severity in deviations[] is exactly one of CRITICAL/MODERATE/MINOR — the deviations.md classification guide is the source of truth."
+  ],
+  "patterns": [
+    "Per-dashboard file layout: dashboards/{id}/{initialization,logs,master_state,metrics}.json + progress/{task_id}.json — replaces legacy single-root status.json.",
+    "Sole-writer atomic-overwrite for progress files: each worker owns exactly one file, writes the full JSON every update.",
+    "fs.watch on progress/ + fs.watchFile on init/logs — different mechanisms for directory vs file watching.",
+    "Stat derivation from progress files: dashboard counts files by status field rather than maintaining counters.",
+    "Sub-schemas: deviations[] has at/severity/description; logs[] has at/level/msg; milestones[] has at/msg; files_changed[] has path/action; annotations is keyed by relative file path."
+  ],
+  "conventions": [
+    "Dashboard IDs: 'ide' (reserved), 6-char hex (default, crypto.randomBytes(3).toString('hex')), or legacy 'dashboardN'.",
+    "All timestamps ISO 8601 UTC, captured via `date -u +\"%Y-%m-%dT%H:%M:%SZ\"`.",
+    "task.project_root in initialization.json identifies the target project for multi-project support.",
+    "Log levels: info, warn, error, debug, permission, deviation — with 'permission' triggering amber popup and 'deviation' rendered with yellow badge."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "CLAUDE.md",
+      "agent/core/dashboard_features.md",
+      "agent/master/dashboard_writes.md",
+      "agent/worker/progress_reporting.md",
+      "src/server/services/DashboardService.js"
+    ],
+    "related": [
+      "agent/core/parallel_principles.md",
+      "agent/master/compaction_recovery.md",
+      "src/server/utils/json.js",
+      "src/server/services/WatcherService.js"
+    ]
+  },
+  "domains": [
+    "core-conventions",
+    "data-architecture",
+    "schemas"
+  ],
+  "tags": [
+    "markdown",
+    "core",
+    "schema",
+    "data-files",
+    "filesystem"
+  ]
+}

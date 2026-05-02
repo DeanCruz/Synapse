@@ -1,0 +1,48 @@
+{
+  "file": "_commands/Synapse/cancel.md",
+  "content_hash": "63f255b6",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!cancel [dashboardId] [--force]` command for immediate swarm cancellation. Marks all non-completed agents as failed via progress file writes — overwrites in-progress files to status:failed and creates failed progress files for pending tasks. Without `--force`, requires user confirmation via a `permission` log entry that triggers a dashboard popup. Produces overwritten/created progress files plus a final logs.json entry summarizing completed-vs-cancelled counts.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Running agents may CONTINUE in the background after cancellation — their progress file writes will succeed (the files exist) but the swarm is finalized; only restarting the Claude Code session truly stops them",
+    "This is THE one documented exception where the master writes progress files — cancellation is a forced state override",
+    "In-progress progress files are overwritten with status:failed and a 'may still be running' summary — the worker's actual work may still complete in the background",
+    "Without --force, the master MUST write a `permission` log entry before asking in the terminal (triggers dashboard popup)",
+    "Completed progress files are never modified — completed work is always preserved"
+  ],
+  "patterns": [
+    "7-step procedure: parse args+flag → read init → read progress → confirm (or skip if --force) → write progress files for non-completed → log cancellation → display summary",
+    "Three-state cancel logic: completed→leave, in_progress→overwrite as failed, no file→create failed progress file",
+    "Permission popup pattern: `permission` log entry triggers dashboard alert before terminal question"
+  ],
+  "conventions": [
+    "Syntax block lists every variant including --force combinations",
+    "Inline note callout warning that running agents may continue",
+    "JSON code blocks for log entry and progress file shapes"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/cancel-safe.md",
+      "_commands/Synapse/reset.md"
+    ]
+  },
+  "domains": [
+    "swarm-command",
+    "cancellation",
+    "force-override"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "lifecycle",
+    "permission-popup"
+  ]
+}

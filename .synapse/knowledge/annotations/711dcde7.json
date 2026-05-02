@@ -1,0 +1,66 @@
+{
+  "file": ".claude/skills/master-protocol/SKILL.md",
+  "content_hash": "c7429b39",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Auto-loaded (user-invocable: false) skill providing the master orchestrator's core identity, constraints, and schemas. Contains: 5 NON-NEGOTIABLE constraints (master never writes code, all implementation dispatched, dashboard mandatory, long prompts mean MORE planning, read command file every time); 5 responsibilities (Gather Context/Plan/Dispatch/Status/Report); allowed-files table (plan.json, initialization.json, logs.json, master_state.json, metrics.json); NEVER list (no .ts/.tsx/.js/.jsx/.py/.css/.html, no app commands, no 'just one thing'); Module Index (10 referenced docs with when-to-read); compact dashboard write schemas (initialization.json/logs.json/master_state.json/metrics.json); dashboard selection priority (assigned > --dashboard flag > ask user, NEVER scan); Eager Dispatch 5-step mechanism; Approval Gate protocol (hook-enforced via validate-approval-gate.sh); 12-row Common Pitfalls table; 11-rule summary.",
+  "exports": [],
+  "imports_from": {
+    "agent_modules": [
+      "agent/master/role.md",
+      "agent/master/initialization_blueprint.md",
+      "agent/master/dashboard_writes.md",
+      "agent/master/ui_map.md",
+      "agent/master/eager_dispatch.md",
+      "agent/master/failure_recovery.md",
+      "agent/master/worker_prompts.md",
+      "agent/master/pki_integration.md",
+      "agent/master/compaction_recovery.md",
+      "agent/master/dashboard_protocol.md"
+    ]
+  },
+  "gotchas": [
+    "Auto-loaded for master-orchestrator agent — provides identity AND schemas",
+    "References agent/master/initialization_blueprint.md as MANDATORY pre-read before writing initialization.json",
+    "Lists exactly 3 documented exceptions to initialization.json write-once: repair task creation, circuit breaker replanning, !add_task",
+    "Approval Gate is hook-enforced — agent CANNOT bypass via clever prompting",
+    "Plan.json must be written BEFORE initialization.json — also hook-enforced",
+    "Mentions legacy paths (tasks/{date}/parallel_*.json) as REMOVED — current canonical is dashboards/{id}/plan.json"
+  ],
+  "patterns": [
+    "Auto-load protocol skill: identity + schemas + module index in one file",
+    "NON-NEGOTIABLE blockquote pattern for the 5 hardest rules",
+    "Compact schema reference (not full schema — points to blueprint for that)"
+  ],
+  "conventions": [
+    "Section ordering: identity -> constraints -> responsibilities -> allowed -> never -> module index -> schemas -> rules"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      ".claude/agents/master-orchestrator.md",
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/skills/p-track-resume/SKILL.md",
+      ".claude/skills/eager-dispatch/SKILL.md",
+      ".claude/skills/master-plan-track/SKILL.md",
+      ".claude/skills/failure-protocol/SKILL.md"
+    ],
+    "related": [
+      "CLAUDE.md",
+      "agent/master/*.md (10 modules)"
+    ]
+  },
+  "domains": [
+    "skill-definition",
+    "master-protocol",
+    "agent-identity"
+  ],
+  "tags": [
+    "skill",
+    "auto-loaded",
+    "master",
+    "non-negotiable",
+    "schemas",
+    "identity"
+  ]
+}

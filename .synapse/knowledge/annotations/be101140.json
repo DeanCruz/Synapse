@@ -1,0 +1,43 @@
+{
+  "file": "documentation/ide/overview.md",
+  "content_hash": "6533f8d5",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Architecture overview of the embedded Code Explorer: workspace-dashboard bridge, multi-workspace tab system, Monaco editor integration, file-system service, search service, and debug system using Node CDP. Explains how IDE state coexists with dashboard/git state in the shared AppContext.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "Workspace folder is independent of dashboard project_root — they may diverge",
+    "Debug sessions piggyback on the dashboard worker process when applicable"
+  ],
+  "patterns": [
+    "Workspace bridge syncs IDE folder with active dashboard project",
+    "Monaco-based editor with custom worker config",
+    "CDP debugger over websocket inside main process"
+  ],
+  "conventions": [
+    "src/ui/components/ide/ for components, electron/services/DebugService.js for debug runtime"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/electron/overview.md"
+    ],
+    "depended_by": [
+      "documentation/ide/components.md",
+      "documentation/ide/ipc-handlers.md"
+    ],
+    "related": [
+      "documentation/dashboard/state-management.md",
+      "documentation/electron/services.md"
+    ]
+  },
+  "domains": [
+    "ide"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "overview",
+    "ide"
+  ]
+}

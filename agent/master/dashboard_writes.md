@@ -8,6 +8,7 @@ This document defines every file the master agent writes to the dashboard, the e
 
 The server (`server.js`) watches three data sources per dashboard:
 
+- **`dashboards/{id}/plan.json`** — **Canonical planning artifact** (master deep-thinking output: shared `context` + per-task `approach`/`files`). Written FIRST. Hook-enforced (`validate-plan-required.sh`) — `initialization.json` writes are blocked until this file exists and is valid.
 - **`dashboards/{id}/initialization.json`** — Static plan data, watched via `fs.watchFile`
 - **`dashboards/{id}/logs.json`** — Event log, watched via `fs.watchFile`
 - **`dashboards/{id}/progress/`** — Worker progress files, watched via `fs.watch` on the directory

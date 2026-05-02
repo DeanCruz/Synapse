@@ -1,0 +1,40 @@
+{
+  "file": "_commands/Synapse/stop.md",
+  "content_hash": "c595f326",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!stop` command for stopping the Synapse dashboard server. Three steps: lsof to find PID on port 3456, kill the PID if found, verify via lsof+sleep. Handles the not-running case explicitly.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Only stops the standalone server on port 3456 — the Electron app's embedded server is not killed by this command (closing the Electron window stops it)",
+    "1-second sleep before verification is required because kill doesn't return synchronously",
+    "lsof -i :3456 -t with 2>/dev/null suppresses errors — never assumes a server is running"
+  ],
+  "patterns": [
+    "3-step procedure: lsof → kill → verify with sleep+lsof",
+    "Bash idiom: `kill $(lsof -i :3456 -t) 2>/dev/null` for safe pid resolution+kill"
+  ],
+  "conventions": [
+    "Minimal command doc — 4 numbered steps, no Output Files",
+    "Bash code blocks with explicit lsof/kill commands"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/start.md",
+      "src/server/index.js"
+    ]
+  },
+  "domains": [
+    "server-control",
+    "lifecycle"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "process-management"
+  ]
+}

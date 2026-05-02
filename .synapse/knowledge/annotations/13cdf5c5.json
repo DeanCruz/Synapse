@@ -1,0 +1,44 @@
+{
+  "file": "documentation/final_reports/04-18-2026_updates.md",
+  "content_hash": "37011cb0",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Final report from the synapse-doc-audit swarm (dashboard 1f36a3) on 2026-04-18. Documents a comprehensive 2-wave/7-task documentation audit across five layers (Electron, Server, UI, Agent/Commands, Documentation Gaps). Reports findings (stale counts, missing services like AutoUpdateService, undocumented endpoints, incomplete component inventories, missing !instrument and p_track_plan docs, complete absence of troubleshooting), corrections applied (12 modified, 2 created files), remaining gaps (testing, performance, migration, ADRs), and recommendations.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Stale count drift was the most common finding -- automated CI checks recommended",
+    "Three CLAUDE.md tasks ran in parallel -- holistic review needed to prevent merge conflicts",
+    "AutoUpdateService gap existed because service was added without doc update"
+  ],
+  "patterns": [
+    "Two-phase audit: pre-planning research across 5 layers, then targeted corrections in 7 tasks/2 waves",
+    "Wave 1 parallel (5 audit tasks), Wave 2 dependent (CLAUDE.md consolidation + final report)"
+  ],
+  "conventions": [
+    "Task IDs follow {wave}.{index} format (1.1-1.5, 2.1-2.2)",
+    "Each finding documents Item / Before / After in tables",
+    "Final report covers Executive Summary, Methodology, Findings, Change Log, Remaining Gaps, Recommendations, Swarm Metadata"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "documentation/troubleshooting/common-issues.md",
+      "documentation/troubleshooting/faq.md",
+      "documentation/electron/",
+      "documentation/server/",
+      "CLAUDE.md"
+    ]
+  },
+  "domains": [
+    "release-notes"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "audit-report",
+    "swarm-output",
+    "doc-drift"
+  ]
+}

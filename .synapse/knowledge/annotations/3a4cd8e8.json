@@ -1,0 +1,45 @@
+{
+  "file": "documentation/dashboard/components.md",
+  "content_hash": "21615c00",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for every React component in the Synapse dashboard UI. Documents Header, Sidebar, layout pipelines (WavePipeline, ChainPipeline), AgentCard, StatsBar, panels (LogPanel, MetricsPanel, TimelinePanel, BottomPanel), modals, and ConnectionIndicator with their props, child components, and rendering responsibilities.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "WavePipeline / ChainPipeline are the two layout primitives — choose by task.type (Waves vs Chains)",
+    "AgentCard receives merged init + progress data; do not query stores directly",
+    "Modals render through Modal.jsx portal, not inline children"
+  ],
+  "patterns": [
+    "Functional components only (no class components)",
+    "Props-down/events-up style; state lives in AppContext",
+    "Single-responsibility components per file"
+  ],
+  "conventions": [
+    "PascalCase JSX filenames matching component name",
+    "Path: src/ui/components/ with subfolders for git/, ide/, modals/, preview/"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/dashboard/state-management.md",
+      "documentation/dashboard/layout-modes.md"
+    ],
+    "depended_by": [
+      "documentation/dashboard/overview.md"
+    ],
+    "related": [
+      "documentation/dashboard/hooks.md",
+      "documentation/dashboard/styling.md"
+    ]
+  },
+  "domains": [
+    "dashboard-ui"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "components",
+    "react"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "file": "documentation/profiles/overview.md",
+  "content_hash": "f169ae77",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Conceptual overview of the Synapse profile system. Explains what profiles do (modify priorities, constraints, output style, success criteria, context gathering without changing technical capabilities), how to invoke them, profile resolution from {tracker_root}/_commands/profiles/, profile file structure, task-scoped behavior, swarm-mode propagation to workers, and creation guidance for custom profiles.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Profile is task-scoped -- agent reverts to default behavior after task",
+    "Profiles do NOT change tool access or orchestration protocols -- only persona/priorities/style",
+    "Custom profiles have duplicate detection -- alerts on name collision"
+  ],
+  "patterns": [
+    "Five required sections: Role, Priorities, Constraints, Output Style, Success Criteria",
+    "Layered modification: profile sits on top of core instructions"
+  ],
+  "conventions": [
+    "Single resolution location: {tracker_root}/_commands/profiles/{name}.md",
+    "Priority list ordered, first priority wins on conflict",
+    "Constraints framed as explicit 'do NOT' rules"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/profiles/available-profiles.md"
+    ],
+    "related": [
+      "_commands/profiles/",
+      "agent/core/profile_system.md"
+    ]
+  },
+  "domains": [
+    "profile-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "profiles",
+    "overview",
+    "personas"
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "file": "src/ui/components/chat/ChatSidebar.jsx",
+  "content_hash": "9695d1ad",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Left sidebar for the Chat tab. Owns the three primary sub-view switchers (Dashboard / Make / New chat), the list of existing chat tabs with per-tab status dot, project badge, action menu (Project configuration / Rename / Delete), and the multi-step new-chat flow. Drives a 3-step new-chat workflow: (1) Yes/No 'Associate a Project?' popup, (2) optional ProjectModal scoped to a 'pending-chat-<ts>' pseudo-id, (3) finalize via window.electronAPI.createChatAgent which allocates a 4-hex agent and creates Chat/chat{N}/agent{XXXX}/ on disk, then re-keys the persisted project from the pending pseudo-id to the real 'chat-agent-<hex>' id and dispatches CHAT_TAB_CREATE. Computes per-tab live status (idle / processing / unread) from currentDashboardId, claudeIsProcessing, claudeProcessingStash, and unreadChatCounts. Manages collapse state (writes --sidebar-width CSS var), inline rename via double-click, popup rename, and delete-confirmation modal. Handles a click-outside listener to dismiss the per-tab action menu.",
+  "exports": [
+    {
+      "name": "ChatSidebar",
+      "kind": "component",
+      "signature": "() => JSX (default export)"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "React",
+      "useState",
+      "useEffect",
+      "useCallback",
+      "useRef"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/components/modals/ProjectModal.jsx": [
+      "ProjectModal (default)"
+    ],
+    "src/ui/utils/dashboardProjects.js": [
+      "saveDashboardProject",
+      "clearDashboardProject",
+      "getDashboardProject"
+    ]
+  },
+  "gotchas": [
+    "TWO project keys are involved during new-chat: a transient 'pending-chat-<timestamp>' written by ProjectModal during the flow, and the real 'chat-agent-<hex>' written in finalizeNewChat AFTER createChatAgent succeeds. The pending key is INTENTIONALLY orphaned in localStorage — do not treat its presence as authoritative.",
+    "ProjectModal's onSave/onClose lifecycle is asymmetric: Save fires onSave THEN onClose; Cancel/X fires onClose ALONE. projectSavedRef guards against carrying over a clicked-but-not-saved selection. If you change ProjectModal to call onSave on Cancel you will silently start associating projects users rejected.",
+    "settingsTabId path uses tab.agentHex to derive 'chat-agent-<hex>' as the dashboard id — DIFFERENT from the new-chat pseudo-id. settingsTabId modal does NOT pass onSave/onProjectSelected because ProjectModal handles persistence itself when given a real dashboard id; do not unify the two ProjectModal usages.",
+    "Chat status dot resolution: when the chat is the active dashboard, processing comes from claudeIsProcessing; otherwise from claudeProcessingStash[dashId].isProcessing. Forgetting the stash branch will make non-active tabs always show idle.",
+    "The Yes/No project-prompt overlay reuses 'sidebar-delete-overlay' / 'sidebar-delete-popup' classes — same DOM/CSS as Delete and Rename popups; cosmetic changes affect all three.",
+    "Inline rename (double-click) and popup rename are TWO separate flows controlled by editingId vs renameTabId — keep them mutually exclusive; both writing simultaneously yields duplicate CHAT_TAB_RENAME dispatches.",
+    "menuRef is conditionally assigned only to the OPEN tab's wrapper (ref={menuOpenTabId === tab.id ? menuRef : null}); the click-outside listener relies on this — never spread the ref across all tabs."
+  ],
+  "patterns": [
+    "Multi-step modal flow with refs (pickedProjectRef, projectSavedRef, pendingChatKeyRef) to bridge async user choices into a single finalize call — refs are used because the values must NOT trigger re-renders.",
+    "Pseudo-id project storage: chat tabs reuse the dashboardProjects localStorage util by passing 'chat-agent-<hex>' (or transient 'pending-chat-<ts>') instead of a real dashboard slug.",
+    "Status dot tri-state derived from cross-slice context (currentDashboardId + claudeIsProcessing + claudeProcessingStash + unreadChatCounts).",
+    "Sidebar collapse drives a CSS custom property (--sidebar-width) on document.documentElement so unrelated panels can react without prop drilling.",
+    "All chat-tab actions dispatch through AppContext (CHAT_TAB_CREATE / CHAT_TAB_SWITCH / CHAT_TAB_RENAME / CHAT_TAB_DELETE / SET_CHAT_VIEW) — sidebar holds NO chat tab state itself."
+  ],
+  "conventions": [
+    "Hex agent ids are 4-character lowercase produced by createChatAgent IPC; ALWAYS prefixed with 'chat-agent-' before being used as a dashboard key.",
+    "'pending-chat-<timestamp>' is the transient pseudo-key for the new-chat flow; never persist this beyond finalize.",
+    "All popup overlays share '.sidebar-delete-overlay' / '.sidebar-delete-popup' class skeleton (associate-project, rename, delete) — keep them visually consistent.",
+    "Action menu items use class 'chat-tab-menu-item'; destructive actions add 'chat-tab-menu-item-danger'."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx (chatTabs, chatActiveTabId, chatActiveView, currentDashboardId, claudeIsProcessing, claudeProcessingStash, unreadChatCounts; CHAT_TAB_* and SET_CHAT_VIEW reducer actions)",
+      "src/ui/components/modals/ProjectModal.jsx",
+      "src/ui/utils/dashboardProjects.js",
+      "electron/preload.js (window.electronAPI.createChatAgent)",
+      "electron/ipc-handlers.js (createChatAgent handler)"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx (rendered as the Chat tab's sidebar)"
+    ],
+    "related": [
+      "src/ui/components/chat/ChatInstanceView.jsx (consumes the same agentHex to derive chatAgentId)",
+      "src/ui/components/chat/ChatDashboardView.jsx (mounted when sidebar sets chatActiveView='dashboard')",
+      "src/ui/components/chat/ChatMakePage.jsx (mounted when sidebar sets chatActiveView='make')",
+      "electron/services/ConversationService.js (manages on-disk Chat/chat{N}/agent{XXXX}/ folders that createChatAgent allocates)"
+    ]
+  },
+  "domains": [
+    "chat-system",
+    "chat-sidebar",
+    "chat-tab-management"
+  ],
+  "tags": [
+    "react",
+    "chat",
+    "component",
+    "sidebar",
+    "modal-flow",
+    "context-consumer"
+  ]
+}

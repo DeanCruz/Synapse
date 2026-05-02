@@ -1,0 +1,64 @@
+{
+  "file": "src/ui/components/chat/ChatInstanceView.jsx",
+  "content_hash": "d60b785a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Thin adapter that mounts the shared ClaudeView component inside the Chat tab's 'chat-instance' surface. Pulls the active chat tab from AppContext (chatTabs + chatActiveTabId), derives a pseudo dashboard id of the form 'chat-agent-<4hex>' from the tab's agentHex, and forwards it to ClaudeView as `chatAgentId` so streaming, tool-call rendering, permissions, and conversation history all work without a real code dashboard being selected. Forwards `tab` and `surface` props (defaulted to 'chat') so ClaudeView can branch behavior between code-floating-panel and chat-mode rendering.",
+  "exports": [
+    {
+      "name": "ChatInstanceView",
+      "kind": "component",
+      "signature": "({ tab='chat', surface='chat' }) => JSX (default export)"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "React",
+      "useMemo"
+    ],
+    "src/ui/components/ClaudeView.jsx": [
+      "ClaudeView (default)"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState"
+    ]
+  },
+  "gotchas": [
+    "chatAgentId here ('chat-agent-<hex>') is a PSEUDO-ID — it is NOT a real dashboard id and must never be passed to dashboard CRUD/IPC handlers that expect a true dashboard slug. ClaudeView and dashboardProjects.js are the only places that knowingly accept it.",
+    "If activeTab.agentHex is missing the component falls back to activeTab.id, which is also non-canonical. Code paths receiving chatAgentId must accept either form (4-hex agent or raw tab id).",
+    "Defaulting `tab='chat'` and `surface='chat'` is load-bearing — ClaudeView uses these to skip the 'Select a dashboard' empty state and to render in chat-mode layout. Removing the defaults will make the chat panel render as if it's the code-mode floating panel.",
+    "useMemo deps are [chatTabs, chatActiveTabId]; mutating a tab in place without changing chatTabs reference will not refresh activeTab."
+  ],
+  "patterns": [
+    "Reuse-by-prop: same ClaudeView component renders in two surfaces (code-floating-panel and chat-instance) — distinguished only by `tab`/`surface` props, not by a separate component.",
+    "Pseudo-id namespace: chat tabs masquerade as dashboards via the 'chat-agent-' prefix, letting per-dashboard utilities (project storage, processing-stash, unread counts) work uniformly across both surfaces."
+  ],
+  "conventions": [
+    "Wrapper div uses class 'chat-instance-claude-wrap' so chat-mode CSS can override ClaudeView's default layout without touching the shared component."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/ClaudeView.jsx",
+      "src/ui/context/AppContext.jsx (chatTabs, chatActiveTabId)"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx (rendered when chatActiveView === 'chat-instance')"
+    ],
+    "related": [
+      "src/ui/components/chat/ChatSidebar.jsx (creates the tabs whose agentHex becomes chatAgentId)",
+      "electron/services/ConversationService.js (persists messages keyed off the 'chat-agent-<hex>' id)"
+    ]
+  },
+  "domains": [
+    "chat-system",
+    "chat-instance",
+    "claude-streaming"
+  ],
+  "tags": [
+    "react",
+    "chat",
+    "component",
+    "adapter",
+    "claude"
+  ]
+}

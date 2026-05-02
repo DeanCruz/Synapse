@@ -1,0 +1,45 @@
+{
+  "file": "documentation/dashboard/styling.md",
+  "content_hash": "93870aee",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Catalog of the dashboard's 10 CSS files, the CSS custom-property design token system, status color palette (in_progress/completed/failed/blocked), and the four built-in themes (Original/Light/Ocean/Custom) plus the theme-switching mechanism via :root attribute.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "All colors must reference --color-* tokens; hardcoded hex values break theming",
+    "Custom theme persists to localStorage and overrides root tokens at runtime",
+    "Class names prefixed per domain (e.g. .git-manager-*) to avoid collision"
+  ],
+  "patterns": [
+    "CSS custom properties at :root drive entire palette",
+    "Theme switching via data-theme attribute on body",
+    "Per-component CSS file colocated semantics"
+  ],
+  "conventions": [
+    "Files in src/ui/styles/ named after component or domain",
+    "Token names: --bg, --surface, --border, --text, --color-<status>"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/dashboard/overview.md"
+    ],
+    "depended_by": [
+      "documentation/dashboard/components.md",
+      "documentation/dashboard/layout-modes.md"
+    ],
+    "related": [
+      "documentation/git-manager/overview.md",
+      "documentation/ide/overview.md"
+    ]
+  },
+  "domains": [
+    "dashboard-ui"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "css",
+    "theming"
+  ]
+}

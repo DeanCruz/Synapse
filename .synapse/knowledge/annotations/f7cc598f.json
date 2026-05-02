@@ -1,0 +1,68 @@
+{
+  "file": "src/ui/components/git/ChangesPanel.jsx",
+  "content_hash": "99a5feae",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Renders the working tree status sidebar inside Git Manager. Displays three collapsible sections — Staged Changes, Unstaged Changes, Untracked Files — each driven by gitStatus.{staged|unstaged|untracked} from AppContext. Each FileItem shows a single-letter status badge (M/A/D/R/U/C/T mapped via STATUS_MAP), a basename + dim parent dir path, and inline hover actions: stage (+), unstage (−), or discard (trash). Clicking a row dispatches GIT_SET_SELECTED_FILE and immediately fetches a per-file diff via api.gitDiffFile(repoPath, filePath, isStaged) — the isStaged flag is critical because staged and unstaged diffs are computed against different references. Provides bulk operations (Stage All / Unstage All / Discard All) in the section headers. Discard operations are gated by window.confirm — irreversible warning text is hard-coded in the prompt.",
+  "exports": [
+    {
+      "name": "ChangesPanel",
+      "kind": "component",
+      "signature": "{ repoPath: string }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useCallback"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/styles/git-manager.css": []
+  },
+  "gotchas": [
+    "Untracked files come in as raw strings (filePath), while staged/unstaged come as objects {path, status} — FileItem handles both shapes via isUntracked flag, do not assume uniform shape.",
+    "Discard operations use window.confirm (native dialog) NOT SafetyDialogs.jsx — this is intentional for single-file discards but inconsistent with QuickActions which uses the React-based dialogs.",
+    "The diff fetch requires the correct isStaged flag: staged diffs use `git diff --cached` semantics, unstaged use working-tree-vs-index. Passing the wrong flag returns an empty/wrong diff.",
+    "handleDiscardAll iterates with `for...of` and awaits each gitDiscardFile sequentially — this is intentional to avoid race conditions on the index but is slow for many files.",
+    "STATUS_MAP includes 'T' (type change) and 'C' (conflicted) — when extending statuses ensure both the map and the .css class names (added/modified/deleted/renamed/untracked/conflicted) stay in sync.",
+    "Selecting a file dispatches a diff, but if discard removes the currently selected file the panel manually clears GIT_SET_SELECTED_FILE and GIT_SET_DIFF — don't forget this when adding new mutations."
+  ],
+  "patterns": [
+    "Three-section collapsible layout with chevron icons (ChevronIcon) and per-section open state (stagedOpen, unstagedOpen, untrackedOpen).",
+    "splitPath() helper renders the basename prominently with the parent directory in a dim suffix — typical IDE file-list pattern.",
+    "All mutations flow through refreshStatus which re-fetches gitStatus and dispatches GIT_SET_STATUS to update sibling components (CommitPanel, BranchPanel)."
+  ],
+  "conventions": [
+    "Section header buttons stop propagation so clicking action buttons doesn't toggle the section collapse.",
+    "Inline-styled chips/labels use var(--text-tertiary), var(--color-blocked), var(--border) tokens for theming consistency."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (gitStatus, gitDiffFile, gitStage, gitUnstage, gitDiscardFile, gitStageAll, gitUnstageAll)"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx"
+    ],
+    "related": [
+      "src/ui/components/git/DiffViewer.jsx",
+      "src/ui/components/git/CommitPanel.jsx"
+    ]
+  },
+  "domains": [
+    "git-manager",
+    "git-diff",
+    "git-safety"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "staging",
+    "working-tree",
+    "discard"
+  ]
+}

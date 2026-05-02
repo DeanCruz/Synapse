@@ -1,0 +1,77 @@
+{
+  "file": "src/ui/components/modals/ProjectModal.jsx",
+  "content_hash": "2167cbca",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Per-dashboard project configuration modal. Resolves the active project path with priority: dashboard-scoped (localStorage via getDashboardProject) → global settings.activeProjectPath fallback (skipped for chat dashboards). Lets the user pick a directory (api.selectProjectDirectory native dialog), shows recent-projects list (api.getRecentProjects), CLI provider toggle (claude / codex) with hard-coded MODEL_OPTIONS lists, CLI binary path with auto-detection (api.detectAgentCli) status indicator, default model dropdown that resolves to the first option if saved value is invalid, dangerouslySkipPermissions toggle, and an Additional Context Directories list (also dashboard-scoped via dashboardProjects helpers) for adding extra read-only context dirs to worker prompts. On Save, persists the chosen project path to dashboard scope; otherwise clears it.",
+  "exports": [
+    {
+      "name": "ProjectModal",
+      "kind": "component",
+      "signature": "{ onClose, onSave, onProjectSelected, dashboardId, pristine }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useEffect"
+    ],
+    "src/ui/components/modals/Modal.jsx": [
+      "default"
+    ],
+    "src/ui/utils/dashboardProjects.js": [
+      "getDashboardProject",
+      "saveDashboardProject",
+      "clearDashboardProject",
+      "getDashboardAdditionalContext",
+      "addDashboardAdditionalContext",
+      "removeDashboardAdditionalContext"
+    ]
+  },
+  "gotchas": [
+    "Chat-mode dashboards (id startsWith 'chat-agent-' or 'pending-chat') deliberately do NOT inherit the global activeProjectPath fallback. This prevents a stale code-mode project from resurfacing in chat-mode after the user clears it. Modifying this guard could leak project context across modes.",
+    "`pristine` flag opens the picker with NO active project pre-selected (used for new-chat flow) and ALSO returns an empty additionalDirs list — both matter; do not just gate one side.",
+    "MODEL_OPTIONS is HARDCODED with current model names (claude-opus-4-7, gpt-5.4, etc.) — when models change, this list must be updated manually. There is no dynamic discovery from the CLI.",
+    "resolveModel auto-falls-back to options[0].value if savedModel is unknown for the active provider — and silently writes the new resolved value back to settings. Switching provider can invisibly mutate the persisted defaultModel.",
+    "selectProjectDirectory then loadProject is two IPC calls; on cancel, dirPath is null and the chain short-circuits (no error). loadProject errors are swallowed with .catch(()=>{}) — silent failures.",
+    "addDashboardAdditionalContext blocks adding the active project as additional context (currentProject.path === dirPath check) — silently no-ops, no user feedback.",
+    "Save handler ALWAYS calls onClose() — there is no validation gate (e.g. if cliFound===false and currentProject is set, save proceeds; the worker spawn will then fail downstream).",
+    "The modal renders inside Modal with a footer prop — note this is one of the few modals using the footer drawer pattern."
+  ],
+  "patterns": [
+    "Dashboard-scoped settings via localStorage (dashboardProjects helpers) — same pattern used by ChatInstanceView and PlanningModal for additional-context dirs.",
+    "Three-tier project resolution: pristine override → per-dashboard → global fallback (with chat exception).",
+    "Per-provider sub-state: cliPath, defaultModel, MODEL_OPTIONS keyed by provider — clean swap when provider changes."
+  ],
+  "conventions": [
+    "dashboardLabel string formatting: 'dashboard1' → 'Dashboard 1' (replace 'dashboard' with 'Dashboard ').",
+    "dirBasename helper extracts last path segment for display."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/modals/Modal.jsx",
+      "src/ui/utils/dashboardProjects.js"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/components/chat/ChatInstanceView.jsx",
+      "electron/services/ProjectService.js",
+      "electron/settings.js"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "project-picker",
+    "settings",
+    "agent-provider-config"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "project",
+    "settings",
+    "claude",
+    "codex",
+    "localstorage"
+  ]
+}

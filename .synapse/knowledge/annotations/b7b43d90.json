@@ -1,0 +1,81 @@
+{
+  "file": "src/ui/components/preview/PreviewView.jsx",
+  "content_hash": "d43e7ba0",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreviewView is the React component that powers the Live Preview tab. It renders an Electron <webview> embedding a user's running web app (typically a localhost dev server) with a chrome-style toolbar (back/forward/refresh/stop, URL input, dev-server detect button). After each page load it injects two scripts: the inline-edit overlay (imported as raw text via Vite ?raw at build time so it survives the bundled Electron dist) and an inline BRIDGE_SCRIPT that listens for window.postMessage 'synapse-edit' events and re-emits them as console.log lines prefixed with '__SYNAPSE_EDIT__'. The host listens to webview console-message events, parses the prefixed JSON, and writes edits back to source via window.electronAPI.previewUpdateText(projectPath, label, newText, routePath). It manages canGoBack/Forward, dev-server detection, project association per-dashboard via getDashboardProject/saveDashboardProject, edit-status toasts auto-clearing after 3s, and a no-project warning banner when editing is disabled.",
+  "exports": [
+    "default PreviewView"
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useRef",
+      "useCallback",
+      "useEffect"
+    ],
+    "../../context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "../../utils/dashboardProjects.js": [
+      "getDashboardProject",
+      "saveDashboardProject"
+    ],
+    "../../preview/inject-overlay.js?raw": [
+      "OVERLAY_SCRIPT_RAW (default, raw text)"
+    ],
+    "../../styles/preview-view.css": [
+      "side-effect import"
+    ]
+  },
+  "gotchas": [
+    "Overlay script MUST be imported via Vite ?raw and inlined at build time. The previous fetch-based approach broke in the bundled Electron app because relative URLs resolved to nonexistent paths in dist/.",
+    "Electron <webview> tag requires webPreferences.webviewTag=true at BrowserWindow creation; nodeintegration must stay OFF for security.",
+    "Communication from webview to host goes through console-message events (not postMessage directly) — the bridge re-emits postMessage events as prefixed console.log lines because webviews are isolated processes.",
+    "did-stop-loading is the definitive 'all done' signal; did-start-loading can fire multiple times (redirects, sub-frames). Don't rely on did-start-loading alone.",
+    "errorCode -3 in did-fail-load means 'cancelled navigation' (user clicked Stop) — must be ignored to avoid spurious error states.",
+    "normalizePreviewLabel strips wrapping {}, (), \"\", '', `` because labels in inject-overlay can be wrapped in JSX expression brackets or string quotes.",
+    "Edits dropped silently if no projectPath is set for the dashboard — surfaces an error toast prompting user to click 'Set Project'.",
+    "After each successful edit, the label map MUST be refreshed via previewGetLabelMap so subsequent edits resolve to correct line numbers.",
+    "forceUpdate(n => n + 1) hack is used after saveDashboardProject because dashboardProjects is read from a non-reactive utility (localStorage), not state."
+  ],
+  "patterns": [
+    "Inline overlay/bridge injection via wv.executeJavaScript after did-finish-load; overlayInjectedRef gates duplicate injection per-page.",
+    "Cross-isolation message passing: window.postMessage in webview -> console.log with __SYNAPSE_EDIT__ prefix -> host console-message listener parses JSON.",
+    "URL normalization heuristic: localhost/IP -> http://, anything else -> https://.",
+    "Toolbar shared between empty-state and loaded-state via toolbar JSX variable."
+  ],
+  "conventions": [
+    "All preview-* CSS classes scoped under .preview-view in preview-view.css.",
+    "AppContext actions: PREVIEW_SET_URL, PREVIEW_SET_LOADING, PREVIEW_SET_ERROR, PREVIEW_ADD_EDIT, PREVIEW_SET_LABEL_MAP."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/preview/inject-overlay.js (raw-imported)",
+      "src/ui/context/AppContext.jsx",
+      "src/ui/utils/dashboardProjects.js",
+      "src/ui/styles/preview-view.css",
+      "electron/preload.js (window.electronAPI: previewUpdateText, previewGetLabelMap, previewDetectDevServer, selectProjectDirectory)",
+      "electron/services/PreviewService.js",
+      "electron/services/PreviewTextWriter.js"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx (rendered when activeTab === 'preview')"
+    ],
+    "related": [
+      "electron/services/InstrumentService.js (creates the data-synapse-label attributes the overlay reads)"
+    ]
+  },
+  "domains": [
+    "live-preview",
+    "webview-overlay"
+  ],
+  "tags": [
+    "react",
+    "electron-webview",
+    "live-preview",
+    "inline-editing",
+    "dev-server-detection"
+  ]
+}

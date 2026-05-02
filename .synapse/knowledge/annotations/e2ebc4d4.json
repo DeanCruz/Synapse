@@ -1,0 +1,64 @@
+{
+  "file": "_commands/project/learn_update.md",
+  "content_hash": "40c8cfa6",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !learn_update slash command — incrementally refreshes the Project Knowledge Index (PKI) at {project_root}/.synapse/knowledge/ by detecting and re-annotating only stale/new/deleted files. Five-phase workflow: (1) Load Existing PKI — read manifest.json, identify pre-flagged stale entries (PostToolUse hook set stale:true), find deleted files (in manifest but not on disk), find new files (on disk but not in manifest); (2) Detect Changes — compute SHA-256 hashes for non-stale files, compare against stored content_hash, add hash-mismatched files to stale set; (3) Re-scan via !p dispatch — group stale+new files by directory, dispatch parallel agents with previous annotations included for stale files so they produce focused diffs; (4) Merge — update manifest.json (content_hash, stale:false, last_annotated for re-annotated; new entries for new files; remove deleted entries; recompute stats), write annotation files to annotations/{hash}.json (delete old hash files for stale), rebuild domains.json and patterns.json from ALL annotations, clear queries/ cache; (5) Report. Auto-trigger at swarm start if stats.stale > 0.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Only re-scan changed files — never re-read or re-annotate files whose content_hash matches AND stale:false. Speed is the entire point of this command.",
+    "Preserve unchanged annotations VERBATIM — do not rewrite/rephrase/improve them; only touch stale, new, and deleted entries.",
+    "PostToolUse hook sets stale:true when agents write to files during a swarm; that is the PRIMARY staleness signal. Content hash comparison is the SECONDARY fallback for changes that bypass the hook (manual edits, non-Synapse processes).",
+    "Handle deleted files cleanly: remove manifest entry AND delete annotation file from annotations/ — never leave orphaned annotation files.",
+    "ALWAYS rebuild domains.json and patterns.json after merging, even for one-file changes — index consistency > speed here.",
+    "ALWAYS clear queries/ cache after any update — stale cached bundles are worse than no cache.",
+    "Include previous annotations in agent prompts for stale files — agents should produce focused diffs, not regenerate from scratch.",
+    "If diff is large (50+ files), warn user and suggest !learn for full rebuild — incremental works best for small-to-medium changes.",
+    "If zero changes detected, exit immediately with 'PKI is up to date' — do NOT dispatch agents or rewrite files.",
+    "Update manifest atomically: read full file → apply all changes in memory → write complete file. Never partial writes or incremental appends.",
+    "Auto-trigger at swarm start: silent unless stale count >50 (suggest !learn) or manifest missing (suggest !learn).",
+    "Annotation file hash is shasum of relative PATH (stable); content_hash is shasum of CONTENT (changes with file)."
+  ],
+  "patterns": [
+    "Five-phase pipeline: load → detect → re-scan → merge → report.",
+    "Two-tier staleness detection: hook flag (primary) + content hash diff (secondary).",
+    "Parallel dispatch only for changed files — unchanged files never re-read.",
+    "Atomic file updates — read-modify-write, never append.",
+    "Auto-trigger integration: swarm masters call !learn_update silently before planning when stats.stale > 0."
+  ],
+  "conventions": [
+    "annotated_by: 'learn-update' for incremental updates (vs 'learn-bootstrap' for !learn).",
+    "Index rebuild after every merge regardless of change size.",
+    "Query cache wiped on any update.",
+    "Dispatched via !p (lightweight parallel)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{project_root}/.synapse/knowledge/manifest.json",
+      "{project_root}/.synapse/knowledge/annotations/",
+      "{project_root}/.synapse/knowledge/domains.json",
+      "{project_root}/.synapse/knowledge/patterns.json"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/learn.md",
+      "_commands/project/context.md",
+      ".claude/hooks/",
+      "_commands/Synapse/p.md"
+    ]
+  },
+  "domains": [
+    "pki-update",
+    "pki-bootstrap"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "pki",
+    "incremental",
+    "parallel-dispatch",
+    "writes-files"
+  ]
+}

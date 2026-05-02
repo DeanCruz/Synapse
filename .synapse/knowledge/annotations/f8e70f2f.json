@@ -1,0 +1,52 @@
+{
+  "file": "documentation/configuration/theming.md",
+  "content_hash": "ef007b5d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for Synapse's dark-first design system. Documents CSS custom properties for backgrounds, text, fonts (DM Sans, Space Grotesk), status colors (completed green, in_progress purple, pending gray, failed red, claimed lime, blocked orange), gradient accents, terminal/editor color palettes, glass morphism patterns, header gradient, JavaScript color constants in src/ui/utils/constants.js, runtime CSS-to-JS synchronization via initStatusColorsFromCSS(), UI constants, scrollbar styling, theme settings, and a customization guide.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Status colors must match between CSS and JS -- runtime sync via initStatusColorsFromCSS()",
+    "Subpixel antialiasing intentionally disabled for thinner text on dark backgrounds",
+    "Currently only 'original' theme is implemented; customColors is reserved/unused",
+    "Dashboard labels derive dynamically -- legacy 'dashboardN' converts to 'Dashboard N', short hex IDs displayed uppercase",
+    "Electron BrowserWindow backgroundColor #0a0a0c must match CSS --bg to prevent white flash"
+  ],
+  "patterns": [
+    "CSS custom properties on :root, JS constants in src/ui/utils/constants.js, runtime sync",
+    "Glass morphism: rgba surface + backdrop-filter blur + subtle border",
+    "Hover effects with purple glow box-shadow",
+    "Status -> color -> background-with-alpha derivation chain",
+    "colorWithAlpha utility for alpha conversion across hex/rgb/rgba"
+  ],
+  "conventions": [
+    "Variables on :root, components reference variables not literal colors",
+    "Display font (Space Grotesk) for headings/numbers, sans (DM Sans) for body",
+    "STATUS_COLORS map keys: completed, in_progress, pending, failed, claimed, blocked",
+    "LEVEL_COLORS map: info, warn, error, debug, permission, deviation"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/configuration/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/styles/index.css",
+      "src/ui/utils/constants.js",
+      "documentation/configuration/electron-config.md"
+    ]
+  },
+  "domains": [
+    "configuration-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "theming",
+    "css",
+    "design-tokens",
+    "colors",
+    "fonts"
+  ]
+}

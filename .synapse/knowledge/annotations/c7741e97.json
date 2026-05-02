@@ -1,0 +1,76 @@
+{
+  "file": "src/ui/components/WavePipeline.jsx",
+  "content_hash": "8f36116f",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Wave-column layout — the primary visualization for parallel swarms. Renders one column per wave, each with a WaveHeader (wave id+name, completed/total count, StatusBadge) and the agents in that wave as AgentCards. An absolutely-positioned SVG overlay (chain-svg) draws dependency lines between cards via drawDependencyLines/drawSiblingLines from utils/dependencyLines.js; setupCardHoverEffects wires hover-highlight. A ResizeObserver redraws the lines whenever the container resizes (layout shift moves cards). Surfaces an unblocked-tasks toast for 8s via appState.unblockedTasks + auto-dismiss timer. Supports activeStatFilter to drop non-matching waves.",
+  "exports": [
+    {
+      "name": "WavePipeline",
+      "kind": "component",
+      "signature": "{ status: { agents[], waves[], chains[] }, activeStatFilter: string|null, onAgentClick: (agent) => void, progressData?: object }"
+    }
+  ],
+  "imports_from": {
+    "@/utils/constants.js": [
+      "STATUS_COLORS",
+      "STATUS_BG_COLORS"
+    ],
+    "./AgentCard.jsx": [
+      "default",
+      "StatusBadge"
+    ],
+    "../utils/dependencyLines.js": [
+      "drawDependencyLines",
+      "drawSiblingLines",
+      "setupCardHoverEffects"
+    ],
+    "../context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ]
+  },
+  "gotchas": [
+    "Dependency lines depend on the DOM `data-agent-id` attribute on AgentCard — renaming or removing that attribute silently breaks the SVG overlay.",
+    "ResizeObserver re-runs drawDependencyLines/drawSiblingLines on every container resize; for very wide swarms with many edges this can be expensive. The lines util has its own internal cache keyed on card geometry.",
+    "Wave column ordering depends on the order of `waves` in initialization.json — the master is responsible for ordering correctly; this component does not sort.",
+    "When activeStatFilter is set, entire waves disappear if no agent matches — the column gap can collapse, causing dependency lines to redraw to surprising positions.",
+    "Unblocked tasks toast auto-dismiss timer (8s) restarts on every appState.unblockedTasks change — repeatedly unblocking new tasks resets the timer rather than queueing toasts."
+  ],
+  "patterns": [
+    "Two parallel maps built per render: agentMap (id→agent) and per-wave aggregates (completedByWave, totalByWave) for the header badge.",
+    "drawDependencyLines is invoked both inside the main effect AND inside the ResizeObserver callback to handle layout shifts after initial draw.",
+    "Imperative DOM querying for cards (`querySelectorAll('.agent-card[data-agent-id]')`) instead of refs — necessary because cards are rendered dynamically."
+  ],
+  "conventions": [
+    "Wave column class chain: wave-column (+wave-active / +wave-done) mirrors wave-header modifiers.",
+    "Wave header shows count badge only when totalCount > 0."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/AgentCard.jsx",
+      "src/ui/utils/constants.js",
+      "src/ui/utils/dependencyLines.js",
+      "src/ui/context/AppContext.jsx"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "src/ui/components/ChainPipeline.jsx",
+      "src/ui/components/AgentCard.jsx"
+    ]
+  },
+  "domains": [
+    "swarm-pipeline",
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "wave-pipeline",
+    "dependency-lines",
+    "svg-overlay"
+  ]
+}

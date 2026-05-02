@@ -207,132 +207,88 @@ Choose the type that gives the user the clearest picture of progress and bottlen
 
 ---
 
-### Step 8: Create the parallelization plan document
+### Step 8: Write `plan.json` — the canonical planning artifact
 
-Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md` with the following structure:
+**`plan.json` is the single source of truth for both shared swarm context and per-task instructions.** It lives in the dashboard directory next to `initialization.json`. The `validate-plan-required.sh` hook blocks `initialization.json` writes when `plan.json` is missing, malformed, or incomplete.
 
-```markdown
-# Parallel Execution Plan: {task-slug}
+**Path:** `{tracker_root}/dashboards/{dashboardId}/plan.json`
 
-## Parallelization Type: {Waves|Chains}
+**Why `plan.json` is required:**
+- Workers read `context` (shared) and their single task entry on dispatch — eliminating per-task duplication of the prompt, project paths, conventions, and architectural decisions.
+- `approach` captures the master's *deep-thinking how-to* for each task — the part that historically lived in working memory and was lost on compaction.
+- A structured artifact lets the validator hook check completeness instead of trusting the master's intent.
 
-### Why This Type Was Chosen
-{2-3 sentences explaining why Waves or Chains is the better fit for this specific task}
+**Schema:**
 
-## Task Organization
-
-### Wave 1 — {wave name}
-| Task | Description | Directory | Dependencies | Est. Complexity |
-|---|---|---|---|---|
-| 1.1 | {title} | {dir} | None | {Low/Medium/High} |
-
-### Wave 2 — {wave name}
-| Task | Description | Directory | Dependencies | Est. Complexity |
-|---|---|---|---|---|
-| 2.1 | {title} | {dir} | 1.1, 1.3 | {Low/Medium/High} |
-
-## Dependency Analysis
-{Explain the dependency graph — which tasks gate which, where the critical path is, what the longest chain is}
-
-## Dispatch Strategy
-{Explain how agents will be dispatched — all Wave 1 immediately, then dependency-driven dispatch regardless of wave boundaries. Identify any tasks that can be dispatched early if their specific dependencies clear before the full wave completes.}
-
-## Risk Assessment
-{Identify potential failure points, tasks most likely to produce warnings, and how failures in key tasks would cascade through the dependency graph}
-
-## Alternative Approaches Considered
-{If there was a more effective way to organize this, note it here with reasoning for why the chosen approach was selected instead. If the chosen approach is clearly optimal, state that and explain why.}
-```
-
-### Step 9: Create the master task file
-
-Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` with the full task breakdown.
-
-> Create the `tasks/{MM_DD_YY}/` directory if it doesn't exist.
-
-**JSON Schema:**
-
-```json
+```jsonc
 {
-  "name": "{task-slug}",
-  "created": "{YYYY-MM-DDTHH:MM:SSZ}",
-  "metadata": {
-    "prompt": "{original user prompt}",
-    "type": "{Waves|Chains}",
-    "directories": ["{affected directory}"],
-    "affected_projects": "{comma-separated directory list}",
-    "total_tasks": 0,
-    "total_waves": 0,
-    "overall_status": "pending"
-  },
-  "waves": [
-    {
-      "id": 1,
-      "name": "{descriptive wave name}",
-      "status": "pending",
-      "tasks": [
-        {
-          "id": "1.1",
-          "title": "{Short descriptive title — under 40 chars}",
-          "description": "{Detailed description of exactly what the agent must do}",
-          "directory": "{directory this task targets}",
-          "depends_on": [],
-          "context": "{All context the agent needs — current file state, architectural decisions, references to other tasks and what they produce}",
-          "critical": "{CRITICAL details — things that MUST be known to avoid mistakes. Gotchas, edge cases, non-obvious requirements. Null if none.}",
-          "tags": ["backend", "frontend", "types", "service", "refactor", "migration", "docs"],
-          "files": [
-            { "action": "read|modify|create|delete", "path": "{file path}" }
-          ],
-          "status": "pending",
-          "assigned_agent": null,
-          "started_at": null,
-          "completed_at": null,
-          "summary": null,
-          "logs": []
-        },
-        {
-          "id": "1.2",
-          "...": "..."
-        }
-      ]
+  "name":    "<kebab-case-slug>",                    // matches initialization.json task.name
+  "created": "<ISO 8601 — date -u>",
+  "context": {
+    "prompt":       "<verbatim user prompt — NON-EMPTY>",
+    "project_root": "<absolute path>",
+    "tracker_root": "<absolute path>",
+    "dashboard_id": "<id>",
+    "type":         "Waves" | "Chains",
+    "directories":  ["<affected dir>", ...],
+    "conventions":  {                                // the convention_map from Step 5A
+      "naming":           ["..."],
+      "file_structure":   ["..."],
+      "imports":          ["..."],
+      "frontend_styling": ["..."],
+      "backend_api":      ["..."],
+      "error_handling":   ["..."],
+      "testing":          ["..."],
+      "types":            ["..."]
     },
+    "reference_code": [
+      { "label": "<descriptive name>", "path": "<file>", "snippet": "<code excerpt>" }
+    ],
+    "architectural_decisions": "<the why — non-obvious choices and their reasoning>",
+    "edge_cases":              "<known gotchas spanning the swarm>",
+    "shared_constraints":      "<rules every worker must respect>"
+  },
+  "tasks": [
     {
-      "id": 2,
-      "name": "{descriptive wave name}",
-      "status": "pending",
-      "tasks": [
-        {
-          "id": "2.1",
-          "title": "{title}",
-          "description": "{description}",
-          "directory": "{directory}",
-          "depends_on": ["1.1", "1.3"],
-          "context": "{context}",
-          "critical": "{critical details}",
-          "tags": ["{tags}"],
-          "files": [
-            { "action": "modify", "path": "{path}" }
-          ],
-          "status": "pending",
-          "assigned_agent": null,
-          "started_at": null,
-          "completed_at": null,
-          "summary": null,
-          "logs": []
-        }
-      ]
+      "id":               "1.1",                    // matches initialization.json agents[].id
+      "title":            "<short verb phrase — ~40 chars>",
+      "wave":             1,
+      "depends_on":       [],
+      "directory":        "<task target dir>",
+      "description":      "<what the worker must do — NON-EMPTY>",
+      "approach":         "<HOW to do it most effectively. The deep-thought how-to:
+                            specific algorithm choices, data flow, file ordering,
+                            interaction with existing code, hazards to avoid.
+                            NON-EMPTY. This is the planning artifact that prior
+                            versions of !p_track lost on compaction.>",
+      "files":            [{ "action": "read|modify|create|delete", "path": "..." }],
+      "context":          "<task-specific context not already in shared context>",
+      "critical":         "<edge cases / gotchas specific to this task>",
+      "success_criteria": ["specific verifiable condition", "..."],
+      "instruction_mode": "FULL" | "LITE",
+      "tags":             ["backend", "frontend", "types", "..."]
     }
-  ],
-  "dependency_chains": [
-    { "id": 1, "tasks": ["{task_id}", "{task_id}", "{task_id}"] },
-    { "id": 2, "tasks": ["{task_id}", "{task_id}"] }
   ]
 }
 ```
 
-**Task status lifecycle:**
+**Required fields enforced by the hook:**
+- Top level: `name`, `created`
+- `context.prompt` — non-empty
+- `tasks` — array of length ≥ 1
+- Per task: `id`, `title`, `description`, `approach`, `files` (≥ 1 entry)
+
+**Cross-check with initialization.json:** the hook verifies `agents.length == tasks.length` when both files are written.
+
+**Deep-thinking requirement (NON-NEGOTIABLE):** `approach` is not a paraphrase of `description`. It is the master's research output — the result of reading the dep_graph, scanning the codebase, weighing alternatives, and deciding the most effective path. If you have lost this context (compaction, fresh master fork, etc.), redo the deep analysis before writing `plan.json`. Do not stub `approach` with a placeholder; the hook accepts the field, but a thin `approach` corrupts every downstream worker prompt.
+
+### Step 9: (removed — `plan.json` replaces the legacy parallel_{name}.json)
+
+**Migration note:** The legacy `tasks/{MM_DD_YY}/parallel_plan_{name}.md` (rationale doc) and `parallel_{name}.json` (master task file with lifecycle data) are no longer required. `plan.json` carries all planning data; lifecycle data (status, started_at, completed_at, summary) lives in worker progress files at `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json`.
+
+**Task status lifecycle (now tracked in progress files only):**
 1. `pending` — Not started, waiting for dependencies or dispatch
-2. `claimed` — Master has selected this task for dispatch (set in task file before agent launch)
+2. `claimed` — Master has selected this task for dispatch
 3. `in_progress` — Agent is actively working
 4. `completed` — Done successfully
 5. `failed` — Error occurred (agent logs the error)
@@ -341,15 +297,13 @@ Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` with the full
 
 ### Step 10: Verify and add dependency chains
 
-1. **Re-read the task file** — Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` in full.
-2. **Cross-check with the .md** — Look for any discrepancies or inconsistencies between the task file definitions and the .md plan. Fix any found.
-3. **Verify all dependencies** — For every task with a `depends_on` value:
-   - Confirm the referenced task IDs exist in the task file
+1. **Re-read `plan.json`** — Read `{tracker_root}/dashboards/{dashboardId}/plan.json` in full and confirm every task entry has `id`, `title`, `description`, `approach`, and `files`.
+2. **Verify all dependencies** — For every task with a `depends_on` value:
+   - Confirm the referenced task IDs exist in `plan.tasks[]`
    - Confirm the dependency direction is correct (the depended-on task produces what this task needs)
    - Confirm no circular dependencies exist
-4. **Build dependency chains** — Trace every path from root tasks (no dependencies) to terminal tasks (nothing depends on them). Each unique path is a chain.
-5. **Write the chains** — Populate the `dependency_chains` array in the task file with all chains.
-6. **Identify the critical path** — The longest chain determines the minimum total execution time.
+3. **Build dependency chains** — Trace every path from root tasks (no dependencies) to terminal tasks (nothing depends on them). Each unique path is a chain. Use these to populate `chains[]` in `initialization.json` if `task.type == "Chains"`.
+4. **Identify the critical path** — The longest chain determines the minimum total execution time.
 
 #### Dependency Validation Algorithm
 
@@ -609,8 +563,7 @@ The dashboard is now live with the full plan — all tasks visible as pending ca
 **Total:** {N} tasks across {W} waves
 **Critical path:** Chain {X} ({N} tasks deep)
 **Dispatch strategy:** Tasks dispatched the instant all their dependencies are met — not waiting for full wave completion.
-**Task file:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
-**Plan:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
+**Plan file:** `{tracker_root}/dashboards/{dashboardId}/plan.json` (canonical { context, tasks })
 ```
 
 #### 11E. Approval Gate — NON-NEGOTIABLE
@@ -650,7 +603,7 @@ The ONLY acceptable triggers to proceed:
 - User approves with modifications (e.g., "yes but change X" — apply the modification, update the plan files, then proceed)
 
 If the user requests changes to the plan:
-1. Apply the requested changes to `initialization.json` and the master task file
+1. Apply the requested changes to `plan.json` first, then propagate to `initialization.json`
 2. Re-present the updated plan summary
 3. Return to Step 2 — request approval again
 

@@ -1,0 +1,15 @@
+{
+  "task_id": "a5-3",
+  "title": "Build repository layer",
+  "status": "in_progress",
+  "agent": "Agent5",
+  "depends_on": ["a5-1", "a5-2"],
+  "started_at": "2026-04-28T11:14:30Z",
+  "completed_at": null,
+  "summary": null,
+  "stage": "coding",
+  "message": "Implementing UserRepository and ProjectRepository",
+  "files_changed": ["src/repositories/UserRepository.ts"],
+  "milestones": ["UserRepository done"],
+  "deviations": []
+}

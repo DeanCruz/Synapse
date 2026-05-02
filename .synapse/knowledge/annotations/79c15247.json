@@ -1,0 +1,33 @@
+{
+  "file": "documentation/data-architecture/initialization-json.md",
+  "content_hash": "8f83a2cc",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Authoritative schema reference for initialization.json -- the static plan file written once by the master containing task metadata, agent definitions, wave structure, chain layout, and history. Documents every field, its UI mapping, write rules (write-once except for repair task appends), and validation expectations.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Write-once rule has ONE exception: repair tasks may be appended after worker failures",
+    "Lifecycle fields (status, started_at, etc.) live in progress files, NOT in initialization.json"
+  ],
+  "patterns": [
+    "Static-plan-vs-dynamic-progress separation"
+  ],
+  "conventions": [
+    "Agent IDs use 'wave.index' format (e.g. '1.1', '2.3')"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "data-architecture",
+    "schema"
+  ],
+  "tags": [
+    "initialization",
+    "plan",
+    "schema"
+  ]
+}

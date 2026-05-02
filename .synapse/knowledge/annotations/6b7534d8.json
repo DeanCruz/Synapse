@@ -1,0 +1,90 @@
+{
+  "file": "electron/services/ProjectService.js",
+  "content_hash": "acb8a675",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Project detection, context loading, and CLI binary discovery. loadProject inspects a directory for language-defining files (package.json, tsconfig.json, Cargo.toml, go.mod, requirements.txt, pyproject.toml, Gemfile, pom.xml, build.gradle), prefers the package.json `name` for display, and locates CLAUDE.md at the root + one level deep. getProjectContext reads every CLAUDE.md and returns {path, content} pairs for prompt injection. detectClaudeCLI / detectCodexCLI use `which` + a list of common install paths to find the CLI binary so swarms work without manual configuration.",
+  "exports": [
+    {
+      "name": "loadProject",
+      "kind": "function",
+      "signature": "(dirPath) => {path, name, language, hasClaudeMd, claudeMdPaths}"
+    },
+    {
+      "name": "getProjectContext",
+      "kind": "function",
+      "signature": "(dirPath) => [{path, content}]"
+    },
+    {
+      "name": "getProjectContextWithFallback",
+      "kind": "function",
+      "signature": "(primaryDir, additionalDirs?) => [{path, content}]"
+    },
+    {
+      "name": "scanDirectory",
+      "kind": "function",
+      "signature": "(dirPath, maxDepth?) => [{name, type, children?}]"
+    },
+    {
+      "name": "detectClaudeCLI",
+      "kind": "function",
+      "signature": "() => string|null"
+    },
+    {
+      "name": "detectCodexCLI",
+      "kind": "function",
+      "signature": "() => string|null"
+    },
+    {
+      "name": "detectAgentCLI",
+      "kind": "function",
+      "signature": "(provider) => string|null"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "CLAUDE.md scan only goes ONE directory level deep — files at deeper nesting (subapp/feature/CLAUDE.md) are missed. This is intentional for performance but can surprise users with monorepos.",
+    "DETECT_FILES is checked in array order and FIRST MATCH wins — a project with both package.json AND requirements.txt resolves to 'javascript', not 'python'.",
+    "The name precedence is: package.json `name` field > directory basename. A project with a different package.json name than its folder will display under the package name.",
+    "detectCliBinary uses execSync('which ...', {timeout:5000}) — if PATH is non-standard (Electron may have inherited a minimal env on macOS Launchpad start) the binary is not found even if it exists.",
+    "detectCodexCLI checks /opt/homebrew/bin/codex (Apple Silicon Homebrew) BEFORE /usr/local/bin/codex (Intel Homebrew); detectClaudeCLI checks /usr/local/bin first instead — the orderings differ for the two providers and reflect typical install locations.",
+    "The fn name `getProjectContextWithFallback` retains 'Fallback' for backward compat but the behavior is ADDITIVE (concatenates primary + each additional dir's contexts). Reading the name as 'use additional only if primary empty' would be wrong."
+  ],
+  "patterns": [
+    "Language detection via signature-file lookup table (DETECT_FILES).",
+    "scanDirectory builds a tree-shaped node array with directories first then alphabetical within each level — used for the file-tree display in the project setup modal.",
+    "Multi-source project context: primary CLAUDE.md + additional context dirs are merged into a single contexts[] array, later partitioned in SwarmOrchestrator.dispatchReady by path-prefix match."
+  ],
+  "conventions": [
+    "Sync fs APIs throughout — invoked at IPC time, never in hot loops.",
+    "Skip dotfile dirs and node_modules/dist when scanning.",
+    "Defensive try/catch around every fs.readFileSync — partial results are preferred over hard failures."
+  ],
+  "relationships": {
+    "depends_on": [
+      "node:fs",
+      "node:path",
+      "node:child_process"
+    ],
+    "depended_by": [
+      "electron/services/SwarmOrchestrator.js",
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "electron/services/CommandsService.js"
+    ]
+  },
+  "domains": [
+    "project-detection",
+    "cli-binary-discovery",
+    "context-loading"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "project-discovery",
+    "claude-md",
+    "language-detection"
+  ]
+}

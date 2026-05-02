@@ -1,0 +1,46 @@
+{
+  "file": "_commands/Synapse/resume.md",
+  "content_hash": "cf5c3a90",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!resume` command for CHAT SESSION resumption — NOT swarm resumption. The agent reviews the full conversation history backwards from most recent, identifies the original task / progress made / point of interruption / outlined plan, optionally checks files-being-modified state and git status to gather more context, presents a Status Summary, then picks up exactly where it left off. For SWARM/dashboard resumption use !track_resume or !p_track_resume instead.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "This is for CHAT session resumption only — NOT swarm/dashboard resumption (use !track_resume or !p_track_resume for those)",
+    "Read before assuming — always check actual file state and git status; don't trust conversation history claims about what was done (another agent or the user may have made changes)",
+    "Don't redo completed work — verify by checking file contents, not by relying on conversation",
+    "Preserve the original approach unless the previous approach clearly failed — don't switch strategies unnecessarily",
+    "Read as far back in history as needed — better to spend time understanding than to miss critical context",
+    "Use git status + git diff to identify in-progress uncommitted changes that may represent partial work"
+  ],
+  "patterns": [
+    "4-step procedure: reconstruct from conversation history → gather additional context if insufficient → present Status Summary → resume execution",
+    "Status Summary format: Original task → Progress so far → Interrupted at → Remaining work",
+    "Resume strategy decision tree: mid-edit → complete the edit; mid-plan → next planned step; previous failed → analyze and try alternative; completed but unverified → run verification"
+  ],
+  "conventions": [
+    "Lighter command doc — no Output Files, no dashboard interaction, just behavior steps",
+    "Top callout explicitly redirecting swarm-resumption use cases elsewhere",
+    "Key Principles section at the bottom enumerates 4 guidelines (read before assuming, don't redo, preserve approach, be thorough)"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/track_resume.md",
+      "_commands/Synapse/p_track_resume.md"
+    ]
+  },
+  "domains": [
+    "chat-resumption",
+    "session-recovery"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "non-swarm",
+    "context-reconstruction"
+  ]
+}

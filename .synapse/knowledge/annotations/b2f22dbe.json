@@ -1,0 +1,36 @@
+{
+  "file": "documentation/worker-protocol/overview.md",
+  "content_hash": "bb75c0c2",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Worker agent lifecycle and responsibilities. Defines the fixed stage sequence (reading_context -> planning -> implementing -> testing -> finalizing -> completed/failed), the two critical paths ({tracker_root} vs {project_root}), the eight non-negotiable rules every worker follows, and the structured return format (STATUS, SUMMARY, FILES CHANGED, EXPORTS, ANNOTATIONS, DIVERGENT ACTIONS, WARNINGS, ERRORS).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Each worker is the SOLE writer of its progress file -- no other agent reads or modifies it",
+    "Partial completion (>=80% done with a blocker) uses status:'completed' with a clear summary, NOT 'failed'",
+    "Workers must always include dashboard_id in every progress write or the server rejects it"
+  ],
+  "patterns": [
+    "Sole-writer-per-file ownership eliminating write conflicts",
+    "Self-contained dispatch prompts so workers need no master callbacks"
+  ],
+  "conventions": [
+    "Progress writes use the Write tool (atomic temp-rename), never echo/cat shell redirects",
+    "Live timestamps via date -u +'%Y-%m-%dT%H:%M:%SZ' -- never reconstructed from memory"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "worker-protocol"
+  ],
+  "tags": [
+    "lifecycle",
+    "stages",
+    "return-format",
+    "rules"
+  ]
+}

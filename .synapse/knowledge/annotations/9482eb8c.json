@@ -1,0 +1,57 @@
+{
+  "file": "_commands/Synapse/track_resume.md",
+  "content_hash": "24dfd0e2",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!track_resume [dashboardId]` command — lighter resume of a stalled !p_track swarm than !p_track_resume. Phase 1 reads core instructions (CLAUDE.md + tracker_master_instructions.md), resolves dashboard (auto-detects first resumable dashboard if not specified), reads init+all progress+logs+plan+project context, and CLASSIFIES every task into Completed/Failed/Stale In-Progress/Pending(ready)/Pending(blocked). For !track_resume purposes, treats ALL in_progress as stale (assumes previous master and its workers are dead). Phase 2 cleans stale progress files, builds full p_track-quality worker prompts with RESUME CONTEXT and PREVIOUS ATTEMPT sections, dispatches all ready. Phase 3 runs the standard execution loop with circuit breaker and final report.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Treats ALL in_progress as stale — does NOT do the alive/uncertain/stale 3-way classification that !p_track_resume does (simpler but more aggressive)",
+    "Reads only 2 instruction files in Phase 1 (CLAUDE.md + tracker_master_instructions.md) vs !p_track_resume's 7 — lighter on instruction reading",
+    "If plan.json is missing, the master MUST regenerate it (redo deep-thinking pass) before re-dispatching — hooks block dispatch otherwise",
+    "Auto-detect logic: scan listDashboards() in order; first dashboard with non-null task and any incomplete/missing progress = resumable",
+    "Worker prompt template still uses the same p_track sections — TASK/DESCRIPTION/CONTEXT/PROJECT+TRACKER ROOT/CONVENTIONS/REFERENCE/UPSTREAM/CRITICAL/FILES/DIRECTORY/RESUME CONTEXT/PREVIOUS ATTEMPT (if retry)/PREPARATION/PROGRESS REPORTING/DEVIATION REPORTING/EXECUTION RULES/RETURN FORMAT",
+    "Final report is lighter than !p_track_resume — just summary table + log entry, no NON-NEGOTIABLE Resume Details section",
+    "Self-assessment 4-question gate is included verbatim in the worker prompt"
+  ],
+  "patterns": [
+    "Three phases: Phase 1 Assess Current State (Steps 1-7) → Phase 2 Dispatch (Steps 8-10) → Phase 3 Monitor+Standard Execution Loop (Steps 11-13)",
+    "5-row task classification (Completed, Failed, Stale In-Progress, Pending ready, Pending blocked)",
+    "Stale detection signals: no active worker process, started_at >15-min old with no recent milestones, master session restarted",
+    "Dispatch sequence: launch agent FIRST → log AFTER → one-line confirmation",
+    "Worker prompt RESUME CONTEXT sections: NOTE about resumed state → optional PREVIOUS ATTEMPT block (status/stage/summary/logs/deviations/ROOT CAUSE/REMEDIATION)"
+  ],
+  "conventions": [
+    "Top-of-file NON-NEGOTIABLE RULES (4 numbered rules — fewer than !p_track_resume's 7)",
+    "Quick Reference table comparing !track_resume vs !dispatch --ready vs !retry",
+    "Embedded full worker prompt template (same as !p_track Step 14 with RESUME CONTEXT additions)"
+  ],
+  "relationships": {
+    "depends_on": [
+      "CLAUDE.md",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/instructions/dashboard_resolution.md",
+      "_commands/Synapse/p_track.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/p_track_resume.md",
+      "_commands/Synapse/dispatch.md",
+      "_commands/Synapse/retry.md"
+    ]
+  },
+  "domains": [
+    "swarm-command",
+    "failure-recovery",
+    "stall-recovery"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "resume",
+    "lighter-variant"
+  ]
+}

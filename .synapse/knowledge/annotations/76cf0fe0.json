@@ -1,0 +1,50 @@
+{
+  "file": ".claude/skills/failure-protocol/SKILL.md",
+  "content_hash": "94e3bf9d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Auto-loaded (user-invocable: false) skill that defines the master's failure recovery protocol. Three sections: (1) Worker Return Validation table — STATUS/SUMMARY/FILES CHANGED/DIVERGENT ACTIONS validation rules, processing order; (2) On Failure Steps 0-7 — double failure check (repair tasks ending in `r` cannot spawn another repair), log failure, create repair task in initialization.json (the documented write-once exception, ID format `{wave}.{next}r`), rewire dependency chain, update chains[] if Chains type, dispatch repair worker with full original prompt + failed progress file + remediation guidance, log repair, eager dispatch scan; (3) Circuit Breaker — thresholds (3+ wave failures, 1 failure blocking 3+ downstreams, 1 failure blocking >50%), 7-step response (pause, gather, analyze, revision plan with categories modified/added/removed/retry, apply, log, resume). Permission gate: repair workers must report major deviations back to master, not proceed autonomously.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Repair task IDs end in `r` — double failure detection depends on this convention",
+    "Repair task creation is the ONE documented exception to initialization.json's write-once rule (along with circuit breaker replan and !add_task)",
+    "Repair worker dispatch MUST include all 4 items: original prompt, failed progress file, repair task ID, instruction to follow failed_task.md",
+    "Circuit breaker pauses dispatches but the swarm 'continues around failures' — only direct dependents are blocked",
+    "Permission gate triggers dashboard popup via permission-level log entry"
+  ],
+  "patterns": [
+    "Numbered recovery steps (Step 0-7 for single failure; Step 1-7 for circuit breaker)",
+    "Auto-loaded protocol skill — referenced from master-protocol, p-track, p-track-resume",
+    "Categorized revision plan: modified | added | removed | retry"
+  ],
+  "conventions": [
+    "Step 0 is the gating check (double failure escalation)",
+    "Repair ID format: `{failed_task_wave}.{next_index}r`"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      ".claude/agents/master-orchestrator.md",
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/skills/p-track-resume/SKILL.md",
+      ".claude/skills/master-protocol/SKILL.md"
+    ],
+    "related": [
+      "agent/master/failure_recovery.md",
+      "agent/instructions/failed_task.md"
+    ]
+  },
+  "domains": [
+    "skill-definition",
+    "failure-recovery",
+    "circuit-breaker"
+  ],
+  "tags": [
+    "skill",
+    "auto-loaded",
+    "failure-protocol",
+    "repair-tasks",
+    "circuit-breaker"
+  ]
+}

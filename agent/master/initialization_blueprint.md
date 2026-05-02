@@ -4,6 +4,8 @@
 
 The dashboard merges `initialization.json` (static plan) with progress files (dynamic lifecycle). If the plan is malformed, the UI may render wave headers with **no task cards** — users see an empty swarm that is in fact running correctly but cannot be displayed. This document exists to eliminate that class of bug.
 
+> **Prerequisite: `plan.json` must exist first.** The `validate-plan-required.sh` hook blocks any write to `initialization.json` unless `plan.json` is present in the same dashboard directory and contains a non-empty `context.prompt` plus a `tasks[]` array where every task has `id`, `title`, `description`, `approach`, and `files`. `agents.length` in `initialization.json` MUST equal `plan.tasks.length`. See [`agent/_commands/p_track_planning.md`](../_commands/p_track_planning.md) Step 8 for the full `plan.json` schema.
+
 ---
 
 ## Write Context

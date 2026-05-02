@@ -1,0 +1,75 @@
+{
+  "file": "electron/services/InstrumentService.js",
+  "content_hash": "d1f815a4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Implements the `!instrument` command: scans .jsx/.tsx/.html/.htm files in a target project and adds `data-synapse-label=\"<UUID>\"` attributes to text-bearing elements (h1-h6, p, span, button, a, label, li, td, th, blockquote, dt, dd, plus a small set of common custom text components like TextAnimated, TextLoop, Marquee, StyledText, Link). The labels are used by Live Preview to map a clicked DOM element back to its source file. Also provides removeInstrumentation() to strip every label attribute. The hand-rolled parser handles JSX expression braces, quoted attributes (\", ', `), HTML comments, JSX `{/* */}` comments, and skips child-component JSX expressions when checking whether a tag has direct text content.",
+  "exports": [
+    {
+      "name": "instrumentProject",
+      "kind": "function",
+      "signature": "(projectPath, options?) => {filesScanned, filesModified, labelsAdded, skipped, errors?}"
+    },
+    {
+      "name": "instrumentFile",
+      "kind": "function",
+      "signature": "(filePath, options?) => {success, labelsAdded, alreadyLabeled, error?}"
+    },
+    {
+      "name": "removeInstrumentation",
+      "kind": "function",
+      "signature": "(projectPath, options?) => {filesScanned, filesModified, labelsRemoved}"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Skips node_modules, .next, dist, build, .git — but does NOT skip vendor/, .turbo/, .cache/, etc. Add new ignores manually if a new framework appears.",
+    "Self-closing tags like `<img />` are skipped by design (no text content). Custom self-closing components emitting text via render-props will not get labels.",
+    "isInsideCommentOrString is a HEURISTIC — it can be fooled by `//` or `/* */` inside template literals that span multiple lines. Acceptable for the current use case, but don't rely on perfect accuracy.",
+    "hasDirectTextContent strips JSX expressions `{...}` AND child tags before checking for non-whitespace — so `<div><span>text</span></div>` will NOT instrument the outer div (correct), but it DOES instrument any tag with bare text + child components mixed in.",
+    "Each label is `crypto.randomUUID()` — re-running !instrument on already-labeled files only adds labels to NEW unlabeled tags (idempotent on existing labels). Removing then re-adding labels assigns NEW UUIDs, breaking any persisted label-to-source mapping.",
+    "TARGET_ELEMENTS is a hardcoded list. Tags not in this list (e.g., `<strong>`, `<em>`) are never instrumented — Live Preview cannot edit them.",
+    "Regex matches are case-insensitive (`gi`) but TARGET_ELEMENTS includes both lowercase `a` and PascalCase `Link`/`StyledText` — JSX is case-sensitive in real React, but the matcher accepts both, which can over-match HTML pages that happen to have `<Link>` text.",
+    "findTagClose tracks brace depth to skip `>` inside JSX expressions, but it does NOT detect TypeScript generics like `<Component<Foo>>` — those would confuse the parser (rare in attributes)."
+  ],
+  "patterns": [
+    "Two-pass instrumentation: (1) collect all valid tag matches with their attribute slices, (2) rebuild output string by walking matches and inserting ` data-synapse-label=\"...\"` right before the closing `>`.",
+    "Hand-rolled JSX-aware tag closer (findTagClose) instead of using a JSX/babel parser — keeps the dependency surface tiny but means tricky edge cases (TS generics, escaped templates) are unsupported.",
+    "Idempotent: existing data-synapse-label attributes are detected and skipped via simple substring search of the attrs slice."
+  ],
+  "conventions": [
+    "Returns numerical summaries (filesScanned/filesModified/labelsAdded/skipped) for !instrument output.",
+    "Errors are accumulated per-file in an `errors[]` array rather than throwing.",
+    "Synchronous fs API — runs once at command time, blocking is acceptable."
+  ],
+  "relationships": {
+    "depends_on": [
+      "node:fs",
+      "node:path",
+      "node:crypto"
+    ],
+    "depended_by": [
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "electron/services/PreviewService.js",
+      "electron/services/PreviewTextWriter.js",
+      "src/ui/preview/inject-overlay.js"
+    ]
+  },
+  "domains": [
+    "live-preview-system",
+    "jsx-instrumentation",
+    "source-mapping"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "instrumentation",
+    "jsx",
+    "tsx",
+    "data-synapse-label",
+    "live-preview"
+  ]
+}

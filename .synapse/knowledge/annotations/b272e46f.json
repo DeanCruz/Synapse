@@ -1,0 +1,87 @@
+{
+  "file": "src/server/services/HistoryService.js",
+  "content_hash": "ba904815",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Builds and persists post-swarm history summaries to the top-level history/ directory. listHistory() reads every history/*.json and sorts newest-first by cleared_at field. buildHistorySummary(id) is the heavy operation: derives total/completed/failed/in_progress/pending counts by walking init.agents and looking up each in progress; computes started_at/completed_at as min/max over per-agent timestamps; computes duration as 'Xm Ys' or 'Ys'; classifies overall_status ('completed', 'completed_with_errors', 'in_progress', 'pending'); produces a flat agentSummaries array with id/title/wave/status/assigned_agent/timing/summary; embeds task metadata (name/type/project/directory/prompt) and log_count. saveHistorySummary(id) wraps build + writes to history/{YYYY-MM-DD}_{taskName}.json (creates HISTORY_DIR if missing).",
+  "exports": [
+    {
+      "name": "listHistory",
+      "kind": "function",
+      "signature": "() => Array<historySummary>"
+    },
+    {
+      "name": "buildHistorySummary",
+      "kind": "function",
+      "signature": "(id) => historySummary"
+    },
+    {
+      "name": "saveHistorySummary",
+      "kind": "function",
+      "signature": "(id) => historySummary"
+    }
+  ],
+  "imports_from": {
+    "fs": [
+      "default"
+    ],
+    "path": [
+      "default"
+    ],
+    "../utils/constants": [
+      "HISTORY_DIR"
+    ],
+    "../utils/json": [
+      "readJSON"
+    ],
+    "./DashboardService": [
+      "readDashboardInit",
+      "readDashboardProgress",
+      "readDashboardLogs"
+    ]
+  },
+  "gotchas": [
+    "Filename collision: history file is `${YYYY-MM-DD}_${task_name}.json` — a second swarm with the same task name on the same day SILENTLY overwrites the prior history file (fs.writeFileSync, no existence check). If you !reset twice in one day on the same task, the first run's history is lost.",
+    "task_name is used verbatim in the filename with no sanitization — slashes/colons in task names produce invalid paths or escape the history directory.",
+    "Built summary uses unsanitized agentDef fields — if init.agents was tampered with (e.g., extra fields), they don't appear in the summary, but missing fields propagate as undefined into the JSON.",
+    "started_at/completed_at use Math.min/Math.max over Number-cast timestamps — invalid date strings become NaN and pollute the result (NaN propagates through Math.min). No validation of timestamp format.",
+    "overall_status logic checks `agents.length > 0 && agentSummaries.every(...)` — an init.agents:[] dashboard reports overall_status:'pending' even if logs.json contains failures.",
+    "Duration formula `m > 0 ? '${m}m ${s}s' : '${s}s'` — for sub-second runs, totalSec=0 produces '0s' (no millisecond resolution). For runs >= 1 hour, no hours field; you get '127m 5s'.",
+    "saveHistorySummary creates HISTORY_DIR with mkdirSync({recursive:true}) but listHistory's existsSync guard means the dir must exist before listing — first call after install returns []."
+  ],
+  "patterns": [
+    "Build-then-save pattern: buildHistorySummary is pure (no I/O writes), saveHistorySummary composes it with the write step — easy to test build logic in isolation.",
+    "Aggregation walk: single pass over init.agents accumulates counts, summaries, and timing arrays simultaneously.",
+    "Date stamping uses `new Date().toISOString().slice(0, 10)` (UTC) — same convention as ArchiveService, ensures dates align across both systems."
+  ],
+  "conventions": [
+    "Functional module, named exports.",
+    "task fallback chain: `(init && init.task) ? init.task : {}` — defensive against malformed init.",
+    "Output JSON is pretty-printed with 2-space indent (JSON.stringify(summary, null, 2)) — diff-friendly when committed."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/services/DashboardService.js",
+      "src/server/utils/constants.js",
+      "src/server/utils/json.js"
+    ],
+    "depended_by": [
+      "src/server/routes/apiRoutes.js",
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "src/server/services/ArchiveService.js"
+    ]
+  },
+  "domains": [
+    "history-summary",
+    "dashboard-state"
+  ],
+  "tags": [
+    "server",
+    "service",
+    "history",
+    "metrics",
+    "post-swarm"
+  ]
+}

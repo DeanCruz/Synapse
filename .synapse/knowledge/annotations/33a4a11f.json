@@ -1,0 +1,85 @@
+{
+  "file": ".claude/skills/p-track/SKILL.md",
+  "content_hash": "cf6ab52a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "User-invocable forked-context Opus skill (`!p_track`) — the PRIMARY swarm orchestration skill. 3 phases / 17 steps: Phase 1 Planning (Steps 1-11: resolve project_root, read master instructions, parse prompt + slug, deep analysis, read context files + build convention_map, decompose tasks 1-5 min / 1-2 files modified, determine Waves vs Chains, write plan.json with full schema (context.{prompt, project_root, tracker_root, dashboard_id, type, directories, conventions, reference_code, architectural_decisions, edge_cases, shared_constraints} + tasks[].{id, title, wave, depends_on, directory, description, approach, files, context, critical, success_criteria, instruction_mode, tags}), verify dependencies (toposort, critical path, no orphans), select dashboard + write plan.json BEFORE initialization.json BEFORE logs.json, then Approval Gate Step 11E — write 'Plan ready for review' permission entry, halt, await user, write 'Approval granted' info entry); Phase 2 Execution (initial dispatch, FULL/LITE worker prompt construction with full template including TEMPLATE_VERSION:p_track_v2, eager dispatch on completions, failure recovery); Phase 3 Completion (Steps 17A-F: finalize task file, append log, post-swarm verification, compute metrics, NON-NEGOTIABLE final report, save to history). Includes the canonical worker prompt template.",
+  "exports": [],
+  "imports_from": {
+    "skills": [
+      "master-protocol",
+      "failure-protocol"
+    ],
+    "agent_modules": [
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/_commands/p_track_planning.md",
+      "agent/_commands/p_track_execution.md",
+      "agent/_commands/p_track_completion.md",
+      "agent/master/initialization_blueprint.md",
+      "agent/master/worker_prompts.md",
+      "agent/master/eager_dispatch.md",
+      "agent/master/failure_recovery.md",
+      "agent/master/compaction_recovery.md",
+      "agent/instructions/common_pitfalls.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/instructions/tracker_worker_instructions_lite.md"
+    ]
+  },
+  "gotchas": [
+    "Write order is HOOK-ENFORCED: plan.json -> initialization.json -> logs.json -> Approval Gate -> dispatch",
+    "Approval Gate is hook-enforced (validate-approval-gate.sh) AND prose-NON-NEGOTIABLE — bypass is impossible",
+    "FULL vs LITE worker prompt: FULL for upstream deps / 3+ files / coordination / high risk; LITE for simple/independent/single-file/mechanical",
+    "TEMPLATE_VERSION: p_track_v2 in worker prompts is the marker validate-worker-prompt.sh checks",
+    "Worker prompt template has 11 required sections (see validate-worker-prompt.sh full set)",
+    "Context budget: ~800 lines / 8000 tokens max per worker prompt — bloat causes context exhaustion",
+    "Sweet spot: 4-8 tasks per swarm; merge back if splitting doesn't reduce critical path 20%+",
+    "Plan must reflect REAL deep-thinking — `approach` field must not be a restatement of `description`",
+    "context: fork — runs in a forked Claude context; model: opus"
+  ],
+  "patterns": [
+    "Three-phase skill: Planning -> Execution -> Completion",
+    "Eager dispatch (waves are visual, dependencies drive)",
+    "FULL/LITE prompt mode selection by task profile",
+    "Hook-enforced order: plan.json BEFORE initialization.json"
+  ],
+  "conventions": [
+    "Steps numbered globally 1-17",
+    "Step 11E is the Approval Gate sub-step",
+    "Worker prompts use ═══ box markers for section separation"
+  ],
+  "relationships": {
+    "depends_on": [
+      ".claude/skills/master-protocol/SKILL.md",
+      ".claude/skills/failure-protocol/SKILL.md",
+      "agent/master/*.md",
+      "agent/_commands/p_track_*.md",
+      "agent/instructions/*.md"
+    ],
+    "depended_by": [
+      ".claude/agents/master-orchestrator.md"
+    ],
+    "related": [
+      ".claude/skills/p/SKILL.md",
+      ".claude/skills/p-track-resume/SKILL.md",
+      ".claude/skills/eager-dispatch/SKILL.md",
+      ".claude/hooks/validate-plan-required.sh",
+      ".claude/hooks/validate-approval-gate.sh",
+      ".claude/hooks/validate-worker-prompt.sh",
+      ".claude/hooks/validate-initialization-schema.sh"
+    ]
+  },
+  "domains": [
+    "skill-definition",
+    "swarm-orchestration",
+    "primary-swarm-skill"
+  ],
+  "tags": [
+    "skill",
+    "user-invocable",
+    "fork",
+    "opus",
+    "p-track",
+    "swarm-master",
+    "primary-skill"
+  ]
+}

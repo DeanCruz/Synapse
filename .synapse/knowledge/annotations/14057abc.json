@@ -1,0 +1,31 @@
+{
+  "file": "documentation/swarm-lifecycle/overview.md",
+  "content_hash": "e468bc2f",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "End-to-end view of a Synapse swarm lifecycle: planning, dispatch, monitoring, completion, and (when triggered) circuit-breaker replanning. Connects the per-phase documents into a single mental model and identifies the artifacts produced at each phase (plan.json -> initialization.json -> progress files -> logs.json -> metrics.json -> insights/).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Phase boundaries are not always crisp -- monitoring and dispatch overlap during eager dispatch"
+  ],
+  "patterns": [
+    "Phased lifecycle with distinct write artifacts per phase"
+  ],
+  "conventions": [
+    "Each phase doc links to the previous and next phase for navigation"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "swarm-lifecycle"
+  ],
+  "tags": [
+    "lifecycle",
+    "phases",
+    "overview"
+  ]
+}

@@ -1,0 +1,83 @@
+{
+  "file": "src/ui/components/Sidebar.jsx",
+  "content_hash": "0dc8e281",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The dashboard sidebar — primary navigation surface. Renders four top tab buttons (Code Explorer, Dashboards, Git Manager, Preview), an add-dashboard button (opens folder picker → createDashboard → saveDashboardProject), and a list of dashboards with status dots, custom names (with double-click rename), drag-and-drop reorder (within IDE-vs-non-IDE sections only), per-item Agent Chat + Delete actions, unread-chat badges, and a queue summary at the bottom. Owns local state for collapse, rename, drag (dragId/dragOverId/dragCounterRef), and delete-confirmation popup. IDE dashboards are filtered to only those whose workspace still exists in `ideWorkspaces`; orphaned mappings trigger automatic cleanup via removeWorkspaceDashboard + deleteDashboard. Settings button at the footer opens the SettingsModal.",
+  "exports": [
+    {
+      "name": "Sidebar",
+      "kind": "component",
+      "signature": "()"
+    }
+  ],
+  "imports_from": {
+    "../context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "@/utils/constants.js": [
+      "getDashboardLabel"
+    ],
+    "../utils/dashboardProjects.js": [
+      "getDashboardProject",
+      "saveDashboardProject"
+    ],
+    "../utils/ideWorkspaceManager.js": [
+      "isIdeDashboard",
+      "getWorkspaceForDashboard",
+      "getWorkspaceDashboard",
+      "getAllWorkspaceDashboards",
+      "removeWorkspaceDashboard"
+    ],
+    "../styles/ide-sidebar.css": []
+  },
+  "gotchas": [
+    "Drag-and-drop reorder only works within the same SECTION (IDE↔IDE or non-IDE↔non-IDE) — the handler explicitly bails when sourceIsIde !== targetIsIde, but there's no visual cue showing the rejection.",
+    "Reorder dispatches REORDER_DASHBOARDS on the FULL allDashboards order (not the filtered view) so dropping does not accidentally trigger orphan cleanup.",
+    "Orphaned IDE dashboard cleanup runs on every ideWorkspaces/dashboardList change — if dashboardList loads after ideWorkspaces, no cleanup yet (early return when empty list).",
+    "Delete confirmation popup branches into THREE flows: agent-active (with hasTaskData sub-branch), no-agent-but-has-data, and immediate-delete. The 'don't allow deleting the last dashboard' guard only fires in the immediate-delete branch.",
+    "Custom names take precedence over project names in getDisplayName, but IDE dashboards always show 'IDE - {project}' and ignore custom names — this surprises users who try to rename an IDE entry.",
+    "--sidebar-width CSS variable is mutated in an effect (52px collapsed / 220px expanded) — components using it should treat it as dynamic, not static.",
+    "Drag handlers set e.target.style.opacity directly via DOM mutation; if React re-renders mid-drag, the inline style is preserved on the stale node."
+  ],
+  "patterns": [
+    "useMemo over ideWorkspaces builds two parallel structures (Set + Map) to avoid scanning the array twice during sort.",
+    "Dashboard render keys off id; itemClasses array is filtered+joined to avoid stray spaces.",
+    "All async electronAPI calls swallow errors with .catch(()=>{}) at the call site — failures are silent UX-wise.",
+    "drag enter/leave uses a counter (dragCounterRef) to handle nested elements correctly — without this, hovering over a child of the drop target fires extra leave events."
+  ],
+  "conventions": [
+    "Sidebar buttons use `sidebar-tab` + `.active` modifier; tab rows are .sidebar-tab-row inside .sidebar-tab-bar.",
+    "Per-item action buttons class chain: dashboard-item-action-btn (+chat-action-btn / dashboard-delete-btn).",
+    "Inline rename input commits on Enter or blur, cancels on Escape; pressing Enter prevents default form submission."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/utils/constants.js",
+      "src/ui/utils/dashboardProjects.js",
+      "src/ui/utils/ideWorkspaceManager.js"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "src/ui/components/Header.jsx",
+      "src/ui/components/ide/IDEView.jsx",
+      "src/ui/components/modals/SettingsModal.jsx"
+    ]
+  },
+  "domains": [
+    "sidebar-navigation",
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "sidebar",
+    "dashboard-list",
+    "drag-drop"
+  ]
+}

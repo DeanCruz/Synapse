@@ -1,0 +1,42 @@
+{
+  "file": "documentation/electron/configuration.md",
+  "content_hash": "e39623fc",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for Electron-side configuration: settings.js JSON-backed store, vite.config.js renderer build setup, electron-builder packaging targets, and the custom app:// protocol resolution chain. Covers persistent settings keys, window state, and dev/prod path handling.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "settings.js writes to userData on save; do not call from renderer directly",
+    "app:// protocol must be registered before app.ready or it silently fails",
+    "Production paths differ from dev — always use the path helpers"
+  ],
+  "patterns": [
+    "JSON file persistence with debounced writes",
+    "Custom protocol with fallback path search (root → dist → public)",
+    "Vite for renderer, electron-builder for packaging"
+  ],
+  "conventions": [
+    "Settings store keyed by string namespaces"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/electron/overview.md"
+    ],
+    "depended_by": [
+      "documentation/electron/services.md"
+    ],
+    "related": [
+      "documentation/electron/update-on-master.md"
+    ]
+  },
+  "domains": [
+    "electron"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "configuration",
+    "build"
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "file": "src/ui/main.jsx",
+  "content_hash": "0f2af373",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Vite entry point. Mounts <AppProvider><App/></AppProvider> into #root and installs the Electron fetch shim that intercepts /api/* requests and routes them through window.electronAPI IPC handlers. Imports global stylesheets (index.css) and the four IDE-specific stylesheets eagerly so they're available before IDE view mounts. The fetch shim is the bridge between Synapse's standalone-server mental model (where components fetch /api/*) and the Electron-app reality (where data flows over IPC).",
+  "exports": [],
+  "imports_from": {
+    "src/ui/context/AppContext.jsx": [
+      "AppProvider"
+    ],
+    "src/ui/App.jsx": [
+      "default"
+    ]
+  },
+  "gotchas": [
+    "Fetch shim runs ONLY if window.electronAPI exists — components built for browser-served standalone mode would skip the shim and hit the real /api/* endpoints (only useful if dev server proxies to src/server).",
+    "Shim's routeToIPC returns null for unmapped /api/* URLs and falls through to native fetch — silent failure if you forget to add a route, you'll see 404s instead of an obvious error.",
+    "Shim ALWAYS returns ok:true status:200 — error responses from IPC are NOT translated into HTTP-style failures; consumers checking response.ok will be misled.",
+    "Body parameter in shim is unused — POST endpoints like /api/dashboards/{id}/clear ignore the body, relying on the IPC method to know what to do with just the id.",
+    "IDE stylesheets are imported globally so the bundle always pays for them even if the user never opens IDE — moving these to lazy imports requires lazy-loading IDEView and the four CSS modules together.",
+    "AppProvider must be the outermost wrapper for both AppContext and DispatchContext — they live in the same provider component."
+  ],
+  "patterns": [
+    "Fetch interception via window.fetch reassignment guarded by window.electronAPI presence — same pattern works for any Electron-React app needing browser-style fetch over IPC.",
+    "URL pattern matching via regex (e.g. /^\\/api\\/dashboards\\/([^/]+)\\/(.+)$/) — extend by adding a new regex match in routeToIPC.",
+    "createRoot + .render with single nested provider — no React.StrictMode wrapper (intentional given IPC listener side-effects)."
+  ],
+  "conventions": [
+    ".jsx entry point named main.jsx (Vite default).",
+    "CSS imports happen alongside the entry, not inside components.",
+    "IPC route helpers placed inside main.jsx scope (not exported) — keep this file as the only fetch shim location."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/App.jsx",
+      "src/ui/styles/index.css"
+    ],
+    "depended_by": [
+      "index.html (Vite entry script)"
+    ],
+    "related": [
+      "electron/preload.js",
+      "electron/ipc-handlers.js"
+    ]
+  },
+  "domains": [
+    "react-dashboard",
+    "ipc-bridge-frontend",
+    "vite-entry"
+  ],
+  "tags": [
+    "react",
+    "entry-point",
+    "fetch-shim",
+    "ipc",
+    "electron",
+    "vite"
+  ]
+}

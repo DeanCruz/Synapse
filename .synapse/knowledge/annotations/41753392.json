@@ -1,0 +1,52 @@
+{
+  "file": "src/ui/styles/index.css",
+  "content_hash": "26674c98",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The 9198-line global stylesheet and design system root. Defines all CSS custom properties (--bg, --surface, --border, --text/--text-secondary/--text-tertiary, status colors --color-completed/--color-in-progress/--color-pending/--color-failed/--color-claimed/--color-blocked, gradient stops, --color-accent (#9b7cf0 purple), terminal palette, editor palette, file-icon palette, --sans/--display fonts, --sidebar-width). Contains the body reset, scrollbar styling (4px webkit), and styles for nearly every dashboard surface: header bar (glass nav with gradient glow), progress bar, stats bar, task badge & details popup, agent details, permission request modal, wave pipeline, chain pipeline, agent card, log panel, empty states, timeline panel, metrics panel, dashboard layout (sidebar+content), dashboard sidebar list, queue popup, agent log popup, files-changed badge, archive/history dropdowns, clear-dashboard confirm, home view meta-dashboard, color themes, settings modal/theme picker, Claude floating panel & conversation view, commands modal, attachment UI, bottom panel (VS Code-style), logs modal, plus responsive breakpoints (≤768px, ≤600px). Imported once globally from src/ui/main.jsx.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "This file is GLOBAL — every selector applies app-wide. Do not add unscoped selectors here (e.g., .header, .panel) without prefix because they will collide with feature stylesheets.",
+    "CSS variables defined in :root here are referenced by ALL other stylesheets (git-manager.css, ide-*.css, preview-view.css). Renaming or removing a variable will break feature stylesheets that reference it without fallbacks.",
+    "Status color tokens (--color-completed, --color-in-progress, etc.) are read by JavaScript via getComputedStyle for canvas/SVG rendering — changing values here also changes JS-rendered visuals.",
+    "Z-index scale used in this file: 100=header sticky, modals/overlays use higher values up to ~1000+. No central z-index map — search before adding.",
+    "9198 lines — searching by section comment (/* === <Title> === */) is far faster than scrolling. Section bands at lines 121, 254, 318, 404, 452, 570, 668, 860, 972, 1193, 1557, 1813, 1869, 2059, 2347, 2403, 2947, 3103, 3193, 3308, 3369, 3413, 3609, 3721, 4047, 4949, 5003, 5652, 5911, 7509, 7894, 8076, 8436.",
+    "Responsive @media (max-width: 768px / 600px) breakpoints exist but only cover header/stats/wave layouts — not all components are mobile-tested.",
+    "Multiple :root override blocks for theme switching (Color Themes section starting line 4047) — adding a new variable in :root requires adding overrides in EVERY theme block."
+  ],
+  "patterns": [
+    "Design tokens via CSS custom properties on :root.",
+    "Glass surfaces: rgba(255,255,255,0.04) on dark bg with subtle border rgba(255,255,255,0.08).",
+    "Section banner comments: /* ============ Section Name ============ */ for top-level navigation.",
+    "Status color naming: --color-{state} for badges/dots, paired with --color-{state}-bg for tinted backgrounds.",
+    "Gradient header glow via ::after pseudo-element with linear-gradient + filter: blur."
+  ],
+  "conventions": [
+    "Class naming uses kebab-case feature prefixes (.header-*, .stat-*, .agent-card-*, .wave-*, .chain-*, .log-*, .timeline-*, .metrics-*, .home-*, .commands-modal-*, .claude-*, .bottom-panel-*).",
+    "BEM-like modifiers via dot suffixes (.stat-card.stat-active, .progress-fill.progress-complete).",
+    "Themes are entire :root blocks gated by [data-theme=...] attribute on root element."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/main.jsx (global import — loads first)",
+      "src/ui/styles/git-manager.css (consumes --bg, --surface, --border, --text-* variables)",
+      "src/ui/styles/preview-view.css (consumes same variables)",
+      "src/ui/styles/ide-*.css (all consume :root variables)"
+    ],
+    "related": [
+      "All component .jsx files reference classes defined here"
+    ]
+  },
+  "domains": [
+    "global-theme"
+  ],
+  "tags": [
+    "css",
+    "design-system",
+    "theming",
+    "global-styles",
+    "css-variables"
+  ]
+}

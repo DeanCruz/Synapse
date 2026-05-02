@@ -1,0 +1,48 @@
+{
+  "file": "_commands/project/health.md",
+  "content_hash": "1de28c20",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !health slash command — comprehensive project health audit. Checks documentation health (CLAUDE.md presence/coverage, .synapse/toc.md presence and consistency with disk state, _commands/ presence), dependency health (node_modules existence, lock files, requirements.txt/go.mod/Cargo.toml status), and cross-layer health (frontend API references match backend handlers, .env.example completeness, type consistency across layers). Supports --quick flag to skip deep cross-layer analysis. Outputs Documentation/Git Status/Dependencies/Cross-Layer Issues/Recommendations table prioritized critical-first. Read-only.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "TOC consistency check is bidirectional: directories on disk missing from TOC AND entries in TOC pointing to deleted paths — both must be flagged.",
+    "--quick flag skips Step 3 (cross-layer) — only do this when speed matters; cross-layer drift is the most valuable signal.",
+    "Use Glob/Grep for quick checks — do NOT deep-read files unnecessarily.",
+    "Prioritization matters: missing CLAUDE.md / merge conflicts / broken imports are critical; stale TOC / missing .env.example are warnings."
+  ],
+  "patterns": [
+    "Section-by-section audit: docs → deps → cross-layer → recommendations.",
+    "Severity-ordered output: critical first, warnings last."
+  ],
+  "conventions": [
+    "Read-only.",
+    "Serial execution.",
+    "Checklist format ([ ] items) for each section."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{project_root}/CLAUDE.md",
+      "{project_root}/.synapse/toc.md",
+      "{project_root}/package.json"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/env_check.md",
+      "_commands/project/contracts.md",
+      "_commands/project/review.md"
+    ]
+  },
+  "domains": [
+    "health-check",
+    "auditing"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "health-audit",
+    "read-only"
+  ]
+}

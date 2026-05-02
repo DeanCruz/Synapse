@@ -103,14 +103,15 @@ During a swarm, the master agent writes to exactly these files at `{tracker_root
 
 | File | Purpose |
 |---|---|
-| `dashboards/{dashboardId}/initialization.json` | Static plan data (written ONCE during planning) |
+| `dashboards/{dashboardId}/plan.json` | **Canonical planning artifact.** Deep-thinking output: shared `context` + per-task `approach`/`files`. MUST be written BEFORE `initialization.json` (hook-enforced). |
+| `dashboards/{dashboardId}/initialization.json` | Static plan data (written ONCE during planning, AFTER `plan.json`) |
 | `dashboards/{dashboardId}/logs.json` | Timestamped event log for the dashboard |
 | `dashboards/{dashboardId}/master_state.json` | State checkpoint for context compaction recovery |
 | `dashboards/{dashboardId}/metrics.json` | Post-swarm performance metrics (written once after completion) |
-| `tasks/{date}/parallel_{name}.json` | Master task record (plan, status, summaries) |
-| `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
 Everything else is a worker's job. The master agent writes **nothing** into `{project_root}`.
+
+> **Legacy paths removed:** `tasks/{date}/parallel_{name}.json` and `tasks/{date}/parallel_plan_{name}.md` are deprecated — all planning context lives in `dashboards/{dashboardId}/plan.json`.
 
 ---
 

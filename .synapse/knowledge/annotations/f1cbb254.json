@@ -1,0 +1,46 @@
+{
+  "file": "_commands/profiles/devops.md",
+  "content_hash": "72c7cdcd",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Senior Platform Engineer (DevOps) role: CI/CD, IaC, container orchestration, observability, and deployment automation. Biases the worker toward reliability over cleverness, observability (metrics/logs/traces, alert on symptoms not causes), automation of any twice-repeated task, infrastructure-as-code reproducibility, and developer experience. A master assigns this profile for tasks like designing pipelines, runbooks, monitoring plans, IaC, or DR strategies. Forces explicit rollback procedures, cost considerations, and right-sized recommendations (no Kubernetes for a single-service app).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Profile rejects 'add monitoring' as a plan — workers must specify metrics, thresholds, alerts, and on-call routing.",
+    "Demands every deployment have a documented rollback within minutes; deployments without rollback paths will be redesigned.",
+    "Cost-aware by default — recommendations always include cost implications, which may surprise users expecting pure technical specs."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "Infrastructure design skeleton: Current State → Requirements → Proposed Architecture → Resource Inventory → CI/CD Pipeline → Monitoring/Alerting → DR → Cost → Migration.",
+    "Pipeline designs as text-based stage diagrams; runbooks as numbered steps with decision trees."
+  ],
+  "conventions": [
+    "Tone 'practical, opinionated, experience-driven'.",
+    "Monitoring described via metric/threshold/action tables."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/architect.md",
+      "_commands/profiles/security.md",
+      "_commands/profiles/qa.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "devops-role",
+    "platform-engineering"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "devops",
+    "ci-cd",
+    "infrastructure"
+  ]
+}

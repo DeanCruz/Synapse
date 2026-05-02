@@ -1,0 +1,51 @@
+{
+  "file": "src/ui/components/ModeMenu.jsx",
+  "content_hash": "1adedef9",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Hamburger-icon dropdown that switches the global appMode between 'chat' and 'code'. Reads appMode from AppContext and dispatches SET_APP_MODE. Closes on outside click via document mousedown listener. Two menu items render with check-mark active state and per-item icons.",
+  "exports": [
+    {
+      "name": "ModeMenu",
+      "kind": "component",
+      "signature": "()"
+    }
+  ],
+  "imports_from": {
+    "../context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ]
+  },
+  "gotchas": [
+    "Selecting the currently-active mode is a no-op (`if (mode !== appMode)`); UI does not give feedback that no switch happened.",
+    "Document-level mousedown listener is added/removed based on `open` state — if the component unmounts while open, cleanup must still run."
+  ],
+  "patterns": [
+    "Outside-click pattern: useRef + useEffect + addEventListener('mousedown') gated by open state; identical to Header archive dropdown."
+  ],
+  "conventions": [
+    "Inline SVG icons; classes mode-menu-btn / mode-menu-dropdown / mode-menu-item."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx"
+    ],
+    "depended_by": [
+      "src/ui/components/Header.jsx"
+    ],
+    "related": [
+      "src/ui/App.jsx (mode-driven view routing)"
+    ]
+  },
+  "domains": [
+    "sidebar-navigation"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "mode-menu",
+    "dropdown"
+  ]
+}

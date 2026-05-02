@@ -37,9 +37,9 @@ Read these files from `{tracker_root}/dashboards/{dashboardId}/`:
    - **Pending set:** All agent IDs from `initialization.json` that have no progress file or `status === "pending"`
 3. **`master_state.json`** — Read the current checkpoint for `next_agent_number` and `upstream_results`.
 
-### Step 3 — Read Master Task File
+### Step 3 — Read Canonical Plan
 
-Read the master task file at `{tracker_root}/tasks/{date}/parallel_{task_name}.json` to get full task context (descriptions, file lists, critical details) for all existing tasks. This is needed for dependency analysis.
+Read the canonical plan at `{tracker_root}/dashboards/{dashboardId}/plan.json` to get full task context (`context.prompt`, shared conventions, and per-task `approach`/`files`/`description`) for all existing tasks. This is needed for dependency analysis.
 
 ### Step 4 — Read Project Context
 
@@ -151,9 +151,9 @@ For each new task:
    - Create new `chains[]` entries if the tasks represent a new independent path
    - Every new agent must appear in exactly one chain
 
-### Step 10 — Update Master Task File
+### Step 10 — Update Canonical Plan
 
-Read `{tracker_root}/tasks/{date}/parallel_{task_name}.json`, then append new tasks to the appropriate waves:
+Read `{tracker_root}/dashboards/{dashboardId}/plan.json`, then append the new task entries to its `tasks[]` array (with full `id`, `title`, `description`, `approach`, `files`, `depends_on`). Then update `initialization.json` to add the matching `agents[]` entries:
 
 ```json
 {

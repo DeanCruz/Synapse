@@ -1,0 +1,45 @@
+{
+  "file": "_commands/profiles/legal.md",
+  "content_hash": "7b547d8a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Legal & Compliance Advisor role: SaaS legal frameworks, GDPR/CCPA/HIPAA, ToS, DPAs, regulatory roadmaps. Biases the worker toward jurisdiction-specific risk identification, plain-language drafting, regulation-to-feature mapping (GDPR Article 17 → specific technical capability), practical compliance over checkboxes, and future-proofing flexibility. A master assigns this profile for privacy policies, ToS drafts, compliance gap analyses, DPIAs, regulatory roadmaps. The profile includes a hard-coded constraint requiring a disclaimer that output should be reviewed by qualified legal counsel before implementation — workers must include this disclaimer.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "MUST include a 'not formal legal advice / review by qualified counsel' disclaimer in every output — mandated by the profile.",
+    "Workers will refuse to copy-paste generic legal templates; jurisdiction and data-flow specifics must be supplied.",
+    "Will not understate risks — outputs may sound more alarming than expected when real legal exposure exists.",
+    "Conflating regulations (GDPR vs CCPA vs HIPAA) is explicitly forbidden — distinguish them in the brief."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "Compliance framework skeleton: Regulatory Scope → Data Inventory → Requirement Mapping (table: Regulation, Article, Requirement, Status, Gap, Remediation) → Roadmap → Policy Drafts → Review Schedule.",
+    "Risk assessments use likelihood/impact matrices."
+  ],
+  "conventions": [
+    "Tone 'in-house counsel briefing the CEO' — direct, practical, honest about risk."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/security.md",
+      "_commands/profiles/founder.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "legal-compliance-role",
+    "privacy-and-regulation"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "legal",
+    "compliance",
+    "gdpr"
+  ]
+}

@@ -1,0 +1,60 @@
+{
+  "file": "agent/instructions/common_pitfalls.md",
+  "content_hash": "98e79336",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Quick-reference pitfall table for swarm orchestration. Each row is a distinct mistake (file overlap in waves, missing file paths, modifying initialization.json mid-execution, forgetting to clear progress/, stripping CLAUDE.md conventions, dispatching without user approval, oversize tasks that exhaust worker context, master implementing instead of dispatching, confusing tracker_root vs project_root, skipping the dashboard, working from memory instead of re-reading the command file). Master agents read this before EVERY swarm dispatch as a final sanity check.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "The 'master agent implementing instead of dispatching' pitfall is bolded as the single worst failure mode — it defeats the entire purpose of Synapse and produces a blind dashboard.",
+    "Forgetting to ARCHIVE before clearing progress/ is silent data loss — the rule is archive-first then `rm -f`, never the reverse.",
+    "Workers cannot find files you don't specify — never assume the worker knows the project layout, always include full relative paths from project root.",
+    "{tracker_root} and {project_root} are different locations and BOTH must be passed in every dispatch prompt — confusing them silently writes code to Synapse or progress files into the project.",
+    "If a task touches more than 5 files, decompose further — workers reading 10+ files exhaust context and silently drop work.",
+    "Quote CLAUDE.md sections directly in worker prompts; paraphrasing produces non-standard code that needs rework.",
+    "After context compaction, upstream task results vanish — downstream prompts must include cached upstream summary, files changed, exports, and deviations."
+  ],
+  "patterns": [
+    "Pitfall reference table — three columns (Mistake | Effect | Fix) so the master can scan-and-match against the current dispatch.",
+    "Archive-then-clear rule: copy dashboard to Archive/{YYYY-MM-DD}_{task_name}/ then `rm -f progress/*.json` — never clear without archiving.",
+    "initialization.json is write-once — all lifecycle data flows through worker progress files.",
+    "Plan-then-approval gate before any dispatch — wasted compute if user rejects the approach.",
+    "Read the command file (p_track.md / p.md) in full every invocation — do not work from memory."
+  ],
+  "conventions": [
+    "Single H2 ('Pitfall Reference') with one markdown table — no per-pitfall subsections.",
+    "Mistake | Effect | Fix three-column structure, with the most catastrophic pitfalls (master implementing) bolded inline for emphasis."
+  ],
+  "relationships": {
+    "depends_on": [
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/p.md",
+      "agent/instructions/tracker_master_instructions.md"
+    ],
+    "depended_by": [
+      "agent/instructions/tracker_master_instructions.md (referenced as quick-reference companion)",
+      ".claude/skills/master-protocol (auto-loaded master protocol)"
+    ],
+    "related": [
+      "agent/master/role.md",
+      "agent/master/dashboard_writes.md",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/_commands/p_track_planning.md"
+    ]
+  },
+  "domains": [
+    "master-orchestration",
+    "swarm-failure-modes",
+    "agent-protocol"
+  ],
+  "tags": [
+    "markdown",
+    "agent-doc",
+    "protocol",
+    "pitfalls",
+    "master-agent",
+    "quick-reference",
+    "non-negotiable"
+  ]
+}

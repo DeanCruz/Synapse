@@ -1,0 +1,49 @@
+{
+  "file": "_commands/Synapse/export.md",
+  "content_hash": "f4793808",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!export [dashboardId] [--format markdown|json]` command for exporting a dashboard's full swarm state as a formatted document. Reads initialization.json, logs.json, all progress files, and metrics.json (optional) in parallel; merges initialization with progress data to derive stats; outputs either raw JSON (single combined object) or structured markdown (header + Task Summary table + Deviations table + Event Timeline + Performance Metrics). Read-only — terminal output only, no file writes.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "metrics.json is optional and may not exist — the markdown export must handle the missing-metrics case with a fallback message ('No performance metrics available')",
+    "Format flag rejects unrecognized values with explicit error — only `markdown` and `json` are supported",
+    "Uses the same merge pattern as !status — for each agent in initialization.json, look up its progress file; missing progress means status='pending'",
+    "Elapsed time is derived: earliest started_at to latest completed_at, or to now if still running"
+  ],
+  "patterns": [
+    "5-step procedure: resolve+parse → parallel reads → merge+derive stats → generate format-specific output → display",
+    "JSON format produces a single combined object with task/derived/agents/waves/log_entries/metrics keys",
+    "Markdown format follows fixed structure: header → Task Summary table → Deviations → Event Timeline → Performance Metrics",
+    "Status emojis: completed=done, in_progress=running, failed=error, pending=waiting"
+  ],
+  "conventions": [
+    "Step 1 / Step 2 / Step 3 / Step 4 / Step 5 sub-headers",
+    "Two parallel sub-sections under Step 4 for JSON vs Markdown formats",
+    "Trailing summary line with task count and format used"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/status.md",
+      "_commands/Synapse/history.md",
+      "_commands/Synapse/update_dashboard.md"
+    ]
+  },
+  "domains": [
+    "dashboard-monitoring",
+    "data-export",
+    "post-mortem"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "json-export",
+    "markdown-export"
+  ]
+}

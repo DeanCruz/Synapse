@@ -1,0 +1,96 @@
+{
+  "file": "electron/settings.js",
+  "content_hash": "d180b6e1",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Persistent settings store backed by a single JSON file at {userData}/synapse-settings.json. Provides a synchronous get/set/getAll/reset API on top of an in-memory cache that's loaded once during init(electronApp). DEFAULTS define the schema (window geometry+maximized state, polling timings, theme, dashboardMeta {order,names}, dashboardAdditionalContext, recentProjects, activeProjectPath, agentProvider, claudeCliPath/codexCliPath, defaultModel, dangerouslySkipPermissions). Set() warns on unknown keys but allows them (extensibility for future keys without migration). Reset() unlinks the JSON file and returns getAll() with all defaults. The store is consumed by main.js (window state), ipc-handlers.js (dashboardMeta ordering, recentProjects, dashboardAdditionalContext), and several IPC handlers exposed to the renderer via get-settings/set-setting/reset-settings. All fields are persisted to disk on every set() — there is no batching.",
+  "exports": [
+    {
+      "name": "init",
+      "kind": "function",
+      "signature": "(electronApp: App) => void"
+    },
+    {
+      "name": "get",
+      "kind": "function",
+      "signature": "(key: string) => any"
+    },
+    {
+      "name": "set",
+      "kind": "function",
+      "signature": "(key: string, value: any) => void"
+    },
+    {
+      "name": "getAll",
+      "kind": "function",
+      "signature": "() => Object<string,any>"
+    },
+    {
+      "name": "reset",
+      "kind": "function",
+      "signature": "() => Object<string,any>"
+    },
+    {
+      "name": "DEFAULTS",
+      "kind": "constant",
+      "signature": "Object<string,any>"
+    }
+  ],
+  "imports_from": {
+    "fs": [
+      "readFileSync",
+      "writeFileSync",
+      "unlinkSync",
+      "existsSync",
+      "mkdirSync"
+    ],
+    "path": [
+      "join",
+      "dirname"
+    ]
+  },
+  "gotchas": [
+    "init(electronApp) MUST be called before any get/set — otherwise settingsPath stays null, _save() silently no-ops, and get() returns DEFAULTS only",
+    "Every set() writes the entire JSON file synchronously — high-frequency writes (e.g. window resize) MUST be debounced by the caller (main.js does this with a 500ms timer)",
+    "Unknown keys are stored anyway with a console.warn — useful for forward-compat but means typos persist silently",
+    "_load swallows JSON parse errors and returns {} — a corrupt settings file silently resets all values to defaults on next launch",
+    "reset() unlinks the file but the cache becomes {} — subsequent get(key) returns DEFAULTS[key] (not undefined) for known keys",
+    "DEFAULTS.dashboardMeta is { order: [], names: {} } — callers that mutate the returned object DIRECTLY without settings.set() will lose changes (the in-memory cache holds the same reference but no disk write occurs)",
+    "DEFAULTS.dangerouslySkipPermissions defaults to false — setting it true makes Claude CLI workers run without permission prompts, which propagates through ClaudeCodeService.spawnWorker"
+  ],
+  "patterns": [
+    "Lazy file location resolution via electronApp.getPath('userData') in init() — the path is platform-specific and can only be obtained after app.whenReady",
+    "Single-file JSON persistence (no SQLite, no electron-store dependency) — keeps Synapse dependency-free for settings",
+    "Default-fallback get(): returns cache value if present, else DEFAULTS, else undefined — guarantees no thrown errors for missing keys",
+    "Eager auto-create of parent directory in _save() via fs.mkdirSync(dir, { recursive: true })"
+  ],
+  "conventions": [
+    "DEFAULTS object groups keys by section comments (Window / Behavior / Performance / Theme / Dashboard metadata / Project)",
+    "Boolean flags default to false; numeric timings have ms units in the name (initPollMs, progressRetryMs, reconcileDebounceMs); paths default to null",
+    "Functions that mutate disk are prefixed with underscore (_load, _save) to mark them as internal"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "electron/main.js",
+      "electron/ipc-handlers.js",
+      "electron/services/ProjectService.js",
+      "electron/services/ClaudeCodeService.js",
+      "electron/services/CodexService.js"
+    ],
+    "related": [
+      "src/ui/components/modals/SettingsModal.jsx"
+    ]
+  },
+  "domains": [
+    "persistent-settings",
+    "user-preferences"
+  ],
+  "tags": [
+    "electron",
+    "settings",
+    "json-store",
+    "userdata",
+    "config"
+  ]
+}

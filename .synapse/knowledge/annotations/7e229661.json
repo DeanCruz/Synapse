@@ -1,0 +1,55 @@
+{
+  "file": "src/ui/components/HomeView.jsx",
+  "content_hash": "cd744f7e",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Overview screen shown when no specific dashboard is selected. Renders four sections via HomeSection: Active Dashboards (status !== 'idle'), Inactive Dashboards (idle), Recently Archived (from /api/overview), Recent History (also from /api/overview). DashboardCard shows task name, type/directory/count badges, and an inline progress fill bar. ArchiveEntry is clickable to open the archive view. HistoryEntry is read-only and color-codes the dot by overall_status.",
+  "exports": [
+    {
+      "name": "HomeView",
+      "kind": "component",
+      "signature": "{ dashboardStates, dashboardList, allDashboardLogs, onSwitchDashboard, onArchiveClick }"
+    }
+  ],
+  "imports_from": {
+    "@/utils/constants.js": [
+      "getDashboardLabel"
+    ]
+  },
+  "gotchas": [
+    "Fetches /api/overview ONCE on mount (empty deps) — does not refresh when archives or history change. User must navigate away and back to see new entries.",
+    "Empty `allDashboardLogs` prop is accepted but currently unused inside the component.",
+    "completedCount counts (completed_tasks + failed_tasks) for the 'X/Y tasks' badge; the progress fill bar uses ONLY completed_tasks — failed_tasks adds a `has-errors` modifier class. Counts can disagree visually."
+  ],
+  "patterns": [
+    "Section component (HomeSection) accepts an `empty` string used both as the empty-state copy and as the truthy/falsy gate for rendering children.",
+    "Status mapping helpers statusDotClass / statusLabel are defined once at module scope and reused by IdleItem and DashboardCard."
+  ],
+  "conventions": [
+    "Inline style colors use CSS custom properties (var(--color-type-bg) etc.) so theme switching works.",
+    "ArchiveEntry uses .home-clickable to imply interactivity; only ArchiveEntry is clickable, ArchiveEntry vs HistoryEntry intentionally diverge."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/utils/constants.js"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "src/server/services/HistoryService.js",
+      "src/server/services/ArchiveService.js"
+    ]
+  },
+  "domains": [
+    "home-screen",
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "home-view",
+    "overview"
+  ]
+}

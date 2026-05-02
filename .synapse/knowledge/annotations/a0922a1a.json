@@ -1,0 +1,50 @@
+{
+  "file": "launch_synapse.command",
+  "content_hash": "4f8d6567",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Self-relocating macOS Finder launcher. Designed to be moved to the Desktop, Dock, or anywhere else after first run — on first launch it remembers the Synapse repo location in `$HOME/.synapse-path`, and on subsequent launches it reads that file to cd into the repo regardless of where the .command lives. Sources the user's zsh/bash profile and adds Homebrew paths to PATH so npm/node are available even when Finder spawns the script with a minimal environment, then runs `npm install` if needed and `npm run dev`.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Stores its config in `$HOME/.synapse-path` — moving the Synapse repo directory after first launch will cause the script to error out and ask the user to delete that file.",
+    "First-run requirement is subtle: this file MUST first be executed from inside the Synapse folder (where package.json sits) so it can record the path; running it from the Desktop on first launch produces an error.",
+    "Sources `~/.zshrc` AND `~/.bash_profile` AND prepends `/opt/homebrew/bin:/usr/local/bin` — this triple fallback handles Apple Silicon (Homebrew at /opt/homebrew), Intel Macs (Homebrew at /usr/local), and pure shell-profile setups, but it WILL clobber the user's PATH order in unexpected ways.",
+    "Runs `npm run dev` (development mode), not `npm start` — packaging expectations differ from `Start Synapse.command`.",
+    "Has `chmod +x` already (-rwxr-xr-x), but Gatekeeper still blocks unsigned .command files on first open — comment tells user to right-click → Open."
+  ],
+  "patterns": [
+    "Self-relocating launcher pattern: cache repo path in a dotfile so the launcher script can be relocated freely.",
+    "Profile-sourcing pattern: explicitly load `~/.zshrc` and `~/.bash_profile` because Finder's GUI launch context lacks them.",
+    "PATH-prepend pattern: ensure Homebrew bin dirs are present even if the user's profile didn't add them."
+  ],
+  "conventions": [
+    "Shebang `#!/bin/bash` (despite zsh being macOS default — bash is more portable here).",
+    ".command extension is the macOS Finder convention for double-clickable shell scripts.",
+    "Error messages prompt for keypress (`read -n 1`) so the Terminal window stays open for the user to read."
+  ],
+  "relationships": {
+    "depends_on": [
+      "package.json",
+      "$HOME/.synapse-path (created at first run)"
+    ],
+    "depended_by": [],
+    "related": [
+      "launch.sh",
+      "Start Synapse.command",
+      "Stop Synapse.command"
+    ]
+  },
+  "domains": [
+    "launcher-script",
+    "macos-launcher"
+  ],
+  "tags": [
+    "shell",
+    "bash",
+    "macos",
+    "command-file",
+    "launcher",
+    "self-relocating"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "file": "_commands/Synapse/history.md",
+  "content_hash": "965bd279",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!history [--last N] [--analytics]` command for viewing past swarm history summaries. History is GLOBAL across all dashboards (no dashboardId param) and is populated when a dashboard is cleared (via Clear Dashboard button or !reset). Lists each history JSON file from {tracker_root}/history/, sorts by cleared_at descending, and renders a table. The --analytics subcommand additionally computes aggregate metrics across all history (avg tasks/duration, failure rate trend, largest/longest swarm, top failure-keyword patterns) and writes them to history/analytics.json.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "History is global — no dashboardId argument; do not auto-detect a dashboard for this command",
+    "History summaries are produced by the server's buildHistorySummary() function — schema must match what HistoryService.js writes",
+    "--analytics persists results to {tracker_root}/history/analytics.json (this is the ONLY history command write — base !history is read-only)",
+    "failure_rate_trend compares LAST 3 swarms against the overall rate (improving/stable/degrading)",
+    "failure_patterns groups failed agents by FIRST significant word in their title — this is a heuristic and may misgroup",
+    "Status emojis: completed=✅, completed_with_errors=⚠️, failed=🔴, in_progress=🔵 (last shouldn't normally appear in history)"
+  ],
+  "patterns": [
+    "12-step procedure: read dir → handle empty → parse each → sort → apply --last → render table → compute summary; analytics adds steps 8-12",
+    "Sort order: cleared_at descending (newest first)",
+    "Cleared-at format: MMM DD, HH:MM",
+    "Analytics computes 8 distinct metrics + failure_patterns array"
+  ],
+  "conventions": [
+    "Note callout that history requires no dashboardId param",
+    "Two output sections: main listing table + (if --analytics) analytics report table with Failure Patterns sub-table",
+    "JSON schema defined for analytics.json"
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/services/HistoryService.js"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/reset.md",
+      "_commands/Synapse/export.md"
+    ]
+  },
+  "domains": [
+    "dashboard-monitoring",
+    "history-analytics",
+    "post-swarm"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "global-scope",
+    "analytics"
+  ]
+}

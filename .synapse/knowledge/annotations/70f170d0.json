@@ -1,0 +1,63 @@
+{
+  "file": "src/ui/components/TerminalView.jsx",
+  "content_hash": "a4ada26d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Interactive xterm.js terminal backed by a node-pty PTY in the Electron main process. Spawns a shell via api.spawnTerminal({cwd, dashboardId}), routes user input → api.writeTerminal(id, data), and PTY output → terminal.write(data) via 'terminal-output' push events. Handles 'terminal-exit' by displaying an [exit] message and waiting for any keypress to respawn. Uses FitAddon + ResizeObserver to auto-resize and informs the PTY of new dimensions via api.resizeTerminal. Theme is computed from CSS custom properties at mount and re-read on data-theme/style mutation observed on documentElement.",
+  "exports": [
+    {
+      "name": "TerminalView",
+      "kind": "component",
+      "signature": "{ projectDir?: string, dashboardId: string }"
+    }
+  ],
+  "imports_from": {
+    "@xterm/xterm": [
+      "Terminal"
+    ],
+    "@xterm/addon-fit": [
+      "FitAddon"
+    ],
+    "@xterm/xterm/css/xterm.css": []
+  },
+  "gotchas": [
+    "Initialization effect has empty deps and is comment-tagged 'Mount once — projectDir changes don't re-create the terminal'. ProjectDir changes only re-fit; switching projectDir does NOT spawn a new shell in the new directory — the user is still in the original cwd.",
+    "isDisposedRef prevents writes after unmount, but xterm internals can still throw if `terminal.dispose()` runs while a write is in flight; the code wraps fit() in try/catch but not write().",
+    "`spawnRef` indirection lets exit-restart and effects call the latest spawnTerminal closure without breaking React rules — required because spawnTerminal depends on projectDir/dashboardId.",
+    "Theme MutationObserver fires on style changes on documentElement (e.g. --sidebar-width updates from Sidebar) — re-reads theme from CSS even when nothing visual changed; throttling not implemented.",
+    "Fallback `terminal-fallback` rendered when window.electronAPI is missing — browser SSE-only mode shows this instead of the terminal."
+  ],
+  "patterns": [
+    "Refs for everything that should not trigger re-renders: terminalRef, fitAddonRef, terminalIdRef, isDisposedRef, spawnRef.",
+    "ResizeObserver tied to the container; on observe-fire it fits AND notifies PTY of cols/rows so the shell wraps correctly.",
+    "Restart-on-keypress pattern: terminal.onData() handler re-arms only when `exited` becomes true."
+  ],
+  "conventions": [
+    "TERMINAL_OPTIONS at module scope; theme function (getTerminalThemeFromCSS) is called both at definition time and on mutation.",
+    "Shell prompt rendering is the PTY's job — TerminalView never injects prompt strings."
+  ],
+  "relationships": {
+    "depends_on": [
+      "@xterm/xterm",
+      "@xterm/addon-fit"
+    ],
+    "depended_by": [
+      "src/ui/components/BottomPanel.jsx"
+    ],
+    "related": [
+      "electron/services/TerminalService.js"
+    ]
+  },
+  "domains": [
+    "terminal",
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "terminal",
+    "xterm",
+    "pty"
+  ]
+}

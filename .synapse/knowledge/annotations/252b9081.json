@@ -1,0 +1,50 @@
+{
+  "file": "_commands/Synapse/retry.md",
+  "content_hash": "a299dd50",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!retry [dashboardId] {task_id}` command for re-dispatching a single failed task. Validates task exists, has a progress file (must be failed for proceed; in_progress/completed require confirmation), all upstream deps are completed (warns if a dep failed), saves the previous failure summary, deletes the old progress file, reads plan.json, ANALYZES THE FAILURE ROOT CAUSE (reads previous logs, identifies cause: missing file/type mismatch/wrong pattern/env issue/ambiguity, reads relevant files), then dispatches a new agent with PREVIOUS FAILURE/ROOT CAUSE ANALYSIS/REMEDIATION GUIDANCE/PREVIOUS WORKER LOGS sections.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Pending tasks (no progress file) cannot be retried — direct user to !dispatch instead",
+    "Failed dependencies are warned about, not auto-retried — the user must !retry the dep first to unblock",
+    "in_progress and completed status retries require user confirmation before proceeding",
+    "The master MUST analyze the failure root cause BEFORE re-dispatching — do not blindly retry; read previous logs, identify cause, read relevant files",
+    "For complex failures requiring a diagnostic-first approach, dispatch a repair worker via failed_task.md protocol instead of !retry",
+    "REMEDIATION GUIDANCE in the retry prompt should include SPECIFIC fixes (correct import paths, function signatures) — vague guidance defeats the purpose"
+  ],
+  "patterns": [
+    "13-step procedure: parse → read init → read progress → validate (existence+status+deps) → save previous summary → delete old progress → read plan → analyze root cause → resolve project_root → dispatch with retry sections → log → display confirmation",
+    "Retry prompt sections: PREVIOUS FAILURE → ROOT CAUSE ANALYSIS → REMEDIATION GUIDANCE → PREVIOUS WORKER LOGS",
+    "Validation order: existence first, then status, then dependencies"
+  ],
+  "conventions": [
+    "Numbered steps with embedded code blocks for the retry prompt sections and bash commands",
+    "Trailing footnote redirecting complex failures to failed_task.md / repair worker protocol"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md",
+      "agent/instructions/failed_task.md",
+      "_commands/Synapse/p_track.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/dispatch.md",
+      "_commands/Synapse/p_track_resume.md",
+      "_commands/Synapse/track_resume.md"
+    ]
+  },
+  "domains": [
+    "swarm-command",
+    "failure-recovery",
+    "single-task-retry"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "root-cause-analysis"
+  ]
+}

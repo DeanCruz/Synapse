@@ -1,7 +1,7 @@
 // AppContext — Central state management via React Context + useReducer
 // Replaces the old AppState.js observable container.
 
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useRef } from 'react';
 
 const AppContext = createContext(null);
 const DispatchContext = createContext(null);
@@ -14,6 +14,9 @@ const MAX_CHAT_MESSAGES = 200; // Hard cap on in-memory message count per tab
 
 const IDE_WORKSPACES_KEY = 'synapse-ide-workspaces';
 const GIT_REPOS_KEY = 'synapse-git-repos';
+const CHAT_TABS_KEY = 'synapse-chat-tabs';
+const CHAT_TAB_MESSAGES_KEY_PREFIX = 'synapse-chat-tab-messages-';
+const CHAT_TAB_ACTIVE_KEY = 'synapse-chat-active-tab';
 
 // Helper: deep-update a tree node's children by path
 function updateTreeNode(node, targetPath, children) {
@@ -121,8 +124,128 @@ function saveGitRepos(repos) {
   try { localStorage.setItem(GIT_REPOS_KEY, JSON.stringify(repos)); } catch (e) { /* */ }
 }
 
+function loadSavedChatTabs() {
+  try {
+    const raw = localStorage.getItem(CHAT_TABS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) { /* corrupt or unavailable */ }
+  return [];
+}
+
+function saveChatTabs(tabs) {
+  try { localStorage.setItem(CHAT_TABS_KEY, JSON.stringify(tabs)); } catch (e) { /* */ }
+}
+
+function chatTabMessagesKey(tabId) {
+  return CHAT_TAB_MESSAGES_KEY_PREFIX + tabId;
+}
+
+// A chat tab's "context id" is the pseudo-dashboard-id ClaudeView uses for
+// per-context state (messages, sub-tabs, sessions). Mirrors the resolution
+// in ClaudeView so claudeMessages persistence keys line up between the two.
+function chatTabContextId(tab) {
+  if (!tab) return null;
+  return tab.agentHex ? 'chat-agent-' + tab.agentHex : tab.id;
+}
+
+function activeChatContextId(state) {
+  if (!state.chatActiveTabId) return null;
+  const tab = state.chatTabs.find(t => t.id === state.chatActiveTabId);
+  return chatTabContextId(tab);
+}
+
+// ── Surface-aware slice routing ───────────────────────────────────────────
+// Two parallel "slices" of Claude chat state coexist: the original code-side
+// (`claude*`) and the new chat-side (`chatClaude*`). Reducer cases that touch
+// any of these fields accept an optional `action.surface` ('code' | 'chat',
+// default 'code') and use SLICE_FIELDS[surface] to pick the right state-key
+// set. Existing dispatches without an action.surface keep writing to the
+// code slice — backward-compatible.
+const SLICE_FIELDS = {
+  code: {
+    messages: 'claudeMessages',
+    isProcessing: 'claudeIsProcessing',
+    status: 'claudeStatus',
+    activeTabId: 'claudeActiveTabId',
+    tabs: 'claudeTabs',
+    tabStash: 'claudeTabStash',
+    processingStash: 'claudeProcessingStash',
+    activeTabMap: 'claudeActiveTabMap',
+    pendingAttachments: 'claudePendingAttachments',
+    dashboardId: 'claudeDashboardId',
+  },
+  chat: {
+    messages: 'chatClaudeMessages',
+    isProcessing: 'chatClaudeIsProcessing',
+    status: 'chatClaudeStatus',
+    activeTabId: 'chatClaudeActiveTabId',
+    tabs: 'chatClaudeTabs',
+    tabStash: 'chatClaudeTabStash',
+    processingStash: 'chatClaudeProcessingStash',
+    activeTabMap: 'chatClaudeActiveTabMap',
+    pendingAttachments: 'chatClaudePendingAttachments',
+    dashboardId: 'chatClaudeDashboardId',
+  },
+};
+
+function fieldsFor(surface) {
+  return SLICE_FIELDS[surface === 'chat' ? 'chat' : 'code'];
+}
+
+function loadChatTabMessages(tabId) {
+  try {
+    const raw = localStorage.getItem(chatTabMessagesKey(tabId));
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch (e) { /* */ }
+  return [];
+}
+
+function saveChatTabMessages(tabId, msgs) {
+  try { localStorage.setItem(chatTabMessagesKey(tabId), JSON.stringify(msgs)); } catch (e) { /* */ }
+}
+
+function loadAllChatTabMessages(tabs) {
+  const out = {};
+  for (const t of tabs) out[t.id] = loadChatTabMessages(t.id);
+  return out;
+}
+
+function loadSavedActiveChatTabId() {
+  try {
+    const raw = localStorage.getItem(CHAT_TAB_ACTIVE_KEY);
+    return raw || null;
+  } catch (e) { return null; }
+}
+
 const savedWorkspaces = loadSavedWorkspaces();
 const savedGitRepos = loadSavedGitRepos();
+const savedChatTabs = loadSavedChatTabs();
+const savedChatActiveTabId = loadSavedActiveChatTabId();
+const savedChatActiveTabIsValid = !!savedChatTabs.find(t => t.id === savedChatActiveTabId);
+
+// Pre-load the restored chat tab's persisted messages and sub-tabs so the
+// initial render shows that chat's history (not the welcome placeholder).
+// Messages persisted under the chat-agent context id mirror the format used
+// by code-mode dashboards via claudeMessagesKey(...). Bootstrap targets the
+// CHAT surface slice (chatClaudeMessages / chatClaudeTabs) — the code-side
+// claude* slice always boots clean to [CLAUDE_WELCOME_MSG] so it shows a
+// fresh start when the user is in code mode.
+const initialChatTab = savedChatActiveTabIsValid
+  ? savedChatTabs.find(t => t.id === savedChatActiveTabId)
+  : null;
+const initialChatCtxId = chatTabContextId(initialChatTab);
+const initialChatClaudeMessages = initialChatCtxId
+  ? (loadSavedMessages(initialChatCtxId, 'default') || [CLAUDE_WELCOME_MSG])
+  : [CLAUDE_WELCOME_MSG];
+const initialChatClaudeTabs = initialChatCtxId
+  ? { [initialChatCtxId]: loadSavedTabs(initialChatCtxId) || [{ ...DEFAULT_TAB }] }
+  : {};
 
 const initialState = {
   currentDashboardId: null,
@@ -145,13 +268,22 @@ const initialState = {
   seenPermissionCount: 0,
   pendingPermission: null, // { pid, toolName, toolInput, requestId, toolUseId, timestamp } — active permission request from a worker
   activeView: 'dashboard', // 'dashboard' | 'home' | 'swarmBuilder' | 'claude' | 'ide' | 'git' | 'preview'
+  appMode: 'chat', // 'code' | 'chat' — top-level mode selector
+  chatActiveView: savedChatActiveTabIsValid ? 'chat-instance' : 'dashboard', // 'dashboard' | 'make' | 'chat-instance' — active view within Chat mode
+  // Chat-mode user-created chat tabs (no dedicated dashboard)
+  chatTabs: savedChatTabs, // [{ id, name }]
+  chatActiveTabId: savedChatActiveTabIsValid ? savedChatActiveTabId : null,
+  chatTabMessages: loadAllChatTabMessages(savedChatTabs), // { [tabId]: [{ id, role, text, ts }] }
   activeModal: null, // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor'
   modalDashboardId: null, // which dashboard a modal was opened for
   claudeDashboardId: null, // which dashboard the Claude view is associated with
   claudeViewMode: 'expanded', // 'minimized' | 'collapsed' | 'expanded' | 'maximized'
   claudeEverOpened: false,   // true once the Claude panel has been opened — keeps it mounted
   connected: false,
-  // Persistent Claude chat state (per-dashboard)
+  // ── CODE-surface Claude chat state (per-dashboard) ────────────────────────
+  // The "code" slice is bound to the active code-mode dashboard. It always
+  // boots clean to [CLAUDE_WELCOME_MSG] so opening the Code tab from a fresh
+  // session shows a placeholder instead of leaking the chat-agent transcript.
   claudeMessages: [CLAUDE_WELCOME_MSG],
   claudeTabStash: {}, // { [dashboardId:tabId]: messages } — in-memory cache for tab/dashboard switching
   claudeProcessingStash: {}, // { [dashboardId]: { isProcessing, status, pendingAttachments } }
@@ -162,6 +294,22 @@ const initialState = {
   claudeStatus: 'Ready',
   claudeActiveTaskId: null,
   claudePendingAttachments: [],
+  // ── CHAT-surface Claude chat state (per-chat-agent) ───────────────────────
+  // Parallel slice that powers the always-mounted chat-mode ClaudeView. Lets
+  // chat and code views coexist without trampling each other's messages,
+  // active tab, processing flag, or pending attachments. Bootstrapped from
+  // the persisted chat-agent transcript when a chat tab was the last active
+  // surface — see initialChatClaudeMessages above.
+  chatClaudeMessages: initialChatClaudeMessages,
+  chatClaudeTabStash: {}, // { [chatCtxId:tabId]: messages }
+  chatClaudeProcessingStash: {}, // { [chatCtxId]: { isProcessing, status, pendingAttachments } }
+  chatClaudeTabs: initialChatClaudeTabs, // { [chatCtxId]: [{ id, name }] }
+  chatClaudeActiveTabId: 'default',
+  chatClaudeActiveTabMap: {}, // { [chatCtxId]: tabId }
+  chatClaudeIsProcessing: false,
+  chatClaudeStatus: 'Ready',
+  chatClaudePendingAttachments: [],
+  chatClaudeDashboardId: null, // chat-agent context id currently bound to the chat-surface ClaudeView
   // Unread chat message counts per dashboard (for sidebar glow)
   unreadChatCounts: {},
   // Per-dashboard caches for sidebar state derivation
@@ -325,44 +473,334 @@ function appReducerCore(state, action) {
         unreadChatCounts: clearedUnread,
       };
     }
+    case 'SET_APP_MODE':
+      return { ...state, appMode: action.mode };
+    case 'SET_CHAT_VIEW': {
+      // Switching to dashboard/make clears the active chat-instance pointer
+      // (purely UI — keeps the tab persisted in chatTabs).
+      const next = { ...state, chatActiveView: action.view };
+      if (action.view !== 'chat-instance') {
+        try { localStorage.removeItem(CHAT_TAB_ACTIVE_KEY); } catch (e) { /* */ }
+        next.chatActiveTabId = null;
+      }
+      return next;
+    }
+    case 'CHAT_TAB_CREATE': {
+      const usedIds = new Set(state.chatTabs.map(t => t.id));
+      let id;
+      do {
+        id = 'chat-' + Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0');
+      } while (usedIds.has(id));
+      // Prefer the chatNumber the IPC handler reserved on disk so the tab name
+      // matches the on-disk chat folder (Chat/chat{N}/agent{XXXX}/). Fall back to
+      // an in-memory tally when no IPC info is supplied.
+      let nextNum = action.chatNumber;
+      if (!Number.isInteger(nextNum)) {
+        const existingNums = state.chatTabs
+          .map(t => /^Chat (\d+)$/.exec(t.name))
+          .filter(Boolean)
+          .map(m => parseInt(m[1], 10));
+        nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1;
+      }
+      const newTab = {
+        id,
+        name: 'Chat ' + nextNum,
+        chatNumber: nextNum,
+        agentHex: action.agentHex || null,     // 4-hex agent id; null when IPC unavailable
+        projectPath: action.projectPath || null,
+      };
+      const updatedTabs = [...state.chatTabs, newTab];
+      saveChatTabs(updatedTabs);
+      try { localStorage.setItem(CHAT_TAB_ACTIVE_KEY, id); } catch (e) { /* */ }
+
+      // Stash the previously active chat tab's claude state so switching back
+      // restores its messages. Without this, creating a new chat while already
+      // in a chat would discard the prior chat's in-memory messages. Operates
+      // on the CHAT slice (chatClaude*) — code-side state is untouched.
+      const prevTabCreate = state.chatTabs.find(t => t.id === state.chatActiveTabId);
+      const prevCtxIdCreate = chatTabContextId(prevTabCreate);
+      const prevSubTabIdCreate = state.chatClaudeActiveTabId;
+      const newTabStashCreate = prevCtxIdCreate
+        ? { ...state.chatClaudeTabStash, [prevCtxIdCreate + ':' + prevSubTabIdCreate]: state.chatClaudeMessages }
+        : state.chatClaudeTabStash;
+      const newActiveTabMapCreate = prevCtxIdCreate
+        ? { ...state.chatClaudeActiveTabMap, [prevCtxIdCreate]: prevSubTabIdCreate }
+        : state.chatClaudeActiveTabMap;
+      const procStashCreate = prevCtxIdCreate
+        ? { ...state.chatClaudeProcessingStash, [prevCtxIdCreate]: {
+            isProcessing: state.chatClaudeIsProcessing,
+            status: state.chatClaudeStatus,
+            pendingAttachments: state.chatClaudePendingAttachments,
+          } }
+        : state.chatClaudeProcessingStash;
+      if (prevCtxIdCreate) {
+        try { localStorage.setItem(claudeMessagesKey(prevCtxIdCreate, prevSubTabIdCreate), JSON.stringify(state.chatClaudeMessages)); } catch (e) { /* */ }
+      }
+
+      const newCtxId = chatTabContextId(newTab);
+      return {
+        ...state,
+        chatTabs: updatedTabs,
+        chatTabMessages: { ...state.chatTabMessages, [id]: [] },
+        chatActiveTabId: id,
+        chatActiveView: 'chat-instance',
+        chatClaudeTabStash: newTabStashCreate,
+        chatClaudeActiveTabMap: newActiveTabMapCreate,
+        chatClaudeActiveTabId: 'default',
+        chatClaudeTabs: newCtxId
+          ? { ...state.chatClaudeTabs, [newCtxId]: [{ ...DEFAULT_TAB }] }
+          : state.chatClaudeTabs,
+        chatClaudeProcessingStash: procStashCreate,
+        chatClaudeMessages: [CLAUDE_WELCOME_MSG],
+        chatClaudeIsProcessing: false,
+        chatClaudeStatus: 'Ready',
+        chatClaudePendingAttachments: [],
+        chatClaudeDashboardId: newCtxId,
+      };
+    }
+    case 'CHAT_TAB_SWITCH': {
+      try { localStorage.setItem(CHAT_TAB_ACTIVE_KEY, action.tabId); } catch (e) { /* */ }
+      // Same-tab click: just ensure the chat-instance view is active.
+      if (action.tabId === state.chatActiveTabId) {
+        const sameTab = state.chatTabs.find(t => t.id === action.tabId);
+        const sameCtxId = chatTabContextId(sameTab);
+        const sameUnread = sameCtxId
+          ? (({ [sameCtxId]: _, ...rest }) => rest)(state.unreadChatCounts)
+          : state.unreadChatCounts;
+        return { ...state, chatActiveTabId: action.tabId, chatActiveView: 'chat-instance', unreadChatCounts: sameUnread };
+      }
+
+      const prevTab = state.chatTabs.find(t => t.id === state.chatActiveTabId);
+      const targetTab = state.chatTabs.find(t => t.id === action.tabId);
+      const prevCtxId = chatTabContextId(prevTab);
+      const targetCtxId = chatTabContextId(targetTab);
+
+      // No target context (e.g. legacy tab without agentHex that hasn't backfilled
+      // yet) — fall back to the previous shallow update so we don't blow away
+      // the current chat's messages with a fresh welcome.
+      if (!targetCtxId) {
+        return { ...state, chatActiveTabId: action.tabId, chatActiveView: 'chat-instance' };
+      }
+
+      // Reading the chat clears its unread badge.
+      const clearedUnread = (({ [targetCtxId]: _, ...rest }) => rest)(state.unreadChatCounts);
+
+      // Stash the previous chat tab's claude state under its context id.
+      // Operates on the CHAT slice (chatClaude*) — code-side state is untouched
+      // so the Code tab keeps showing its own dashboard's transcript.
+      const prevSubTabId = state.chatClaudeActiveTabId;
+      const newTabStash = prevCtxId
+        ? { ...state.chatClaudeTabStash, [prevCtxId + ':' + prevSubTabId]: state.chatClaudeMessages }
+        : state.chatClaudeTabStash;
+      const newActiveTabMap = prevCtxId
+        ? { ...state.chatClaudeActiveTabMap, [prevCtxId]: prevSubTabId }
+        : state.chatClaudeActiveTabMap;
+      const procStash = prevCtxId
+        ? { ...state.chatClaudeProcessingStash, [prevCtxId]: {
+            isProcessing: state.chatClaudeIsProcessing,
+            status: state.chatClaudeStatus,
+            pendingAttachments: state.chatClaudePendingAttachments,
+          } }
+        : state.chatClaudeProcessingStash;
+      if (prevCtxId) {
+        try { localStorage.setItem(claudeMessagesKey(prevCtxId, prevSubTabId), JSON.stringify(state.chatClaudeMessages)); } catch (e) { /* */ }
+      }
+
+      // Restore the target chat tab's claude state (in-memory stash → localStorage → welcome).
+      const targetSubTabId = newActiveTabMap[targetCtxId] || 'default';
+      const targetStashKey = targetCtxId + ':' + targetSubTabId;
+      const targetMessages = newTabStash[targetStashKey]
+        || loadSavedMessages(targetCtxId, targetSubTabId)
+        || [CLAUDE_WELCOME_MSG];
+      const targetProc = procStash[targetCtxId] || {};
+      const targetSubTabs = state.chatClaudeTabs[targetCtxId]
+        || loadSavedTabs(targetCtxId)
+        || [{ ...DEFAULT_TAB }];
+
+      return {
+        ...state,
+        chatActiveTabId: action.tabId,
+        chatActiveView: 'chat-instance',
+        chatClaudeTabStash: newTabStash,
+        chatClaudeActiveTabMap: newActiveTabMap,
+        chatClaudeActiveTabId: targetSubTabId,
+        chatClaudeTabs: { ...state.chatClaudeTabs, [targetCtxId]: targetSubTabs },
+        chatClaudeProcessingStash: procStash,
+        chatClaudeMessages: targetMessages,
+        chatClaudeIsProcessing: targetProc.isProcessing || false,
+        chatClaudeStatus: targetProc.status || 'Ready',
+        chatClaudePendingAttachments: targetProc.pendingAttachments || [],
+        chatClaudeDashboardId: targetCtxId,
+        unreadChatCounts: clearedUnread,
+      };
+    }
+    case 'CHAT_TAB_DELETE': {
+      const deletedTab = state.chatTabs.find(t => t.id === action.tabId);
+      const deletedCtxId = chatTabContextId(deletedTab);
+      const updatedTabs = state.chatTabs.filter(t => t.id !== action.tabId);
+      saveChatTabs(updatedTabs);
+      try { localStorage.removeItem(chatTabMessagesKey(action.tabId)); } catch (e) { /* */ }
+      const newMessages = { ...state.chatTabMessages };
+      delete newMessages[action.tabId];
+
+      // Purge persisted chat-claude messages and stashed sub-tabs for the
+      // deleted chat-agent context so its history doesn't linger after
+      // deletion. Operates on the CHAT slice — code-side state is untouched.
+      let newTabStash = state.chatClaudeTabStash;
+      let newClaudeTabs = state.chatClaudeTabs;
+      let newActiveTabMap = state.chatClaudeActiveTabMap;
+      let newProcStash = state.chatClaudeProcessingStash;
+      if (deletedCtxId) {
+        const subTabs = state.chatClaudeTabs[deletedCtxId] || [{ ...DEFAULT_TAB }];
+        for (const t of subTabs) {
+          try { localStorage.removeItem(claudeMessagesKey(deletedCtxId, t.id)); } catch (e) { /* */ }
+        }
+        try { localStorage.removeItem(claudeTabsKey(deletedCtxId)); } catch (e) { /* */ }
+        newTabStash = Object.fromEntries(
+          Object.entries(state.chatClaudeTabStash).filter(([k]) => !k.startsWith(deletedCtxId + ':'))
+        );
+        const { [deletedCtxId]: _omit1, ...restClaudeTabs } = state.chatClaudeTabs;
+        newClaudeTabs = restClaudeTabs;
+        const { [deletedCtxId]: _omit2, ...restActiveTabMap } = state.chatClaudeActiveTabMap;
+        newActiveTabMap = restActiveTabMap;
+        const { [deletedCtxId]: _omit3, ...restProcStash } = state.chatClaudeProcessingStash;
+        newProcStash = restProcStash;
+      }
+
+      const wasActive = state.chatActiveTabId === action.tabId;
+      if (wasActive) {
+        try { localStorage.removeItem(CHAT_TAB_ACTIVE_KEY); } catch (e) { /* */ }
+      }
+      return {
+        ...state,
+        chatTabs: updatedTabs,
+        chatTabMessages: newMessages,
+        chatActiveTabId: wasActive ? null : state.chatActiveTabId,
+        chatActiveView: wasActive ? 'dashboard' : state.chatActiveView,
+        chatClaudeTabStash: newTabStash,
+        chatClaudeTabs: newClaudeTabs,
+        chatClaudeActiveTabMap: newActiveTabMap,
+        chatClaudeProcessingStash: newProcStash,
+        // Reset the visible chat-claude state when the active chat is deleted.
+        chatClaudeMessages: wasActive ? [CLAUDE_WELCOME_MSG] : state.chatClaudeMessages,
+        chatClaudeIsProcessing: wasActive ? false : state.chatClaudeIsProcessing,
+        chatClaudeStatus: wasActive ? 'Ready' : state.chatClaudeStatus,
+        chatClaudePendingAttachments: wasActive ? [] : state.chatClaudePendingAttachments,
+        chatClaudeActiveTabId: wasActive ? 'default' : state.chatClaudeActiveTabId,
+        chatClaudeDashboardId: wasActive ? null : state.chatClaudeDashboardId,
+      };
+    }
+    case 'CHAT_TAB_RENAME': {
+      const updatedTabs = state.chatTabs.map(t =>
+        t.id === action.tabId ? { ...t, name: action.name } : t
+      );
+      saveChatTabs(updatedTabs);
+      return { ...state, chatTabs: updatedTabs };
+    }
+    case 'CHAT_TAB_BACKFILL_AGENT': {
+      // Attach an on-disk agent identity to a legacy tab that was persisted
+      // before chat agents had Chat/chat{N}/agent{XXXX} folders. Tab id and
+      // name are preserved so chat-message localStorage keys keep working.
+      const updatedTabs = state.chatTabs.map(t =>
+        t.id === action.tabId
+          ? { ...t, agentHex: action.agentHex, chatNumber: action.chatNumber ?? t.chatNumber }
+          : t
+      );
+      saveChatTabs(updatedTabs);
+      return { ...state, chatTabs: updatedTabs };
+    }
+    case 'CHAT_TAB_APPEND_MSG': {
+      const tabId = action.tabId;
+      const existing = state.chatTabMessages[tabId] || [];
+      const newMsgs = [...existing, { id: Date.now() + '-' + Math.random().toString(36).slice(2, 6), ...action.msg }];
+      saveChatTabMessages(tabId, newMsgs);
+      return {
+        ...state,
+        chatTabMessages: { ...state.chatTabMessages, [tabId]: newMsgs },
+      };
+    }
+    case 'CHAT_TAB_CLEAR_MSGS': {
+      const tabId = action.tabId;
+      saveChatTabMessages(tabId, []);
+      return {
+        ...state,
+        chatTabMessages: { ...state.chatTabMessages, [tabId]: [] },
+      };
+    }
     case 'OPEN_MODAL':
       return { ...state, activeModal: action.modal, modalDashboardId: action.dashboardId || state.currentDashboardId };
     case 'CLOSE_MODAL':
       return { ...state, activeModal: null };
-    case 'CLAUDE_SET_MESSAGES':
-      return { ...state, claudeMessages: action.messages };
+    case 'CLAUDE_SET_MESSAGES': {
+      const f = fieldsFor(action.surface);
+      return { ...state, [f.messages]: action.messages };
+    }
     case 'CLAUDE_APPEND_MSG': {
-      const newMessages = trimMessages([...state.claudeMessages, { id: Date.now() + Math.random(), ...action.msg }]);
-      // Track unread if user isn't viewing this dashboard's chat
-      const shouldTrackUnread = action.msg.type === 'assistant' && state.activeView !== 'claude';
+      const f = fieldsFor(action.surface);
+      const prev = state[f.messages];
+      const newMessages = trimMessages([...prev, { id: Date.now() + Math.random(), ...action.msg }]);
+      // Track unread if user isn't viewing this dashboard's chat (code-surface only —
+      // chat-surface unread is tracked elsewhere via the chat tab context).
+      const shouldTrackUnread = (action.surface !== 'chat')
+        && action.msg.type === 'assistant'
+        && state.activeView !== 'claude';
       const updatedUnread = (shouldTrackUnread && state.currentDashboardId)
         ? { ...state.unreadChatCounts, [state.currentDashboardId]: (state.unreadChatCounts[state.currentDashboardId] || 0) + 1 }
         : state.unreadChatCounts;
-      return { ...state, claudeMessages: newMessages, unreadChatCounts: updatedUnread };
+      return { ...state, [f.messages]: newMessages, unreadChatCounts: updatedUnread };
     }
-    case 'CLAUDE_UPDATE_MESSAGES':
+    case 'CLAUDE_UPDATE_MESSAGES': {
       // Functional update: action.updater(prevMessages) => newMessages
-      return { ...state, claudeMessages: trimMessages(action.updater(state.claudeMessages)) };
-    case 'CLAUDE_CLEAR_MESSAGES':
-      if (!state.currentDashboardId) return state;
-      try { localStorage.removeItem(claudeMessagesKey(state.currentDashboardId, state.claudeActiveTabId)); } catch (e) { /* unavailable */ }
-      return { ...state, claudeMessages: [CLAUDE_WELCOME_MSG], claudePendingAttachments: [] };
+      const f = fieldsFor(action.surface);
+      return { ...state, [f.messages]: trimMessages(action.updater(state[f.messages])) };
+    }
+    case 'CLAUDE_CLEAR_MESSAGES': {
+      const f = fieldsFor(action.surface);
+      // Resolve the active context id for persistence cleanup.
+      // Chat surface -> chat-agent ctx id; code surface -> currentDashboardId.
+      const clearCtxId = action.surface === 'chat'
+        ? activeChatContextId(state)
+        : state.currentDashboardId;
+      if (!clearCtxId) return state;
+      try { localStorage.removeItem(claudeMessagesKey(clearCtxId, state[f.activeTabId])); } catch (e) { /* unavailable */ }
+      return { ...state, [f.messages]: [CLAUDE_WELCOME_MSG], [f.pendingAttachments]: [] };
+    }
     case 'CLAUDE_SET_VIEW_MODE':
+      // viewMode is a global UI flag (shared between code/chat surfaces).
       return { ...state, claudeViewMode: action.mode };
-    case 'CLAUDE_SET_PROCESSING':
-      return { ...state, claudeIsProcessing: action.value };
-    case 'CLAUDE_SET_STATUS':
-      return { ...state, claudeStatus: action.value };
+    case 'CLAUDE_SET_PROCESSING': {
+      const f = fieldsFor(action.surface);
+      return { ...state, [f.isProcessing]: action.value };
+    }
+    case 'CLAUDE_SET_STATUS': {
+      const f = fieldsFor(action.surface);
+      return { ...state, [f.status]: action.value };
+    }
     case 'CLAUDE_SET_TASK_ID':
+      // Task id is global — only one worker can be active at a time per
+      // OS-level Claude CLI process. No surface branch.
       return { ...state, claudeActiveTaskId: action.value };
-    case 'CLAUDE_ADD_ATTACHMENT':
+    case 'CLAUDE_SET_DASHBOARD': {
+      // Surface-aware dashboardId update. For code surface this mirrors
+      // claudeDashboardId (set by SET_VIEW); for chat surface it tracks the
+      // chat-agent context id currently bound to the chat-mode ClaudeView.
+      const f = fieldsFor(action.surface);
+      return { ...state, [f.dashboardId]: action.dashboardId || null };
+    }
+    case 'CLAUDE_ADD_ATTACHMENT': {
       // action.attachment = { id, name, type, dataUrl }
-      return { ...state, claudePendingAttachments: [...state.claudePendingAttachments, action.attachment] };
-    case 'CLAUDE_REMOVE_ATTACHMENT':
+      const f = fieldsFor(action.surface);
+      return { ...state, [f.pendingAttachments]: [...state[f.pendingAttachments], action.attachment] };
+    }
+    case 'CLAUDE_REMOVE_ATTACHMENT': {
       // action.id = attachment id to remove
-      return { ...state, claudePendingAttachments: state.claudePendingAttachments.filter(a => a.id !== action.id) };
-    case 'CLAUDE_CLEAR_ATTACHMENTS':
-      return { ...state, claudePendingAttachments: [] };
+      const f = fieldsFor(action.surface);
+      return { ...state, [f.pendingAttachments]: state[f.pendingAttachments].filter(a => a.id !== action.id) };
+    }
+    case 'CLAUDE_CLEAR_ATTACHMENTS': {
+      const f = fieldsFor(action.surface);
+      return { ...state, [f.pendingAttachments]: [] };
+    }
     // --- Permission request management ---
     case 'PERMISSION_REQUEST':
       // action.permission = { pid, toolName, toolInput, requestId, toolUseId, timestamp }
@@ -375,126 +813,150 @@ function appReducerCore(state, action) {
       return { ...state, pendingPermission: null };
     // --- Tab management ---
     case 'CLAUDE_NEW_TAB': {
-      if (!state.currentDashboardId) return state;
-      const did = state.currentDashboardId;
-      const currentTabs = state.claudeTabs[did] || [{ ...DEFAULT_TAB }];
+      const f = fieldsFor(action.surface);
+      // Code surface: tabs are per-dashboard (state.currentDashboardId).
+      // Chat surface: tabs are per-chat-agent (chatClaudeDashboardId, falls
+      // back to deriving from the active chat tab).
+      const did = action.surface === 'chat'
+        ? (state.chatClaudeDashboardId || activeChatContextId(state))
+        : state.currentDashboardId;
+      if (!did) return state;
+      const currentTabs = state[f.tabs][did] || [{ ...DEFAULT_TAB }];
       const newTabId = 'tab-' + Date.now();
       const newTabName = 'Chat ' + (currentTabs.length + 1);
       const updatedTabs = [...currentTabs, { id: newTabId, name: newTabName }];
-      const stashKey = did + ':' + state.claudeActiveTabId;
-      const newTabStash = { ...state.claudeTabStash, [stashKey]: state.claudeMessages };
-      try { localStorage.setItem(claudeMessagesKey(did, state.claudeActiveTabId), JSON.stringify(state.claudeMessages)); } catch (e) { /* */ }
+      const stashKey = did + ':' + state[f.activeTabId];
+      const newTabStash = { ...state[f.tabStash], [stashKey]: state[f.messages] };
+      try { localStorage.setItem(claudeMessagesKey(did, state[f.activeTabId]), JSON.stringify(state[f.messages])); } catch (e) { /* */ }
       saveTabs(did, updatedTabs);
       return {
         ...state,
-        claudeTabs: { ...state.claudeTabs, [did]: updatedTabs },
-        claudeActiveTabId: newTabId,
-        claudeTabStash: newTabStash,
-        claudeMessages: [CLAUDE_WELCOME_MSG],
-        claudePendingAttachments: [],
+        [f.tabs]: { ...state[f.tabs], [did]: updatedTabs },
+        [f.activeTabId]: newTabId,
+        [f.tabStash]: newTabStash,
+        [f.messages]: [CLAUDE_WELCOME_MSG],
+        [f.pendingAttachments]: [],
       };
     }
     case 'CLAUDE_SWITCH_TAB': {
-      if (!state.currentDashboardId) return state;
-      const did = state.currentDashboardId;
+      const f = fieldsFor(action.surface);
+      const did = action.surface === 'chat'
+        ? (state.chatClaudeDashboardId || activeChatContextId(state))
+        : state.currentDashboardId;
+      if (!did) return state;
       const targetTabId = action.tabId;
-      if (targetTabId === state.claudeActiveTabId) return state;
-      const stashKey = did + ':' + state.claudeActiveTabId;
-      const newTabStash = { ...state.claudeTabStash, [stashKey]: state.claudeMessages };
-      try { localStorage.setItem(claudeMessagesKey(did, state.claudeActiveTabId), JSON.stringify(state.claudeMessages)); } catch (e) { /* */ }
+      if (targetTabId === state[f.activeTabId]) return state;
+      const stashKey = did + ':' + state[f.activeTabId];
+      const newTabStash = { ...state[f.tabStash], [stashKey]: state[f.messages] };
+      try { localStorage.setItem(claudeMessagesKey(did, state[f.activeTabId]), JSON.stringify(state[f.messages])); } catch (e) { /* */ }
       const targetStashKey = did + ':' + targetTabId;
       const targetMessages = newTabStash[targetStashKey] || loadSavedMessages(did, targetTabId) || [CLAUDE_WELCOME_MSG];
       return {
         ...state,
-        claudeActiveTabId: targetTabId,
-        claudeTabStash: newTabStash,
-        claudeMessages: targetMessages,
+        [f.activeTabId]: targetTabId,
+        [f.tabStash]: newTabStash,
+        [f.messages]: targetMessages,
       };
     }
     case 'CLAUDE_CLOSE_TAB': {
-      if (!state.currentDashboardId) return state;
-      const did = state.currentDashboardId;
-      const currentTabs = state.claudeTabs[did] || [{ ...DEFAULT_TAB }];
+      const f = fieldsFor(action.surface);
+      const did = action.surface === 'chat'
+        ? (state.chatClaudeDashboardId || activeChatContextId(state))
+        : state.currentDashboardId;
+      if (!did) return state;
+      const currentTabs = state[f.tabs][did] || [{ ...DEFAULT_TAB }];
       if (currentTabs.length <= 1) return state;
       const closingTabId = action.tabId;
       const updatedTabs = currentTabs.filter(t => t.id !== closingTabId);
       const stashKey = did + ':' + closingTabId;
-      const newTabStash = { ...state.claudeTabStash };
+      const newTabStash = { ...state[f.tabStash] };
       delete newTabStash[stashKey];
       try { localStorage.removeItem(claudeMessagesKey(did, closingTabId)); } catch (e) { /* */ }
       saveTabs(did, updatedTabs);
-      if (closingTabId === state.claudeActiveTabId) {
+      if (closingTabId === state[f.activeTabId]) {
         const closedIdx = currentTabs.findIndex(t => t.id === closingTabId);
         const newActive = updatedTabs[Math.min(closedIdx, updatedTabs.length - 1)];
         const targetStashKey = did + ':' + newActive.id;
         const targetMessages = newTabStash[targetStashKey] || loadSavedMessages(did, newActive.id) || [CLAUDE_WELCOME_MSG];
         return {
           ...state,
-          claudeTabs: { ...state.claudeTabs, [did]: updatedTabs },
-          claudeActiveTabId: newActive.id,
-          claudeTabStash: newTabStash,
-          claudeMessages: targetMessages,
+          [f.tabs]: { ...state[f.tabs], [did]: updatedTabs },
+          [f.activeTabId]: newActive.id,
+          [f.tabStash]: newTabStash,
+          [f.messages]: targetMessages,
         };
       }
       return {
         ...state,
-        claudeTabs: { ...state.claudeTabs, [did]: updatedTabs },
-        claudeTabStash: newTabStash,
+        [f.tabs]: { ...state[f.tabs], [did]: updatedTabs },
+        [f.tabStash]: newTabStash,
       };
     }
     case 'CLAUDE_RENAME_TAB': {
-      if (!state.currentDashboardId) return state;
-      const did = state.currentDashboardId;
-      const currentTabs = state.claudeTabs[did] || [{ ...DEFAULT_TAB }];
+      const f = fieldsFor(action.surface);
+      const did = action.surface === 'chat'
+        ? (state.chatClaudeDashboardId || activeChatContextId(state))
+        : state.currentDashboardId;
+      if (!did) return state;
+      const currentTabs = state[f.tabs][did] || [{ ...DEFAULT_TAB }];
       const updatedTabs = currentTabs.map(t => t.id === action.tabId ? { ...t, name: action.name } : t);
       saveTabs(did, updatedTabs);
-      return { ...state, claudeTabs: { ...state.claudeTabs, [did]: updatedTabs } };
+      return { ...state, [f.tabs]: { ...state[f.tabs], [did]: updatedTabs } };
     }
     // --- Stashed tab updates (for non-active tabs on same dashboard with running workers) ---
     case 'CLAUDE_TAB_STASH_APPEND_MSG': {
-      if (!state.currentDashboardId) return state;
-      const did = state.currentDashboardId;
+      const f = fieldsFor(action.surface);
+      const did = action.surface === 'chat'
+        ? (state.chatClaudeDashboardId || activeChatContextId(state))
+        : state.currentDashboardId;
+      if (!did) return state;
       const stashKey = did + ':' + action.tabId;
-      const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
+      const stashedMsgs = state[f.tabStash][stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
       const updatedMsgs = trimMessages([...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }]);
-      const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
+      const newTabStash = { ...state[f.tabStash], [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, action.tabId), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
-      return { ...state, claudeTabStash: newTabStash };
+      return { ...state, [f.tabStash]: newTabStash };
     }
     case 'CLAUDE_TAB_STASH_UPDATE_MESSAGES': {
-      if (!state.currentDashboardId) return state;
-      const did = state.currentDashboardId;
+      const f = fieldsFor(action.surface);
+      const did = action.surface === 'chat'
+        ? (state.chatClaudeDashboardId || activeChatContextId(state))
+        : state.currentDashboardId;
+      if (!did) return state;
       const stashKey = did + ':' + action.tabId;
-      const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
+      const stashedMsgs = state[f.tabStash][stashKey] || loadSavedMessages(did, action.tabId) || [CLAUDE_WELCOME_MSG];
       const updatedMsgs = trimMessages(action.updater(stashedMsgs));
-      const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
+      const newTabStash = { ...state[f.tabStash], [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, action.tabId), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
-      return { ...state, claudeTabStash: newTabStash };
+      return { ...state, [f.tabStash]: newTabStash };
     }
     // --- Stashed dashboard updates (for non-active dashboards with running workers) ---
     case 'CLAUDE_STASH_APPEND_MSG': {
+      const f = fieldsFor(action.surface);
       const did = action.dashboardId;
-      const activeTab = state.claudeActiveTabMap[did] || 'default';
+      const activeTab = state[f.activeTabMap][did] || 'default';
       const stashKey = did + ':' + activeTab;
-      const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, activeTab) || [CLAUDE_WELCOME_MSG];
+      const stashedMsgs = state[f.tabStash][stashKey] || loadSavedMessages(did, activeTab) || [CLAUDE_WELCOME_MSG];
       const updatedMsgs = trimMessages([...stashedMsgs, { id: Date.now() + Math.random(), ...action.msg }]);
-      const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
+      const newTabStash = { ...state[f.tabStash], [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, activeTab), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
-      // Track unread assistant messages for non-active dashboards
-      const unreadChatCounts = action.msg.type === 'assistant'
+      // Track unread assistant messages for non-active dashboards (code surface only —
+      // chat-surface unread is keyed by chat-tab context elsewhere).
+      const unreadChatCounts = (action.surface !== 'chat' && action.msg.type === 'assistant')
         ? { ...state.unreadChatCounts, [did]: (state.unreadChatCounts[did] || 0) + 1 }
         : state.unreadChatCounts;
-      return { ...state, claudeTabStash: newTabStash, unreadChatCounts };
+      return { ...state, [f.tabStash]: newTabStash, unreadChatCounts };
     }
     case 'CLAUDE_STASH_UPDATE_MESSAGES': {
+      const f = fieldsFor(action.surface);
       const did = action.dashboardId;
-      const activeTab = state.claudeActiveTabMap[did] || 'default';
+      const activeTab = state[f.activeTabMap][did] || 'default';
       const stashKey = did + ':' + activeTab;
-      const stashedMsgs = state.claudeTabStash[stashKey] || loadSavedMessages(did, activeTab) || [CLAUDE_WELCOME_MSG];
+      const stashedMsgs = state[f.tabStash][stashKey] || loadSavedMessages(did, activeTab) || [CLAUDE_WELCOME_MSG];
       const updatedMsgs = trimMessages(action.updater(stashedMsgs));
-      const newTabStash = { ...state.claudeTabStash, [stashKey]: updatedMsgs };
+      const newTabStash = { ...state[f.tabStash], [stashKey]: updatedMsgs };
       try { localStorage.setItem(claudeMessagesKey(did, activeTab), JSON.stringify(updatedMsgs)); } catch (e) { /* */ }
-      return { ...state, claudeTabStash: newTabStash };
+      return { ...state, [f.tabStash]: newTabStash };
     }
     case 'REMOVE_DASHBOARD': {
       // Clean up state when a dashboard is deleted
@@ -577,10 +1039,11 @@ function appReducerCore(state, action) {
       };
     }
     case 'CLAUDE_STASH_SET_PROCESSING': {
+      const f = fieldsFor(action.surface);
       const did = action.dashboardId;
-      const existing = state.claudeProcessingStash[did] || {};
-      const newProcStash = { ...state.claudeProcessingStash, [did]: { ...existing, isProcessing: action.value, status: action.status || existing.status || 'Ready' } };
-      return { ...state, claudeProcessingStash: newProcStash };
+      const existing = state[f.processingStash][did] || {};
+      const newProcStash = { ...state[f.processingStash], [did]: { ...existing, isProcessing: action.value, status: action.status || existing.status || 'Ready' } };
+      return { ...state, [f.processingStash]: newProcStash };
     }
     case 'SET_CHAT_PREVIEW': {
       return {
@@ -691,6 +1154,29 @@ function appReducerCore(state, action) {
       if (!currentTree) return state;
       const updatedTree = updateTreeNode(currentTree, action.nodePath, action.children);
       return { ...state, ideFileTrees: { ...state.ideFileTrees, [action.workspaceId]: updatedTree } };
+    }
+    case 'IDE_MERGE_ROOT_ENTRIES': {
+      // Refresh root-level entries while preserving lazy-loaded children of
+      // existing directories. Used by the polling interval so user-expanded
+      // subtrees don't collapse on every refresh.
+      const currentTree = state.ideFileTrees[action.workspaceId];
+      const existingChildren = (currentTree && Array.isArray(currentTree.children)) ? currentTree.children : [];
+      const existingByPath = new Map();
+      for (const child of existingChildren) existingByPath.set(child.path, child);
+      const mergedChildren = action.entries.map(entry => {
+        const existing = existingByPath.get(entry.path);
+        if (existing && existing.type === 'directory' && entry.type === 'directory' && Array.isArray(existing.children)) {
+          return { ...entry, children: existing.children };
+        }
+        return entry;
+      });
+      const newTree = {
+        name: action.rootName,
+        path: action.rootPath,
+        type: 'directory',
+        children: mergedChildren,
+      };
+      return { ...state, ideFileTrees: { ...state.ideFileTrees, [action.workspaceId]: newTree } };
     }
     case 'IDE_OPEN_FILE': {
       const wsId = action.workspaceId;
@@ -1008,13 +1494,55 @@ function schedulePersist(dashboardId, tabId, messages) {
 function appReducer(state, action) {
   const newState = appReducerCore(state, action);
   if (CLAUDE_PERSIST_ACTIONS.has(action.type)) {
-    schedulePersist(newState.currentDashboardId, newState.claudeActiveTabId, newState.claudeMessages);
+    // Persistence is surface-aware: chat-surface dispatches persist under the
+    // chat-agent context id; code-surface dispatches persist under the active
+    // dashboard id. Action carries surface=='chat' explicitly; otherwise we
+    // fall back to the legacy "infer from appMode" rule for back-compat with
+    // older callers that have not been updated yet.
+    const isChat = action.surface === 'chat'
+      || (action.surface !== 'code' && newState.appMode === 'chat' && newState.chatActiveTabId);
+    const f = fieldsFor(isChat ? 'chat' : 'code');
+    const persistDid = isChat
+      ? (newState.chatClaudeDashboardId || activeChatContextId(newState))
+      : newState.currentDashboardId;
+    schedulePersist(persistDid, newState[f.activeTabId], newState[f.messages]);
   }
   return newState;
 }
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+
+  // One-shot migration: legacy chat tabs persisted before the Chat/chat{N}/
+  // agent{XXXX} layout existed have no agentHex. Allocate one for each so
+  // future spawns can be sanity-checked against a real on-disk folder.
+  const backfilledRef = useRef(false);
+  useEffect(() => {
+    if (backfilledRef.current) return;
+    const api = typeof window !== 'undefined' ? window.electronAPI : null;
+    if (!api || typeof api.createChatAgent !== 'function') return;
+    const stale = state.chatTabs.filter(t => !t.agentHex);
+    if (stale.length === 0) { backfilledRef.current = true; return; }
+    backfilledRef.current = true;
+    (async () => {
+      for (const tab of stale) {
+        try {
+          const result = await api.createChatAgent({ projectPath: tab.projectPath || null });
+          if (result && result.agentHex) {
+            dispatch({
+              type: 'CHAT_TAB_BACKFILL_AGENT',
+              tabId: tab.id,
+              agentHex: result.agentHex,
+              chatNumber: result.chatNumber,
+            });
+          }
+        } catch (err) {
+          console.warn('[chat-tab backfill] failed for', tab.id, err);
+        }
+      }
+    })();
+  }, [state.chatTabs]);
+
   return (
     <AppContext.Provider value={state}>
       <DispatchContext.Provider value={dispatch}>
@@ -1034,4 +1562,26 @@ export function useDispatch() {
   const dispatch = useContext(DispatchContext);
   if (!dispatch) throw new Error('useDispatch must be inside AppProvider');
   return dispatch;
+}
+
+// Returns a flat view of the requested Claude chat slice. Callers pass either
+// 'code' (default) or 'chat' to read from claude* / chatClaude* respectively.
+// Lets components stay surface-agnostic — read state.claudeMessages or
+// state.chatClaudeMessages through the same key (`messages`) by destructuring
+// this helper. Field set is intentionally identical across both slices so
+// components can switch on appMode without conditional field names.
+export function getClaudeSlice(state, surface) {
+  const f = fieldsFor(surface);
+  return {
+    messages: state[f.messages],
+    isProcessing: state[f.isProcessing],
+    status: state[f.status],
+    activeTabId: state[f.activeTabId],
+    tabs: state[f.tabs],
+    tabStash: state[f.tabStash],
+    processingStash: state[f.processingStash],
+    activeTabMap: state[f.activeTabMap],
+    pendingAttachments: state[f.pendingAttachments],
+    dashboardId: state[f.dashboardId],
+  };
 }

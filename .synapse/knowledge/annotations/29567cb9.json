@@ -1,0 +1,60 @@
+{
+  "file": "documentation/electron/services.md",
+  "content_hash": "b7a45318",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Per-service reference for the 14+ Electron service modules (SwarmOrchestrator, ClaudeCodeService, CodexService, PromptBuilder, ProjectService, CommandsService, TaskEditorService, ConversationService, DebugService, TerminalService, InstrumentService, PreviewService, PreviewTextWriter, AutoUpdateService). Documents each service's API, responsibilities, lifecycle, and inter-service relationships.",
+  "exports": [
+    "SwarmOrchestrator",
+    "ClaudeCodeService",
+    "CodexService",
+    "PromptBuilder",
+    "ProjectService",
+    "CommandsService",
+    "TaskEditorService",
+    "ConversationService",
+    "DebugService",
+    "TerminalService",
+    "InstrumentService",
+    "PreviewService",
+    "PreviewTextWriter",
+    "AutoUpdateService"
+  ],
+  "imports_from": [],
+  "gotchas": [
+    "SwarmOrchestrator runs a circuit breaker — repeated failures pause dispatch automatically",
+    "DebugService uses Chrome DevTools Protocol; only one debug session per process",
+    "TerminalService backs PTY sessions — closing window must dispose all sessions"
+  ],
+  "patterns": [
+    "One responsibility per service module",
+    "Stateless functions where possible; instance state where lifecycle matters",
+    "Services consumed only by ipc-handlers.js (no cross-service imports from renderer)"
+  ],
+  "conventions": [
+    "Files: electron/services/XxxService.js",
+    "Services expose register/start/stop and method-per-IPC-handler"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/electron/overview.md",
+      "documentation/electron/ipc-reference.md"
+    ],
+    "depended_by": [
+      "documentation/electron/update-on-master.md"
+    ],
+    "related": [
+      "documentation/electron/configuration.md",
+      "documentation/git-manager/ipc-handlers.md",
+      "documentation/ide/ipc-handlers.md"
+    ]
+  },
+  "domains": [
+    "electron"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "services"
+  ]
+}

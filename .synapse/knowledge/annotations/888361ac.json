@@ -1,0 +1,50 @@
+{
+  "file": ".claude/hooks/verify-final-report.sh",
+  "content_hash": "8b0a9e6b",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Stop hook (no matcher). Checks at agent stop time whether any active swarm exists without a completion report and warns if so. Iterates all non-ide dashboards' initialization.json; for each with task!=null, reads logs.json and searches for completion phrases ('swarm complete', 'all tasks completed', 'swarm finished', 'completion report' — case-insensitive). If no completion message found, emits a non-blocking warning telling the agent to consider running !status or completing the swarm. Stop hooks can only warn, never block.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Stop hooks cannot block agent termination — only warn",
+    "Iterates ALL non-ide dashboards on every Stop — O(N) over dashboards × logs",
+    "Completion regex is a fixed alternation list — adding new completion phrasings requires hook update",
+    "Stops at first warning emission (warn() exits) — only the first incomplete swarm is reported per stop event",
+    "Wired in BOTH .claude/settings.json (global Stop) AND .claude/agents/master-orchestrator.md (role-scoped Stop)"
+  ],
+  "patterns": [
+    "Stop-hook warn pattern (no blocking possible)",
+    "Multi-dashboard sweep with per-dashboard completion scan"
+  ],
+  "conventions": [
+    "warn() emits {message: ...} JSON"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq",
+      "dashboards/*/initialization.json",
+      "dashboards/*/logs.json"
+    ],
+    "depended_by": [
+      ".claude/settings.json",
+      ".claude/agents/master-orchestrator.md"
+    ],
+    "related": [
+      ".claude/skills/p-track/SKILL.md (Phase 3 17E: final report)",
+      ".claude/skills/master-protocol/SKILL.md"
+    ]
+  },
+  "domains": [
+    "completion-verification",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "Stop",
+    "warn-only",
+    "final-report",
+    "swarm-completion"
+  ]
+}

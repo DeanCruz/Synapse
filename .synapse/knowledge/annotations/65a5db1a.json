@@ -1,0 +1,48 @@
+{
+  "file": "start.sh",
+  "content_hash": "1b38d37d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Production-style start script. Resolves its own directory, checks whether port 3456 (Synapse's SSE server port) already has a listener via `lsof -ti :3456 -sTCP:LISTEN`, refuses to start if Synapse is already running (telling the user to run `./stop.sh` first), and then `cd`s into the script directory and runs `npm run dev`. Functions as a guarded version of launch.sh.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Despite being named `start.sh`, it runs `npm run dev` (Vite watch mode), NOT `npm start` (production build). Inconsistent with the `Start Synapse.command` macOS launcher which DOES run `npm start`.",
+    "Port-busy check uses port 3456 — this is a Synapse-internal convention. If the SSE server's port is changed in code, this script will silently allow duplicate launches.",
+    "Detects only TCP LISTEN state — if the server is in a transient bind state or bound to a different interface, the check can produce false negatives.",
+    "Does not source the shell profile — same PATH risk as launch.sh.",
+    "Hard-codes port 3456 with no override — there is no SYNAPSE_PORT env var support."
+  ],
+  "patterns": [
+    "Port-as-singleton pattern: use a known listening port to detect whether the app is already running, instead of a PID file.",
+    "Fail-fast pattern: refuse to start when conflict is detected, with a hint pointing the user at the matching `stop.sh`."
+  ],
+  "conventions": [
+    "Shebang `#!/bin/bash`.",
+    "Captures DIR via `$(cd \"$(dirname \"$0\")\" && pwd)` to get an absolute path safely.",
+    "Exit code 1 on conflict, 0 on success."
+  ],
+  "relationships": {
+    "depends_on": [
+      "package.json"
+    ],
+    "depended_by": [],
+    "related": [
+      "stop.sh",
+      "launch.sh",
+      "Start Synapse.command",
+      "Stop Synapse.command"
+    ]
+  },
+  "domains": [
+    "launcher-script",
+    "developer-tooling"
+  ],
+  "tags": [
+    "shell",
+    "bash",
+    "launcher",
+    "port-check",
+    "macos"
+  ]
+}

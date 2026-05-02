@@ -234,6 +234,7 @@ Synapse/                              <-- {tracker_root}
 |   +-- styles/                       <-- CSS stylesheets
 |
 |-- dashboards/{id}/                  <-- Live dashboard data (one dir per dashboard)
+|   |-- plan.json                     <-- Canonical planning artifact (deep-thinking output) — REQUIRED before initialization.json
 |   |-- initialization.json           <-- Task plan (agents, waves, chains)
 |   |-- logs.json                     <-- Log entries
 |   |-- metrics.json                  <-- Post-swarm performance metrics
@@ -244,7 +245,7 @@ Synapse/                              <-- {tracker_root}
 |-- history/                          <-- History summary JSON files
 |-- queue/                            <-- Overflow queue for master_plan_track
 |-- conversations/                    <-- Chat conversation JSON files
-|-- tasks/{date}/                     <-- Per-swarm task + plan files
+|-- tasks/{date}/                     <-- (legacy, deprecated) — planning lives in dashboards/{id}/plan.json
 |-- backlog/                          <-- Backlog items (complete/ and todo/)
 +-- documentation/                    <-- Deep-dive reference docs by topic
 ```

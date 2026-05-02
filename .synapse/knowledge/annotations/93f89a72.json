@@ -1,0 +1,48 @@
+{
+  "file": ".claude/hooks/enforce-dashboard-isolation.sh",
+  "content_hash": "f02d3840",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Edit|Write that blocks agents from writing to any dashboard other than their assigned one. Resolves the assignment via SYNAPSE_DASHBOARD_ID env var (Electron-spawned CLI) or `DASHBOARD ID:` directive in transcript binding markers (raw CLI). Extracts the dashboard ID from the file_path's `.../dashboards/{id}/...` segment and compares against the assignment. Fail-open if neither source provides an assignment — supports raw CLI usage outside the dashboard binding model. Validates the discovered ID matches dashboard-shape regex (ide | 6-hex | dashboardN) so quoted text in transcripts cannot inject fake assignments.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "If both SYNAPSE_DASHBOARD_ID and the transcript directive disagree, env var wins (checked first)",
+    "Files NOT under dashboards/ are always allowed — this hook only gates dashboard writes",
+    "Writes to `dashboards/` (the directory itself, no /{id}/) are allowed (no ID extracted)",
+    "Tracker root resolved via $(cd $SCRIPT_DIR/../.. && pwd) — moving the script breaks this"
+  ],
+  "patterns": [
+    "PreToolUse Edit|Write matcher with stdin tool_input.file_path",
+    "Two-source assignment resolution with strict validation regex",
+    "awk between marker-pair pattern: ===DASHBOARD_BINDING_START=== ... ===DASHBOARD_BINDING_END==="
+  ],
+  "conventions": [
+    "block reason includes both assigned and target IDs plus the source for diagnostics"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq",
+      ".synapse/project.json (indirect)"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      ".claude/hooks/enforce-dashboard-isolation-bash.sh",
+      ".claude/hooks/enforce-tracker-root-writes.sh"
+    ]
+  },
+  "domains": [
+    "dashboard-isolation",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "validation",
+    "PreToolUse",
+    "Edit-Write-matcher",
+    "dashboard-isolation"
+  ]
+}

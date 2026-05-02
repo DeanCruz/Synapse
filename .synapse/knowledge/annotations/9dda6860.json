@@ -1,0 +1,34 @@
+{
+  "file": "documentation/swarm-lifecycle/completion-phase.md",
+  "content_hash": "ad5f52a0",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Specifies the swarm completion phase: how the master detects all-done, the final report format, post-swarm metrics calculation written to metrics.json, automatic knowledge extraction (Step 17G) into the PKI insights/, and the user-facing summary. This phase converts a finished swarm into durable knowledge artifacts.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Post-swarm knowledge extraction writes to {project_root}/.synapse/knowledge/insights/ -- one file per swarm",
+    "metrics.json is post-swarm-only; not updated incrementally during execution"
+  ],
+  "patterns": [
+    "Automatic knowledge harvesting from worker annotations and deviations"
+  ],
+  "conventions": [
+    "Final report includes per-wave timing, deviation counts, and links to relevant artifacts"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "swarm-lifecycle",
+    "completion"
+  ],
+  "tags": [
+    "completion",
+    "metrics",
+    "pki",
+    "extraction"
+  ]
+}

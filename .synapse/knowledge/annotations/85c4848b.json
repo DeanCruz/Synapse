@@ -1,0 +1,44 @@
+{
+  "file": ".claude/hooks/validate-initialization-immutable.sh",
+  "content_hash": "b71a840d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Edit|Write. Enforces the write-once rule for task IDENTITY in initialization.json. Specifically: blocks Write tool calls that change `task.name` after its initial creation. Edits are always allowed (legitimate use cases: repair task append, dependency rewiring, !add_task — all of which preserve task.name). The first Write to a non-existent file is allowed (initial planning). Subsequent Writes that would set a different task.name are rejected with a message naming both the existing and attempted values. The broader 'fields don't drift' invariants are partly handled by validate-initialization-schema.sh on the Write side and by trust on the Edit side.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Edit tool ALWAYS passes — the partial-patch surface is too hard to validate; treat Edit as trusted (repair/add_task path)",
+    "Only validates task.name — other identity fields (task.created, task.type) not protected here (schema hook covers them)",
+    "Fails open on parse errors — a malformed Write reaches validate-initialization-schema.sh which catches it",
+    "Companion hook validate-initialization-schema.sh enforces structural correctness (agents/waves/chains coverage)"
+  ],
+  "patterns": [
+    "Write-once enforcement via comparing existing-on-disk to new-content from tool_input",
+    "Edit/Write asymmetry: Edits trust, Writes validate"
+  ],
+  "conventions": [],
+  "relationships": {
+    "depends_on": [
+      "jq"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      ".claude/hooks/validate-initialization-schema.sh",
+      "agent/master/initialization_blueprint.md"
+    ]
+  },
+  "domains": [
+    "initialization-write-once",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PreToolUse",
+    "Edit-Write-matcher",
+    "write-once",
+    "initialization-json"
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "file": "src/ui/components/modals/TaskDetails.jsx",
+  "content_hash": "e5cda4b4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Read-only metadata view for a swarm task (the top-level swarm record from initialization.json — distinct from per-agent details). Renders task name as custom header, badges row (overall_status, type, project, directory), a long-form prompt block, and a meta grid (Created, Started, Completed, Total Tasks, Completed Tasks, Failed Tasks, Waves). Has no edit affordances — purely informational; opened from HomeView/StatsBar/swarm header to inspect a swarm's plan summary.",
+  "exports": [
+    {
+      "name": "TaskDetails",
+      "kind": "component",
+      "signature": "{ onClose, task }"
+    }
+  ],
+  "imports_from": {
+    "react": [],
+    "src/ui/components/modals/Modal.jsx": [
+      "default"
+    ],
+    "src/ui/utils/constants.js": [
+      "STATUS_COLORS",
+      "STATUS_BG_COLORS",
+      "colorWithAlpha"
+    ],
+    "src/ui/utils/format.js": [
+      "formatTime"
+    ]
+  },
+  "gotchas": [
+    "metaItem returns null when value is null/undefined OR empty string — a value of 0 (e.g. failed_tasks=0) WILL be rendered because String(0) is truthy and the != null check passes; consistent with intent but tricky if intent is to hide zero-counts.",
+    "Inline StatusBadge sub-component duplicates the one in AgentDetails.jsx — they share visual style but are NOT extracted.",
+    "Modal title is empty string ('') because TaskDetails renders its own .task-details-header — same convention as AgentDetails.",
+    "There is no way to refresh — task object is captured at modal-open time; if the swarm completes while modal is open, badges will show stale data."
+  ],
+  "patterns": [
+    "Header comment 'Mirrors TaskDetailsModal.js' — JSX rewrite of vanilla.",
+    "Custom header inside body rather than using Modal title — gives more typographic control."
+  ],
+  "conventions": [
+    "Class names: .task-details-* prefix shared with AgentDetails (both use .task-details-meta, .task-details-badges, .task-details-prompt — visual consistency)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/modals/Modal.jsx",
+      "src/ui/utils/constants.js",
+      "src/ui/utils/format.js"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/components/modals/AgentDetails.jsx"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "task-details",
+    "swarm-monitoring"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "task",
+    "metadata",
+    "readonly"
+  ]
+}

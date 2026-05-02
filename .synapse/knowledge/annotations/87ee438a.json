@@ -1,0 +1,48 @@
+{
+  "file": ".claude/hooks/enforce-dashboard-isolation-bash.sh",
+  "content_hash": "1a80c0a6",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Bash that blocks bash commands whose `dashboards/{id}/...` path references differ from the agent's assigned dashboard. Companion to enforce-dashboard-isolation.sh which handles Edit/Write — this catches mkdir/cp/rm/echo/cat redirects that reference dashboards. Resolves assigned dashboard from SYNAPSE_DASHBOARD_ID env var (set by Electron) or `DASHBOARD ID:` directive between ===DASHBOARD_BINDING_START/END=== markers in the transcript. Greps the command for `dashboards/{id}` patterns and blocks if any referenced ID differs from the assignment. Fail-open: missing jq, no input, or no assignment all allow.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Fail-open by design — raw CLI usage without SYNAPSE_DASHBOARD_ID and without binding markers is unblocked. Only enforces when an assignment is discoverable.",
+    "Validates dashboard ID shape (^(ide|[a-f0-9]{6}|dashboardN)$) before trusting it — prevents transcripts containing quoted text from injecting fake assignments",
+    "Pattern match `dashboards/[a-zA-Z0-9_]+` — won't catch dashboards/Some-Hyphenated-ID (no hyphens in regex)",
+    "Multiple dashboard refs in one command must ALL match the assignment — first mismatch blocks"
+  ],
+  "patterns": [
+    "PreToolUse Bash matcher with stdin tool_input.command",
+    "JSON output: {decision: allow|block, reason: ...}",
+    "Defense in depth: paired with enforce-dashboard-isolation.sh (Edit|Write) for bash-level coverage"
+  ],
+  "conventions": [
+    "allow()/block() helper functions for consistent JSON output",
+    "set -o pipefail for safe error propagation"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq (optional — fail-open if missing)"
+    ],
+    "depended_by": [
+      ".claude/settings.json — wires this on PreToolUse Bash"
+    ],
+    "related": [
+      ".claude/hooks/enforce-dashboard-isolation.sh",
+      ".claude/hooks/enforce-tracker-root-writes-bash.sh"
+    ]
+  },
+  "domains": [
+    "dashboard-isolation",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "validation",
+    "PreToolUse",
+    "Bash-matcher",
+    "dashboard-isolation"
+  ]
+}

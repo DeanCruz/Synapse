@@ -1,0 +1,48 @@
+{
+  "file": "launch.sh",
+  "content_hash": "6bf89e02",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Minimal POSIX launcher script intended to be double-clicked or executed from the Synapse repo root. Changes to its own directory, runs `npm install` if `node_modules/` is missing, then runs `npm run dev` (Vite watch + Electron concurrent). Used as the simplest possible 'just open Synapse' affordance; comments tell first-time macOS users to right-click → Open if Gatekeeper blocks the file.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Calls `npm run dev` (NOT `npm start`) — so users who launch via this script get the dev-mode Vite server with hot reload, NOT the production-built UI. May surprise users expecting `npm start` behavior.",
+    "Doesn't source the user's shell profile — assumes `npm` and `node` are already on PATH, which fails for users whose Node is installed via nvm or Homebrew without a global shim.",
+    "No port-busy check — running this while Synapse is already up will spawn duplicate processes (compare to start.sh which checks port 3456).",
+    "First-time `npm install` runs in the foreground without progress; the user only sees a single 'installing dependencies...' line for what may take minutes.",
+    "Not chmod +x by default in the file system check — it's `-rw-r--r--` per the ls listing, so it must be invoked as `bash launch.sh` rather than `./launch.sh` until the user fixes permissions."
+  ],
+  "patterns": [
+    "Launch sequence pattern: `cd $(dirname $0)` → ensure deps → exec dev/start command.",
+    "Lazy install pattern: only run `npm install` when `node_modules/` is missing — keeps subsequent launches fast."
+  ],
+  "conventions": [
+    "Shebang `#!/bin/bash`.",
+    "Comments explain UX (right-click → Open) for non-developer users.",
+    "Quoted `\"$(dirname \"$0\")\"` to handle paths with spaces."
+  ],
+  "relationships": {
+    "depends_on": [
+      "package.json"
+    ],
+    "depended_by": [],
+    "related": [
+      "start.sh",
+      "stop.sh",
+      "launch_synapse.command",
+      "Start Synapse.command"
+    ]
+  },
+  "domains": [
+    "launcher-script",
+    "developer-tooling"
+  ],
+  "tags": [
+    "shell",
+    "bash",
+    "launcher",
+    "macos",
+    "npm"
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "file": "_commands/project/help.md",
+  "content_hash": "f00ee91d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !help slash command — outputs a categorized practical guide to Synapse usage. Groups commands into Context & Discovery, Parallel Execution, Auditing & Analysis, Monitoring, and Project Management sections with one-line descriptions. Then provides Tips for Best Results (start with context, parallelize when sensible, be specific in prompts, keep CLAUDE.md current, run !env_check periodically, use !toc_update after structural changes, bootstrap PKI with !learn) and Workflow Patterns (small/large feature, very-large with master_plan_track, first-time-on-project, start-of-session, code-review workflow, blast-radius analysis, periodic maintenance). Master adapts output to actual project state — omits sections for unavailable commands.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Adapt the guide to actual project state — if certain commands don't exist (e.g., no PKI yet), omit those sections rather than reference unavailable features.",
+    "This is a STATIC reference doc — the content of the guide is defined inline in this .md file, not generated dynamically (unlike !commands).",
+    "Workflow Patterns section is high-value — it lists exact command sequences for common scenarios."
+  ],
+  "patterns": [
+    "Category-grouped command tables.",
+    "Tip+pattern format: numbered tips → workflow recipes."
+  ],
+  "conventions": [
+    "Read-only — never modifies files.",
+    "Serial — instant output.",
+    "Markdown headings + tables structure."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "_commands/project/commands.md",
+      "_commands/Synapse/guide.md"
+    ]
+  },
+  "domains": [
+    "project-context",
+    "command-discovery"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "guide",
+    "reference"
+  ]
+}

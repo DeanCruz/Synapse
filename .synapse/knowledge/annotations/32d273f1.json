@@ -1,0 +1,54 @@
+{
+  "file": ".claude/hooks/validate-initialization-schema.sh",
+  "content_hash": "3046ad03",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Write — the most comprehensive schema enforcer. Validates every structural invariant of dashboards/{id}/initialization.json before the write lands: valid JSON, default-template allowance, task.{name,type,created,total_tasks,total_waves} required & well-typed, name kebab-case, type ∈ {Waves,Chains}, agents[] non-empty (catches the 'wave headers with no cards' bug), waves[] non-empty, total_waves==waves.length, total_tasks==agents.length, sum(waves[].total)==agents.length, agent.id format ^[0-9]+\\.[0-9]+r?$, no duplicate IDs, every agent.wave matches a waves[].id, every depends_on entry references an existing agent.id, and (Chains mode) every agent appears in exactly one chain's tasks[]. Bypass: SYNAPSE_SKIP_SCHEMA=1 env var. Block reason aggregates all errors with newlines.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Only validates Write — Edit uses partial patches that are harder to validate (caught by other hooks)",
+    "ide dashboard and Archive/ paths are skipped — those have non-swarm shapes",
+    "SYNAPSE_SKIP_SCHEMA=1 is the documented escape hatch — use sparingly for scratch/repair work",
+    "Block reason is JSON-escaped via `jq -R -s` so newlines render properly in the agent's view",
+    "Default-template detection (task=null, agents=[], waves=[]) lets ensureDashboard() write the empty template",
+    "agent.id format `^[0-9]+\\.[0-9]+r?$` — repair tasks have trailing `r`",
+    "Block message points at agent/master/initialization_blueprint.md for the canonical schema"
+  ],
+  "patterns": [
+    "Aggregate-then-fail validation: collect all errors into ERRORS string, single block at end with all violations",
+    "jq cross-field assertions (sum(waves[].total) == agents.length, every wave referenced exists, etc.)",
+    "Default-template fast-path skip"
+  ],
+  "conventions": [
+    "Error format: bullet point per violation prefixed with `\\n- `",
+    "Helper allow()/block() with JSON output",
+    "Block reason JSON-escaped to preserve formatting"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      "agent/master/initialization_blueprint.md",
+      ".claude/hooks/validate-initialization-immutable.sh",
+      ".claude/hooks/validate-plan-required.sh"
+    ]
+  },
+  "domains": [
+    "initialization-schema-validation",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PreToolUse",
+    "Write-matcher",
+    "schema-validation",
+    "initialization-json",
+    "jq-heavy"
+  ]
+}

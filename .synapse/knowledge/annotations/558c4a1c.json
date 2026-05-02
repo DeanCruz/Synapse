@@ -1,0 +1,57 @@
+{
+  "file": "_commands/project/prompt_audit.md",
+  "content_hash": "66a8a4f8",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !prompt_audit slash command — POST-MORTEM tool analyzing the last completed swarm's worker performance and prompt quality. Resolves dashboard (argument or assigned), reads initialization.json + all progress/ files + logs.json, then computes per-task metrics (template_version, duration, stage progression count, deviation count+severity, log density, status, milestone count, prompt_size), analyzes upstream-result completeness (GOOD if logs reference upstream task IDs, GAP if has deps but no evidence of reading upstream progress files, N/A if no deps), checks for convention filtering evidence in worker prompts, then assigns letter grades A-F per task based on completion+deviations+stage count+log density+upstream score. Outputs scorecard table + summary statistics + 2-5 recommendations triggered by thresholds (failure>20%, upstream gaps, log density<1/min, deviations>30%, no template_version coverage, CRITICAL deviations, prompt size >10K or <1K tokens). Read-only.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "POST-MORTEM only — runs after swarm completes; reports 'No swarm data to audit' if initialization.json.task is null.",
+    "Read all progress files in PARALLEL — they have no dependencies on each other.",
+    "Handle MISSING data gracefully — not all fields may be present in every progress file. Use null/N/A rather than failing.",
+    "Be CONSTRUCTIVE not punitive — frame recommendations as actionable improvements, not blame for past mistakes.",
+    "Convention filtering presence is INFERRED from worker prompt quality (it's an in-memory structure during planning, not a persisted file).",
+    "Letter grades are deterministic from collected metrics — A=clean, B=minor issues, C=2+ deviations or sparse logging, D=CRITICAL deviation or upstream GAP, F=failed.",
+    "Upstream score 'GAP' fires when task has dependencies but logs show no evidence of reading upstream progress files — surfaces a specific dispatch-prompt failure mode.",
+    "Generate ONLY recommendations that apply (min 2 max 5), prioritized by impact.",
+    "Log density formula: total log entries / duration in minutes. <1/min = low; <0.5/min = sparse."
+  ],
+  "patterns": [
+    "Post-mortem dashboard analysis: read metadata → compute metrics → grade → recommend.",
+    "Threshold-triggered recommendations.",
+    "Cross-reference: progress files ↔ initialization.json by task_id."
+  ],
+  "conventions": [
+    "Read-only.",
+    "Serial execution.",
+    "Dashboard resolution: agent/instructions/dashboard_resolution.md.",
+    "Letter grades A-F."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{tracker_root}/dashboards/{id}/initialization.json",
+      "{tracker_root}/dashboards/{id}/progress/",
+      "{tracker_root}/dashboards/{id}/logs.json",
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/p_track.md",
+      "agent/master/dashboard_protocol.md",
+      "agent/worker/progress_reporting.md"
+    ]
+  },
+  "domains": [
+    "auditing",
+    "swarm-analysis"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "post-mortem",
+    "swarm-quality",
+    "read-only"
+  ]
+}

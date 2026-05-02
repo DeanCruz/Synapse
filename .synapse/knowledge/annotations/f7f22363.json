@@ -1,0 +1,105 @@
+{
+  "file": "src/ui/context/AppContext.jsx",
+  "content_hash": "6ba92a14",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Central global-state store for the entire dashboard. Implements a useReducer-based store split into two contexts — AppContext (state) and DispatchContext (dispatch) — provided together by AppProvider. Owns ~80 reducer cases covering: per-dashboard chat state (claude* slice), per-chat-agent chat state (chatClaude* slice), dashboard list/names/states, IDE workspaces/files/file-trees/search/debug/diagnostics, Git Manager repos/branches/log/diff, live-preview state, modals, view routing, permission requests, queue, and unread counts. Implements the surface-aware slice pattern (SLICE_FIELDS.code vs SLICE_FIELDS.chat) so the same CLAUDE_* action types route to either claudeMessages or chatClaudeMessages based on action.surface. Persists chat tabs, IDE workspaces, git repos, chat-tab messages, and per-tab Claude transcripts to localStorage with debounced writes (500ms via schedulePersist).",
+  "exports": [
+    {
+      "name": "AppProvider",
+      "kind": "component",
+      "signature": "AppProvider({ children }) — wraps in AppContext + DispatchContext"
+    },
+    {
+      "name": "useAppState",
+      "kind": "hook",
+      "signature": "() => state — throws if used outside provider"
+    },
+    {
+      "name": "useDispatch",
+      "kind": "hook",
+      "signature": "() => dispatch — throws if used outside provider"
+    },
+    {
+      "name": "getClaudeSlice",
+      "kind": "function",
+      "signature": "(state, surface: 'code'|'chat') => { messages, isProcessing, status, activeTabId, tabs, ... }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "createContext",
+      "useContext",
+      "useReducer",
+      "useCallback",
+      "useEffect",
+      "useRef"
+    ]
+  },
+  "gotchas": [
+    "Two contexts (AppContext + DispatchContext) — always import both individually via useAppState() and useDispatch(); do NOT useContext(AppContext) directly.",
+    "AppContext re-renders on EVERY state change — every consumer re-renders unless wrapped in React.memo. The split into DispatchContext means components that only dispatch (no read) never re-render.",
+    "SLICE_FIELDS.code vs SLICE_FIELDS.chat is the foundation of the dual chat shell — passing wrong action.surface silently writes to the wrong slice. Backward-compat: missing action.surface defaults to 'code' via fieldsFor().",
+    "appReducer wraps appReducerCore and triggers schedulePersist for CLAUDE_PERSIST_ACTIONS only — appending a new persist-worthy action type requires adding it to CLAUDE_PERSIST_ACTIONS set.",
+    "schedulePersist uses a single module-level persistTimer — concurrent dispatches collapse into one write (last-write-wins), which is desirable for streaming deltas but means you can lose intermediate states on quick crash.",
+    "trimMessages caps each tab at MAX_CHAT_MESSAGES (200) and inserts a 'X older messages trimmed' system notice — long-running chats will show this notice once cap is hit.",
+    "loadSavedMessages does a one-time migration from legacy 'synapse-claude-messages' key to dashboard1 default tab — only runs when (!tabId || tabId==='default') && (!dashboardId || dashboardId==='dashboard1').",
+    "CLAUDE_WELCOME_MSG is reused as fallback in many places — comparing message.id === 'welcome' is a reliable way to detect 'no real messages yet'.",
+    "SWITCH_DASHBOARD stashes prev dashboard's chat state, restores target's — uses cachedProgress/cachedLogs from allDashboardProgress/allDashboardLogs to avoid 'pending' flicker during async re-fetch.",
+    "chatTabContextId(tab) returns 'chat-agent-' + tab.agentHex when agentHex exists, otherwise tab.id — chat-agent backfill effect (in AppProvider) allocates agentHex for legacy tabs lacking one.",
+    "REMOVE_DASHBOARD has full cleanup logic — purges localStorage keys, stash, tabs, names, unread; if the removed dashboard was active, auto-switches to dashboardList[0] with full state restore.",
+    "IDE_OPEN_FILE de-dupes by path: if same path is already open it just switches active file; new files get id of Date.now() + random — IDs are NOT deterministic.",
+    "GIT_NAVIGATE_TO_FILE doubles as 'open repo if not open' AND 'switch view to git AND highlight file' — single action, multi-effect.",
+    "previewEditHistory is capped at 100 entries — silently drops oldest via slice(-100).",
+    "Persistence of chatClaudeMessages happens both inside reducer cases (synchronous localStorage.setItem on tab switches) AND via debounced schedulePersist for streaming — two paths."
+  ],
+  "patterns": [
+    "Surface-aware slice routing: action.surface ('code'|'chat') + fieldsFor(surface) + SLICE_FIELDS lookup table — adopt this pattern when adding any chat field.",
+    "Context split for performance: AppContext (state) + DispatchContext (dispatch) — components needing only dispatch import only useDispatch.",
+    "Action shape: { type: 'NAMESPACE_ACTION', ...payload } — payload keys vary per action; switch cases destructure them inline.",
+    "Persistence helpers (loadSaved*, save*) live in the file with try/catch around localStorage to handle quota/private-browsing — never let a localStorage failure crash the app.",
+    "Tab stash key pattern: dashboardId + ':' + tabId — used as both localStorage key suffix and in-memory tabStash key.",
+    "Initial state bootstrap reads localStorage synchronously at module-load time (savedWorkspaces, savedGitRepos, savedChatTabs, etc.) — first-render shows persisted state.",
+    "useRef(false) + useEffect for one-shot migrations (backfilledRef pattern) — ensures async migration runs exactly once across re-renders."
+  ],
+  "conventions": [
+    "Action types are SCREAMING_SNAKE_CASE namespaced: CLAUDE_*, IDE_*, GIT_*, DEBUG_*, DIAGNOSTICS_*, PREVIEW_*, CHAT_TAB_*.",
+    "Reducer returns new state via spread; every case immutably copies maps with { ...state.foo, [key]: val }.",
+    "localStorage keys all prefixed with 'synapse-' to avoid collisions with the host's other localStorage usage."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/App.jsx",
+      "src/ui/main.jsx",
+      "src/ui/hooks/useDashboardData.js",
+      "src/ui/components/ClaudeView.jsx",
+      "src/ui/components/chat/ChatInstanceView.jsx",
+      "src/ui/components/Sidebar.jsx",
+      "src/ui/components/Header.jsx",
+      "src/ui/components/HomeView.jsx",
+      "src/ui/components/ide/IDEView.jsx",
+      "src/ui/components/git/GitManagerView.jsx",
+      "src/ui/components/preview/PreviewView.jsx"
+    ],
+    "related": [
+      "electron/preload.js"
+    ]
+  },
+  "domains": [
+    "global-state",
+    "react-dashboard",
+    "chat-state",
+    "ide-state",
+    "git-state"
+  ],
+  "tags": [
+    "react",
+    "context",
+    "reducer",
+    "useReducer",
+    "global-state",
+    "localstorage-persistence",
+    "surface-routing"
+  ]
+}

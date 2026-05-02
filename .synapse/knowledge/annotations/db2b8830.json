@@ -1,0 +1,70 @@
+{
+  "file": "electron/services/PreviewService.js",
+  "content_hash": "2beca093",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Builds the reverse map for the Live Preview tab: scans a project's JSX/TSX/HTML files for `data-synapse-label=\"...\"` attributes and produces `{ [label]: { file, line, text } }`. Used by the Preview overlay to resolve a clicked element to its source file location and current text. Caches the map in-memory keyed by projectPath and invalidates when any tracked file's mtime changes or when new files appear.",
+  "exports": [
+    {
+      "name": "init",
+      "kind": "function",
+      "signature": "(broadcast) => void"
+    },
+    {
+      "name": "scanLabels",
+      "kind": "function",
+      "signature": "(projectPath) => labelMap|{error}"
+    },
+    {
+      "name": "getLabelMap",
+      "kind": "function",
+      "signature": "(projectPath) => labelMap|{error}"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Cache is keyed by projectPath only — switching projects rebuilds the cache, but identical paths from different machines (unlikely) would share state.",
+    "Staleness check stat()s every previously-scanned file plus walks the project tree once per call to count files. On large projects (~10k files) getLabelMap() can be hundreds of milliseconds.",
+    "If a file is moved/renamed, the next getLabelMap() detects it via the file-count delta and triggers a full rescan — single-file deletes are caught by the stat-fail branch.",
+    "Label values are unwrapped through normalizeLabel: removes wrapping `{}`, `()`, `\"\"`, `''`, `` `` `` so JSX-escape-style attributes (data-synapse-label={\"abc\"}) are normalized to bare 'abc'. Mismatched wrappers produce silently wrong output.",
+    "The labelAttrRegex uses a 6-alternative capture group for value forms; ordering matters because regex alternation is left-priority. Any label containing the matching quote character will fail to capture (the regex is non-escaping)."
+  ],
+  "patterns": [
+    "mtime-based cache invalidation: `cachedMtimes[file] !== fs.statSync(file).mtimeMs` triggers full rescan.",
+    "extractTextContent strips JSX expressions and child tags then collapses whitespace — surfaces only the literal text, matching what the user sees in the preview overlay.",
+    "Path-relative label entries (`path.relative(projectPath, filePath)`) so the renderer-side overlay can treat them as portable strings."
+  ],
+  "conventions": [
+    "Same SKIP_DIRS list as InstrumentService (node_modules, .next, dist, build, .git) — must stay in sync with InstrumentService and PreviewTextWriter.",
+    "Same DEFAULT_EXTENSIONS list (.jsx/.tsx/.html/.htm) — likewise.",
+    "Returns errors as `{error: 'message'}` for projectPath validation; missing-file conditions inside the scan are silently skipped."
+  ],
+  "relationships": {
+    "depends_on": [
+      "node:fs",
+      "node:path"
+    ],
+    "depended_by": [
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "electron/services/InstrumentService.js",
+      "electron/services/PreviewTextWriter.js",
+      "src/ui/components/preview/PreviewView.jsx",
+      "src/ui/preview/inject-overlay.js"
+    ]
+  },
+  "domains": [
+    "live-preview-system",
+    "label-source-mapping"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "live-preview",
+    "data-synapse-label",
+    "label-map",
+    "mtime-cache"
+  ]
+}

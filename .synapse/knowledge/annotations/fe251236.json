@@ -1,0 +1,50 @@
+{
+  "file": "src/ui/components/chat/ChatMakePage.jsx",
+  "content_hash": "774b7946",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Placeholder 'Make' sub-view inside the Chat tab. Renders a centered empty-state SVG plus a 'Coming soon' message. No state, no IPC, no event handlers — purely a visual stub mounted when chatActiveView === 'make'. Reserved for a future feature surface accessed via the sidebar's Make button.",
+  "exports": [
+    {
+      "name": "ChatMakePage",
+      "kind": "component",
+      "signature": "() => JSX (default export)"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "React"
+    ]
+  },
+  "gotchas": [
+    "Empty stub — do not assume any 'Make' functionality exists. Code that branches on chatActiveView === 'make' currently just gets this placeholder.",
+    "Class names ('chat-make-page', 'chat-make-empty') are styled centrally in src/ui/styles — duplicating them in another empty-state will inherit the Make styling, which may not be desired."
+  ],
+  "patterns": [
+    "Empty-state stub pattern: render a low-opacity SVG icon plus heading + subtext, used uniformly across Synapse for placeholder views."
+  ],
+  "conventions": [
+    "Inline SVG (no asset file), strokeWidth 1.5, opacity 0.3 — matches the chat dashboard empty-state styling."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/App.jsx (rendered when chatActiveView === 'make')"
+    ],
+    "related": [
+      "src/ui/components/chat/ChatSidebar.jsx (Make button dispatches SET_CHAT_VIEW with view='make')"
+    ]
+  },
+  "domains": [
+    "chat-system",
+    "chat-make",
+    "placeholder"
+  ],
+  "tags": [
+    "react",
+    "chat",
+    "component",
+    "stub",
+    "empty-state"
+  ]
+}

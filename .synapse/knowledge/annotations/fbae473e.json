@@ -1,0 +1,73 @@
+{
+  "file": "src/ui/components/modals/SettingsModal.jsx",
+  "content_hash": "02b3429e",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Application-wide settings: theme picker (6 named themes + Custom), custom-color picker (bg/surface/text/accent/completed/error), App Configuration numeric inputs (dashboardCount, init/progress/reconcile poll timings), and Updates section (current version, latest release, last-checked timestamp, Check for Updates / Restart and Install buttons). Theme selection toggles document.documentElement[data-theme] (mapped to CSS variable sets) and re-syncs JS color constants via initStatusColorsFromCSS so STATUS_COLORS reflects the new theme. Custom theme writes ~30 CSS variables directly via root.style.setProperty (covering terminal, editor, semantic, status colors), persists to localStorage, and tears down all of them via clearCustomTheme when switching back to a named theme. Subscribes to update-status IPC events for live download progress.",
+  "exports": [
+    {
+      "name": "SettingsModal",
+      "kind": "component",
+      "signature": "{ onClose, currentTheme, onThemeChange }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useEffect"
+    ],
+    "src/ui/components/modals/Modal.jsx": [
+      "default"
+    ],
+    "src/ui/utils/constants.js": [
+      "colorWithAlpha",
+      "initStatusColorsFromCSS"
+    ]
+  },
+  "gotchas": [
+    "applyCustomTheme sets ~30 CSS custom properties including derived alpha variants (--color-accent-bg = accent at 0.1 alpha, etc.) — adding a NEW custom property MUST be added to BOTH applyCustomTheme AND clearCustomTheme's `props` array, or stale values will leak when switching back to named themes.",
+    "data-theme='custom' is set BEFORE applyCustomTheme — order matters because clearCustomTheme reads documentElement state. Switching from named theme to custom calls clearCustomTheme is NOT invoked (intentional, since named theme CSS vars don't conflict with inline styles set by applyCustomTheme).",
+    "Switching FROM custom TO named (selectTheme) calls clearCustomTheme to remove inline styles — without this, named theme's CSS variables would be shadowed by the inline overrides.",
+    "initStatusColorsFromCSS is called via requestAnimationFrame in selectTheme but synchronously in selectCustomTheme/handleColorChange — small inconsistency; both work because CSS variables apply synchronously, but the rAF wrapping was likely added to wait for [data-theme] CSS rule to apply.",
+    "MODEL/Custom colors are persisted to localStorage key 'synapse-custom-colors' — direct localStorage usage; not in dashboardProjects helpers.",
+    "App Configuration changes for poll intervals are noted as 'effective on next app restart' — runtime change does not re-init watchers.",
+    "Number input handler does parseInt with isNaN guard but uses base 10; accepts integer-only — no floats supported even if min/max would allow them.",
+    "Updates section is only rendered if api truthy (Electron-only) — same gate applies to App Configuration section."
+  ],
+  "patterns": [
+    "Theme system: 6 named themes via [data-theme=name] CSS rules + 1 custom theme via inline style props on documentElement.",
+    "Theme constants (THEMES, DEFAULT_CUSTOM_COLORS, COLOR_FIELDS, APP_FIELDS) declared at module top — all data-driven so the grid auto-renders.",
+    "Update state subscription via api.on('update-status', ...) — live progress percentage during downloads."
+  ],
+  "conventions": [
+    "Header comment 'Mirrors SettingsModal.js' — JSX rewrite of vanilla version.",
+    "settings-* CSS class prefix throughout."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/modals/Modal.jsx",
+      "src/ui/utils/constants.js"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/styles/index.css",
+      "electron/services/AutoUpdateService.js",
+      "electron/settings.js"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "theme-system",
+    "app-settings",
+    "auto-update"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "settings",
+    "theme",
+    "css-variables",
+    "localstorage",
+    "update"
+  ]
+}

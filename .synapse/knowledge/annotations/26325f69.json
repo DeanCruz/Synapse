@@ -1,0 +1,43 @@
+{
+  "file": "documentation/data-architecture/pki-schemas.md",
+  "content_hash": "8da7ee47",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Authoritative schema reference for the Project Knowledge Index (PKI) at {project_root}/.synapse/knowledge/. Defines manifest.json (master routing index with file/domain/tag/concept indexes), annotations/{hash}.json (deep per-file knowledge: purpose, exports, gotchas, patterns, relationships), domains.json (taxonomy), patterns.json (cross-cutting patterns), and insights/{date}_{slug}.json (post-swarm lessons learned). Establishes cross-schema consistency rules and the content-hash-based staleness model.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Annotation filename is the first 8 hex chars of SHA-256(relative_file_path) -- must match manifest hash field exactly",
+    "manifest content_hash and annotation content_hash must match for non-stale entries; staleness hook flips stale flag when they diverge",
+    "domain_index and tag_index in the manifest are bidirectional inverses of per-file domains/tags -- writes must keep them consistent",
+    "Insights index in manifest is FIFO-capped at 50 entries"
+  ],
+  "patterns": [
+    "Hash-keyed annotation files with central manifest routing",
+    "Content-hash-based staleness detection (avoids timestamp false positives)",
+    "Bidirectional indexing (domain_index + tag_index reverse maps)"
+  ],
+  "conventions": [
+    "Domain and pattern keys are lowercase-hyphenated identifiers (/^[a-z][a-z0-9-]*$/)",
+    "queries/ subdirectory is gitignored cache, regenerable from manifest+annotations",
+    "Schema version field on every PKI file for forward-compatible migration"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "data-architecture",
+    "pki",
+    "schema"
+  ],
+  "tags": [
+    "pki",
+    "manifest",
+    "annotations",
+    "domains",
+    "patterns",
+    "insights"
+  ]
+}

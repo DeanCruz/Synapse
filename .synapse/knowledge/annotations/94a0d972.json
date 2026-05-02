@@ -1,0 +1,78 @@
+{
+  "file": "src/ui/components/ide/DebugConsolePanel.jsx",
+  "content_hash": "8d1a10e7",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "REPL-style debug console mounted in BottomPanel. Subscribes via window.electronAPI.on('debug-output', ...) and 'debug-stopped' for live stdout/stderr/log lines, and exposes a single-line input that becomes enabled only when state.debugSession.status === 'paused'. Pressing Enter calls window.electronAPI.debugEvaluate(expr, callFrameId) where callFrameId comes from debugCallStack[0].id (top frame from AppContext). Maintains a bounded output buffer (MAX_OUTPUT_ENTRIES = 1000, FIFO trim) with monotonic entryIdCounter. Implements 'sticky bottom' auto-scroll: autoScrollRef tracks whether user is within 30px of bottom; manual scroll-up disables auto-scroll until user returns. Strips ANSI escape sequences from output text via stripAnsi (regex /\\x1b\\[[0-9;]*[a-zA-Z]|\\x1b\\].*?\\x07/g). Up/Down arrows traverse a deduplicated commandHistory (most recent at end). Each entry is rendered with timestamp + type label ('out', 'err', '>>>', '<<<', 'sys') + colored CSS class.",
+  "exports": [
+    {
+      "name": "DebugConsolePanel",
+      "kind": "component",
+      "signature": "()"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useEffect",
+      "useRef",
+      "useCallback",
+      "useMemo"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState"
+    ],
+    "src/ui/styles/ide-debug.css": [
+      "default-side-effect"
+    ]
+  },
+  "gotchas": [
+    "MAX_OUTPUT_ENTRIES = 1000 — older entries silently dropped via slice(combined.length - MAX). Long-running processes will lose history.",
+    "entryIdCounter is module-level — it persists across remounts and across Hot Module Reload; that's intentional so React keys never collide, but it grows unboundedly.",
+    "Input is disabled unless debugSession.status === 'paused' — REPL evaluation against a running V8 inspector requires a paused execution context (Runtime.evaluate without callFrameId is allowed but the spec wires it to the top frame).",
+    "callFrameId is taken from debugCallStack[0]?.id — if the call stack is empty even when paused, eval still proceeds with `undefined` callFrameId (global scope).",
+    "Auto-scroll threshold is hardcoded 30px — this is the 'within bottom' tolerance; changing it changes how aggressive auto-scroll feels.",
+    "ANSI regex includes both CSI sequences (\\x1b\\[...) AND OSC sequences (\\x1b\\]...\\x07) — incomplete sequences may slip through.",
+    "stripAnsi regex has // eslint-disable-next-line no-control-regex because control chars are intentional."
+  ],
+  "patterns": [
+    "Push-event subscription in useEffect with cleanup function returned from window.electronAPI.on() — the API returns its own unsubscribe function.",
+    "Sticky-bottom auto-scroll uses ref (autoScrollRef) instead of state — avoids re-render cascades during rapid output.",
+    "Command history dedup: filter out duplicates of new expr first, then append → most recent at index length-1.",
+    "Type-driven CSS class via TYPE_CLASS_MAP lookup (stdout, stderr, log, eval-input/result/error, system)."
+  ],
+  "conventions": [
+    "All entry types defined as TYPE_CLASS_MAP / TYPE_LABELS twin maps for symmetry.",
+    "OutputLine is a memoizable inner component (not memoized currently — opportunity for perf if buffer grows).",
+    "Section comments use `// ── Title ──` style."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (electronAPI.on, debugEvaluate)"
+    ],
+    "depended_by": [
+      "src/ui/components/BottomPanel.jsx (mounted as 'Debug Console' tab)"
+    ],
+    "related": [
+      "src/ui/components/ide/DebugPanels.jsx",
+      "src/ui/components/ide/DebugToolbar.jsx",
+      "electron/services/DebugService.js"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "node-debugger",
+    "debug-console",
+    "repl"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "debug",
+    "repl",
+    "ansi",
+    "node-debugger"
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "file": "agent/_commands/p_track_completion.md",
+  "content_hash": "5ffe1786",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Phase 3 of !p_track — Completion: verification, reporting, and metrics. Documents Step 17's seven sub-steps that the master executes after all tasks reach a terminal state: 17A (update master task file overall_status), 17B (final log entry), 17C (post-swarm verification with conditional dispatch decision matrix and cross-repo checks plus post-verification fix procedure that REPAIR-DISPATCHES rather than fixes directly), 17D (compute swarm metrics — elapsed_seconds, serial_estimate_seconds, parallel_efficiency, duration_distribution, failure_rate, max_concurrent, deviation_count and write metrics.json), 17E (compile and deliver the comprehensive REQUIRED final report with sections for Summary/Files Changed/Deviations/Warnings/Failures/Verification/Potential Improvements/Future Steps/Performance/Artifacts), 17F (save history summary), 17G (automatic post-swarm knowledge extraction — harvest worker annotations into PKI, extract swarm-level insights into {project_root}/.synapse/knowledge/insights/{date}_{slug}.json, merge into manifest, update insights_index, log). Also defines the post-swarm transition checklist (5 conditions before exiting master mode).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Master does NOT update initialization.json on completion — dashboard derives overall_status and completed_at from progress files. The elapsed timer freezes when all workers have completed_at set.",
+    "The no-code constraint STILL APPLIES during verification and post-verification — master must dispatch repair tasks for verification issues, not fix them directly.",
+    "17E final report is NON-NEGOTIABLE — the master MUST compile and deliver it after every swarm. Required sections (Summary, Files Changed, Potential Improvements, Future Steps, Performance) appear ALWAYS; Deviations/Warnings/Failures/Verification are CONDITIONAL on triggers.",
+    "17G knowledge extraction runs AUTOMATICALLY after every swarm — never skipped. It is the mechanism by which the system gets smarter over time.",
+    "17G is best-effort — failures (directory creation, file write, manifest parse) are logged and continue. Knowledge extraction must NEVER block swarm completion or skip the final report.",
+    "If no PKI manifest exists, worker annotations are captured in the insights file ONLY — log a hint to run !learn to bootstrap the full PKI.",
+    "insights_index in manifest is FIFO-capped at 50 entries (drop oldest).",
+    "Annotation-merge dedupe is by EXACT STRING MATCH — minor wording differences will both be kept.",
+    "Path hash for new annotation files: `echo -n \"{relative_path}\" | shasum -a 256 | cut -c1-8`.",
+    "metrics.json is written ONCE post-completion — not watched by the server for live updates, post-hoc analysis artifact only.",
+    "Post-Swarm Transition Checklist requires all 5 conditions before exiting master mode — 'almost done' / 'just one task left' is still master mode and still requires a worker dispatch.",
+    "Cross-repo verification adds three extra checks: type/interface consistency across consuming repos, import-path validity after file moves, contract alignment for backend+frontend pairs."
+  ],
+  "patterns": [
+    "Verification-needed decision table: Modified existing across multiple files = dispatch verification; purely additive = optional; deviations reported = strongly recommended; all clean = may skip.",
+    "Verification agent prompt template includes Files Changed list, what-to-verify checklist (tests, type-check, build, integration), and structured return (TESTS/TYPES/BUILD/ISSUES).",
+    "Metric computation: elapsed = max(completed_at) - min(started_at); serial_estimate = sum of all task durations; parallel_efficiency = serial / elapsed (>1.0 = speedup); max_concurrent = peak overlap of started_at/completed_at windows.",
+    "Final report quality bar: a developer not present during the swarm should fully understand (1) what was done, (2) what went sideways, (3) current project state, (4) next steps.",
+    "Knowledge-extraction insight categories: dependency_insights, complexity_surprises, failure_patterns, effective_patterns, architecture_notes.",
+    "Post-Swarm Transition Checklist (5 conditions): all tasks terminal + final report delivered + metrics recorded + dashboard archived (if requested) + user-acknowledgment."
+  ],
+  "conventions": [
+    "Section headings use Step-letter sub-numbering: 17A, 17B, 17C, 17D, 17E, 17F, 17G.",
+    "REQUIRED vs CONDITIONAL annotations on every report section — explicit about when sections appear/omit.",
+    "JSON examples are inline with placeholder syntax `{captured timestamp}`, `{ISO 8601}`.",
+    "Tables for verification decision matrix, metric computation, and insight categories."
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/_commands/p_track_planning.md (Phase 1)",
+      "agent/_commands/p_track_execution.md (Phase 2)",
+      "_commands/Synapse/p_track.md (parent command)"
+    ],
+    "depended_by": [
+      ".claude/skills/p-track",
+      ".claude/skills/p-track-resume"
+    ],
+    "related": [
+      "agent/master/dashboard_writes.md",
+      "agent/master/role.md",
+      "documentation/project-integration/pki-overview.md",
+      "{project_root}/.synapse/knowledge/manifest.json",
+      "{project_root}/.synapse/knowledge/insights/"
+    ]
+  },
+  "domains": [
+    "master-orchestration",
+    "swarm-completion",
+    "pki-knowledge-extraction"
+  ],
+  "tags": [
+    "markdown",
+    "agent-doc",
+    "protocol",
+    "p-track",
+    "phase-3",
+    "completion",
+    "metrics",
+    "final-report",
+    "verification",
+    "pki",
+    "knowledge-extraction",
+    "non-negotiable"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "file": "documentation/data-architecture/logs-json.md",
+  "content_hash": "3a1cd622",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Schema reference for logs.json -- the master-owned, append-only event log per dashboard. Defines log entry structure (at, level, msg, optional task_id), log levels (info/warn/error/deviation), and the read-modify-write append pattern the master uses. Drives the dashboard's log panel.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Append happens via read-modify-write of the entire file -- not true append-mode I/O",
+    "Workers do NOT write to logs.json; their narrative lives in their progress file's logs[] array"
+  ],
+  "patterns": [
+    "Read-modify-write with full-file overwrite for append semantics"
+  ],
+  "conventions": [
+    "Log levels mirror worker progress log levels for consistent UI rendering"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "data-architecture",
+    "schema"
+  ],
+  "tags": [
+    "logs",
+    "event-log",
+    "schema"
+  ]
+}

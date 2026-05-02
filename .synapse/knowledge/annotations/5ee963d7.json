@@ -1,0 +1,75 @@
+{
+  "file": "src/ui/components/git/RemotePanel.jsx",
+  "content_hash": "1fc6f10a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Compact remote-operations strip mounted near the bottom of GitManagerView. Shows the current branch, its upstream tracking ref, ahead/behind counts (api.gitAheadBehind), a 'Synced' or 'No upstream' badge, and a remote selector dropdown (only when more than one remote exists). Provides three primary action buttons — Fetch, Pull, Push — each with its own loading spinner and result toast. Encapsulates Push safety logic: warns before pushing to PROTECTED_BRANCHES (['main','master']), auto-prompts to set upstream when none exists ('Push & Set Upstream'), and handles non-fast-forward rejection with a hint to pull first or force push. Force push is gated behind a two-step danger dialog (forceConfirmStep 1→2) but the IPC handler currently surfaces 'Force push is not yet supported' — UI is wired ahead of backend support.",
+  "exports": [
+    {
+      "name": "RemotePanel",
+      "kind": "component",
+      "signature": "{ repoPath: string }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useCallback",
+      "useEffect",
+      "useRef"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/styles/git-manager.css": []
+  },
+  "gotchas": [
+    "PROTECTED_BRANCHES is hard-coded to ['main','master'] — if the project uses 'develop' or 'trunk' as a protected branch, push will not warn.",
+    "Force push UI exists but the IPC handler is unimplemented — clicking Force after the two-step dialog returns 'Force push is not yet supported by the git backend.'",
+    "Push error parsing relies on substring match for 'non-fast-forward', 'rejected', 'no upstream', 'no tracking' — wording from git changes between versions and locales (LANG=C is NOT enforced here).",
+    "Pull merge conflict detection matches 'CONFLICT', 'Merge conflict', 'not possible because you have unmerged files' — same locale risk as push error parsing.",
+    "Auto-set-upstream on push: if aheadBehind.upstream is empty, executePush(true) is called automatically (passes setUpstream=true) — without confirmation. This may surprise users who didn't expect a tracking branch to be created.",
+    "Remote selector defaults to 'origin' if it exists, otherwise the first remote in the list — saved only in local state, not persisted across reloads.",
+    "The Force push button only appears in the result message when the error text contains 'force push' — relying on backend error wording, fragile.",
+    "Confirmation dialogs are rendered inline (NOT via SafetyDialogs.jsx) — same visual style but separate implementation; they auto-dismiss only via the cancel button or backdrop click."
+  ],
+  "patterns": [
+    "Result toast with auto-dismiss after 5s — type 'success'|'error'|'warning' maps to color tokens.",
+    "anyOperationRunning = pushing || pulling || fetching || gitLoading — single boolean disables ALL actions during any in-flight op.",
+    "After every remote op, refreshAfterRemoteOp re-fetches gitStatus + gitLog + gitAheadBehind + gitBranches in parallel.",
+    "Ahead/behind chips render with arrow icons (ArrowUpIcon green for ahead, ArrowDownIcon orange for behind), or a CheckIcon Synced badge."
+  ],
+  "conventions": [
+    "Push button color flips: warning class on protected branches, success class otherwise — visual cue before the user even clicks.",
+    "Inline SVG icons (PushIcon, PullIcon, FetchIcon, ForceIcon, ArrowUpIcon, ArrowDownIcon, CheckIcon, BranchSmallIcon, plus DangerDialogIcon, WarningDialogIcon, SafeDialogIcon for the inline dialogs).",
+    "All IPC results checked for `result.success` before reading `result.data`; errors surface to showResult which formats them by type."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (gitStatus, gitLog, gitBranches, gitPush, gitPull, gitFetch, gitAheadBehind)"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx"
+    ],
+    "related": [
+      "src/ui/components/git/QuickActions.jsx",
+      "src/ui/components/git/SafetyDialogs.jsx"
+    ]
+  },
+  "domains": [
+    "git-manager",
+    "git-safety"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "push",
+    "pull",
+    "fetch",
+    "remote",
+    "force-push"
+  ]
+}

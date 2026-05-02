@@ -1,0 +1,53 @@
+{
+  "file": "src/ui/hooks/useElectronAPI.js",
+  "content_hash": "b19f8cc7",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Tiny convenience accessor for window.electronAPI. Provides a memoized hook so components can read the IPC bridge without sprinkling window.electronAPI direct accesses, plus useIsElectron() for feature-detection branching.",
+  "exports": [
+    {
+      "name": "useElectronAPI",
+      "kind": "hook",
+      "signature": "() => window.electronAPI | null"
+    },
+    {
+      "name": "useIsElectron",
+      "kind": "hook",
+      "signature": "() => boolean"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useMemo"
+    ]
+  },
+  "gotchas": [
+    "Memo deps are []  — value is captured once at first render. If preload.js were re-installed mid-session the hook would not see the new bridge (not a real concern in production, but breaks hot-reload of preload).",
+    "useElectronAPI returns null when the page is not running inside Electron — callers must guard against null."
+  ],
+  "patterns": [
+    "useMemo with empty deps to capture window globals — same pattern useful for any window.X bridge."
+  ],
+  "conventions": [
+    "Hook names are useFooBar (camelCase prefix 'use')."
+  ],
+  "relationships": {
+    "depends_on": [
+      "electron/preload.js (for window.electronAPI)"
+    ],
+    "depended_by": [
+      "various components — light usage; many components access window.electronAPI directly"
+    ],
+    "related": []
+  },
+  "domains": [
+    "ipc-bridge-frontend",
+    "react-dashboard"
+  ],
+  "tags": [
+    "react",
+    "hook",
+    "ipc",
+    "electron-bridge"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "file": "_commands/profiles/customer-success.md",
+  "content_hash": "7b723ade",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Customer Success Lead role: SaaS onboarding, retention, health scoring, churn prevention, and expansion revenue. Biases the worker toward time-to-value acceleration, proactive intervention via health scores, scalable playbooks (vs. one-off heroics), outcome alignment with customer goals, and usage-driven expansion signals. A master assigns this profile for tasks producing onboarding playbooks, health score frameworks, customer-segment-specific email templates, churn prevention strategies, or QBR/check-in scripts. Forces phased onboarding designs (Day 1-7, 8-30, 31-90) with measurable milestones.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Profile rejects 'logged in' as engagement and 'just checking in' templates — workers will refuse generic CS deliverables.",
+    "Demands segmentation by size/use-case/maturity; do not request a 'one-size-fits-all' onboarding flow.",
+    "Insists churn playbooks be grounded in actual churn data — if none exists, the worker will flag the gap rather than invent reasons."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "Onboarding playbook structure: Segment → Success Milestones → Phase 1 (Day 1-7) → Phase 2 (Day 8-30) → Phase 3 (Day 31-90) → Health Check Cadence → Escalation Triggers.",
+    "Health scores presented as weighted metric tables."
+  ],
+  "conventions": [
+    "Tone is 'warm, proactive, data-informed' — strategic partner framing.",
+    "Email templates labeled by trigger event."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/sales.md",
+      "_commands/profiles/product.md",
+      "_commands/profiles/analyst.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "customer-success-role",
+    "retention-and-onboarding"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "customer-success",
+    "retention",
+    "onboarding"
+  ]
+}

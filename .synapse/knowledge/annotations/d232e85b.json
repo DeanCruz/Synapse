@@ -1,0 +1,52 @@
+{
+  "file": ".claude/agents/swarm-worker.md",
+  "content_hash": "a42b7a32",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the swarm-worker subagent role for Claude Code. YAML frontmatter declares the agent name, description (single-task swarm worker), one auto-loaded skill (worker-protocol), and one role-specific hook (PostToolUse on Write -> validate-progress-file.sh). The body documents the dual-path convention (code in {project_root}, progress in {tracker_root}/dashboards/{id}/progress/{task_id}.json), the seven fixed stages (reading_context -> planning -> implementing -> testing -> finalizing -> completed/failed), the 8 mandatory progress writes, and the structured RETURN FORMAT (STATUS / SUMMARY / FILES CHANGED / EXPORTS / DIVERGENT ACTIONS / WARNINGS / ERRORS) the master parses on completion.",
+  "exports": [],
+  "imports_from": {
+    "skills": [
+      "worker-protocol"
+    ],
+    "hooks": [
+      ".claude/hooks/validate-progress-file.sh"
+    ]
+  },
+  "gotchas": [
+    "Workers MUST distinguish {project_root} (code) from {tracker_root} (progress) — confusing them is the most common worker failure mode",
+    "The 8 mandatory writes are the bare minimum — validate-progress-log-detail.sh PostToolUse hook nags on stage-relative log count thresholds",
+    "RETURN FORMAT keys (STATUS:/SUMMARY:/FILES CHANGED:) are parsed by the master via failure-protocol — typos in headers break parsing"
+  ],
+  "patterns": [
+    "Single-skill subagent: only worker-protocol auto-loads; the dispatched prompt provides the rest",
+    "Hook is PostToolUse (after Write), not PreToolUse — validates without blocking"
+  ],
+  "conventions": [
+    "Stage names are lowercase snake-friendly underscored (`reading_context`)",
+    "Status values: `in_progress` | `completed` | `failed` (no other values)"
+  ],
+  "relationships": {
+    "depends_on": [
+      ".claude/skills/worker-protocol/SKILL.md",
+      ".claude/hooks/validate-progress-file.sh"
+    ],
+    "depended_by": [],
+    "related": [
+      ".claude/agents/master-orchestrator.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/instructions/tracker_worker_instructions_lite.md"
+    ]
+  },
+  "domains": [
+    "worker-agent-definition",
+    "agent-config"
+  ],
+  "tags": [
+    "agent-definition",
+    "worker",
+    "yaml-frontmatter",
+    "progress-reporting",
+    "swarm"
+  ]
+}

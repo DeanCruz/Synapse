@@ -1,0 +1,286 @@
+{
+  "file": "electron/ipc-handlers.js",
+  "content_hash": "9f3e045c",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Central IPC bridge — registers ~140 ipcMain.handle() endpoints that adapt Synapse's pre-existing server services (originally HTTP/SSE) to Electron's IPC. Replaces the standalone SSE server inside the desktop app. registerIPCHandlers(getMainWindow) is called once from main.js on app.whenReady and: (1) ensures dashboards/, archive/, history/, queue/ directories exist and creates a default 'dashboard1' if none exist, (2) registers handlers grouped by domain — dashboard CRUD, settings, project, task editor, workers (Claude/Codex), terminals, commands, swarm orchestration, conversations, attachments, IDE filesystem, IDE search (ripgrep with Node fallback), IDE diagnostics (JSON via JSON.parse, JS/JSX via vm.compileFunction, CSS via hand-rolled bracket matcher), Node.js debug (CDP), Git operations (execFile-based), Live Preview, and Chat dashboard, (3) starts file watchers via WatcherService that push real-time events through createBroadcastFn — the broadcast bridge intercepts dashboards_changed events to inject persisted ordering+names from settings.dashboardMeta, sends to renderer via webContents.send, AND feeds agent_progress events to SwarmOrchestrator.handleProgressUpdate to drive the dispatch loop. Also exports a 'get-chat-system-prompt' handler that constructs the multi-section prompt for in-app chat agents (response priority protocol, communication transparency protocol, directory references with dashboard binding markers, Synapse CLAUDE.md, project CLAUDE.md). Mirrors the original src/server SSE startup but via IPC instead of HTTP/EventSource.",
+  "exports": [
+    {
+      "name": "registerIPCHandlers",
+      "kind": "function",
+      "signature": "(getMainWindow: () => BrowserWindow) => void"
+    },
+    {
+      "name": "stopWatchers",
+      "kind": "function",
+      "signature": "() => void"
+    }
+  ],
+  "imports_from": {
+    "electron": [
+      "ipcMain",
+      "dialog"
+    ],
+    "child_process": [
+      "execFile"
+    ],
+    "vm": [
+      "compileFunction"
+    ],
+    "../src/server/services/DashboardService": [
+      "listDashboards",
+      "ensureDashboard",
+      "getDashboardDir",
+      "readDashboardInit",
+      "readDashboardLogs",
+      "readDashboardProgress",
+      "readDashboardInitAsync",
+      "readDashboardLogsAsync",
+      "readDashboardProgressAsync",
+      "clearDashboardProgress",
+      "copyDirSync",
+      "deleteDashboard",
+      "nextDashboardId",
+      "getDashboardCreationTime"
+    ],
+    "../src/server/services/WatcherService": [
+      "watchDashboard",
+      "unwatchDashboard",
+      "startDashboardsWatcher",
+      "startQueueWatcher",
+      "startReconciliation",
+      "stopAll"
+    ],
+    "../src/server/services/ArchiveService": [
+      "listArchives",
+      "archiveDashboard",
+      "deleteArchive"
+    ],
+    "../src/server/services/HistoryService": [
+      "listHistory",
+      "buildHistorySummary",
+      "saveHistorySummary"
+    ],
+    "../src/server/services/QueueService": [
+      "listQueueSummaries",
+      "getQueueDir",
+      "readQueueInitAsync",
+      "readQueueLogsAsync",
+      "readQueueProgressAsync"
+    ],
+    "../src/server/utils/json": [
+      "readJSONAsync"
+    ],
+    "../src/server/utils/constants": [
+      "DASHBOARDS_DIR",
+      "QUEUE_DIR",
+      "ARCHIVE_DIR",
+      "HISTORY_DIR",
+      "DEFAULT_INITIALIZATION",
+      "DEFAULT_LOGS"
+    ],
+    "./settings": [
+      "get",
+      "set",
+      "getAll",
+      "reset"
+    ],
+    "./services/ConversationService": [
+      "listConversations",
+      "loadConversation",
+      "saveConversation",
+      "createConversation",
+      "deleteConversation",
+      "renameConversation"
+    ],
+    "./services/AutoUpdateService": [
+      "getUpdateState",
+      "checkForUpdates",
+      "quitAndInstallUpdate"
+    ],
+    "./services/ProjectService": [
+      "loadProject",
+      "getProjectContext",
+      "getProjectContextWithFallback",
+      "scanDirectory",
+      "detectClaudeCLI",
+      "detectAgentCLI"
+    ],
+    "./services/TaskEditorService": [
+      "createSwarm",
+      "addTask",
+      "updateTask",
+      "removeTask",
+      "addWave",
+      "removeWave",
+      "nextTaskId",
+      "validateDependencies"
+    ],
+    "./services/ClaudeCodeService": [
+      "init",
+      "spawnWorker",
+      "killWorker",
+      "killAllWorkers",
+      "getActiveWorkers",
+      "writeToWorker"
+    ],
+    "./services/CodexService": [
+      "init",
+      "spawnWorker",
+      "killWorker",
+      "killAllWorkers",
+      "getActiveWorkers"
+    ],
+    "./services/TerminalService": [
+      "init",
+      "spawnTerminal",
+      "writeTerminal",
+      "resizeTerminal",
+      "killTerminal",
+      "killAllTerminals",
+      "getActiveTerminals"
+    ],
+    "./services/CommandsService": [
+      "listCommands",
+      "getCommand",
+      "saveCommand",
+      "deleteCommand",
+      "createCommandFolder",
+      "saveCommandInFolder",
+      "generateCommand",
+      "loadProjectClaudeMd",
+      "listProjectCommands",
+      "listUserCommands",
+      "getUserCommand",
+      "saveUserCommand",
+      "deleteUserCommand",
+      "generateUserCommand"
+    ],
+    "./services/SwarmOrchestrator": [
+      "init",
+      "startSwarm",
+      "pauseSwarm",
+      "resumeSwarm",
+      "cancelSwarm",
+      "retryTask",
+      "getSwarmStates",
+      "handleProgressUpdate"
+    ],
+    "./services/DebugService": [
+      "init",
+      "launch",
+      "stop",
+      "setBreakpoint",
+      "removeBreakpoint",
+      "resume",
+      "pause",
+      "stepOver",
+      "stepInto",
+      "stepOut",
+      "evaluate",
+      "getVariables",
+      "getScopes",
+      "getSessionInfo"
+    ],
+    "./services/PreviewService": [
+      "init",
+      "scanLabels",
+      "getLabelMap"
+    ],
+    "./services/PreviewTextWriter": [
+      "updateText",
+      "detectDevServer"
+    ]
+  },
+  "gotchas": [
+    "createBroadcastFn intercepts 'dashboards_changed' and 'dashboards_list' events to overlay persisted ordering+names from settings.dashboardMeta — workers writing dashboards directly will not see custom display names unless they go through this bridge",
+    "The 'ide' dashboard is HARD-PINNED at index 0 in getOrderedDashboards() — reorder-dashboards filters it out then unshifts it back. Dropping this invariant breaks IDE workspace tabs",
+    "agent_progress broadcasts trigger SwarmOrchestrator.handleProgressUpdate(dashboardId, task_id, data) — this is the dispatch feedback loop. If SwarmOrchestrator isn't loaded yet, MODULE_NOT_FOUND is silently swallowed but other errors warn. Renaming the channel name 'agent_progress' breaks the orchestration loop",
+    "All ipc channel names must match the strings in preload.js's PUSH_CHANNELS whitelist OR the contextBridge method names — there is no shared constant",
+    "spawnWorker validates differently for chatMode (looks for Chat/chat{N}/agent{HEX} folders with 4-hex IDs) vs dashboardId mode (looks for dashboards/{id}) — calling without either throws no error here but downstream services may misbehave",
+    "Chat agents use 4-hex IDs; code agents use 6-hex IDs — these namespaces must not collide. create-chat-agent allocates by checking ALL existing chat dirs (cross-chat uniqueness)",
+    "ide-* handlers validate paths via ideValidatePath which prevents directory traversal — but only if workspaceRoot is provided. Missing workspaceRoot bypasses the check",
+    "ide-create-file deliberately rejects existing files with 'File already exists' — there is no overwrite flag",
+    "ide-search prefers ripgrep (rg) on PATH but falls back to a Node walker only when ENOENT/'not found' is detected in stderr — other rg failure modes return error to the renderer",
+    "Git diff/status/log uses execFile (not shell exec) — args are passed as arrays specifically to prevent shell injection from filenames",
+    "git-graph uses \\x01 (SOH) as field separator because git data may legitimately contain commas/pipes",
+    "git-status uses --porcelain -uall and parses the two-character status code (X=index, Y=worktree) — the substring(3) skips the 2-char code + 1 space",
+    "git-discard-file checks for untracked files (??) and unlinks them via fs — for tracked files it does git checkout HEAD -- file. Both are destructive with no confirmation here",
+    "stopWatchers() must be called on window-all-closed (in main.js) to release fs.watch handles AND the chat dashboard recursive watcher — otherwise the process hangs",
+    "The chat dashboard watcher uses fs.watch with recursive:true which is unsupported on Linux — it will throw on Linux but is caught and logged, so the chat_dashboard_changed event silently never fires there",
+    "saveTempImages and save-temp-file write to os.tmpdir() — these files are NOT cleaned up by Synapse and accumulate; rely on OS temp cleanup",
+    "get-chat-system-prompt requires a non-null dashboardId — it throws synchronously if missing because every chat agent must be bound to a dashboard for swarm dispatch isolation",
+    "ide-check-syntax for 'typescript' uses vm.compileFunction which only validates JS-level syntax (TS types are not checked) — type errors are silently passed",
+    "The CSS diagnostic is hand-rolled bracket matching — it does not validate CSS semantics (e.g. unknown properties, invalid values), only structural balance",
+    "ProjectService is loaded lazily inside registerIPCHandlers via require — circular deps with the rest of the electron services would surface here",
+    "saveAdditionalContext stores per-dashboard arrays inside settings.dashboardAdditionalContext as a fallback for renderer localStorage; clearing settings via reset-settings purges these too"
+  ],
+  "patterns": [
+    "Broadcast bridge pattern: createBroadcastFn returns a closure that mirrors the SSE broadcast signature so WatcherService is reused unchanged — only the transport differs (webContents.send vs SSE)",
+    "Service init via broadcastFn injection: ClaudeCodeService.init(broadcastFn), CodexService.init(broadcastFn), etc. — services emit progress through this single channel",
+    "Persisted ordering reconciliation: getOrderedDashboards filters meta.order against existing IDs, appends new ones by creation time, ensures 'ide' first, then writes back the reconciled order — self-healing across filesystem changes",
+    "Dashboard status derivation mirrors src/server/routes/apiRoutes.js (deriveDashboardStatus duplicated) — keeping IPC and HTTP responses identical when both modes are used",
+    "Reverse-sorted match application in ide-search-replace (sort by line desc, column desc) so earlier replacements don't shift positions of later ones",
+    "Chat agent allocation: 4-hex random with up to 1000 retries, uniqueness scoped across ALL chat dirs (not per-chat), folder layout Chat/chat{N}/agent{XXXX}/",
+    "git operations use execFile + array args (never shell concat) for injection safety; all wrapped in gitExec() with consistent { success, data | error } envelope",
+    "Diagnostics multi-language dispatch via ideDiagLanguage(filePath) -> {ideDiagJSON, ideDiagJS, ideDiagCSS}",
+    "Initial-data burst pattern (sendInitialData): on window-ready, push dashboards_list + initialization + all_progress + queue_changed for every dashboard — mirrors what an SSE client would receive on /events connect"
+  ],
+  "conventions": [
+    "Handlers grouped by domain with banner comments (--- Section Name ---)",
+    "Each ipcMain.handle uses async () => and returns a plain object (success/data/error envelope for git+ide; raw shape for dashboard reads)",
+    "Channel names follow kebab-case: 'get-dashboards', 'spawn-worker', 'git-stage', 'ide-read-file'",
+    "Push event names use snake_case: 'agent_progress', 'dashboards_changed', 'init_state'",
+    "DEFAULT_INITIALIZATION/DEFAULT_LOGS spread into a fresh object on every read so callers can mutate without polluting the constant",
+    "Settings reloaded inline via require('./settings') in some handlers — leverages Node's module cache",
+    "The IDE_DEFAULT_IGNORE list ['.git', 'node_modules', '.DS_Store', '__pycache__', '.next', '.cache', 'dist', 'build', '.venv', 'venv'] is the single source of truth for both ide-read-dir and ide-search"
+  ],
+  "relationships": {
+    "depends_on": [
+      "electron/settings.js",
+      "electron/services/ConversationService.js",
+      "electron/services/AutoUpdateService.js",
+      "electron/services/ProjectService.js",
+      "electron/services/TaskEditorService.js",
+      "electron/services/ClaudeCodeService.js",
+      "electron/services/CodexService.js",
+      "electron/services/TerminalService.js",
+      "electron/services/CommandsService.js",
+      "electron/services/SwarmOrchestrator.js",
+      "electron/services/DebugService.js",
+      "electron/services/PreviewService.js",
+      "electron/services/PreviewTextWriter.js",
+      "src/server/services/DashboardService.js",
+      "src/server/services/WatcherService.js",
+      "src/server/services/ArchiveService.js",
+      "src/server/services/HistoryService.js",
+      "src/server/services/QueueService.js",
+      "src/server/utils/json.js",
+      "src/server/utils/constants.js"
+    ],
+    "depended_by": [
+      "electron/main.js"
+    ],
+    "related": [
+      "electron/preload.js",
+      "src/ui/hooks/useElectronAPI.js",
+      "src/server/routes/apiRoutes.js"
+    ]
+  },
+  "domains": [
+    "ipc-bridge",
+    "service-orchestration",
+    "dashboard-coordination"
+  ],
+  "tags": [
+    "electron",
+    "ipc",
+    "broadcast",
+    "watchers",
+    "git",
+    "ide",
+    "debug",
+    "ripgrep",
+    "diagnostics"
+  ]
+}

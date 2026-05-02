@@ -1,0 +1,58 @@
+{
+  "file": "src/ui/components/ChainPipeline.jsx",
+  "content_hash": "e03db2d2",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Chain-row layout for swarms whose tasks form linear dependency chains. Renders one header row of wave cells across the top, then one row per chain. Each chain cell at column `wave` shows the task in that chain that belongs to that wave. Uses ChainWaveHeader (wave title + StatusBadge) for headers and AgentCard for the body. Filters cells by `activeStatFilter` and skips entire chains when nothing is visible. Note: dependency-line SVG overlay is intentionally omitted (per file comment, deferred to a follow-up).",
+  "exports": [
+    {
+      "name": "ChainPipeline",
+      "kind": "component",
+      "signature": "{ status: { agents[], waves[], chains[] }, activeStatFilter: string|null, onAgentClick: (agent) => void }"
+    }
+  ],
+  "imports_from": {
+    "@/utils/constants.js": [
+      "STATUS_COLORS",
+      "STATUS_BG_COLORS"
+    ],
+    "./AgentCard.jsx": [
+      "default",
+      "StatusBadge"
+    ]
+  },
+  "gotchas": [
+    "Assumes each chain has at most one task per wave — the `for...break` loop picks the first match. Plans that violate this silently lose tasks.",
+    "Empty chain rows are pruned only when activeStatFilter is set; without a filter, chains with no agents in some columns still render an empty cell.",
+    "STATUS_COLORS / STATUS_BG_COLORS are imported but unused at this layer; only StatusBadge consumes them downstream."
+  ],
+  "patterns": [
+    "Lookup map (agentMap) built once per render to avoid quadratic scans inside nested loops.",
+    "VisibleIds Set computed once when filter is active so chain pruning is O(chains)."
+  ],
+  "conventions": [
+    "Uses chain.id and wave.id as React keys; chain.tasks is an array of task ids (strings)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/AgentCard.jsx",
+      "src/ui/utils/constants.js"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "src/ui/components/WavePipeline.jsx"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering",
+    "swarm-pipeline"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "chain-pipeline"
+  ]
+}

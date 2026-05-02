@@ -1,0 +1,66 @@
+{
+  "file": "_commands/Synapse/p_track_resume.md",
+  "content_hash": "c60da7ce",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!p_track_resume [--dashboard {id}]` command — comprehensive resume of a stalled/interrupted !p_track swarm. The most complete 'pick up where we left off' command. Phase 0 reads ALL 7 master instruction docs (NON-NEGOTIABLE). Phase 1 reconstructs state from disk (initialization.json, all progress, logs, master_state, plan, project context, rebuilds upstream cache). Phase 2 classifies each task and detects agent health via 10/20-minute thresholds (alive vs stale vs uncertain). Phase 3 cleans up stale progress files, builds full p_track_v2 worker prompts with PREVIOUS ATTEMPT/ROOT CAUSE/REMEDIATION sections, dispatches all ready. Phase 4 runs the standard p_track execution loop. Phase 5 delivers the NON-NEGOTIABLE final report with Resume Details section.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Do NOT blindly re-dispatch all in-progress tasks — check progress file recency first; clobbering a running worker wastes computation and risks file conflicts",
+    "Agent health classification thresholds: 10-min for recent activity = alive; >20-min started_at with no updates = stale; reading_context/planning >10-min = stale",
+    "If plan.json is missing (legacy swarm), the master MUST regenerate it with a fresh deep-thinking pass BEFORE re-dispatching — hooks block dispatch otherwise",
+    "Progress files are AUTHORITATIVE over master_state.json when they conflict",
+    "Reading 7 specific files in Phase 0 is non-negotiable — CLAUDE.md, tracker_master_instructions.md, dashboard_writes.md, eager_dispatch.md, worker_prompts.md, compaction_recovery.md, failure_recovery.md",
+    "Worker prompt MUST use TEMPLATE_VERSION: p_track_v2 — workers include this in their progress file template_version field",
+    "RESUME CONTEXT section in worker prompts must instruct workers to check actual file state — files may have been modified by completed upstream tasks or partially modified by an interrupted previous worker",
+    "Likely-alive monitored agents that stop updating for 10+ minutes get reclassified as stale and re-dispatched",
+    "Final report Resume Details section is REQUIRED and must cover: tasks completed before resume, re-dispatched (stale), retried (failed), dispatched fresh, agents found alive"
+  ],
+  "patterns": [
+    "Six phases: Phase 0 Read Core Instructions → Phase 1 State Reconstruction → Phase 2 Health Check+Classification → Phase 3 Cleanup+Dispatch+Monitor → Phase 4 Execution Loop → Phase 5 Completion+Report",
+    "5-row classification matrix: Completed/Failed/Likely Alive/Stale In-Progress/Pending(ready)/Pending(blocked)",
+    "Agent health Alive vs Stale indicators (3 alive, 4 stale signals; ANY alive = treat as alive, ALL stale = treat as stale)",
+    "Worker prompt sections in fixed order: TASK → DESCRIPTION → CONTEXT → PROJECT/TRACKER ROOT → CONVENTIONS → REFERENCE CODE → UPSTREAM RESULTS → SIBLING TASKS → CRITICAL → SUCCESS CRITERIA → FILES → DIRECTORY → RESUME CONTEXT → PREVIOUS ATTEMPT (if retry) → PREPARATION → PROGRESS REPORTING → DEVIATION REPORTING → EXECUTION RULES → RETURN FORMAT",
+    "Dispatch sequence: launch agent FIRST → log AFTER dispatch → write master_state checkpoint after batch",
+    "Compaction recovery: detect by losing cached upstream results → read master_state → read initialization → read all progress (authoritative) → cross-reference + rebuild cache → log → resume"
+  ],
+  "conventions": [
+    "Top-of-file NON-NEGOTIABLE RULES (7 numbered rules)",
+    "Verification gate at end of Phase 0",
+    "Quick Reference table comparing !p_track_resume vs !track_resume vs !dispatch --ready vs !retry vs !resume",
+    "Final Rules section with 14 non-negotiable rules grouped by Instruction Reading, Agent Health, Dispatch+Tracking, State Management, Completion"
+  ],
+  "relationships": {
+    "depends_on": [
+      "CLAUDE.md",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/master/dashboard_writes.md",
+      "agent/master/eager_dispatch.md",
+      "agent/master/worker_prompts.md",
+      "agent/master/compaction_recovery.md",
+      "agent/master/failure_recovery.md",
+      "agent/_commands/p_track_completion.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/track_resume.md",
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/eager_dispatch.md",
+      ".claude/skills/p-track-resume/"
+    ]
+  },
+  "domains": [
+    "swarm-command",
+    "failure-recovery",
+    "compaction-recovery"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "resume",
+    "health-check",
+    "non-negotiable"
+  ]
+}

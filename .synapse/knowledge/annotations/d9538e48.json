@@ -1,0 +1,45 @@
+{
+  "file": "documentation/server/sse-events.md",
+  "content_hash": "ea177d4d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for every SSE event emitted on /events: dashboards_list, initialization, all_progress, init_state, agent_progress, logs, tasks_unblocked, dashboards_changed, queue_changed, write_rejected. Documents triggers, payload shapes, validation rules, the initial-data burst sequence, heartbeat, EventSource client usage, and per-client dashboard filtering.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "agent_progress events read with PROGRESS_READ_DELAY_MS (30ms) + retry to avoid mid-write JSON",
+    "write_rejected fires instead of agent_progress when task_id/dashboard_id mismatch",
+    "Heartbeat is a comment line (: ping) — invisible to EventSource clients",
+    "?dashboard= filter affects events 2-4 of initial burst but dashboards_list always full"
+  ],
+  "patterns": [
+    "Wire format: event:<name>\\ndata:<json>\\n\\n",
+    "Initial-data burst on connect for fast catch-up",
+    "Per-client filter via dashboardFilter metadata"
+  ],
+  "conventions": [
+    "Event names snake_case",
+    "Dashboard-scoped events include dashboardId field"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/server/overview.md",
+      "documentation/server/services.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/server/api-reference.md",
+      "documentation/electron/ipc-reference.md",
+      "documentation/dashboard/hooks.md"
+    ]
+  },
+  "domains": [
+    "server"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "sse",
+    "events"
+  ]
+}

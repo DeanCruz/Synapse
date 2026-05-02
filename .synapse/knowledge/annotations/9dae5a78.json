@@ -1,0 +1,72 @@
+{
+  "file": "src/server/services/DependencyService.js",
+  "content_hash": "b3aa1801",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Pure-computation service for dependency-aware dispatch readiness. Does not touch filesystem directly — delegates to DashboardService for init/progress reads. Three exports: getDispatchableTasks(dashboardId) does a full scan returning every agent whose `depends_on` is fully satisfied (all deps have status==='completed') AND whose own progress file does NOT yet exist (i.e., not yet dispatched); computeNewlyUnblocked(dashboardId, completedTaskId) is the optimized incremental variant — only inspects agents whose depends_on includes the just-completed task, used by WatcherService on every progress-completion event to fire 'tasks_unblocked' SSE; getDependencyStatus(dashboardId, taskId) returns per-task aggregate {dependencies map, allSatisfied, satisfiedCount, totalCount} for inspection UI. Status resolution is strict: anything not 'completed' (including 'in_progress', 'failed', 'pending') is treated as unsatisfied.",
+  "exports": [
+    {
+      "name": "getDispatchableTasks",
+      "kind": "function",
+      "signature": "(dashboardId) => Array<agent + {dependency_status}>"
+    },
+    {
+      "name": "computeNewlyUnblocked",
+      "kind": "function",
+      "signature": "(dashboardId, completedTaskId) => Array<agent + {dependency_status}>"
+    },
+    {
+      "name": "getDependencyStatus",
+      "kind": "function",
+      "signature": "(dashboardId, taskId) => {dependencies, allSatisfied, satisfiedCount, totalCount}"
+    }
+  ],
+  "imports_from": {
+    "./DashboardService": [
+      "readDashboardInit",
+      "readDashboardProgress"
+    ]
+  },
+  "gotchas": [
+    "Presence of a progress file = 'task already dispatched/running' regardless of status. A failed task with a progress file is therefore NOT dispatchable via getDispatchableTasks — to retry a failed task you MUST delete its progress file first (this is what !retry / SwarmOrchestrator do). If a progress file gets stuck in failed state and is not deleted, downstream tasks depending on it will never unblock.",
+    "computeNewlyUnblocked is fired on EVERY progress write where status==='completed' (in WatcherService) — including spurious re-writes of an already-completed file (master can re-emit). Workers depending on the same parent will receive the 'tasks_unblocked' broadcast multiple times. Listeners must be idempotent.",
+    "Status is matched as exact string 'completed'. A worker that writes status: 'complete' (typo) will never satisfy a dependency.",
+    "getDependencyStatus returns allSatisfied:true for tasks with NO dependencies AND for unknown task ids (totalCount:0). The two cases are indistinguishable without checking totalCount — caller must handle this when rendering UI.",
+    "All three functions wrap in try/catch returning empty/safe defaults — silent failure if init/progress reads throw. Errors do not propagate; debugging requires turning on DashboardService logging."
+  ],
+  "patterns": [
+    "Incremental-vs-full scan pair: getDispatchableTasks (O(agents * deps)) for cold start, computeNewlyUnblocked (O(downstream_of_completed)) for hot path — invoked by WatcherService DEPENDENCY_CHECK_DELAY_MS after a completion event.",
+    "Output augmentation: returned agent objects are spread copies with an extra `dependency_status` field — original initialization.json data is not mutated.",
+    "Helper trio (getAgents, getDependsOn, resolveTaskStatus) defensively handle missing/non-array fields — defends against partial initialization.json writes.",
+    "Pending-as-default for missing progress: resolveTaskStatus returns 'pending' for any task without a progress file — this is the correct semantics for unblock checks."
+  ],
+  "conventions": [
+    "Pure module — no I/O, no logging, no side effects (file reads happen inside dependencies).",
+    "Returns plain JS objects/arrays, no classes.",
+    "All public functions wrap their body in try/catch with safe-default returns."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/services/DashboardService.js"
+    ],
+    "depended_by": [
+      "src/server/services/WatcherService.js",
+      "src/server/routes/apiRoutes.js",
+      "electron/services/SwarmOrchestrator.js (via apiRoutes)"
+    ],
+    "related": [
+      "src/server/utils/validation.js (Kahn's algorithm dep-cycle validator)"
+    ]
+  },
+  "domains": [
+    "dependency-resolution",
+    "dispatch-readiness"
+  ],
+  "tags": [
+    "server",
+    "service",
+    "dependency-graph",
+    "dispatch",
+    "pure-function"
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "file": "src/server/services/QueueService.js",
+  "content_hash": "2307097d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Read-only accessor for the queue/ overflow directory used by !master_plan_track when more swarms are planned than the active dashboard slots can hold. Mirrors DashboardService's read API (sync + async pairs for init/logs/progress) but rooted at QUEUE_DIR. listQueue() returns sorted queue ids whose directory has an initialization.json (validity gate). listQueueSummaries() is the showpiece function: for each queue item, computes a derived `status` string ('pending' | 'in_progress' | 'completed' | 'error') by walking progress entries — accounts for partially-written queues by comparing progressValues.length vs init.task.total_tasks and only declares completed when ALL tasks are accounted for AND none are in progress. Returns lightweight summaries for the QueuePopup UI.",
+  "exports": [
+    {
+      "name": "listQueue",
+      "kind": "function",
+      "signature": "() => string[]"
+    },
+    {
+      "name": "getQueueDir",
+      "kind": "function",
+      "signature": "(id) => path"
+    },
+    {
+      "name": "readQueueInit",
+      "kind": "function",
+      "signature": "(id) => object|null"
+    },
+    {
+      "name": "readQueueInitAsync",
+      "kind": "function",
+      "signature": "async (id) => object|null"
+    },
+    {
+      "name": "readQueueProgress",
+      "kind": "function",
+      "signature": "(id) => Record<task_id, progress>"
+    },
+    {
+      "name": "readQueueProgressAsync",
+      "kind": "function",
+      "signature": "async (id) => Record<task_id, progress>"
+    },
+    {
+      "name": "readQueueLogs",
+      "kind": "function",
+      "signature": "(id) => object|null"
+    },
+    {
+      "name": "readQueueLogsAsync",
+      "kind": "function",
+      "signature": "async (id) => object|null"
+    },
+    {
+      "name": "listQueueSummaries",
+      "kind": "function",
+      "signature": "() => Array<{id, task, agentCount, status}>"
+    }
+  ],
+  "imports_from": {
+    "fs": [
+      "default",
+      "promises (lazy)"
+    ],
+    "path": [
+      "default"
+    ],
+    "../utils/constants": [
+      "QUEUE_DIR"
+    ],
+    "../utils/json": [
+      "readJSON",
+      "readJSONAsync"
+    ]
+  },
+  "gotchas": [
+    "listQueueSummaries derives status WITHOUT consulting init.agents — it walks the progress map only. If a queue item's progress dir has 5 files and init.task.total_tasks is 3 (mismatch), allDone evaluates to true based on those 5 files. Cross-check init.task.total_tasks is the only guard against premature completion.",
+    "The completion test uses BOTH (a) `progressValues.length < totalTasks` to flag incomplete AND (b) per-progress status walk. A queue item where total_tasks is 0 or missing skips guard (a) — so a queue with 1 progress file marked 'completed' and total_tasks:0 would report 'completed' even if more tasks were planned.",
+    "Status priority: error trumps completed, completed trumps in_progress, in_progress trumps pending. If a worker is in_progress AND a sibling already failed, status is 'in_progress' (not 'error') until allDone — UI may not reflect the failure until the queue finishes.",
+    "fs.promises is lazy-required inside readQueueProgressAsync — avoids loading promises module at import time but minor cost per call. Keep as-is to match symmetry with the sync variant.",
+    "No write API — queue items are written by master agents directly via filesystem (per master-protocol). This service is read-only by design.",
+    "listQueue sort is plain `.sort()` (lexicographic) — not numeric. queue10 sorts before queue2."
+  ],
+  "patterns": [
+    "Mirror of DashboardService API surface — same function names with `Queue` prefix. Maintained intentionally so consumers can swap dashboards/queue accessors with minimal change.",
+    "Three-state derivation (pending/in_progress/completed/error) computed live from progress walk rather than stored — queue items have no separate status field, status is always derived.",
+    "Validity gate via initialization.json existsSync — same pattern as DashboardService.listDashboards."
+  ],
+  "conventions": [
+    "Read-only module, sync + async parallel pairs (matches DashboardService convention).",
+    "Lightweight summary shape: { id, task: {name, type, directory, total_tasks, created} | null, agentCount, status } — used directly by QueuePopup.jsx without further transformation.",
+    "Defensive try/catch returning [] / {} from each function — never throws."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/utils/constants.js",
+      "src/server/utils/json.js"
+    ],
+    "depended_by": [
+      "src/server/services/WatcherService.js (listQueueSummaries for queue_changed broadcasts)",
+      "src/server/routes/apiRoutes.js",
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "src/server/services/DashboardService.js"
+    ]
+  },
+  "domains": [
+    "queue-overflow",
+    "dashboard-state"
+  ],
+  "tags": [
+    "server",
+    "service",
+    "queue",
+    "filesystem",
+    "read-only"
+  ]
+}

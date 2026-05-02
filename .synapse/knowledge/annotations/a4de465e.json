@@ -1,0 +1,125 @@
+{
+  "file": "src/server/routes/apiRoutes.js",
+  "content_hash": "3c98874a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Single function `handleApiRoute(req, res, url)` containing every REST API endpoint handler for the dashboard server, dispatched as a sequential cascade of `if (url.pathname === ... && req.method === ...)` branches. Returns `true` if a route was matched and a response sent, `false` to let the caller fall through to 404. Endpoints cover: dashboard CRUD (`GET/POST /api/dashboards`, `DELETE /api/dashboards/:id`), per-dashboard data reads (`/initialization`, `/logs`, `/progress`, `/dispatchable`, `/metrics`, `/export`), per-dashboard mutations (`POST /archive`, `POST /save-history`, `POST /clear`), aggregate views (`/api/dashboards/statuses`, `/api/overview`), archive listing/reading/deletion, history list + analytics, and queue list + per-item read. Path parameters are validated through `sanitizePathParam` (max 100 chars, no `..`, no slashes/backslashes, must match `^[a-zA-Z0-9_][a-zA-Z0-9_.\\-]*$`) before any filesystem operation — a path-traversal hard stop. The status-derivation logic is duplicated between `/api/dashboards/statuses` and `/api/overview` (allDone + hasFailed + hasInProgress booleans + `totalTasks > progressValues.length`). Mutating endpoints (archive, clear, save-history) are intentionally synchronous (`fs.writeFileSync`, `copyDirSync`) for atomicity within the request lifecycle.",
+  "exports": [
+    {
+      "name": "handleApiRoute",
+      "kind": "function",
+      "signature": "(req, res, url: URL) => boolean"
+    }
+  ],
+  "imports_from": {
+    "fs": [
+      "fs"
+    ],
+    "fs (promises)": [
+      "fsPromises"
+    ],
+    "path": [
+      "path"
+    ],
+    "../services/DashboardService": [
+      "listDashboards",
+      "getDashboardDir",
+      "ensureDashboard",
+      "readDashboardInit",
+      "readDashboardLogs",
+      "readDashboardProgress",
+      "readDashboardInitAsync",
+      "readDashboardLogsAsync",
+      "readDashboardProgressAsync",
+      "clearDashboardProgress",
+      "copyDirSync",
+      "deleteDashboard",
+      "nextDashboardId"
+    ],
+    "../services/ArchiveService": [
+      "listArchives",
+      "deleteArchive"
+    ],
+    "../services/HistoryService": [
+      "listHistory",
+      "buildHistorySummary",
+      "saveHistorySummary"
+    ],
+    "../services/QueueService": [
+      "listQueue",
+      "listQueueSummaries",
+      "readQueueInitAsync",
+      "readQueueLogsAsync",
+      "readQueueProgressAsync",
+      "getQueueDir"
+    ],
+    "../services/DependencyService": [
+      "getDispatchableTasks"
+    ],
+    "../utils/json": [
+      "readJSONAsync"
+    ],
+    "../utils/constants": [
+      "ARCHIVE_DIR",
+      "HISTORY_DIR",
+      "QUEUE_DIR",
+      "DEFAULT_INITIALIZATION",
+      "DEFAULT_LOGS"
+    ]
+  },
+  "gotchas": [
+    "Route ORDER MATTERS — `DELETE /api/dashboards/:id` would also match the `:id` slot for reserved names like `statuses` if `sanitizePathParam` allowed them; `/api/dashboards/statuses` MUST be registered before any `:id` regex match attempt or the route would be shadowed.",
+    "`sanitizePathParam` is the ONLY guard against path traversal — every fs operation that consumes a URL parameter (id, name, queueId) must pass it through this function first. Do not bypass.",
+    "Status derivation is DUPLICATED between `/api/dashboards/statuses` and `/api/overview` — keep them in sync when changing logic, or extract to a shared helper.",
+    "`POST /api/dashboards/:id/clear` synchronously archives + writes history + truncates files — if any step fails after the archive copy, the dashboard is left half-cleared. The 500 path returns early before the truncation.",
+    "Archive `name` and history `task_name` are sanitized differently — archive uses raw task name in `${today}_${taskName}`, while save-history sanitizes via `replace(/[^a-zA-Z0-9_-]/g, '_')`. The unsanitized archive path can fail on tasks with `/` or other shell-unsafe chars.",
+    "`buildHistorySummary` is called inside `/clear` and `/save-history`; it reads files synchronously — if files are mid-write by a worker the summary may be stale.",
+    "All async branches use IIFEs `(async () => {...})()` — they swallow rejections silently UNLESS wrapped in try/catch. The `/export` handler does this correctly; some other branches (e.g. `/initialization` async read) do not.",
+    "Returning `true` is mandatory after sending a response — forgetting it would cause double-responses when subsequent route checks also match."
+  ],
+  "patterns": [
+    "Cascade dispatch — every route is a sequential if/return-true; no router lib.",
+    "Path traversal defense via `sanitizePathParam`: rejects `..`, `/`, `\\`, and anything outside `[a-zA-Z0-9_.\\-]` (must start with alphanumeric or underscore), max 100 chars.",
+    "`parseDashboardRoute(pathname)` regex `^/api/dashboards/([^/]+)(?:/(.*))?$` captures id + optional subpath in one match, so all `/api/dashboards/:id/<subpath>` endpoints share the same validated id.",
+    "Async DB-style reads use `fs.promises` via IIFE; sync mutations use `fs.writeFileSync` for in-request atomicity.",
+    "`sendJSON(res, statusCode, data)` is the canonical JSON response helper — sets `Content-Type: application/json` and stringifies the payload.",
+    "Default fallbacks via `{ ...DEFAULT_INITIALIZATION }` and `{ ...DEFAULT_LOGS }` (spread to avoid shared-reference mutation) when reads return null."
+  ],
+  "conventions": [
+    "Status is derived from `task.total_tasks > 0 && progressValues.length < totalTasks` — a swarm with declared tasks is `in_progress` until all progress files exist.",
+    "Archive name format: `${YYYY-MM-DD}_${taskName}`.",
+    "History file format: `${YYYY-MM-DD}_${safeTaskName}.json` in HISTORY_DIR.",
+    "Error messages for 400 responses include the validation rule (`alphanumeric with hyphens, underscores, or dots (max 100 chars, no path traversal)`)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/services/DashboardService.js",
+      "src/server/services/ArchiveService.js",
+      "src/server/services/HistoryService.js",
+      "src/server/services/QueueService.js",
+      "src/server/services/DependencyService.js",
+      "src/server/utils/json.js",
+      "src/server/utils/constants.js"
+    ],
+    "depended_by": [
+      "src/server/index.js"
+    ],
+    "related": [
+      "src/ui/hooks/useDashboardData.js (consumes these endpoints)",
+      "electron/ipc-handlers.js (mirror IPC handlers for Electron mode)"
+    ]
+  },
+  "domains": [
+    "rest-api",
+    "dashboard-routes",
+    "path-validation"
+  ],
+  "tags": [
+    "http",
+    "rest",
+    "routing",
+    "validation",
+    "javascript",
+    "fs"
+  ]
+}

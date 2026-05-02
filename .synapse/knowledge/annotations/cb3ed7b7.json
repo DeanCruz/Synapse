@@ -1,0 +1,108 @@
+{
+  "file": "src/server/utils/json.js",
+  "content_hash": "ea2f2ee1",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Hardened JSON I/O and schema validation utilities. `readJSON(path)` and `readJSONAsync(path)` swallow all errors and return `null` on failure — but log SyntaxError specifically to console.error (so malformed JSON is visible while ENOENT is silent). `readJSONWithRetry(path, delayMs)` is the workhorse for progress files: it reads once, and if the result is null (likely a mid-write empty/partial file from a worker), it waits `PROGRESS_RETRY_MS` (80ms default) and reads again — this races against the worker's atomic rename. `writeAtomic`/`writeAtomicAsync` implement write-rename atomicity by writing to `<path>.tmp` and renaming to the final path; on error the .tmp file is cleaned up best-effort and the error is rethrown. Schema validators `isValidInitialization`, `isValidProgress(data, expectedTaskId, expectedDashboardId)`, and `isValidLogs` enforce the canonical document shapes: initialization requires `task` (null or object with name/type), `agents` array (each with id+title), and validates `task.type` is in `['Waves','Chains']`; progress requires task_id+status, status in `['in_progress','completed','failed']`, optional stage in `['reading_context','planning','implementing','testing','finalizing','completed','failed']`, and rejects mismatched task_id/dashboard_id (a cross-worker write violation guard); logs requires `entries` array.",
+  "exports": [
+    {
+      "name": "readJSON",
+      "kind": "function",
+      "signature": "(filePath: string) => object|null"
+    },
+    {
+      "name": "readJSONAsync",
+      "kind": "function",
+      "signature": "async (filePath: string) => object|null"
+    },
+    {
+      "name": "readJSONWithRetry",
+      "kind": "function",
+      "signature": "(filePath: string, retryDelayMs?: number) => Promise<object|null>"
+    },
+    {
+      "name": "isValidInitialization",
+      "kind": "function",
+      "signature": "(data) => boolean"
+    },
+    {
+      "name": "isValidProgress",
+      "kind": "function",
+      "signature": "(data, expectedTaskId?, expectedDashboardId?) => boolean"
+    },
+    {
+      "name": "isValidLogs",
+      "kind": "function",
+      "signature": "(data) => boolean"
+    },
+    {
+      "name": "writeAtomic",
+      "kind": "function",
+      "signature": "(filePath, data) => void"
+    },
+    {
+      "name": "writeAtomicAsync",
+      "kind": "function",
+      "signature": "async (filePath, data) => void"
+    }
+  ],
+  "imports_from": {
+    "fs": [
+      "fs",
+      "fs.promises"
+    ],
+    "path": [
+      "path"
+    ],
+    "./constants": [
+      "PROGRESS_RETRY_MS"
+    ]
+  },
+  "gotchas": [
+    "`readJSON` returns null on BOTH 'file does not exist' AND 'malformed JSON' — callers cannot distinguish without checking fs.existsSync first. Only SyntaxError is logged.",
+    "`readJSONWithRetry` only retries ONCE — if a worker is doing a slow non-atomic write, the second read may also fail and return null silently. Workers SHOULD use writeAtomic to avoid this.",
+    "`writeAtomic` rename is atomic ONLY on the same filesystem — across mounts it falls back to copy+delete, breaking atomicity. All Synapse paths are under ROOT so this is safe by convention.",
+    "`isValidProgress` REJECTS data when `expectedTaskId` is provided and doesn't match — and logs a CROSS-WORKER WRITE VIOLATION error. This is intentional security: the validate-progress-file.sh hook depends on this rejection.",
+    "`isValidProgress` allows `completed_at` to be absent OR null on in_progress — but rejects it being a non-null string. A worker that sets completed_at while still in_progress will fail validation.",
+    "`isValidInitialization` enforces `task.type in ['Waves','Chains']` — case-sensitive, capitalized. Any other value (e.g. 'waves' lowercase) fails validation.",
+    "Stage must be one of seven lowercase values — adding a new stage requires updating this validator OR validation will reject worker progress."
+  ],
+  "patterns": [
+    "Read-fail-silently pattern: `try {return JSON.parse(readFileSync(p))} catch {return null}` — callers branch on null.",
+    "Mid-write resilience: `readJSONWithRetry` waits 80ms and retries once before giving up — designed for fs.watch races against worker writes.",
+    "Atomic write: write to `<path>.tmp`, rename to `<path>`. Best-effort cleanup of .tmp on failure.",
+    "Schema validation returns boolean — callers log/skip on false, never throw.",
+    "Cross-worker write detection: `expectedTaskId` mismatch in progress data returns false AND logs to stderr — this is a hook-enforced security boundary."
+  ],
+  "conventions": [
+    "All readers return null on any failure (never throw).",
+    "All writers throw on failure (never silent).",
+    "Schema validators are pure functions named `isValid<Shape>`.",
+    "JSON output uses 2-space indent (`JSON.stringify(data, null, 2)`)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/utils/constants.js"
+    ],
+    "depended_by": [
+      "src/server/services/* (DashboardService, WatcherService, QueueService, ArchiveService, HistoryService, DependencyService)",
+      "src/server/routes/apiRoutes.js"
+    ],
+    "related": [
+      ".claude/hooks/validate-progress-file.sh (mirrors isValidProgress logic)"
+    ]
+  },
+  "domains": [
+    "json-io",
+    "schema-validation",
+    "atomic-write"
+  ],
+  "tags": [
+    "json",
+    "fs",
+    "validation",
+    "atomic",
+    "retry",
+    "javascript"
+  ]
+}

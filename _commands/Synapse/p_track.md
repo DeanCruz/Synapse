@@ -47,11 +47,12 @@
 
 **Output files:**
 ```
-{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json              ← Master task file (single source of truth)
-{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md            ← Parallelization strategy rationale
-{tracker_root}/dashboards/{dashboardId}/initialization.json             ← Static plan data (written once)
+{tracker_root}/dashboards/{dashboardId}/plan.json                       ← Canonical plan: { context, tasks } — read by every worker
+{tracker_root}/dashboards/{dashboardId}/initialization.json             ← Static dashboard data (written once, after plan.json)
 {tracker_root}/dashboards/{dashboardId}/logs.json                       ← Timestamped event log
 ```
+
+> **`plan.json` is required.** The `validate-plan-required.sh` hook blocks `initialization.json` writes unless `plan.json` exists in the same directory and contains a non-empty `context.prompt` and a `tasks` array where every task has `id`, `title`, `description`, `approach`, and `files`. `agents.length` in `initialization.json` must equal `plan.json` `tasks.length`.
 
 > **`{tracker_root}`** refers to the Synapse directory (Synapse). Locate it relative to the project root — it may be at `./Synapse/`, `../Synapse/`, or wherever the user has placed it.
 >
@@ -63,9 +64,11 @@
 
 ## Phase 1: Planning — Deep Analysis & Decomposition
 
-**Steps 1-11:** Resolve `{project_root}`, read master instructions, parse prompt, deep analysis (including dep graph consultation), read all relevant context files, build convention map, decompose into tasks with budget checks, determine parallelization type (Waves vs Chains), create plan document and master task file, verify dependencies with topological sort, select a dashboard, archive previous data, populate `initialization.json` and `logs.json`, present the plan to the user and wait for approval.
+**Steps 1-11:** Resolve `{project_root}`, read master instructions, parse prompt, deep analysis (including dep graph consultation), read all relevant context files, build convention map, decompose into tasks with budget checks, determine parallelization type (Waves vs Chains), **write `plan.json` (the canonical { context, tasks } artifact — captures the deep-thinking output)**, verify dependencies with topological sort, select a dashboard, archive previous data, write `initialization.json` (after `plan.json` exists) and `logs.json`, present the plan to the user and wait for approval.
 
 > **Read `{tracker_root}/agent/_commands/p_track_planning.md` for the complete planning protocol.**
+
+> **`plan.json` precedes `initialization.json`.** The `validate-plan-required.sh` hook blocks `initialization.json` writes when `plan.json` is missing or incomplete. Every task in `plan.tasks[]` must have `id`, `title`, `description`, `approach` (the deep-thought how-to), and `files`. If the deep-thinking context is forgotten (e.g., after compaction), redo the analysis until each task's `approach` clearly fulfills the original prompt.
 
 ---
 
@@ -123,9 +126,9 @@
 
 ### Planning
 
-21. **Plan before executing.** Always create the task file. Always create the .md plan. Always verify dependencies. Always get user approval.
-22. **Task file is the master record.** All agents read from it. The master updates it on every completion. It is the authoritative record of the task.
-23. **Verify before dispatching.** After creating the task file and .md, re-read the task file, cross-check with the .md, verify all dependencies, and build dependency chains — all before presenting to the user.
+21. **Plan before executing.** Always write `plan.json` (`{tracker_root}/dashboards/{dashboardId}/plan.json`) with deeply considered `context` and `tasks`. Always verify dependencies. Always get user approval.
+22. **`plan.json` is the canonical record.** Every worker reads `context` and its task entry from it. The master writes it once during planning. Lifecycle data (status, started_at, summary) lives in worker progress files — never in `plan.json`.
+23. **Verify before dispatching.** After writing `plan.json`, re-read it, verify every task has `id`, `title`, `description`, `approach`, and `files`, verify dependencies, and confirm `agents.length` in `initialization.json` equals `plan.tasks.length` — all before presenting to the user.
 24. **Right-size tasks.** Target 1-5 minutes per task. A task reading 2-3 files and modifying 1-2 files is right-sized. Tasks reading 10+ files or modifying 5+ files should be decomposed further.
 25. **Handle shared files explicitly.** When multiple tasks need to modify the same file, use one of the shared file patterns (owner task, integration task, or append protocol). Never let two concurrent workers modify the same file.
 

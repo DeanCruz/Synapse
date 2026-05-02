@@ -1,0 +1,82 @@
+{
+  "file": "src/ui/components/chat/ChatDashboardView.jsx",
+  "content_hash": "9fb46c2d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top-level renderer for the Chat tab's 'Dashboard' sub-view. Shows agent activity sourced from disk folders Chat/Dashboard/Agent{x}/ via window.electronAPI.getChatDashboardData(). Each agent renders as a vertical 'AgentRow' lane; tasks within a lane are arranged either as a flat horizontal strip (single-wave / fully-parallel agent) or as wave-columns connected by BFS dependency lines (multi-wave agent). Computes within-agent waves using a longest-path topological-levels algorithm where cross-agent depends_on are deliberately ignored (siblings only). Subscribes to the 'chat_dashboard_changed' push channel for live updates and falls back to a six-agent hardcoded demo dataset (loadDemoData) when no agent folders exist or the IPC bridge is unavailable. Handles selection of a task card to open AgentDetails modal, with a flat taskById map built across all lanes so dep-label lookups resolve cross-agent.",
+  "exports": [
+    {
+      "name": "ChatDashboardView",
+      "kind": "component",
+      "signature": "() => JSX (default export)"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "React",
+      "useState",
+      "useEffect",
+      "useCallback",
+      "useRef",
+      "useMemo"
+    ],
+    "src/ui/components/AgentCard.jsx": [
+      "AgentCard (default)",
+      "StatusBadge (named)"
+    ],
+    "src/ui/components/modals/AgentDetails.jsx": [
+      "AgentDetails (default)"
+    ],
+    "src/ui/utils/dependencyLines.js": [
+      "drawDependencyLines",
+      "setupCardHoverEffects"
+    ]
+  },
+  "gotchas": [
+    "computeWavesForAgent INTENTIONALLY filters depends_on to within-agent ids — passing a task whose deps reference other agents will silently drop those edges and place the task in wave 0. This is by design (sibling-only BFS) but will look wrong if you mistakenly expect cross-agent ordering.",
+    "Demo data is loaded ANY time the IPC call returns 0 agents, not just when the API is missing. A real-but-empty Chat/Dashboard/ directory will display the demo lanes — easy to mistake for live data.",
+    "AgentDetails is invoked with progressData=null and projectRoot=null; do not rely on those props inside AgentDetails when launched from the chat dashboard.",
+    "The dependency-line SVG is only rendered for hasMultipleWaves; redraw is wired through a ResizeObserver on the tasks container, but NOT to wave/task content mutations beyond the tasks array reference — adding/removing cards inside a wave without changing tasks identity will not redraw lines.",
+    "Lanes are sorted alphabetically by name AFTER shaping — agent ordering is not preserved from the IPC payload."
+  ],
+  "patterns": [
+    "Status aggregation: lane.status is derived from task statuses (allCompleted -> completed, anyFailed -> failed, anyInProgress -> in_progress, else pending) inside shapeAgent — single source of truth for the row badge.",
+    "BFS dependency-line reuse: chat dashboard uses the SAME drawDependencyLines/setupCardHoverEffects helpers as the code dashboard, just scoped to a single lane's container/svg.",
+    "Live-updates pattern: `window.electronAPI.on('chat_dashboard_changed', () => loadData())`; the cleanup function returned by the IPC bridge MUST be invoked in useEffect cleanup.",
+    "Graceful degradation: demo data is the fallback for both 'no API' and 'API failed' branches — chat dashboard never blanks out."
+  ],
+  "conventions": [
+    "Helper components defined below the default export inside the same file (AgentRow at the bottom, demo loader as async function).",
+    "Tasks transformed via taskToAgent() before passing to AgentCard — keeps AgentCard contract uniform between code and chat dashboards.",
+    "CSS namespace 'chat-' prefix for all chat-dashboard-specific classes (chat-agent-row, chat-wave-column, chat-dashboard-empty, etc.) so they can't collide with the code dashboard's selectors."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/AgentCard.jsx",
+      "src/ui/components/modals/AgentDetails.jsx",
+      "src/ui/utils/dependencyLines.js",
+      "electron/preload.js (window.electronAPI.getChatDashboardData, window.electronAPI.on)",
+      "electron/ipc-handlers.js (chat dashboard reader + chat_dashboard_changed broadcaster)"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx (rendered when chatActiveView === 'dashboard')"
+    ],
+    "related": [
+      "src/ui/components/chat/ChatSidebar.jsx (sets chatActiveView='dashboard' to mount this view)",
+      "src/ui/components/WavePipeline.jsx (analogous wave layout for code dashboards)"
+    ]
+  },
+  "domains": [
+    "chat-system",
+    "chat-dashboard",
+    "agent-visualization"
+  ],
+  "tags": [
+    "react",
+    "chat",
+    "component",
+    "dashboard",
+    "dependency-graph",
+    "live-updates"
+  ]
+}

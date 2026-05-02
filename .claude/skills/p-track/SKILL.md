@@ -64,21 +64,68 @@ Break work into atomic tasks (1-5 min each, 1-2 files modified). Group into wave
 
 **Waves** for broad, shallow work (tasks independent within wave). **Chains** for narrow, deep work (sequential paths progressing independently).
 
-### Steps 8-9: Create Plan Files
+### Steps 8-9: Write `plan.json` — the canonical planning artifact
 
-Create `{tracker_root}/tasks/{TASK_DATE}/parallel_plan_{task_name}.md` (rationale) and `parallel_{task_name}.json` (master task file — single source of truth).
+**The plan lives at `{tracker_root}/dashboards/{dashboardId}/plan.json` — same directory as `initialization.json`.** It captures all the deep-thinking output and is read by every worker on dispatch. The `validate-plan-required.sh` hook blocks `initialization.json` writes when `plan.json` is missing or malformed.
+
+`plan.json` schema:
+
+```jsonc
+{
+  "name":    "<kebab-case-slug>",                  // matches initialization.json task.name
+  "created": "<ISO 8601 — date -u>",
+  "context": {
+    "prompt":       "<verbatim user prompt — NON-EMPTY>",
+    "project_root": "<absolute path>",
+    "tracker_root": "<absolute path>",
+    "dashboard_id": "<id>",
+    "type":         "Waves" | "Chains",
+    "directories":  ["<affected dir>", ...],
+    "conventions":  { "naming": [...], "file_structure": [...], "imports": [...],
+                      "frontend_styling": [...], "backend_api": [...],
+                      "error_handling": [...], "testing": [...], "types": [...] },
+    "reference_code":         [{ "label": "...", "path": "...", "snippet": "..." }],
+    "architectural_decisions":"<the why — non-obvious choices and their reasoning>",
+    "edge_cases":             "<known gotchas spanning the swarm>",
+    "shared_constraints":     "<rules every worker must respect>"
+  },
+  "tasks": [
+    {
+      "id":               "1.1",
+      "title":            "<short verb phrase>",
+      "wave":             1,
+      "depends_on":       [],
+      "directory":        "<task target dir>",
+      "description":      "<what the worker must do — NON-EMPTY>",
+      "approach":         "<HOW to do it most effectively — the deep-thought how-to. NON-EMPTY>",
+      "files":            [{ "action": "read|modify|create|delete", "path": "..." }],
+      "context":          "<task-specific context not in shared>",
+      "critical":         "<edge cases / gotchas for this task>",
+      "success_criteria": ["specific verifiable condition", ...],
+      "instruction_mode": "FULL" | "LITE",
+      "tags":             [...]
+    }
+  ]
+}
+```
+
+**Deep thinking is mandatory.** `approach` must reflect real research and decision-making — not a restatement of `description`. If you have lost the deep-thinking context (e.g., after compaction), redo the analysis (re-read CLAUDE.md, reference files, dep_graph) until each task's `approach` clearly fulfills the original prompt.
+
+The legacy `tasks/{TASK_DATE}/parallel_{name}.json` and `parallel_plan_{name}.md` are no longer required. `plan.json` is the single planning artifact.
 
 ### Step 10: Verify Dependencies
 
-Topological sort (detect cycles), compute critical path, identify bottleneck tasks (depended on by 3+), verify no orphans/dangling references. Write `dependency_chains` array.
+Topological sort (detect cycles), compute critical path, identify bottleneck tasks (depended on by 3+), verify no orphans/dangling references. Encode dependencies in each task's `depends_on` field.
 
 ### Step 11: Select Dashboard and Populate Plan
 
 See master-protocol for dashboard selection priority. **Archive before clear — NON-NEGOTIABLE.**
 
-**Before writing `initialization.json`, read [`agent/master/initialization_blueprint.md`](../../../agent/master/initialization_blueprint.md) — NON-NEGOTIABLE.** It contains the authoritative schema, worked examples, and a pre-write checklist. The `validate-initialization-schema.sh` hook blocks any write that violates the blueprint. Skipping the blueprint means guessing — and a single missing field produces a dashboard with wave headers but no task cards.
-
-Write `initialization.json`, `logs.json`, present plan to user, **execute the Approval Gate (Step 11E) — NON-NEGOTIABLE.**
+**Order of writes (NON-NEGOTIABLE):**
+1. **First**, write `plan.json` to the dashboard directory. The `validate-plan-required.sh` hook will block step 2 if this file is missing or incomplete.
+2. **Then**, read [`agent/master/initialization_blueprint.md`](../../../agent/master/initialization_blueprint.md) and write `initialization.json`. The `validate-initialization-schema.sh` hook enforces the blueprint. `agents.length` must equal `plan.tasks.length`.
+3. **Then**, write the initial entry to `logs.json`.
+4. **Then**, present the plan to the user and execute the Approval Gate (Step 11E) — NON-NEGOTIABLE.
 
 ### Step 11E: Approval Gate — NON-NEGOTIABLE
 
@@ -137,6 +184,7 @@ CONTEXT:
 
 PROJECT ROOT: {project_root}
 TRACKER ROOT: {tracker_root}
+PLAN FILE: {tracker_root}/dashboards/{dashboardId}/plan.json
 
 CONVENTIONS:
 {Filtered from convention_map — include ONLY categories relevant to THIS task.
@@ -184,9 +232,11 @@ DIRECTORY: {working directory}
 PREPARATION — REQUIRED BEFORE STARTING WORK
 ═══════════════════════════════════
 
-1. READ YOUR TASK IN THE MASTER TASK FILE:
-   Read `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` — your task at id="{id}".
-   Do NOT read the entire file — only your task entry and depends_on tasks.
+1. READ YOUR TASK IN THE PLAN FILE:
+   Read `{tracker_root}/dashboards/{dashboardId}/plan.json` — your task at `tasks[]` where `id == "{id}"`.
+   Read `context` (shared across all workers in this swarm) and your single task entry plus the
+   entries for every id listed in your `depends_on`. Do NOT read other tasks' entries.
+   The plan file is the canonical source for your description, approach, files, and success criteria.
 
 2. READ PROJECT INSTRUCTIONS (only if CONVENTIONS above is empty):
    Check {project_root}/CLAUDE.md. Skip if conventions already provided above.
@@ -291,7 +341,7 @@ Read all progress files. Write `metrics.json`: `elapsed_seconds`, `serial_estima
 | Wall-clock / Serial estimate / Parallel efficiency | {elapsed}s / {serial}s / {efficiency}x |
 | Max concurrent / Deviations / Failure rate | {max} / {dev_count} / {fail_rate} |
 ### Artifacts
-Task: `tasks/{date}/parallel_{task_name}.json` | Plan: `tasks/{date}/parallel_plan_{task_name}.md`
+Plan: `dashboards/{dashboardId}/plan.json`
 Dashboard: `dashboards/{dashboardId}/` (initialization.json, logs.json, metrics.json)
 ```
 

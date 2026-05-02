@@ -1,0 +1,44 @@
+{
+  "file": ".claude/hooks/enforce-tracker-root-writes.sh",
+  "content_hash": "ba5d9b9b",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Edit|Write. Blocks dashboard-pattern files (initialization.json, logs.json, master_state.json, metrics.json, progress/*.json) from being written outside {tracker_root}/dashboards/. Catches the bug where the master writes `{project_root}/dashboards/{id}/initialization.json` (because the agent's CWD or path heuristic confused the two roots) — those writes are silently invisible to the dashboard server. The fix: tracker_root is computed from the script's own location ($SCRIPT_DIR/../..); any dashboard-shaped file outside that root is rejected with the correct absolute path in the error message.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Quick allow if file is already under TRACKER_ROOT/dashboards — no further checks",
+    "File path resolution via cd-and-pwd may fail for non-existent parent dirs — falls back to literal FILE_PATH",
+    "Only catches the 5 known dashboard file patterns — adding a new dashboard file type requires updating the case list"
+  ],
+  "patterns": [
+    "Dual-pattern check: allow if under tracker_root, block if matches dashboard shape outside it",
+    "Helpful block message includes the corrected absolute path so the agent can retry"
+  ],
+  "conventions": [],
+  "relationships": {
+    "depends_on": [
+      "jq"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      ".claude/hooks/enforce-tracker-root-writes-bash.sh",
+      ".claude/hooks/enforce-dashboard-isolation.sh",
+      ".claude/hooks/validate-master-write.sh"
+    ]
+  },
+  "domains": [
+    "tracker-root-enforcement",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "validation",
+    "PreToolUse",
+    "Edit-Write-matcher",
+    "path-enforcement"
+  ]
+}

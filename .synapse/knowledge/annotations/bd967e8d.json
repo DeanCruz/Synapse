@@ -1,0 +1,95 @@
+{
+  "file": "src/ui/utils/ideWorkspaceManager.js",
+  "content_hash": "96099a39",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Bridge between IDE workspaces (folders opened in the Code Explorer) and dedicated dashboards. Stores the workspaceId→dashboardId mapping in localStorage so IDE chat context survives restarts. Provides reverse lookup (which workspace owns a dashboard?), a 'is dashboard linked to IDE?' check, label decoration for sidebar listings, and a deduped-async createWorkspaceDashboard() that uses an in-flight promise map to prevent multiple concurrent useEffect hooks from spawning duplicate dashboards.",
+  "exports": [
+    {
+      "name": "getAllWorkspaceDashboards",
+      "kind": "function",
+      "signature": "() => { [workspaceId]: dashboardId }"
+    },
+    {
+      "name": "getWorkspaceDashboard",
+      "kind": "function",
+      "signature": "(workspaceId) => string|null"
+    },
+    {
+      "name": "setWorkspaceDashboard",
+      "kind": "function",
+      "signature": "(workspaceId, dashboardId) => void"
+    },
+    {
+      "name": "removeWorkspaceDashboard",
+      "kind": "function",
+      "signature": "(workspaceId) => void"
+    },
+    {
+      "name": "isIdeDashboard",
+      "kind": "function",
+      "signature": "(dashboardId) => boolean"
+    },
+    {
+      "name": "getWorkspaceForDashboard",
+      "kind": "function",
+      "signature": "(dashboardId) => string|null"
+    },
+    {
+      "name": "getIdeDashboardLabel",
+      "kind": "function",
+      "signature": "(dashboardId) => string — appends '(IDE)' if linked"
+    },
+    {
+      "name": "createWorkspaceDashboard",
+      "kind": "function",
+      "signature": "async (workspaceId) => string|null"
+    }
+  ],
+  "imports_from": {
+    "src/ui/utils/constants.js": [
+      "getDashboardLabel"
+    ]
+  },
+  "gotchas": [
+    "createWorkspaceDashboard's _inFlight Map is a module-scoped guard — concurrent calls for the same workspaceId return the same promise. Without this, two simultaneous useEffect mounts would each create a separate dashboard and orphan one.",
+    "Re-check happens both before AND after awaiting the in-flight slot (existing → return, then promise → await getWorkspaceDashboard(workspaceId) again) — prevents race when multiple callers hit createWorkspaceDashboard at once.",
+    "isIdeDashboard does an O(N) linear scan over all workspace mappings — fine at typical N (<10) but quadratic if called inside a render loop over dashboards.",
+    "removeWorkspaceDashboard is for explicit unlinking — closing a workspace tab in IDEView does NOT call this; the mapping persists across sessions intentionally.",
+    "Storage key 'synapse-ide-workspace-dashboards' is distinct from AppContext's IDE_WORKSPACES_KEY ('synapse-ide-workspaces') — workspaces and their dashboard links are persisted separately.",
+    "Disk-sync is NOT done here — workspace-dashboard mappings are localStorage-only. Wiping localStorage orphans workspaces from their dashboards (the dashboards still exist on disk, just lose their IDE context binding)."
+  ],
+  "patterns": [
+    "In-flight promise map pattern — Map<key, Promise> deduplicates concurrent async creators. Reusable for any async-create-once workflow.",
+    "Pure-localStorage helpers + async create-with-IPC pattern — same shape as dashboardProjects.js."
+  ],
+  "conventions": [
+    "Storage key 'synapse-ide-workspace-dashboards' (plural)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/utils/constants.js",
+      "window.electronAPI.createDashboard"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx",
+      "src/ui/components/Sidebar.jsx"
+    ],
+    "related": [
+      "src/ui/context/AppContext.jsx (IDE state)",
+      "electron/services/ProjectService.js"
+    ]
+  },
+  "domains": [
+    "ide-workspace",
+    "ipc-bridge-frontend",
+    "localstorage-persistence"
+  ],
+  "tags": [
+    "ide",
+    "workspace",
+    "dashboard-link",
+    "in-flight-dedup",
+    "localStorage"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "file": "agent/core/profile_system.md",
+  "content_hash": "a98e28f4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the agent role profile system — markdown files in {tracker_root}/_commands/profiles/ that act as MODIFIERS layered on top of any command (not standalone commands themselves). A profile overrides the agent's default priorities, goals, tone, and output style without replacing core CLAUDE.md instructions or technical capabilities. Specifies the invocation syntax (!{profile} {prompt}, !{profile} !{command} {prompt}, !p !{profile} {prompt}, !p_track !{profile} {prompt}), the profile file structure (Role, Priorities, Constraints, Output Style, Success Criteria), the application protocol (read in full, adopt for current task, propagate to dispatched workers via prompt injection), and the task-scoped lifetime.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Profile is a MODIFIER, not a standalone command — it must be combined with either a direct prompt or another command (!p, !p_track, etc.). Invoking !{profile} alone with no prompt is invalid.",
+    "When profile is combined with a swarm command (!p, !p_track), the FULL profile content must be injected into EVERY worker's dispatch prompt — the master's role doesn't propagate automatically.",
+    "Profile scope is task-scoped — applies only for the duration of the current task, does not persist across commands.",
+    "Profile lookup is single-location ({tracker_root}/_commands/profiles/{name}.md) — does NOT use the four-tier command resolution hierarchy.",
+    "Profile does NOT replace technical capabilities, tool access, or orchestration protocols — only the persona/priorities/output style. Worker progress reporting still applies in full."
+  ],
+  "patterns": [
+    "Modifier-on-command composition: !{profile} can prefix any direct prompt or command.",
+    "Required profile sections: Role, Priorities (ranked), Constraints, Output Style, Success Criteria.",
+    "Worker-prompt propagation: master injects full profile content into each agent's dispatch prompt for swarm commands so all agents adopt the same role.",
+    "Layered application: profile overrides priorities/tone/output, CLAUDE.md and command protocols remain intact."
+  ],
+  "conventions": [
+    "Profile files at {tracker_root}/_commands/profiles/{name}.md.",
+    "Invocation syntax: !{profile} as a leading or composable prefix.",
+    "Profile lifetime: scoped to current task only, never persistent."
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/core/command_resolution.md"
+    ],
+    "depended_by": [
+      "CLAUDE.md",
+      "_commands/Synapse/profiles.md",
+      "_commands/profiles/*.md"
+    ],
+    "related": [
+      "_commands/profiles/architect.md",
+      "_commands/profiles/qa.md",
+      "_commands/profiles/devops.md",
+      "_commands/profiles/copywriter.md"
+    ]
+  },
+  "domains": [
+    "core-conventions",
+    "profile-system"
+  ],
+  "tags": [
+    "markdown",
+    "core",
+    "profile",
+    "modifier",
+    "role"
+  ]
+}

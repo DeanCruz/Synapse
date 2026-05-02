@@ -10,10 +10,14 @@ function ensureDir() {
 }
 
 /**
- * Returns array of {id, name, created, updated, dashboardId, messageCount} sorted newest-first by updated.
+ * Returns array of {id, name, created, updated, dashboardId, surface, messageCount} sorted newest-first by updated.
  * If dashboardId is provided, only returns conversations for that dashboard.
+ * If surface is provided ('chat' or 'code'), only returns conversations for that surface.
+ *   - Legacy entries (no surface field on disk) are treated as 'code' for filtering:
+ *     surface='code' includes them, surface='chat' excludes them.
+ *   - undefined/null surface means no surface filter (returns all entries matching dashboardId).
  */
-function listConversations(dashboardId) {
+function listConversations(dashboardId, surface) {
   try {
     ensureDir();
     const files = fs.readdirSync(CONVERSATIONS_DIR).filter(f => f.endsWith('.json'));
@@ -24,12 +28,18 @@ function listConversations(dashboardId) {
         const conv = JSON.parse(raw);
         // Filter by dashboardId if provided
         if (dashboardId && conv.dashboardId && conv.dashboardId !== dashboardId) continue;
+        // Filter by surface if provided. Legacy entries (no surface field) default to 'code'.
+        if (surface) {
+          const convSurface = conv.surface || 'code';
+          if (convSurface !== surface) continue;
+        }
         results.push({
           id: conv.id,
           name: conv.name,
           created: conv.created,
           updated: conv.updated,
           dashboardId: conv.dashboardId || null,
+          surface: conv.surface || null,
           messageCount: Array.isArray(conv.messages) ? conv.messages.length : 0,
         });
       } catch (e) {
@@ -58,6 +68,8 @@ function loadConversation(id) {
 
 /**
  * Writes conversation data to disk. Returns saved data or null on error.
+ * Persists whatever fields the caller provides (including optional `surface`: 'chat' | 'code').
+ * No auto-default for `surface` — callers control it.
  */
 function saveConversation(data) {
   try {

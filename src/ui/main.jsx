@@ -2,13 +2,13 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppProvider } from './context/AppContext.jsx';
 import App from './App.jsx';
-import '../ui/styles/index.css';
+import './styles/index.css';
 
 // IDE styles — loaded globally so they're available when switching to IDE view
-import './styles/ide-sidebar.css';
-import './styles/ide-explorer.css';
-import './styles/ide-editor.css';
-import './styles/ide-layout.css';
+import './pages/code/subpages/code-explorer/styles/ide-sidebar.css';
+import './pages/code/subpages/code-explorer/styles/ide-explorer.css';
+import './pages/code/subpages/code-explorer/styles/ide-editor.css';
+import './pages/code/subpages/code-explorer/styles/ide-layout.css';
 
 // ---------------------------------------------------------------------------
 // Electron fetch shim — intercepts /api/* calls and routes through IPC.

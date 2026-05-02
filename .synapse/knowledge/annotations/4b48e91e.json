@@ -1,0 +1,50 @@
+{
+  "file": "documentation/project-integration/conventions.md",
+  "content_hash": "1ea4c165",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for the two project-level artifacts Synapse uses: the CLAUDE.md project convention file and the .synapse/ metadata directory. Covers CLAUDE.md purpose/structure/quality guidance/creation methods (!scaffold, !initialize, manual), the .synapse/ directory contents (config.json with monorepo support, toc.md, knowledge/), version control recommendations, project _commands/ resolution hierarchy, context gathering priorities, and CLAUDE.md's impact on swarm quality.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Synapse NEVER overwrites existing CLAUDE.md (use --force to override)",
+    "CLAUDE.md should be committed; .synapse/ should be gitignored",
+    ".synapse/ contains absolute paths -- machine-local, not portable",
+    "Project _commands/ have lowest priority -- cannot override built-in Synapse commands",
+    "Monorepo field is explicit null (not omitted) for non-monorepo projects"
+  ],
+  "patterns": [
+    "Specificity over vagueness: 'TypeScript 5.x with strict mode, no any' vs 'we use TypeScript'",
+    "Patterns over descriptions: explain how to create new code, not just what exists",
+    "Idempotent !initialize: skips existing files, never overwrites",
+    "Eight-priority context gathering: glob/grep first, parallel reads, targeted ranges"
+  ],
+  "conventions": [
+    "Recommended CLAUDE.md sections: Tech Stack, Architecture, File Structure, Conventions, Commands, Environment",
+    "Monorepo detection types: npm_workspaces, pnpm, lerna, nx, turbo, cargo, go",
+    "Add .synapse/ to .gitignore"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/project-integration/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/project-integration/toc-system.md",
+      "documentation/project-integration/pki-overview.md",
+      "documentation/project-integration/project-setup.md",
+      "_commands/project/scaffold.md",
+      "_commands/project/initialize.md"
+    ]
+  },
+  "domains": [
+    "project-integration-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "claude-md",
+    "synapse-directory",
+    "conventions"
+  ]
+}

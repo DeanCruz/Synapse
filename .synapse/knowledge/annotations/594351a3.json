@@ -1,0 +1,54 @@
+{
+  "file": "documentation/project-integration/toc-system.md",
+  "content_hash": "0080fc71",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for the Table of Contents (TOC) -- a semantic index at {project_root}/.synapse/toc.md. Covers why the TOC exists, structure (Project Overview + per-directory File Index), entry format (filename, summary, tags, content hash, related, exports), generation via !toc_generate (3-phase: discovery, parallel scan, streaming assembly), incremental update via !toc_update (diff detection with hashes), search via !toc with text/tag/combined modes, content hash usage, monorepo organization, and best practices.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Master never reads source files directly -- agents do all file reading during !toc_generate",
+    "!toc verifies candidates by reading actual files (prevents stale-entry false positives)",
+    "Content hash = first 8 chars of SHA-256",
+    "Backward-compatible: legacy TOCs without hash comments treated as unchanged",
+    "Renamed files detected via 'git diff --name-status -M'",
+    "Skipped: node_modules/, .next/, dist/, .git/, *.lock, auto-generated files"
+  ],
+  "patterns": [
+    "Three-phase generation: discovery -> parallel scan -> streaming assembly",
+    "Streaming assembly protects against context loss from interruption",
+    "Tag-based search: # prefix, multiple tags use AND logic",
+    "Result ranking: exact name > summary > tag > related file",
+    "One-hop related-file traversal in search results"
+  ],
+  "conventions": [
+    "Entry format: bold filename, em-dash summary, [tags: ...], <!-- hash:xxxxxxxx -->",
+    "Sub-lines for Related and Exports indented",
+    "Tag categories: technology, domain, role, feature",
+    "Directories with 3+ files get own agent, small directories grouped"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/project-integration/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/project-integration/conventions.md",
+      "documentation/project-integration/pki-overview.md",
+      "_commands/project/toc.md",
+      "_commands/project/toc_generate.md",
+      "_commands/project/toc_update.md"
+    ]
+  },
+  "domains": [
+    "project-integration-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "toc",
+    "indexing",
+    "search",
+    "semantic"
+  ]
+}

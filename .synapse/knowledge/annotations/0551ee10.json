@@ -1,0 +1,50 @@
+{
+  "file": ".claude/hooks/validate-plan-required.sh",
+  "content_hash": "af8a85fb",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Edit|Write. Blocks the master from writing initialization.json unless a properly structured plan.json exists in the same dashboard directory. plan.json captures the master's deep-thinking output (shared context + per-task approach/files) and is read by every worker on dispatch. Validates plan.json: parseable JSON, required top-level fields (name, created), context.prompt non-empty (workers need original goal), tasks[] non-empty, every task has id+title+description+approach+non-empty files. Cross-check on Write: agents.length in initialization.json content must equal plan.tasks.length. Edits to existing populated initialization.json bypass (repair/add_task path).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Edit on already-populated initialization.json (task != null) is allowed — repair tasks and !add_task don't re-write the plan",
+    "Schema enforced is the dashboards/{id}/plan.json schema (NEW), not the legacy tasks/{date}/parallel_plan_{name}.md",
+    "Cross-check agents.length == plan.tasks.length is enforced on Write only — Edit may rewire agents (repair appends an `r` agent)",
+    "Block messages reference agent/_commands/p_track_planning.md and agent/master/initialization_blueprint.md for the canonical authoring guides",
+    "context.prompt must be NON-EMPTY — workers rely on it to understand the original goal even after compaction"
+  ],
+  "patterns": [
+    "Pre-write gate enforcing planning artifact existence (plan.json BEFORE initialization.json)",
+    "Per-task field completeness check via jq array-of-missings construction"
+  ],
+  "conventions": [
+    "Plan schema mirrors the spec in agent/master/initialization_blueprint.md verbatim"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq",
+      "plan.json (sibling file)"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      ".claude/skills/p-track/SKILL.md",
+      "agent/_commands/p_track_planning.md",
+      "agent/master/initialization_blueprint.md",
+      ".claude/hooks/validate-initialization-schema.sh"
+    ]
+  },
+  "domains": [
+    "plan-gate",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PreToolUse",
+    "Edit-Write-matcher",
+    "plan-json",
+    "deep-thinking-gate"
+  ]
+}

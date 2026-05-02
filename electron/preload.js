@@ -31,6 +31,7 @@ const PUSH_CHANNELS = [
   'preview-edit-request',
   'settings-changed',
   'update-status',
+  'chat_dashboard_changed',
 ];
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -137,6 +138,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Chat context
   getChatSystemPrompt: (projectDir, dashboardId, additionalContextDirs) => ipcRenderer.invoke('get-chat-system-prompt', projectDir, dashboardId, additionalContextDirs),
   logChatEvent: (dashboardId, entry) => ipcRenderer.invoke('log-chat-event', dashboardId, entry),
+  getChatDashboardData: () => ipcRenderer.invoke('get-chat-dashboard-data'),
+  createChatAgent: (opts) => ipcRenderer.invoke('create-chat-agent', opts || {}),
 
   // Attachments
   saveTempImages: (attachments) => ipcRenderer.invoke('save-temp-images', attachments),
@@ -165,7 +168,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSwarmStates: () => ipcRenderer.invoke('get-swarm-states'),
 
   // Conversation management
-  listConversations: (dashboardId) => ipcRenderer.invoke('list-conversations', dashboardId),
+  listConversations: (dashboardId, surface) => ipcRenderer.invoke('list-conversations', dashboardId, surface),
   loadConversation: (filename) => ipcRenderer.invoke('load-conversation', filename),
   saveConversation: (conv) => ipcRenderer.invoke('save-conversation', conv),
   createConversation: (name) => ipcRenderer.invoke('create-conversation', name),

@@ -1,0 +1,43 @@
+{
+  "file": "documentation/git-manager/ipc-handlers.md",
+  "content_hash": "fb38e58c",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for the 28 git-* IPC handlers exposing git operations to the renderer: status/diff, log/graph, branches, staging, commit, remotes, stash, reset/revert/discard. Documents the gitValidateRepoPath / gitExec helpers, execFile-only execution, 30s timeout, 10MB buffer, and standard response envelope.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "All commands shell out to the user's installed git via execFile (no shell)",
+    "Repo path validated by stat() before every command — invalid paths reject early",
+    "10MB buffer ceiling — extremely large diffs may truncate"
+  ],
+  "patterns": [
+    "execFile for safety against shell injection",
+    "Path resolve + stat validation per call",
+    "Standardized { success, data, error } responses"
+  ],
+  "conventions": [
+    "Handler names: git-<verb> (e.g., git-status, git-create-branch)"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/git-manager/overview.md",
+      "documentation/electron/ipc-reference.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/git-manager/components.md",
+      "documentation/electron/services.md"
+    ]
+  },
+  "domains": [
+    "git-manager",
+    "electron"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "git",
+    "ipc"
+  ]
+}

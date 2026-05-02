@@ -1,0 +1,49 @@
+{
+  "file": "documentation/dashboard/hooks.md",
+  "content_hash": "3126c6b0",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Documents the dashboard's three custom React hooks (useDashboardData, useElectronAPI, useResize) and the mergeState() helper that fuses initialization.json with live progress files. Covers IPC push subscriptions, dashboard switching, cleanup semantics, and the data-flow contract between Electron and the renderer.",
+  "exports": [
+    "useDashboardData",
+    "useElectronAPI",
+    "useResize",
+    "mergeState"
+  ],
+  "imports_from": [],
+  "gotchas": [
+    "useDashboardData unsubscribes on dashboardId change — stale closures will leak listeners if effect deps are wrong",
+    "mergeState always overlays progress on top of init agents; missing progress yields default 'pending' status",
+    "useElectronAPI returns null in non-Electron contexts (e.g., SSR/web build)"
+  ],
+  "patterns": [
+    "Subscription hooks return cleanup functions",
+    "IPC push handlers normalized through mergeState before dispatch",
+    "ResizeObserver wrapped in idempotent hook"
+  ],
+  "conventions": [
+    "Hook files in src/ui/hooks/ named useXxx.js"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/electron/ipc-reference.md",
+      "documentation/dashboard/state-management.md"
+    ],
+    "depended_by": [
+      "documentation/dashboard/components.md"
+    ],
+    "related": [
+      "documentation/server/sse-events.md"
+    ]
+  },
+  "domains": [
+    "dashboard-ui",
+    "electron"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "hooks",
+    "react"
+  ]
+}

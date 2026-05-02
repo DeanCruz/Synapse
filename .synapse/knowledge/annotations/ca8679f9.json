@@ -1,0 +1,32 @@
+{
+  "file": "documentation/README.md",
+  "content_hash": "7bc6bb19",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top-level documentation map and entry point for the Synapse documentation directory. Indexes the major documentation sections (architecture, master-agent, worker-protocol, swarm-lifecycle, data-architecture, multi-dashboard) and orients readers toward the right deep-dive doc for their question. Acts as a table of contents rather than a primary information source.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Not authoritative -- it links out; canonical content lives in the linked sub-docs"
+  ],
+  "patterns": [
+    "Hub-and-spoke documentation index"
+  ],
+  "conventions": [
+    "Markdown links use relative paths to keep the doc tree portable"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "documentation",
+    "navigation"
+  ],
+  "tags": [
+    "index",
+    "toc",
+    "overview"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "file": "documentation/multi-dashboard/overview.md",
+  "content_hash": "b0f2f639",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Introduces Synapse's multi-dashboard architecture: dashboards are dynamically created with 6-char hex IDs (no fixed slot limit), each fully isolated with its own initialization.json, logs.json, and progress/ directory. Different dashboards can run different projects simultaneously (project_root field per dashboard). Server watches all dashboards in parallel with fs.watch/fs.watchFile and broadcasts SSE events scoped by dashboard ID.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Dashboards are created on demand by nextDashboardId() using crypto.randomBytes(3) -- collisions are checked",
+    "IDE dashboards are pinned at the top of the sidebar; user dashboards reorderable via drag-and-drop",
+    "All stats are derived at render time from progress files -- no maintained counters anywhere"
+  ],
+  "patterns": [
+    "Per-dashboard isolation with no shared state between swarms",
+    "Multi-project orchestration via per-dashboard project_root"
+  ],
+  "conventions": [
+    "Dashboard IDs are 6-character lowercase hex strings",
+    "task.project_root in initialization.json identifies which project a swarm targets"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "multi-dashboard",
+    "architecture"
+  ],
+  "tags": [
+    "multi-dashboard",
+    "isolation",
+    "concurrency"
+  ]
+}

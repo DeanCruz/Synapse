@@ -1,0 +1,56 @@
+{
+  "file": "src/ui/components/TimelinePanel.jsx",
+  "content_hash": "0bea2a38",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Side panel showing a sorted chronological timeline of task events for the current task plus a History section listing past tasks. Builds events on every render from `task.started_at`, each agent's started_at/completed_at (label varies by status), and `task.completed_at`. Sorts by ISO timestamp. Auto-scrolls to bottom on visibility change or when events.length changes. Two sub-components: TimelineEntry (dot + time + label + agent title) and HistoryEntry (dot + name + meta which is duration when both timestamps exist, otherwise overall_status).",
+  "exports": [
+    {
+      "name": "TimelinePanel",
+      "kind": "component",
+      "signature": "{ status: { active_task, agents, history }, visible: boolean, onClose: () => void }"
+    }
+  ],
+  "imports_from": {
+    "@/utils/constants.js": [
+      "TIMELINE_COLORS"
+    ],
+    "@/utils/format.js": [
+      "formatTime",
+      "calcDuration"
+    ]
+  },
+  "gotchas": [
+    "events array is rebuilt on EVERY render, not memoized — for swarms with hundreds of agents this is O(n log n) per render.",
+    "History is reversed in-place via `[...history].reverse()` — original array is not mutated, but each render allocates a new copy.",
+    "Auto-scroll uses requestAnimationFrame inside a useEffect; if the body element re-mounts at the same time, the scroll target may be the old node."
+  ],
+  "patterns": [
+    "Status-to-label mapping inline in the build loop (`a.status === 'failed' ? 'Agent failed' : 'Agent completed'`).",
+    "Event keys combine timestamp + index to disambiguate co-located events."
+  ],
+  "conventions": [
+    "Section labels (.timeline-section-label) separate Current Task from History; an empty state renders centered when both arrays are empty."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/utils/constants.js",
+      "src/ui/utils/format.js"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "src/ui/components/StatsBar.jsx (Elapsed click opens this)"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "timeline-panel"
+  ]
+}

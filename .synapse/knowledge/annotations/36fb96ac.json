@@ -1,0 +1,48 @@
+{
+  "file": ".claude/hooks/validate-master-write.sh",
+  "content_hash": "786aaf1f",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Edit|Write. Blocks the master agent from writing to {project_root} during an active swarm (any non-ide dashboard with task != null). Reads project_root from .synapse/project.json; tracker_root from script location. Allow-list: tracker_root/{dashboards,tasks,Archive,.claude,.synapse}. If project_root == tracker_root (Synapse self-targeting), all writes allowed. If no swarm is active, all writes allowed (master can edit project files when not orchestrating). Otherwise: writes anywhere under project_root are blocked with `Master agent cannot write to project files during an active swarm. File: {path}. Create a worker task instead.`",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Active-swarm check iterates all non-ide dashboards looking for task!=null — if any one is active, the gate is on",
+    "Self-targeting bypass (PROJECT_ROOT == TRACKER_ROOT) — Synapse developing itself uses worker discipline anyway",
+    "Allow-list paths are ABSOLUTE matches against tracker_root prefix — symlinks may not be normalized",
+    "Fail-open if .synapse/project.json missing or project_root unset"
+  ],
+  "patterns": [
+    "Allow-list of permitted tracker subpaths + active-swarm gate on everything else",
+    "Absolute path resolution via cd-and-pwd with literal fallback"
+  ],
+  "conventions": [
+    "Block reason instructs the agent on the correct action ('Create a worker task instead')"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq",
+      ".synapse/project.json"
+    ],
+    "depended_by": [
+      ".claude/settings.json",
+      ".claude/agents/master-orchestrator.md (also wires it role-scoped)"
+    ],
+    "related": [
+      ".claude/hooks/enforce-tracker-root-writes.sh",
+      ".claude/skills/master-protocol/SKILL.md"
+    ]
+  },
+  "domains": [
+    "master-write-gate",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PreToolUse",
+    "Edit-Write-matcher",
+    "master-only",
+    "code-write-block"
+  ]
+}

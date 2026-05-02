@@ -1,0 +1,44 @@
+{
+  "file": "documentation/profiles/available-profiles.md",
+  "content_hash": "2dd17b07",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Catalog of all 15 built-in agent role profiles in {tracker_root}/_commands/profiles/. Documents engineering profiles (architect, devops, qa, security, technical-writer), business strategy (founder, product, pricing), data analytics (analyst), marketing/sales (marketing, copywriter, sales, growth), and customer/operations (customer-success, legal). Each profile includes role description, key priorities, output style, and when-to-use guidance, plus a profile-by-use-case comparison table and combination patterns.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Profiles are task-scoped -- they apply only to current task",
+    "When combined with !p/!p_track, profile content is included in EVERY worker prompt",
+    "Profile invocation syntax: !{profile_name} can be standalone or combined with commands"
+  ],
+  "patterns": [
+    "Persona-based behavioral preset layered on top of core agent instructions",
+    "Each profile has Role / Priorities / Constraints / Output Style / Success Criteria sections",
+    "Common output structure templates (e.g., security review with Scope/Threat Model/Findings)"
+  ],
+  "conventions": [
+    "Profile names match file names (.md), invoked with !{profile}",
+    "Tone and format guidance specific to each role",
+    "Always includes 'When to Use' section for disambiguation"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/profiles/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/profiles/",
+      "documentation/commands/creating-commands.md"
+    ]
+  },
+  "domains": [
+    "profile-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "profiles",
+    "roles",
+    "personas"
+  ]
+}

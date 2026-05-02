@@ -29,7 +29,7 @@
    - Task must have no progress file, or a progress file with `status: "pending"`. If it has any other status, report it and stop.
    - All tasks in `depends_on` must have progress files with `status: "completed"`. If any dependency is not completed, report which dependencies are blocking and stop.
 
-5. **Read the master task file** at `{tracker_root}/tasks/{date}/parallel_{task_name}.json`. Extract the full task context for `{task_id}`.
+5. **Read the canonical plan** at `{tracker_root}/dashboards/{dashboardId}/plan.json`. Extract `context` (shared) and the `tasks[]` entry whose `id == "{task_id}"` — that entry contains the deeply-thought `approach` and `files`.
 
 6. **Resolve `{project_root}`** from the `task.project_root` field in `initialization.json`. If not present, resolve using the standard resolution order (see `{tracker_root}/CLAUDE.md` — Path Convention section).
 

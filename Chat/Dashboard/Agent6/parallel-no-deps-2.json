@@ -1,0 +1,15 @@
+{
+  "task_id": "a6-2",
+  "title": "Parallel: Scan secrets",
+  "status": "in_progress",
+  "agent": "Agent6",
+  "depends_on": [],
+  "started_at": "2026-04-28T12:00:00Z",
+  "completed_at": null,
+  "summary": null,
+  "stage": "scanning",
+  "message": "Running secret scanner across repo (parallel — no upstream)",
+  "files_changed": [],
+  "milestones": ["Patterns loaded"],
+  "deviations": []
+}

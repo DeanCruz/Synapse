@@ -1,0 +1,80 @@
+{
+  "file": "src/ui/components/BottomPanel.jsx",
+  "content_hash": "003001de",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "VS Code-style bottom panel with Terminal, Problems, Output, Debug Console, and Ports tabs. Supports up to 5 terminal tabs PER dashboard, drag-to-resize from the top edge, and embedded vs overlay rendering for IDE vs dashboard mode. Tracks per-dashboard terminal state in a single `termState` object keyed by dashboardId so PTYs survive dashboard switches; ALL dashboards' TerminalView components stay mounted with display:none when inactive (PTY+xterm processes never tear down on tab swap). Reads diagnostics from AppContext to badge the Problems tab and entries.length to badge Output.",
+  "exports": [
+    {
+      "name": "BottomPanel",
+      "kind": "component",
+      "signature": "{ logs, activeFilter, onFilterChange, projectDir, dashboardId, onNavigate, embedded?: boolean }"
+    }
+  ],
+  "imports_from": {
+    "../context/AppContext.jsx": [
+      "useAppState"
+    ],
+    "./LogPanel.jsx": [
+      "default"
+    ],
+    "./TerminalView.jsx": [
+      "default"
+    ],
+    "./ide/ProblemsPanel.jsx": [
+      "default"
+    ],
+    "./ide/DebugConsolePanel.jsx": [
+      "default"
+    ],
+    "../utils/dashboardProjects.js": [
+      "getDashboardProject"
+    ]
+  },
+  "gotchas": [
+    "All dashboards' terminals stay mounted simultaneously — heavy memory use if many dashboards have multiple terminals open. The `display:none` toggle keeps PTY processes alive but does not release xterm/canvas resources.",
+    "Drag resize uses pointer capture + RAF throttling; failing to release pointer capture on unmount could leave the cursor stuck — `onUp` is invoked in cleanup to defend against this.",
+    "MAX_TERMINAL_TABS=5 silently caps further additions; the +button just disappears with no toast/error.",
+    "Per-dashboard term state is initialized lazily in an effect — first render of a new dashboard renders DEFAULT_TERM before the effect commits, so the first frame may flicker to the default."
+  ],
+  "patterns": [
+    "Per-dashboard isolation via `termState[dashboardId]` map; effect ensures every dashboardId has a record before tabs render.",
+    "All panes mounted; only `display` toggles between flex/none — preserves scroll position and component state across tab switches.",
+    "Drag handle uses `dragStateRef` + `rafRef` (no React state during drag) to avoid re-render storms; `bottom-panel-resizing` body class disables hover effects across the app while dragging."
+  ],
+  "conventions": [
+    "Terminal IDs (1, 2, ...) are local per-dashboard, not global. Tab labels follow `Terminal {id}`.",
+    "Constants DEFAULT_PANEL_HEIGHT, MIN_PANEL_HEIGHT, HEADER_HEIGHT defined at module scope."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/LogPanel.jsx",
+      "src/ui/components/TerminalView.jsx",
+      "src/ui/components/ide/ProblemsPanel.jsx",
+      "src/ui/components/ide/DebugConsolePanel.jsx",
+      "src/ui/context/AppContext.jsx",
+      "src/ui/utils/dashboardProjects.js"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx",
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": [
+      "src/ui/components/TerminalView.jsx",
+      "src/ui/components/LogPanel.jsx"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering",
+    "terminal",
+    "log-panel"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "bottom-panel",
+    "vs-code-style",
+    "drag-resize"
+  ]
+}

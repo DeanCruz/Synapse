@@ -1,0 +1,37 @@
+{
+  "file": "documentation/worker-protocol/deviations.md",
+  "content_hash": "437684b4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the deviation reporting protocol for worker agents. A deviation is anything the worker did that was not explicitly specified in its dispatch prompt, classified into CRITICAL (interface/contract change affecting downstream tasks), MODERATE (different approach but same outcome), or MINOR (cosmetic, no functional impact). Workers must report deviations immediately to both deviations[] and a level:'deviation' log entry.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Under-reporting is worse than over-reporting -- when in doubt, report it",
+    "CRITICAL deviations may force the master to re-plan downstream tasks before dispatching them",
+    "Deviation must be added to BOTH deviations[] and logs[] (level:'deviation') -- one without the other is incomplete"
+  ],
+  "patterns": [
+    "Severity-based triage of plan divergences",
+    "Immediate (not end-of-task) deviation reporting for live dashboard visibility"
+  ],
+  "conventions": [
+    "Deviation descriptions answer: what happened, why, and what the impact is",
+    "Resolution priority for ambiguity: dispatch prompt -> CLAUDE.md -> conservative choice -> document as deviation"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "worker-protocol",
+    "deviations"
+  ],
+  "tags": [
+    "deviation",
+    "severity",
+    "reporting",
+    "ambiguity"
+  ]
+}

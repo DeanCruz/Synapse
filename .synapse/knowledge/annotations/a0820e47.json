@@ -1,0 +1,59 @@
+{
+  "file": "_commands/project/instrument.md",
+  "content_hash": "0191ceac",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !instrument slash command — invokes electron/services/InstrumentService.js (instrumentProject / removeInstrumentation) to add or strip data-synapse-label UUID attributes on text-bearing elements in the target project's JSX/TSX/HTML files. Resolves project path from {tracker_root}/.synapse/project.json (errors if no project set), then runs three modes: default (instrument), --dry-run (preview without writing), --remove (strip all data-synapse-label attributes). Each label is a globally unique crypto.randomUUID() value (e.g., f47ac10b-58cc-4372-a567-0e02b2c3d479). Re-running on already-labeled elements skips them — labels are preserved across runs. Reports filesScanned/filesModified/labelsAdded/skipped counts.",
+  "exports": [],
+  "imports_from": {
+    "electron/services/InstrumentService": [
+      "instrumentProject",
+      "removeInstrumentation"
+    ]
+  },
+  "gotchas": [
+    "Requires {tracker_root}/.synapse/project.json to be set — errors with 'Run !project set /path/to/project first' if missing.",
+    "MUTATES JSX/TSX/HTML files — non-destructive (only adds attributes, preserves existing labels) but is a write operation. Use --dry-run to preview.",
+    "Skips node_modules/, .next/, dist/, build/, .git/ — instrumenting these would be catastrophic.",
+    "Only specific text-bearing elements are labeled: h1-h6, p, span, button, a, label, li, td, th, caption, figcaption, blockquote, dt, dd. Other elements ignored even if they have text.",
+    "Element must have DIRECT text content to be labeled — wrapper elements without immediate text are skipped.",
+    "Each label is a UUID (crypto.randomUUID), not deterministic. Re-running creates NEW labels for newly-text-bearing elements but preserves existing UUIDs.",
+    "--remove strips labels project-wide — use carefully; users lose Live Preview mappings."
+  ],
+  "patterns": [
+    "Three-mode CLI: default / --dry-run / --remove.",
+    "Service-delegation: command doc orchestrates InstrumentService methods.",
+    "Idempotent labeling: re-runs preserve existing UUIDs."
+  ],
+  "conventions": [
+    "Element allowlist (not blocklist) for what gets labeled.",
+    "UUID-based stable identifiers via crypto.randomUUID().",
+    "Markdown structure: # title → Syntax → Steps → What It Does → Output."
+  ],
+  "relationships": {
+    "depends_on": [
+      "electron/services/InstrumentService.js",
+      "{tracker_root}/.synapse/project.json"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/components/preview/PreviewView.jsx",
+      "src/ui/preview/inject-overlay.js",
+      "electron/services/PreviewService.js",
+      "electron/services/PreviewTextWriter.js"
+    ]
+  },
+  "domains": [
+    "instrumentation",
+    "live-preview"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "instrumentation",
+    "writes-files",
+    "filesystem-modify",
+    "uuid"
+  ]
+}

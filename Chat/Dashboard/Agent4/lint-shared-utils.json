@@ -1,0 +1,15 @@
+{
+  "task_id": "a4-3",
+  "title": "Lint shared utilities",
+  "status": "in_progress",
+  "agent": "Agent4",
+  "depends_on": [],
+  "started_at": "2026-04-28T11:00:05Z",
+  "completed_at": null,
+  "summary": null,
+  "stage": "linting",
+  "message": "Scanning utils/ and helpers/ packages",
+  "files_changed": [],
+  "milestones": [],
+  "deviations": []
+}

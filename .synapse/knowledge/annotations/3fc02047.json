@@ -1,0 +1,67 @@
+{
+  "file": "src/ui/components/Header.jsx",
+  "content_hash": "854e08c4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top navigation bar of the app. Renders ModeMenu, Synapse logo (clickable to home), centered task badge + directory, and right-side action group: archive dropdown (Archive task / View Archive), History button, Electron-only Commands button, an 'N active' chats badge computed across all dashboards via claudeIsProcessing/claudeProcessingStash, and a Replanning badge when overall_status==='replanning'. Archive dropdown closes on outside-click via document mousedown listener gated by archiveOpen state. Export action exists (handleExport fetches /api/dashboards/:id/export and triggers a JSON download) but the button is currently hidden per code comment.",
+  "exports": [
+    {
+      "name": "Header",
+      "kind": "component",
+      "signature": "()"
+    }
+  ],
+  "imports_from": {
+    "../context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "../hooks/useElectronAPI.js": [
+      "useIsElectron"
+    ],
+    "../assets/synapse-logo-mark.svg": [
+      "default"
+    ],
+    "./ModeMenu.jsx": [
+      "default"
+    ]
+  },
+  "gotchas": [
+    "Active-chat counter sums isProcessing across BOTH the current dashboard (claudeIsProcessing) and stashed dashboards (claudeProcessingStash[id].isProcessing) — easy to miss when adding new processing state.",
+    "handleArchiveTask calls window.electronAPI.archiveDashboard with the current dashboardId and silently swallows errors via .catch(()=>{}); failures don't surface in UI.",
+    "handleHistory and handleViewArchive both just dispatch SET_VIEW=home — the history/archive UIs live entirely in HomeView, not as separate routes."
+  ],
+  "patterns": [
+    "Document-level mousedown listener pattern with ref+open-state for outside-click dropdown dismissal — repeated in ModeMenu, QueuePopup, Sidebar, ClaudeView quick-access editor.",
+    "Electron-only UI gated via useIsElectron() so SSE-only browser mode hides Commands."
+  ],
+  "conventions": [
+    "Inline SVG icons rather than icon font/library.",
+    "Action buttons use class header-action-btn with optional modifier (header-commands-btn)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/hooks/useElectronAPI.js",
+      "src/ui/components/ModeMenu.jsx"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "src/ui/components/HomeView.jsx",
+      "src/ui/components/ModeMenu.jsx"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering",
+    "sidebar-navigation"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "header",
+    "navigation"
+  ]
+}

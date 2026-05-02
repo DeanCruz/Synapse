@@ -1,0 +1,99 @@
+{
+  "file": "src/ui/components/git/GitManagerView.jsx",
+  "content_hash": "7ad4d3a9",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top-level Git Manager view container — assembles RepoTabs across the top, a resizable left sidebar (ChangesPanel + CommitPanel), a draggable divider, the right content area with three tabs (Changes/DiffViewer, History/HistoryPanel, Branches/BranchPanel), plus a bottom RemotePanel and floating QuickActions bar. Manages the repo-discovery lifecycle: when activeRepo changes it (1) checks api.gitIsRepo to decide between GitWelcome (no repos), InitFlow (folder is not a git repo), or the full layout; (2) parallel-fetches initial data via Promise.all of gitStatus, gitBranches, gitCurrentBranch, gitLog, gitRemotes; (3) starts a 3-second gitStatus polling interval to keep the working-tree view live; (4) auto-fetches a diff for any pre-selected file (via GIT_NAVIGATE_TO_FILE flow from elsewhere in the app), tracking the last-fetched file in autoFetchedFileRef so manual selections in ChangesPanel are not double-fetched. Also implements the resizable sidebar drag handler (220–500 px range).",
+  "exports": [
+    {
+      "name": "GitManagerView",
+      "kind": "component",
+      "signature": "() — no props, reads from AppContext"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useRef",
+      "useCallback",
+      "useEffect"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "./RepoTabs.jsx": [
+      "default"
+    ],
+    "./GitWelcome.jsx": [
+      "default"
+    ],
+    "./InitFlow.jsx": [
+      "default"
+    ],
+    "./ChangesPanel.jsx": [
+      "default"
+    ],
+    "./DiffViewer.jsx": [
+      "default"
+    ],
+    "./CommitPanel.jsx": [
+      "default"
+    ],
+    "./RemotePanel.jsx": [
+      "default"
+    ],
+    "./BranchPanel.jsx": [
+      "default"
+    ],
+    "./HistoryPanel.jsx": [
+      "default"
+    ],
+    "./QuickActions.jsx": [
+      "default"
+    ],
+    "src/ui/styles/git-manager.css": []
+  },
+  "gotchas": [
+    "isGitRepo has THREE states: null=unknown (still checking), true=valid repo, false=not a repo — render branches must handle all three (loading state for null, InitFlow for false, full UI for true).",
+    "The 3-second status polling interval continues for the lifetime of the active repo — switching tabs in the app doesn't unmount this view in some setups, so the polling persists. Always cleanup on activeRepo/isGitRepo changes via the useEffect cleanup.",
+    "autoFetchedFileRef.current prevents double-fetching a pre-selected file but is keyed by filename — selecting the same file twice in a row from elsewhere will only fetch once until the ref is reset.",
+    "The Ctrl/Cmd+Enter global shortcut focuses `.git-manager-commit-input` via document.querySelector — relies on a single instance of CommitPanel being in the DOM. Multiple instances will all receive the focus call.",
+    "Drag-resize attaches mousemove/mouseup listeners to document, NOT the divider — required for drag-outside-bounds behavior. Cleanup removes them and the body class .git-manager-dragging.",
+    "When activeRepo transitions from a valid repo back to null (close-tab), the gitStatus polling cleanup still fires but the dispatched data cleanup (clearing gitStatus etc.) is up to the GIT_CLOSE_REPO reducer — verify reducer handles this."
+  ],
+  "patterns": [
+    "Three-mode render gate: `!hasRepos` → GitWelcome, `!isGitRepo` → InitFlow, otherwise full layout. Each mode reuses the RepoTabs header.",
+    "Parallel data load via Promise.all — five endpoints fire concurrently; each is null-checked in case the API surface evolves.",
+    "Refresh callback (refreshGitData) is passed to CommitPanel onCommitComplete — used to re-fetch everything after a commit lands.",
+    "DEFAULT_SIDEBAR_WIDTH (300) / MIN (220) / MAX (500) — clamp logic uses Math.min(MAX, Math.max(MIN, ...))."
+  ],
+  "conventions": [
+    "All git API calls use window.electronAPI.git* and check `result?.success` before reading `result.data`.",
+    "Inline SVG icons (GitSpinnerIcon, DiffIcon, HistoryIcon, BranchIcon, GitRepoIcon) live at the bottom of the file."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "all sibling git/ components",
+      "electron/preload.js (gitIsRepo, gitStatus, gitBranches, gitCurrentBranch, gitLog, gitRemotes, gitDiffFile)"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx (routes 'git' view to this component)"
+    ],
+    "related": [
+      "src/ui/components/ide/IDEView.jsx (mirrors the resizable-sidebar pattern)"
+    ]
+  },
+  "domains": [
+    "git-manager"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "layout",
+    "container",
+    "polling"
+  ]
+}

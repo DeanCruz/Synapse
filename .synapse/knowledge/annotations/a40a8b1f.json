@@ -1,0 +1,81 @@
+{
+  "file": "src/ui/components/ide/SearchPanel.jsx",
+  "content_hash": "9b2bb01a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "IDE search/replace sidebar that REPLACES FileExplorer when state.ideSidebarView === 'search'. Owns search query input, three regex/case/wholeWord toggle buttons, optional replace input row (toggled via chevron on left), and collapsible include/exclude glob filters. Search is debounced 300ms via debounceRef; Enter triggers immediate execution. Calls window.electronAPI.ideSearch(workspace.path, query, options) and dispatches IDE_SET_SEARCH_RESULTS with { results, totalMatches, truncated }. Replace All calls window.electronAPI.ideSearchReplace(workspacePath, [{file, matches, replacement}]) for every file in results. ESC key behavior: clears results if any, else returns to explorer view. Single-file replace via handleReplaceInFile (passed down through SearchResults? No — currently unused at panel level; defined but only called via the FileGroup-level button if added).",
+  "exports": [
+    {
+      "name": "SearchPanel",
+      "kind": "component",
+      "signature": "()"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useCallback",
+      "useRef",
+      "useEffect"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/components/ide/SearchResults.jsx": [
+      "SearchResults"
+    ],
+    "src/ui/styles/ide-search.css": [
+      "default-side-effect"
+    ]
+  },
+  "gotchas": [
+    "Uses `var` (not const/let) and function-expression callbacks — looks like older transpile target / hand-written ES5-flavored code; behavior is identical but inconsistent with rest of codebase.",
+    "handleReplaceAll has a buggy guard: `!replaceText === undefined` — that's `!replaceText` evaluated then compared to undefined, which is ALWAYS false (so guard never triggers). Likely intended `replaceText === undefined`. Actual replace still works because empty string is allowed (e.g., delete-mode replace).",
+    "toggleOption sets newOptions = { [key]: !options[key] } — the dispatch payload is partial; reducer must MERGE with existing options or filters reset on toggle.",
+    "Re-search after toggleOption runs after 100ms debounce using a stale options snapshot merged inline ({ ...options, ...newOptions }) — this avoids the React state lag but means rapid toggles can race.",
+    "executeSearch's 'no api' branch dispatches results=[] but does NOT clear loading flag — could leave the panel in 'Searching...' forever if IPC vanishes mid-session.",
+    "handleReplaceInFile is defined but I don't see it called — appears to be dead code or wired through SearchResults (which currently doesn't pass it through).",
+    "Cmd/Ctrl+Shift+F handler in IDEView focuses '.ide-search-input' — DOM class must remain stable.",
+    "Initial focus uses inputRef.current?.focus() in mount effect — empty deps so it runs once."
+  ],
+  "patterns": [
+    "Debounced search input (300ms) + Enter for immediate execution.",
+    "Search options stored globally in AppContext (state.ideSearchOptions = { regex, caseSensitive, wholeWord, includeGlob, excludeGlob }) — persistent across panel toggles.",
+    "Single source of truth: results, query, options, replaceMode, replaceText, loading all live in AppContext via IDE_SET_SEARCH_* actions.",
+    "'Back to Explorer' button + ESC key both flip ideSidebarView to 'explorer'."
+  ],
+  "conventions": [
+    "Arrow buttons toggle replace row (.ide-search-mode-toggle) — chevron rotates via 'expanded' class.",
+    "Three-letter regex/case/word toggle buttons with monospace icon glyphs ('.*', 'Aa', 'ab' underlined).",
+    "ES5-style `var` and `function() {}` (anomalous in this codebase)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/components/ide/SearchResults.jsx",
+      "electron/preload.js (electronAPI.ideSearch, ideSearchReplace)"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": [
+      "src/ui/components/ide/FileExplorer.jsx (sibling sidebar view)"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "search",
+    "replace",
+    "ripgrep"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "search",
+    "replace",
+    "regex",
+    "glob"
+  ]
+}

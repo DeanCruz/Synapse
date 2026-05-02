@@ -1,0 +1,104 @@
+{
+  "file": "src/server/index.js",
+  "content_hash": "73702c27",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "HTTP server entry point that wires together SSEManager, DashboardService, WatcherService, QueueService, and apiRoutes into a single pure-Node `http` server (no framework). On every request it sets permissive CORS headers, logs non-SSE/non-OPTIONS requests on response finish, handles preflight OPTIONS with 204, and dispatches to either the `/events` SSE endpoint or the apiRoutes handler. The `/events` handler is the live dashboard pipe: it sets `text/event-stream` headers, optionally honors a `?dashboard=` query param to filter events, then immediately replays state to the new client via `dashboards_list`, `initialization`, `all_progress`, `init_state`, and `queue_changed` events before registering the response with `addClient`. The `startup()` function (passed as the listen callback) creates dashboards/, Archive/, history/, queue/ dirs if missing, ensures at least `dashboard1` exists, attaches per-dashboard watchers, starts the dashboards-dir watcher, queue-dir watcher, periodic reconciliation loop, and SSE heartbeat — all wired with `broadcast` from SSEManager as the change sink. Graceful shutdown on SIGINT/SIGTERM stops watchers, heartbeat, closes all SSE clients, then `server.close()` and `process.exit(0)`.",
+  "exports": [],
+  "imports_from": {
+    "http": [
+      "http"
+    ],
+    "fs": [
+      "fs"
+    ],
+    "path": [
+      "path"
+    ],
+    "./utils/constants": [
+      "PORT",
+      "DASHBOARDS_DIR",
+      "QUEUE_DIR",
+      "ARCHIVE_DIR",
+      "HISTORY_DIR",
+      "INIT_POLL_MS"
+    ],
+    "./SSEManager": [
+      "broadcast",
+      "addClient",
+      "removeClient",
+      "startHeartbeat",
+      "stopHeartbeat",
+      "closeAll"
+    ],
+    "./services/DashboardService": [
+      "listDashboards",
+      "ensureDashboard",
+      "readDashboardInit",
+      "readDashboardProgress",
+      "readDashboardLogs"
+    ],
+    "./services/WatcherService": [
+      "watchDashboard",
+      "startDashboardsWatcher",
+      "startQueueWatcher",
+      "startReconciliation",
+      "stopAll"
+    ],
+    "./services/QueueService": [
+      "listQueueSummaries"
+    ],
+    "./routes/apiRoutes": [
+      "handleApiRoute"
+    ]
+  },
+  "gotchas": [
+    "SSE responses must skip request logging on `res.on('finish')` — they are long-lived and would log incorrectly; the early `return` on `req.url.startsWith('/events')` is what guards this.",
+    "OPTIONS preflight must short-circuit with 204 BEFORE URL parsing — otherwise CORS preflights from browser clients fail.",
+    "`new URL(req.url, 'http://127.0.0.1:${PORT}')` requires a base because `req.url` is path-only; bare `new URL(req.url)` would throw.",
+    "Initial state replay sends `initialization` + `all_progress` separately AND a combined `init_state` — frontend code must dedupe or it will receive overlapping payloads on connect.",
+    "`startup()` is passed directly as the `server.listen` callback — it must be sync-safe; any async work must self-manage via promises or it can race with first incoming requests.",
+    "`process.exit(0)` in shutdown is called immediately after `server.close()` without awaiting its callback — in-flight SSE/HTTP responses may be aborted abruptly."
+  ],
+  "patterns": [
+    "Pure-http server (no Express/Koa) — every endpoint is a manual `if (url.pathname === ... && req.method === ...)` branch.",
+    "API routing is delegated: `handleApiRoute(req, res, url)` returns boolean indicating whether the route was handled, and the SSE branch + 404 fallback are local.",
+    "Per-client dashboard filtering via `?dashboard=` query param stored in client metadata, used later by `broadcast` to skip non-matching clients.",
+    "On-connect state replay: send dashboards_list -> per-dashboard initialization -> per-dashboard progress -> per-dashboard combined init_state -> queue_changed, so a fresh client renders without polling.",
+    "Startup directory bootstrapping (`dashboards/`, `Archive/`, `history/`, `queue/`) is idempotent — all use `fs.existsSync` + `mkdirSync({recursive:true})`.",
+    "Graceful shutdown stops watchers BEFORE heartbeat BEFORE SSE close — mirrors the reverse order of startup."
+  ],
+  "conventions": [
+    "Console logs use a leading two-space indent (e.g. `  [http] ...`, `  Synapse server listening...`) for visual grouping in terminal output.",
+    "Default dashboard ID is the literal string 'dashboard1' when none exist.",
+    "PORT defaults to 3456 (from constants) but is overridable via `PORT` env var."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/utils/constants.js",
+      "src/server/SSEManager.js",
+      "src/server/services/DashboardService.js",
+      "src/server/services/WatcherService.js",
+      "src/server/services/QueueService.js",
+      "src/server/routes/apiRoutes.js"
+    ],
+    "depended_by": [],
+    "related": [
+      "electron/main.js (Electron app spawns this server)",
+      "src/ui/main.jsx (browser-mode SSE client)"
+    ]
+  },
+  "domains": [
+    "sse-server",
+    "dashboard-broadcast",
+    "server-lifecycle"
+  ],
+  "tags": [
+    "sse",
+    "http-server",
+    "javascript",
+    "startup",
+    "shutdown",
+    "cors"
+  ]
+}

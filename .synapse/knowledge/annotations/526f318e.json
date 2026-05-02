@@ -1,0 +1,50 @@
+{
+  "file": "_commands/project/scope.md",
+  "content_hash": "218d6170",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !scope {task} slash command — blast-radius analysis BEFORE touching any code. Determines which directories, files, and contracts a proposed change would affect; helps user decide whether to proceed, simplify, or split into phases. Three-step workflow: parse task (new feature / refactor / bug fix / migration; which domains; additive vs modificative), search for affected files (grep + glob + .synapse/toc.md + import/export tracing for indirect deps + cross-layer contract consumers + config/env/deploy scripts), produce analysis (Impact Summary / Affected Files by Area / Cross-Layer Impact / Dependencies & Ordering / Risks / Recommendation: Proceed-as-is | Break-into-phases | Simplify-first | Needs-more-investigation). Optional dep_graph.json consultation: if {project_root}/.synapse/dep_graph.json exists, look up importers + imports + transitive importers to capture full blast radius beyond manual import tracing.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Read-only — never modifies files.",
+    "Be HONEST about complexity — don't minimize scope to make the task seem easier; user needs accurate info.",
+    "INCLUDE indirect effects: a type rename might touch 50 files; a new endpoint might require auth+validation+tests+frontend integration. Surface all of it.",
+    "dep_graph.json is OPTIONAL but valuable: provides transitive importer chains that manual tracing misses. Falls back gracefully when absent.",
+    "Recommendation must be one of four explicit options — not vague hedging."
+  ],
+  "patterns": [
+    "Pre-coding analysis: parse intent → find affected files → trace cross-layer → recommend.",
+    "Optional dep_graph.json enrichment for transitive deps.",
+    "Four-option recommendation: proceed / break / simplify / investigate."
+  ],
+  "conventions": [
+    "Read-only.",
+    "Serial execution.",
+    "Output sections: Impact Summary / Affected Files / Cross-Layer / Dependencies / Risks / Recommendation."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{project_root}/.synapse/toc.md",
+      "{project_root}/.synapse/dep_graph.json"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/plan.md",
+      "_commands/project/trace.md",
+      "_commands/project/toc.md"
+    ]
+  },
+  "domains": [
+    "planning",
+    "auditing"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "blast-radius",
+    "dep-graph",
+    "read-only"
+  ]
+}

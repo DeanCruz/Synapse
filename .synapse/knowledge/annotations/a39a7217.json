@@ -1,0 +1,51 @@
+{
+  "file": "agent/core/command_resolution.md",
+  "content_hash": "1bef1c99",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines how Synapse resolves and executes !-prefixed commands typed by the user. Specifies the four-tier command lookup hierarchy ({tracker_root}/_commands/Synapse → {tracker_root}/_commands/project → {tracker_root}/_commands/user → {project_root}/_commands), the duplicate-detection requirements when creating new commands or profiles (must search ALL locations and confirm before overwriting), and the full command catalog organized by category (Project Management, Swarm Lifecycle, Monitoring, Project Analysis, TOC, Profiles & Discovery, Server Control). The agent reads the matched command file in full and follows it exactly — commands are complete specs, not improvised flows.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Resolution ORDER matters — Synapse swarm commands have highest priority. A user/project command with the same name as a Synapse command will NEVER be reached.",
+    "{tracker_root}/_commands/user/ is git-ignored — user commands persist locally without interfering with repo updates. Don't commit anything there.",
+    "Duplicate detection is MANDATORY before creating new commands or profiles — must search ALL four locations (commands) or _commands/profiles/ (profiles) and confirm with user before overwriting.",
+    "Profile lookup is single-location ({tracker_root}/_commands/profiles/{name}.md) unlike commands which search four locations.",
+    "Once a command file is found, the agent reads it in full and follows it EXACTLY — improvising or partial execution defeats the spec-based command design."
+  ],
+  "patterns": [
+    "Four-tier resolution hierarchy with explicit priority order (Synapse > project > user > project_root).",
+    "Spec-based command design: each .md file is a complete spec the agent follows verbatim, not a hint or guideline.",
+    "Categorized command catalog (7 categories) for user-facing discovery via !commands and !help.",
+    "Mandatory duplicate detection before creation, with overwrite/rename/cancel choice presented to user."
+  ],
+  "conventions": [
+    "Commands invoked with ! prefix: !p_track, !status, !context, etc.",
+    "Subcommand modifiers passed as flags: --ready, --critical, --force, --last, --level, --task, --agent, --since, --dashboard.",
+    "Profile invocation form: !{profile_name} {prompt} or !{profile_name} !{command} {prompt} (profile is a modifier, not a standalone command)."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "CLAUDE.md",
+      "agent/instructions/tracker_master_instructions.md",
+      ".claude/agents/master-orchestrator.md"
+    ],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/Synapse/commands.md",
+      "_commands/Synapse/help.md",
+      "_commands/Synapse/guide.md"
+    ]
+  },
+  "domains": [
+    "core-conventions",
+    "command-resolution"
+  ],
+  "tags": [
+    "markdown",
+    "core",
+    "commands",
+    "resolution-hierarchy"
+  ]
+}

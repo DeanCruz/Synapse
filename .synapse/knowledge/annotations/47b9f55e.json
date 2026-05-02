@@ -1,0 +1,35 @@
+{
+  "file": "documentation/master-agent/dispatch-protocol.md",
+  "content_hash": "400832d3",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the master agent's dispatch protocol: eager dispatch loop, dependency-driven worker spawning, repair task creation when workers fail, and the circuit-breaker conditions that pause replanning. Specifies the exact write contract the master uses against initialization.json and progress observations to decide what to dispatch next.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "initialization.json is write-once except for repair task additions -- regular updates go to logs.json",
+    "Repair tasks use an 'r' suffix on task IDs and are appended to the existing wave"
+  ],
+  "patterns": [
+    "Eager dispatch (dispatch as soon as deps are met)",
+    "Circuit breaker on cascading failure (3+ related failures in a wave)"
+  ],
+  "conventions": [
+    "Master never writes worker progress files",
+    "Dispatch decisions based on reads of progress/{id}.json snapshots"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "master-agent",
+    "dispatch"
+  ],
+  "tags": [
+    "eager-dispatch",
+    "repair-tasks",
+    "circuit-breaker"
+  ]
+}

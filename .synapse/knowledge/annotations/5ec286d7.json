@@ -1,0 +1,41 @@
+{
+  "file": "documentation/ide/components.md",
+  "content_hash": "68532f01",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for the Code Explorer (IDE) React components: IDEView, IDEWelcome, FileExplorer, CodeEditor (Monaco), EditorTabs, WorkspaceTabs, SearchPanel, SearchResults, DebugToolbar, DebugPanels, DebugConsolePanel, ProblemsPanel. Documents responsibilities, prop contracts, and integration with Monaco Editor.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "Monaco editor instance must be disposed on tab close to prevent leaks",
+    "FileExplorer is virtualized — large directories require lazy expansion",
+    "Debug panels only render when an active debug session exists"
+  ],
+  "patterns": [
+    "Multi-workspace tabs with isolated state per workspace",
+    "Editor tabs share single Monaco instance via models",
+    "Resizable split panes"
+  ],
+  "conventions": [
+    "Components in src/ui/components/ide/"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/ide/overview.md",
+      "documentation/dashboard/state-management.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/ide/ipc-handlers.md"
+    ]
+  },
+  "domains": [
+    "ide"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "ide",
+    "monaco"
+  ]
+}

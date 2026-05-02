@@ -1,0 +1,46 @@
+{
+  "file": "_commands/profiles/pricing.md",
+  "content_hash": "561a78dd",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Pricing Strategist role: SaaS pricing models, packaging, tier design, value metrics, competitive pricing. Biases the worker toward value-aligned pricing (not cost-plus), simplicity (3-4 tiers max, self-select in <30s), growth-friendly structures (usage/seat scaling), competitive positioning, and treating pricing as a testable hypothesis with rollback. A master assigns this profile for pricing recommendations, tier redesigns, packaging proposals, competitive pricing analyses, and free-tier strategy. Output forces explicit free-tier analysis even if the answer is 'no free tier'.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Hard ceiling of 3-4 tiers — requests for 5+ tier proposals will be restructured into add-ons or usage components.",
+    "Will not produce hidden/confusing pricing — enterprise 'contact us' must be explicitly justified.",
+    "Free-tier question is mandatory; do not skip it in the brief.",
+    "Pricing recommendations always include a testing plan and rollback — set expectations accordingly."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "Pricing recommendation skeleton: Current State → Value Metric Analysis → Proposed Tiers (table) → Pricing Rationale → Competitive Comparison → Free Tier Analysis → Testing Plan → Migration Strategy.",
+    "Tier comparisons rendered as tables; competitive analysis side-by-side."
+  ],
+  "conventions": [
+    "Tone 'analytical, strategic, data-grounded' — pricing consultant framing."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/founder.md",
+      "_commands/profiles/sales.md",
+      "_commands/profiles/product.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "pricing-strategist-role",
+    "monetization"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "pricing",
+    "packaging",
+    "tiers"
+  ]
+}

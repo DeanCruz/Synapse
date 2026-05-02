@@ -1,0 +1,85 @@
+{
+  "file": "src/server/services/ArchiveService.js",
+  "content_hash": "016ce40c",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Manages archived dashboard snapshots in the top-level Archive/ directory. Provides three operations: listArchives() returns a sorted (newest-first by name) array of archive metadata derived from each archive's initialization.json (task name + agent count); archiveDashboard(id) copies the entire dashboard directory (including progress/, logs.json, initialization.json) into Archive/{YYYY-MM-DD}_{taskName} via a recursive copyDirSync borrowed from DashboardService; deleteArchive(name) recursively removes the named archive folder. The archive name format YYYY-MM-DD_taskName is the de facto identifier and the basis for newest-first sorting via localeCompare.",
+  "exports": [
+    {
+      "name": "listArchives",
+      "kind": "function",
+      "signature": "() => Array<{name, task, agentCount}>"
+    },
+    {
+      "name": "archiveDashboard",
+      "kind": "function",
+      "signature": "(id: string) => string (archiveName)"
+    },
+    {
+      "name": "deleteArchive",
+      "kind": "function",
+      "signature": "(name: string) => boolean"
+    }
+  ],
+  "imports_from": {
+    "fs": [
+      "default"
+    ],
+    "path": [
+      "default"
+    ],
+    "../utils/constants": [
+      "ARCHIVE_DIR"
+    ],
+    "../utils/json": [
+      "readJSON"
+    ],
+    "./DashboardService": [
+      "getDashboardDir",
+      "copyDirSync",
+      "readDashboardInit (lazy require)"
+    ]
+  },
+  "gotchas": [
+    "Archive name collisions: if two swarms share the same task.name and are archived on the same day, archiveDashboard overwrites silently — copyDirSync runs mkdirSync({recursive:true}) and then copyFileSync, which clobbers same-named files but does not pre-clear extra files left from a prior archive of the same name (orphaned progress/*.json from a previous archive will linger).",
+    "readDashboardInit is lazy-required inside archiveDashboard to avoid a circular dependency with DashboardService — moving this require to the top would break module load (DashboardService imports nothing from here, but maintainers should not 'clean up' this require).",
+    "task.name is taken verbatim into the folder name with no sanitization — slashes, colons, or unicode in task.name will produce invalid or surprising paths.",
+    "Sorting is by archive name string (localeCompare), so ordering only matches chronological order because the YYYY-MM-DD prefix is lexicographically equal to date order — if the prefix format ever changes, sorting silently breaks.",
+    "deleteArchive uses fs.rmSync({recursive:true,force:true}) — irrecoverable; no soft-delete or trash."
+  ],
+  "patterns": [
+    "Single source-of-truth for archive directory layout: ARCHIVE_DIR constant from utils/constants is the only place the path is defined.",
+    "Defensive try/catch wrapping listArchives so missing/unreadable Archive dir returns [] rather than throwing into route handlers.",
+    "Lazy require inside function body (`require('./DashboardService')`) used as a circular-dep-avoidance pattern."
+  ],
+  "conventions": [
+    "All exported functions are named, no class wrapper.",
+    "Returns boolean from delete operation, returns string id from create operation, returns array from list operation — same convention as DashboardService.",
+    "Date stamping uses `new Date().toISOString().slice(0, 10)` — UTC date, not local."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/services/DashboardService.js",
+      "src/server/utils/constants.js",
+      "src/server/utils/json.js"
+    ],
+    "depended_by": [
+      "src/server/routes/apiRoutes.js",
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "src/server/services/HistoryService.js"
+    ]
+  },
+  "domains": [
+    "archive-management",
+    "dashboard-state"
+  ],
+  "tags": [
+    "server",
+    "service",
+    "archive",
+    "filesystem",
+    "snapshot"
+  ]
+}

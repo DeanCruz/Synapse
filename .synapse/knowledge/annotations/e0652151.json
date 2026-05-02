@@ -1,0 +1,41 @@
+{
+  "file": "documentation/git-manager/components.md",
+  "content_hash": "15deee11",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Component reference for the in-app Git Manager: GitManagerView, RepoTabs, GitWelcome, InitFlow, ChangesPanel, DiffViewer, CommitPanel, RemotePanel, BranchPanel (1567 lines), HistoryPanel (1097 lines, SVG branch graph), QuickActions (962 lines), and SafetyDialogs (Confirm/DoubleConfirm).",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "HistoryPanel computes a lane-based SVG graph — large logs need infinite scroll batches of 50",
+    "QuickActions auto-generates commit messages from staged file list",
+    "Discard-all flow requires typing 'DISCARD' to confirm"
+  ],
+  "patterns": [
+    "Tiered confirmation dialogs (safe / warning / danger)",
+    "Resizable sidebar with drag handle",
+    "Parallel data fetches via Promise.all on repo switch"
+  ],
+  "conventions": [
+    "Components in src/ui/components/git/, prefixed CSS .git-manager-*"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/git-manager/overview.md",
+      "documentation/dashboard/state-management.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/git-manager/ipc-handlers.md"
+    ]
+  },
+  "domains": [
+    "git-manager"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "git",
+    "components"
+  ]
+}

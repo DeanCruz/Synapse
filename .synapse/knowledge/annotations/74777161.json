@@ -1,0 +1,104 @@
+{
+  "file": "electron/services/TaskEditorService.js",
+  "content_hash": "acebc524",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Backs the in-app Swarm Builder modal with CRUD operations on a dashboard's initialization.json: createSwarm (also resets logs.json + clears progress/), addTask, updateTask, removeTask (with depends_on cleanup + progress file deletion), addWave, removeWave (with cascading task delete), nextTaskId (auto-numbering), and validateDependencies (checks for missing references + cycles via Kahn's algorithm). Wave totals are recalculated after every task mutation, and waves with zero tasks are auto-removed.",
+  "exports": [
+    {
+      "name": "createSwarm",
+      "kind": "function",
+      "signature": "(dashboardId, {name, type?, directory?, project?, prompt?}) => init"
+    },
+    {
+      "name": "addTask",
+      "kind": "function",
+      "signature": "(dashboardId, {id, title, wave, layer?, directory?, depends_on?, description?}) => init"
+    },
+    {
+      "name": "updateTask",
+      "kind": "function",
+      "signature": "(dashboardId, taskId, updates) => init|null"
+    },
+    {
+      "name": "removeTask",
+      "kind": "function",
+      "signature": "(dashboardId, taskId) => init|null"
+    },
+    {
+      "name": "addWave",
+      "kind": "function",
+      "signature": "(dashboardId, {name?}) => init"
+    },
+    {
+      "name": "removeWave",
+      "kind": "function",
+      "signature": "(dashboardId, waveId) => init"
+    },
+    {
+      "name": "nextTaskId",
+      "kind": "function",
+      "signature": "(dashboardId, waveNum) => string"
+    },
+    {
+      "name": "validateDependencies",
+      "kind": "function",
+      "signature": "(dashboardId) => {valid, errors[]}"
+    }
+  ],
+  "imports_from": {
+    "src/server/utils/constants": [
+      "DASHBOARDS_DIR",
+      "DEFAULT_INITIALIZATION",
+      "DEFAULT_LOGS"
+    ],
+    "src/server/services/DashboardService": [
+      "readDashboardInit"
+    ]
+  },
+  "gotchas": [
+    "createSwarm RESETS the dashboard: it overwrites initialization.json, replaces logs.json with a single 'Swarm created' entry, and unlinks every JSON file in the progress/ subdir. There is no confirmation guard — any caller using this on a live dashboard will wipe its history.",
+    "addTask's `description` field is added to the agent object but is NOT part of the standard initialization.json schema (it lives outside agents[].id/title/wave/layer/directory/depends_on). Some downstream consumers may not expect it.",
+    "removeTask deletes the task's progress JSON file on disk — re-adding the task with the same ID produces a clean slate. There is no undo.",
+    "removeWave cascades to delete every task in that wave AND scrubs depends_on arrays — a deeply downstream chain can be unintentionally orphaned.",
+    "nextTaskId assumes the convention W.N (wave.subtask). IDs like '2.1r' (replanner repair tasks from SwarmOrchestrator.applyReplan) parse fine but won't be accounted for when computing maxSub if the suffix breaks parseInt.",
+    "validateDependencies uses Kahn's algorithm on a freshly-built indegree map — if multiple agents share the same id (data corruption), the cycle-check undercounts visited.",
+    "DEFAULT_LOGS is imported but never used — dead import."
+  ],
+  "patterns": [
+    "Read-modify-write pattern: every public function reads init, mutates it, calls writeInit().",
+    "Falls back to DEFAULT_INITIALIZATION (deep-cloned via JSON.parse(JSON.stringify(...))) if the dashboard has no init file yet.",
+    "recalcWaves enforces invariants: wave.total reflects current agents, empty waves are pruned, init.task.total_tasks/total_waves are updated."
+  ],
+  "conventions": [
+    "Task IDs are strings shaped 'W.N' (wave.subtask) — must be unique across the dashboard.",
+    "All mutations return the full updated init object so callers can immediately re-render without a separate read."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/utils/constants",
+      "src/server/services/DashboardService"
+    ],
+    "depended_by": [
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "src/ui/components/modals/TaskEditorModal.jsx",
+      "src/ui/components/SwarmBuilder.jsx"
+    ]
+  },
+  "domains": [
+    "swarm-builder",
+    "initialization-crud",
+    "dependency-graph-validation"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "task-editor",
+    "initialization-json",
+    "kahn-algorithm",
+    "swarm-builder"
+  ]
+}

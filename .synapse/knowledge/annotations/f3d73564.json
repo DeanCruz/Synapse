@@ -1,0 +1,52 @@
+{
+  "file": "_commands/project/create_claude.md",
+  "content_hash": "95cb15f9",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !create_claude slash command — generates a PRESCRIPTIVE CLAUDE.md establishing coding standards, architecture patterns, documentation requirements, and styling guidelines for the target project. Differs fundamentally from !scaffold (which DOCUMENTS what exists); this command PRESCRIBES what should be. Accepts an optional inline prompt with architecture directions, otherwise interactively prompts the user via AskUserQuestion for architecture pattern (MVC/MVVM/Feature/Custom), styling approach (CSS Modules/Tailwind/CSS-in-JS/Plain), and standards priority (Strict/Balanced/Minimal). Falls back to detected-stack best-practice defaults when user declines. Supports --update (merge with existing, preserve user customization) and --force (overwrite with confirmation) flags. Refuses to overwrite existing CLAUDE.md without an explicit flag.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Differentiation is critical: !scaffold documents what IS; !create_claude prescribes what SHOULD BE. If both run, !create_claude takes precedence as actionable standards.",
+    "Never overwrite existing CLAUDE.md without --update or --force flag — existing files represent user work.",
+    "Read ONLY config/structure/READMEs/linter configs — do NOT deep-read source files. Infer from tooling, not implementation.",
+    "Make CONCRETE decisions: 'Use good naming' is unacceptable; 'Use camelCase for functions, PascalCase for components' is required.",
+    "Respect existing patterns when project already has established conventions visible from configs — do not impose conflicting rules.",
+    "When user gives no/vague directions, auto-detect the stack and apply best-practice defaults — do not leave TODOs for style choices.",
+    "Opinionated > permissive: when in doubt, pick the stricter convention; easier to relax than to add later."
+  ],
+  "patterns": [
+    "Three-question interactive setup: architecture / styling / standards level.",
+    "Stack-adaptive defaults: detected technologies drive specific guideline choices.",
+    "Diff-and-merge for --update mode: preserve customized sections, replace scaffold-marked sections, add new sections."
+  ],
+  "conventions": [
+    "Two-flag mode system: --update (merge) and --force (overwrite with confirm).",
+    "Templated CLAUDE.md sections: Tech Stack → Architecture → Coding Standards → Styling → Documentation → Testing → Git → Commands → Environment.",
+    "Serial execution."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{project_root}/package.json",
+      "{project_root}/CLAUDE.md",
+      "{project_root}/.eslintrc"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/scaffold.md",
+      "_commands/project/initialize.md"
+    ]
+  },
+  "domains": [
+    "project-setup",
+    "claude-md-generation"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "scaffolding",
+    "interactive",
+    "writes-files"
+  ]
+}

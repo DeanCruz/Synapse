@@ -72,6 +72,7 @@ function buildSystemPrompt(opts) {
   parts.push('- **dashboard_id:** `' + opts.dashboardId + '` — include this value as `"dashboard_id"` in every progress file write');
   parts.push('- **task_id:** `' + opts.taskId + '`');
   parts.push('- **progress_file:** `' + opts.trackerRoot + '/dashboards/' + opts.dashboardId + '/progress/' + opts.taskId + '.json`');
+  parts.push('- **plan_file:** `' + opts.trackerRoot + '/dashboards/' + opts.dashboardId + '/plan.json` — your canonical task spec. Read `context` (shared prompt + conventions) and `tasks[]` entry where `id == "' + opts.taskId + '"` (deeply-thought approach + files) before implementing.');
   parts.push('- **ide_dashboard:** `ide` (reserved — always exists, never use for swarms)');
   parts.push('');
   parts.push('**IMPORTANT:** Always use the Synapse_Instance_Location and Synapse_Dashboard paths above when writing progress files or updating dashboard state. Never assume a different Synapse directory.');

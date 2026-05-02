@@ -1,0 +1,64 @@
+{
+  "file": "_commands/Synapse/master_plan_track.md",
+  "content_hash": "0c72e617",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!master_plan_track {prompt}` command — multi-stream orchestration. The invoking agent becomes the META-PLANNER (a third tier above master): decomposes a large body of work into 2-5 (up to 8) independent planning streams, dispatches PLANNER agents in parallel to write each stream's plan.json + initialization.json + logs.json, gets user approval, then dispatches CHILD MASTER agents (one per stream) that each own their own dashboard and run their own swarms. Manages dashboard slots, queue/{queueN}/ overflow, queue-to-dashboard promotion after every child master completion, and cross-stream dependencies. Three-tier hierarchy: meta-planner (reads tracker_multi_plan_instructions.md) → child masters (read tracker_master_instructions.md) → workers (read tracker_worker_instructions.md).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "The meta-planner NEVER dispatches workers directly — only planner agents (Phase 2) and child master agents (Phase 4)",
+    "Pre-assigned dashboard from chat context is ALWAYS claimed first for Stream S1 — never auto-select for it",
+    "Two non-skippable approval gates: stream decomposition (Step 8) and dispatch selection (Step 12)",
+    "Queue slots have NO live visualization — never dispatch a child master for a queue slot; wait for promotion",
+    "`promoteFromQueue()` must run after EVERY child master return — not periodically",
+    "Cross-stream deps block child master DISPATCH only — all streams are PLANNED in parallel regardless",
+    "Archive-before-clear is MANDATORY when assigning a dashboard or queue slot with previous data — never skip",
+    "Each stream writes its own plan.json — validate-plan-required.sh hook blocks per-stream initialization.json writes until that stream's plan.json is valid",
+    "Planner agents do NOT execute — they only produce the plan; reading tracker_master_instructions.md is forbidden for them",
+    "Each tier reads its OWN instructions file — cross-tier reads are a planning error"
+  ],
+  "patterns": [
+    "Four phases: Phase 1 Context+Stream Decomposition (Steps 1-8) → Phase 2 Parallel Planning (Steps 9-11) → Phase 3 Review+Approval (Step 12) → Phase 4 Execution+Child Master Dispatch (Steps 13-17)",
+    "Stream IDs sequential: S1, S2, S3, ... up to ~8",
+    "Slot priority: pre-assigned dashboard (S1) → other available dashboards → queue1, queue2, ... overflow",
+    "Stream independence criteria: planned without other streams' outcomes, no shared file modifications, executable without sequencing",
+    "Cross-stream dep dispatch logic: when child master returns, scan dashboard-assigned streams with status=planned and dispatch any whose depends_on streams are now completed",
+    "Queue structure mirrors dashboards exactly: initialization.json + logs.json + progress/",
+    "Stream decomposition target: 2-5 streams for most work, up to 8 for very large efforts; per-stream task target 4-8"
+  ],
+  "conventions": [
+    "Massive document (~600 lines) with 17 numbered Steps spanning 4 Phases",
+    "Pre-amble lists Agent Hierarchy and Output Files",
+    "Two cross-reference tables: When to Use !master_plan_track vs !p_track vs !p, and stream slot priority",
+    "Embedded planner agent prompt template (Step 10) with rigorous Required Element checklist",
+    "Final Rules section with 22 numbered non-negotiable rules grouped by domain (Agent Hierarchy, Meta-Planning, Dashboard&Queue Management, Execution, Statusing, Approval Gates)"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/tracker_multi_plan_instructions.md",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/instructions/dashboard_resolution.md",
+      "agent/_commands/p_track_planning.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/p.md",
+      ".claude/skills/master-plan-track/"
+    ]
+  },
+  "domains": [
+    "multi-stream",
+    "meta-planning",
+    "queue-orchestration"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "three-tier",
+    "parallel-planning"
+  ]
+}

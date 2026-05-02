@@ -1,0 +1,44 @@
+{
+  "file": "documentation/server/api-reference.md",
+  "content_hash": "7f2cca96",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Complete REST API reference for the Synapse SSE server: 22 endpoints (21 REST + 1 SSE) covering dashboards CRUD, statuses, initialization/logs/progress reads, dispatchable tasks, archives, history, queue, and overview. Documents path sanitization, request/response shapes, status codes, and side effects.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "Path params sanitized by sanitizePathParam — rejects ../, /, \\, and >100 chars",
+    "Dashboard IDs are 6-char hex (no fixed cap on count)",
+    "Save-history is idempotent; returns alreadySaved:true if file exists",
+    "Clear endpoint archives + saves history + resets — destructive"
+  ],
+  "patterns": [
+    "Consistent { error: string } body for failures",
+    "200/201/204/400/404/500 status code conventions",
+    "Status derivation by scanning progress files"
+  ],
+  "conventions": [
+    "All endpoints under /api/, content-type application/json",
+    "Permissive CORS on all responses"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/server/overview.md",
+      "documentation/server/services.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/server/sse-events.md",
+      "documentation/server/configuration.md"
+    ]
+  },
+  "domains": [
+    "server"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "rest",
+    "api"
+  ]
+}

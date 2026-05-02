@@ -1,0 +1,46 @@
+{
+  "file": ".claude/hooks/nudge-progress-update.sh",
+  "content_hash": "3fc06160",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PostToolUse hook on Edit|Write. Non-blocking nudge that reminds workers to update their progress file after editing/creating project files. Fires only when (a) the changed file is under {project_root} (not a Synapse internal file under tracker_root or hidden config dirs), (b) at least one in_progress progress file exists across all dashboards, and (c) NO progress file was modified in the last 1 minute (avoids nagging diligent workers). Emits `{message: ...}` with the specific filename and the exact JSON snippet to add to files_changed[]. The action ('created/modified' for Write, 'modified' for Edit) is included so the worker can copy-paste.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Skip guards: tracker_root, .claude/, .git/, .synapse/ — won't nag for Synapse-internal edits",
+    "Uses `find -mmin -1` to detect recent progress activity — depends on filesystem mtime accuracy",
+    "Iterates all dashboards/ progress dirs every Edit/Write — O(N) over progress files; small N in practice",
+    "PostToolUse cannot block — agent already wrote; this is a coaching message"
+  ],
+  "patterns": [
+    "Coaching-style PostToolUse: emits constructive message with the exact correction",
+    "Activity throttling: only nudge if no recent progress file activity (within 1 min)"
+  ],
+  "conventions": [
+    "Message includes emoji prefix and the literal JSON snippet to paste"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      ".claude/hooks/validate-progress-file.sh",
+      ".claude/hooks/validate-progress-log-detail.sh"
+    ]
+  },
+  "domains": [
+    "progress-file-validation",
+    "worker-coaching"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PostToolUse",
+    "Edit-Write-matcher",
+    "nudge",
+    "progress-reporting"
+  ]
+}

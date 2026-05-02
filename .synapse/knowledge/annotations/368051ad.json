@@ -1,0 +1,74 @@
+{
+  "file": "electron/services/AutoUpdateService.js",
+  "content_hash": "a25dbaa5",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Wraps electron-updater into a single-state-machine service that powers the in-app auto-update UI. Subscribes to autoUpdater lifecycle events (checking-for-update, update-available, download-progress, update-downloaded, error), keeps a single shared `state` object, and pushes snapshots to the renderer via the injected `broadcast('update-status', snapshot)` channel. Auto-downloads and auto-installs on quit are enabled. A 10s post-init startup check is scheduled so the user gets an update banner shortly after launch.",
+  "exports": [
+    {
+      "name": "initAutoUpdater",
+      "kind": "function",
+      "signature": "(broadcastFn) => void"
+    },
+    {
+      "name": "checkForUpdates",
+      "kind": "function",
+      "signature": "() => Promise<state>"
+    },
+    {
+      "name": "quitAndInstallUpdate",
+      "kind": "function",
+      "signature": "() => {success, error?}"
+    },
+    {
+      "name": "getUpdateState",
+      "kind": "function",
+      "signature": "() => state"
+    },
+    {
+      "name": "disposeAutoUpdater",
+      "kind": "function",
+      "signature": "() => void"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "All update plumbing is no-op when !app.isPackaged — running from source emits a one-shot snapshot then exits initAutoUpdater early, so dev builds will never see real update events.",
+    "`initialized` flag prevents re-init but the function silently returns if called twice; passing a fresh broadcastFn second-time-around will be ignored.",
+    "quitAndInstallUpdate uses setImmediate then autoUpdater.quitAndInstall(false, true) — the (isSilent=false, isForceRunAfter=true) combo means a visible installer will appear; a silent flow would require different flags.",
+    "`startupCheckTimer` is the only timer captured for dispose — if a user-initiated checkForUpdates is in flight at app quit, it is not awaited."
+  ],
+  "patterns": [
+    "Module-level singleton state object shared by every event handler; mutation through `setState(patch)` triggers an `emit()` that broadcasts the entire snapshot to the renderer.",
+    "Renderer push channel is `update-status`; the snapshot is the source of truth (no incremental diffs).",
+    "Lifecycle: initAutoUpdater(broadcast) at app ready -> auto event-driven updates -> disposeAutoUpdater() on quit."
+  ],
+  "conventions": [
+    "Snapshots always re-read app.getVersion() so the version field cannot drift.",
+    "Errors are caught at every async boundary — checkForUpdates().catch(() => {}) on the timer guarantees no unhandled-rejection at startup.",
+    "Human-readable `message` field is set alongside semantic state (checking/available/downloaded/error) for direct UI consumption."
+  ],
+  "relationships": {
+    "depends_on": [
+      "electron (app)",
+      "electron-updater"
+    ],
+    "depended_by": [
+      "electron/main.js",
+      "electron/ipc-handlers.js"
+    ],
+    "related": []
+  },
+  "domains": [
+    "auto-update",
+    "electron-lifecycle"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "auto-update",
+    "electron-updater",
+    "ipc-broadcast"
+  ]
+}

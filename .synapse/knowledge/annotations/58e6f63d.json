@@ -1,0 +1,67 @@
+{
+  "file": "vite.config.js",
+  "content_hash": "ab13e374",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Vite build configuration for the React renderer. Sets `base: './'` so the bundled HTML works when loaded via Electron's `app://` / `file://` protocols (no absolute URLs). Outputs to `dist/`, defines a single path alias `@` → `src/ui`, pre-bundles the five Monaco worker entrypoints (editor, json, css, html, ts) so Monaco's web workers resolve correctly under Vite, pins the dev server to port 5174 with strictPort (fails fast if taken), and emits ES-module workers.",
+  "exports": [
+    "default config (defineConfig)"
+  ],
+  "imports_from": {
+    "node_modules": [
+      "vite",
+      "@vitejs/plugin-react"
+    ],
+    "node_builtins": [
+      "path"
+    ]
+  },
+  "gotchas": [
+    "`base: './'` is critical — if changed to `/` the production build will 404 inside Electron because the renderer loads dist/index.html via a non-root URL.",
+    "Dev server port is 5174 (NOT the default 5173) — strictPort means it fails instead of falling back; coordinate with any Electron dev-server URL hardcoded elsewhere.",
+    "optimizeDeps.include is REQUIRED for Monaco — without those five entries Monaco's `window.MonacoEnvironment` will hand out unbundled worker URLs that fail in production.",
+    "`worker.format: 'es'` requires Vite 5+ and modern browsers — fine in Electron's Chromium but would break in older targets.",
+    "No `build.rollupOptions` defined — code splitting is the Vite default, and Monaco's 100+ language entries will be split unless overridden.",
+    "Alias `@` resolves to `src/ui`, NOT `src/` — imports of server-side code from the renderer would have to use relative paths."
+  ],
+  "patterns": [
+    "Pattern: '@' alias to the renderer-only directory keeps the boundary between Electron main and React renderer enforceable via import paths.",
+    "Pattern: worker pre-bundling for Monaco — the canonical Vite + Monaco recipe.",
+    "Pattern: relative `base` for Electron — required for any Vite app loaded from a non-HTTP origin."
+  ],
+  "conventions": [
+    "ES module config (uses `import` rather than `require`).",
+    "Two-space indentation.",
+    "Alias key uses bare `@` (no `@/` slash suffix)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "node_modules/vite",
+      "node_modules/@vitejs/plugin-react",
+      "src/ui/main.jsx",
+      "index.html"
+    ],
+    "depended_by": [
+      "package.json (build/dev scripts)",
+      "dist/ (output)"
+    ],
+    "related": [
+      "index.html",
+      "src/ui/main.jsx",
+      "src/ui/utils/monacoWorkerSetup.js"
+    ]
+  },
+  "domains": [
+    "vite-build",
+    "build-config",
+    "renderer-config"
+  ],
+  "tags": [
+    "javascript",
+    "vite",
+    "react",
+    "monaco",
+    "config",
+    "esm"
+  ]
+}

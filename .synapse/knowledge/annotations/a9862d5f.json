@@ -1,0 +1,105 @@
+{
+  "file": "src/ui/utils/constants.js",
+  "content_hash": "dcc50310",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Theme constants (status/level/timeline color maps) plus initStatusColorsFromCSS() that pulls the canonical theme from CSS custom properties at runtime. Exposes STATUS_COLORS, STATUS_BG_COLORS, LEVEL_COLORS, LEVEL_BG_COLORS, TIMELINE_COLORS for direct import; also a colorWithAlpha(color, alpha) helper that handles rgba/rgb/hex inputs. App.jsx calls initStatusColorsFromCSS() once on mount to sync these maps with --color-completed, --color-in-progress, etc., from the active theme.",
+  "exports": [
+    {
+      "name": "colorWithAlpha",
+      "kind": "function",
+      "signature": "(color, alpha) => string"
+    },
+    {
+      "name": "STATUS_COLORS",
+      "kind": "constant",
+      "signature": "Record<status, color>"
+    },
+    {
+      "name": "STATUS_BG_COLORS",
+      "kind": "constant",
+      "signature": "Record<status, color>"
+    },
+    {
+      "name": "LEVEL_COLORS",
+      "kind": "constant",
+      "signature": "Record<logLevel, color>"
+    },
+    {
+      "name": "LEVEL_BG_COLORS",
+      "kind": "constant",
+      "signature": "Record<logLevel, color>"
+    },
+    {
+      "name": "TIMELINE_COLORS",
+      "kind": "constant",
+      "signature": "Record<timelineKey, color>"
+    },
+    {
+      "name": "DEBOUNCE_MS",
+      "kind": "constant",
+      "signature": "number = 250"
+    },
+    {
+      "name": "LOG_ROW_HEIGHT",
+      "kind": "constant",
+      "signature": "number = 32"
+    },
+    {
+      "name": "LOG_VIRTUAL_THRESHOLD",
+      "kind": "constant",
+      "signature": "number = 500"
+    },
+    {
+      "name": "getDashboardLabel",
+      "kind": "function",
+      "signature": "(id) => string — backwards compat for legacy dashboardN, otherwise uppercase hex"
+    },
+    {
+      "name": "initStatusColorsFromCSS",
+      "kind": "function",
+      "signature": "() => void — must be called once after CSS loaded"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Constants are MUTATED by initStatusColorsFromCSS — they're not frozen. Direct imports give you the LATEST values only if init has run; reading them at module-load time gives stale defaults.",
+    "Theme switching at runtime requires re-calling initStatusColorsFromCSS() AFTER the data-theme attribute change — currently App.jsx only calls once on mount, so switching themes does not refresh status colors.",
+    "STATUS_BG_COLORS.pending uses --surface override (NOT alpha-derived from STATUS_COLORS.pending) — it's intentionally bound to the panel surface for the 'no-progress' empty state.",
+    "LEVEL_COLORS.info is overridden by --color-accent if available, otherwise --color-in-progress — small mismatch with hardcoded purple default.",
+    "getDashboardLabel returns 'Dashboard N' for legacy 'dashboardN' IDs but UPPERCASE hex for new short IDs — UI must handle both forms.",
+    "colorWithAlpha falls through and returns the original color UNCHANGED if it doesn't match rgba/rgb/hex — no error thrown."
+  ],
+  "patterns": [
+    "Theme tokens read from CSS custom properties via getComputedStyle(documentElement).getPropertyValue — gives JS access to CSS-defined theme without duplication.",
+    "Mutable constant maps initialized once per app boot — preferred over re-deriving on every component render."
+  ],
+  "conventions": [
+    "Status keys: completed, in_progress, pending, failed, claimed, blocked.",
+    "Log level keys: info, warn, error, debug, permission, deviation."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/App.jsx",
+      "src/ui/components/AgentCard.jsx",
+      "src/ui/components/LogPanel.jsx",
+      "src/ui/components/TimelinePanel.jsx",
+      "src/ui/utils/ideWorkspaceManager.js"
+    ],
+    "related": [
+      "src/ui/styles/index.css"
+    ]
+  },
+  "domains": [
+    "theme",
+    "react-dashboard",
+    "css-bridge"
+  ],
+  "tags": [
+    "constants",
+    "theme",
+    "css-vars",
+    "color-utils"
+  ]
+}

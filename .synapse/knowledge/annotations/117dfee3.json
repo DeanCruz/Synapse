@@ -1,0 +1,58 @@
+{
+  "file": "src/server/utils/validation.js",
+  "content_hash": "58a9b5f8",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Single-export `validateDependencyGraph(agents)` that performs four structural checks on a Synapse swarm's agent dependency graph and returns `{valid, errors, warnings}`. Errors (block dispatch): (A) self-references — an agent listing its own id in `depends_on`; (B) dangling references — `depends_on` entries that aren't in the agents array; (C) circular dependencies — detected via Kahn's algorithm (BFS topological sort): builds in-degree map and adjacency list, enqueues all in-degree-0 nodes, drains the queue while decrementing neighbor in-degrees; if `sorted.length < agents.length` after the BFS, the remaining nodes are in a cycle and reported by id. Warnings (advisory): (D) orphan tasks — non-Wave-1 tasks with no dependencies AND nothing depending on them (Wave 1 is exempt because Wave 1 tasks are root tasks by design). Wave value is normalized via `parseInt` if string. Used by WatcherService when initialization.json is written to gate dispatch, and by master agent pre-flight planning checks.",
+  "exports": [
+    {
+      "name": "validateDependencyGraph",
+      "kind": "function",
+      "signature": "(agents: Array<{id, depends_on?, wave?}>) => {valid: boolean, errors: Array<{type,message}>, warnings: Array<{type,message}>}"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Kahn's algorithm REQUIRES an acyclic graph for full topo sort — the cycle-detection is implicit (`sorted.length < agents.length`), and the reported cycle nodes are ALL non-sorted nodes, not just the minimal cycle. Diagnostics may include innocent downstream nodes blocked by the cycle.",
+    "Dangling references are reported as ERRORS but the cycle check still runs and only adds edges where `idSet.has(dep)` — so a graph with both dangling refs and cycles will report both, but the cycle node list excludes the dangling-ref tasks.",
+    "Self-references generate BOTH a self_ref error AND a cycle error (the self-loop creates an in-degree of 1 that's never decremented) — duplicate signal, may confuse log readers.",
+    "Wave 1 exemption uses `wave === 1` after `parseInt` — a wave value of `'1.0'` parses to 1 and is exempt, but `'01'` parses to 1 too; non-numeric strings parseInt to NaN and the agent is NOT exempt (will be flagged orphan if it has no deps).",
+    "Orphan check is O(N*M) where M is avg deps — fine for typical swarms (<100 tasks) but could be slow on very large graphs.",
+    "`agents` parameter is assumed to be an array of objects with at least `id` — the function will throw `TypeError` if any agent is null or lacks id. No defensive check at the entry."
+  ],
+  "patterns": [
+    "Kahn's algorithm for cycle detection: build in-degree + adjacency, BFS from in-degree-0 nodes, cycle iff sorted.length < total.",
+    "Four-phase validation: self_ref -> dangling_ref -> cycle -> orphan. Each phase appends to errors/warnings independently — all checks always run, no short-circuit.",
+    "Errors block, warnings inform: only errors flip `valid: false`.",
+    "Wave 1 exemption convention — root tasks have no upstream dependencies and may have no downstream dependents (e.g. terminal write tasks).",
+    "Type discrimination via `type` field on each error/warning ('self_ref', 'dangling_ref', 'cycle', 'orphan') — UI uses this to color/group."
+  ],
+  "conventions": [
+    "Errors and warnings carry both `type` (machine-readable) and `message` (human-readable).",
+    "Dependency identifiers are task ids (strings).",
+    "Wave is a 1-indexed integer (or numeric string)."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/server/services/WatcherService.js (validates initialization.json on write)",
+      "src/server/services/DependencyService.js (gates dispatch)"
+    ],
+    "related": [
+      ".claude/agents/master-orchestrator.md (master must produce a valid graph)",
+      "agent/master/initialization_blueprint.md"
+    ]
+  },
+  "domains": [
+    "dependency-validation",
+    "graph-algorithms",
+    "swarm-planning"
+  ],
+  "tags": [
+    "validation",
+    "graph",
+    "kahn",
+    "topological-sort",
+    "javascript"
+  ]
+}

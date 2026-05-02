@@ -1,0 +1,45 @@
+{
+  "file": "_commands/project/commands.md",
+  "content_hash": "fcf0a603",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !commands slash command, which dynamically discovers and lists every ! command available to the user by scanning three command directories: {tracker_root}/_commands/ (Synapse core), {tracker_root}/_commands/project/ (project-level), and {project_root}/_commands/ (project-specific). For each .md file found, the master extracts the command name from the filename (stripping .md) and a one-line description from the first heading or Overview section, then renders a grouped markdown table. Master agent runs serially; this command does no swarm dispatch. Output must be generated dynamically from the filesystem on every invocation — the embedded table in the doc is illustrative only and should never be hardcoded.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "The big table in this doc is a TEMPLATE/example only — master MUST regenerate output by scanning the filesystem live, never copy the table verbatim.",
+    "If new commands are added to ANY _commands/ directory, they must surface automatically — do not maintain a hardcoded allowlist.",
+    "Three sources are scanned, not two: tracker core commands, project-level commands at {tracker_root}/_commands/project/, AND project-specific overrides at {project_root}/_commands/. Skipping the third silently loses project customization."
+  ],
+  "patterns": [
+    "Filesystem-driven discovery: scan directories → extract name from filename → extract description from first heading.",
+    "Group-by-source rendering: separate tables per origin so users know where commands live."
+  ],
+  "conventions": [
+    "Markdown command spec structure: # title → ## Overview → ## Execution Steps → ## Rules.",
+    "Serial execution explicitly declared in Rules section — no swarm dispatch."
+  ],
+  "relationships": {
+    "depends_on": [
+      "_commands/Synapse/",
+      "_commands/project/",
+      "_commands/profiles/"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/help.md",
+      "_commands/project/profiles.md"
+    ]
+  },
+  "domains": [
+    "command-discovery",
+    "project-context"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "discovery",
+    "filesystem-scan"
+  ]
+}

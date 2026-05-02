@@ -1,0 +1,50 @@
+{
+  "file": "_commands/project/plan.md",
+  "content_hash": "88003ca8",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !plan {task} slash command — produces a detailed implementation plan WITHOUT writing any code. Reads context (TOC, CLAUDE.md, grep/glob, key files), designs the plan (per-change file/what/why/dependencies/risks), determines execution mode (Serial if ≤3 changes with deps, Parallel if 3+ independent changes), presents the plan with Context Summary / Execution Mode / Changes / Dependency Order ASCII tree / Cross-Layer Impact / Risks & Mitigations / Testing Strategy / Estimated Scope sections, then WAITS FOR USER APPROVAL (Proceed/Modify/Abort) before any execution. Read-only analysis.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Do NOT write any code — this command produces a plan only. Approval-gated.",
+    "Be SPECIFIC: 'Update the file' is not a plan; 'Add a phone?: string field to UserProfile interface at line 15' is a plan.",
+    "Every plan must include a verification/testing strategy.",
+    "Do NOT begin execution until user explicitly approves — Proceed/Modify/Abort prompt is mandatory.",
+    "Mode determination is concrete: ≤3 changes with deps = Serial; 3+ independent = Parallel."
+  ],
+  "patterns": [
+    "Plan-first development: gather → design → mode-decide → present → approve → (then execute).",
+    "Approval gate before execution.",
+    "Dependency tree visualization in ASCII."
+  ],
+  "conventions": [
+    "Read-only.",
+    "Serial mode for analysis itself.",
+    "Per-change template: File / What / Why / Depends on."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{project_root}/.synapse/toc.md",
+      "{project_root}/CLAUDE.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/scope.md",
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/p_track_plan.md"
+    ]
+  },
+  "domains": [
+    "planning",
+    "project-context"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "planning",
+    "approval-gated",
+    "read-only"
+  ]
+}

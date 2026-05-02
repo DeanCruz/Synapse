@@ -1,0 +1,60 @@
+{
+  "file": "src/ui/components/StatsBar.jsx",
+  "content_hash": "562488d3",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Six-card stat strip across the top of the dashboard view: Total, Completed, In Progress, Failed, Pending, Elapsed. Each StatCard is keyboard-accessible (role=button + Enter/Space) and toggles `activeStatFilter` via dispatch SET key=activeStatFilter — null for Total (clears), specific status string for the others. Elapsed card is special: clicks call `onOpenTimeline` instead of filtering, and its value live-ticks every 1s while the task is running (no completed_at).",
+  "exports": [
+    {
+      "name": "StatsBar",
+      "kind": "component",
+      "signature": "{ onOpenTimeline?: () => void }"
+    }
+  ],
+  "imports_from": {
+    "../context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "@/utils/format.js": [
+      "formatElapsed",
+      "calcDuration"
+    ]
+  },
+  "gotchas": [
+    "Total card uses null filter (clears any active filter) — toggle logic is asymmetric: `filter === null || activeStatFilter === filter ? null : filter` means clicking the active card clears it, but clicking Total always clears.",
+    "Elapsed counter ticks regardless of whether the user is viewing the dashboard — the interval runs as long as the task is in-progress and the StatsBar is mounted.",
+    "Counts derived twice: from task fields (total_tasks/completed_tasks/failed_tasks) when available, from the agents array otherwise. Mismatches between init plan and live agents can cause the totals to flicker."
+  ],
+  "patterns": [
+    "computeElapsed wrapped in useCallback to keep the effect's deps stable; effect cleans up the interval on completion or unmount.",
+    "StatCard subcomponent receives `id`, `value`, `label`, `numberClass`, `isActive`, `onClick`."
+  ],
+  "conventions": [
+    "Number color via class names (.total/.completed/.in-progress/.failed/.pending/.elapsed); active state via .stat-active modifier."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/utils/format.js"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "src/ui/components/TimelinePanel.jsx",
+      "src/ui/components/WavePipeline.jsx",
+      "src/ui/components/ChainPipeline.jsx"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "stats-bar",
+    "filter"
+  ]
+}

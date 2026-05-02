@@ -49,13 +49,14 @@ The meta-planner never dispatches workers. Child masters never touch other dashb
 
 **Output files (per planning stream):**
 ```
-{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json              ← Master task file
-{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md            ← Parallelization strategy rationale
-{tracker_root}/dashboards/{dashboardId}/initialization.json             ← Static plan data (dashboard slots)
+{tracker_root}/dashboards/{dashboardId}/plan.json                       ← Canonical planning artifact (deep-thinking output, written FIRST)
+{tracker_root}/dashboards/{dashboardId}/initialization.json             ← Static plan data (written AFTER plan.json)
 {tracker_root}/dashboards/{dashboardId}/logs.json                       ← Initialized event log
 {tracker_root}/queue/{queueId}/initialization.json                      ← Overflow plan data (queue slots)
 {tracker_root}/queue/{queueId}/logs.json                                ← Initialized event log (queue)
 ```
+
+> Each stream writes its own `plan.json` to its assigned dashboard. The `validate-plan-required.sh` hook blocks `initialization.json` writes per stream until that stream's `plan.json` is valid.
 
 > **`{tracker_root}`** refers to the Synapse directory. Locate it relative to the project root.
 >
@@ -275,27 +276,22 @@ Follow these steps exactly:
 3. DETERMINE VISUALIZATION TYPE
    Choose Waves or Chains based on the dependency graph shape.
 
-4. CREATE THE PLAN DOCUMENT
-   Write to: {tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{stream_slug}.md
+4. CREATE THE CANONICAL PLAN
+   Write to: {tracker_root}/dashboards/{dashboardId}/plan.json
 
-   Include: parallelization type rationale, task organization table, dependency analysis, dispatch strategy, risk assessment, alternative approaches.
+   Schema: { context: { prompt, conventions, ...shared }, tasks: [{ id, title, description, approach, files, depends_on }, ...] }
+   See `agent/_commands/p_track_planning.md` Step 8 for the full schema.
 
-5. CREATE THE MASTER TASK FILE
-   Write to: {tracker_root}/tasks/{MM_DD_YY}/parallel_{stream_slug}.json
+   `context.prompt` MUST contain the verbatim original user prompt for this stream. `tasks[]` MUST capture the deeply-thought
+   `approach` and exact `files` for each task — this is the deliverable of the deep-thinking pass and the spec workers will read.
 
-   Follow the exact task file schema from the !p_track protocol:
-   - Top-level parallel_task object with metadata
-   - waves array with task entries containing all fields
-   - dependency_chains section
-
-6. VERIFY DEPENDENCIES
-   - Re-read the task file you wrote
-   - Cross-check with the .md plan
-   - Verify all dependency references exist and are directionally correct
+5. VERIFY DEPENDENCIES
+   - Re-read the plan.json you wrote
+   - Verify every task's depends_on references an existing task id
    - Confirm no circular dependencies
-   - Build and write dependency chains
+   - Build and validate dependency chains
 
-7. POPULATE THE {slot_type}
+6. POPULATE THE {slot_type}
    Write to: {tracker_root}/{slot_path}/initialization.json
 
    Set `task`:
@@ -437,10 +433,10 @@ Once all planner agents have returned, present a consolidated view:
 - **S5** ({slug}) dispatches after **S2** and **S4** complete
 
 ### Artifacts
-| Stream | Plan | Task File | Dashboard/Queue |
-|---|---|---|---|
-| S1 | `tasks/{date}/parallel_plan_{slug}.md` | `tasks/{date}/parallel_{slug}.json` | `dashboards/{dashboardId}/` |
-| S2 | `tasks/{date}/parallel_plan_{slug}.md` | `tasks/{date}/parallel_{slug}.json` | `dashboards/{dashboardId}/` |
+| Stream | Canonical Plan | Dashboard/Queue |
+|---|---|---|
+| S1 | `dashboards/{dashboardId}/plan.json` | `dashboards/{dashboardId}/` |
+| S2 | `dashboards/{dashboardId}/plan.json` | `dashboards/{dashboardId}/` |
 
 ### Execution Architecture
 Each approved stream will be handed to an autonomous **child master agent** that:

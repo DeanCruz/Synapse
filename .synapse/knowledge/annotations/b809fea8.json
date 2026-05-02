@@ -1,0 +1,33 @@
+{
+  "file": "documentation/architecture/overview.md",
+  "content_hash": "71691523",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "High-level architectural overview of Synapse as a distributed agent swarm control system. Explains the master/worker separation (master plans and dispatches, workers execute), the {tracker_root} vs {project_root} split, the file-based no-database design, and the Electron + server + React layering. Establishes the mental model new contributors need before reading deeper docs.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Master never writes code in {project_root} -- a hook enforces this; workers do all implementation",
+    "There is no database; all coordination state is JSON files watched by the server"
+  ],
+  "patterns": [
+    "Master/worker separation of concerns",
+    "File-based state with watcher-driven event propagation"
+  ],
+  "conventions": [
+    "Path placeholders {tracker_root} / {project_root} used consistently across docs"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "architecture"
+  ],
+  "tags": [
+    "overview",
+    "master-worker",
+    "design-principles"
+  ]
+}

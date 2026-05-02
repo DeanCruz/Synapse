@@ -1,0 +1,79 @@
+{
+  "file": "src/ui/components/ide/WorkspaceTabs.jsx",
+  "content_hash": "130c8244",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top-of-IDE horizontal tab bar listing all open workspace folders with a '+' add button. Each tab shows folder icon + name + close (×). On mount, runs a one-shot recovery effect (recoveryRanRef): for each persisted workspace, validates its dashboard exists in dashboardList; if missing, calls removeWorkspaceDashboard(wsId) + createWorkspaceDashboard(wsId) + saveDashboardProject + dispatches IDE_LINK_WORKSPACE_DASHBOARD. handleAddWorkspace opens native picker, generates wsId=String(Date.now()), dispatches IDE_OPEN_WORKSPACE, then creates the dashboard, links it via IDE_LINK_WORKSPACE_DASHBOARD, and SWITCH_DASHBOARD. handleSwitchWorkspace dispatches IDE_SWITCH_WORKSPACE and SWITCH_DASHBOARD to the workspace's dashboard so chat context follows the active folder. handleCloseWorkspace deletes the dashboard from disk via window.electronAPI.deleteDashboard, dispatches REMOVE_DASHBOARD, removes localStorage mapping, and switches to a fallback dashboard if the closed one was current.",
+  "exports": [
+    {
+      "name": "WorkspaceTabs",
+      "kind": "component",
+      "signature": "()"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useCallback",
+      "useEffect",
+      "useRef"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/utils/ideWorkspaceManager.js": [
+      "createWorkspaceDashboard",
+      "getWorkspaceDashboard",
+      "removeWorkspaceDashboard"
+    ],
+    "src/ui/utils/dashboardProjects.js": [
+      "saveDashboardProject"
+    ]
+  },
+  "gotchas": [
+    "Mount-time recovery effect uses recoveryRanRef to ensure it runs ONCE per mount — if it fails partway, retrying requires a remount.",
+    "Recovery dep array is [dashboardList, ideWorkspaces] — but recoveryRanRef gates execution to first run. If dashboardList loads after ideWorkspaces (race), the effect re-runs with correct data and the ref guard prevents re-execution. Keep the ref guard.",
+    "createWorkspaceDashboard call duplicated in IDEWelcome.jsx (cold-start path) AND here (warm path) — but IDEWelcome does NOT dispatch IDE_LINK_WORKSPACE_DASHBOARD, leading to a subtle desync where ws.dashboardId is null until the next recovery run.",
+    "handleCloseWorkspace switches dashboard FIRST, then deletes — order matters because deleting current dashboard would leave UI in a broken state.",
+    "deleteDashboard IPC is awaited but errors are only logged — user gets no feedback if disk delete fails.",
+    "Workspace ID generation via String(Date.now()) — same collision risk as IDEWelcome (rare).",
+    "Comment in source: 'Sidebar.jsx only handles display, sorting, and orphan cleanup — never creation.' — i.e., dashboard creation is owned by THIS file (and IDEWelcome) exclusively."
+  ],
+  "patterns": [
+    "One-shot mount-time recovery effect via useRef boolean guard — recreates missing dashboards after app restart.",
+    "Workspace↔Dashboard linking has THREE storage layers: (1) ideWorkspaceManager localStorage map, (2) ws.dashboardId in React state, (3) saveDashboardProject mapping. All three must agree.",
+    "handleCloseWorkspace is a 4-step ordered cascade: get mapping → switch away if current → close in state → delete on disk → REMOVE_DASHBOARD action."
+  ],
+  "conventions": [
+    "CSS class 'workspace-tabs' container, 'workspace-tab' base + ' active' modifier, 'workspace-tab-close' for ×.",
+    "Inline SVG folder icon."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/utils/ideWorkspaceManager.js",
+      "src/ui/utils/dashboardProjects.js",
+      "electron/preload.js (electronAPI.ideSelectFolder, deleteDashboard)"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": [
+      "src/ui/components/ide/IDEWelcome.jsx",
+      "src/ui/components/Sidebar.jsx"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "workspace-tabs",
+    "workspace",
+    "dashboard-link"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "workspace-tabs",
+    "dashboard-recovery"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "file": "_commands/project/env_check.md",
+  "content_hash": "8f6c44ad",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !env_check slash command — read-only audit verifying that every environment variable referenced in code exists in corresponding .env files, and that config keys are consistent across client/server contexts. Greps for process.env.X (Node), import.meta.env.X (Vite), NEXT_PUBLIC_X (Next.js), Deno.env.get, os.environ/os.getenv (Python), defineString/defineInt (Firebase Functions), and ${VAR} substitution. Locates all .env, .env.local, .env.development, .env.production, .env.example, .env.template, firebase.json files. Cross-references and reports: missing variables, missing-from-template variables, undocumented variables (in .env but not .env.example), and cross-context naming inconsistencies (e.g., NEXT_PUBLIC_API_URL vs API_BASE_URL).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "NEVER output env var VALUES — only key names, existence, and consistency. Outputting values would leak secrets.",
+    "Never modify .env files — report only. The user manages secrets.",
+    "Cross-context naming drift (client uses NEXT_PUBLIC_API_URL, server uses API_BASE_URL) must be flagged as warning even when both technically exist — they may hold mismatched values.",
+    "Undocumented vars (present in .env but not in .env.example) are documentation gaps — surface them."
+  ],
+  "patterns": [
+    "Multi-language env var pattern detection: Node/Vite/Next.js/Deno/Python/Firebase all checked.",
+    "Three-axis check: code references → .env files → .env.example completeness."
+  ],
+  "conventions": [
+    "Read-only.",
+    "Serial execution.",
+    "Output keys never values (security)."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "_commands/project/health.md",
+      "_commands/project/contracts.md"
+    ]
+  },
+  "domains": [
+    "auditing",
+    "env-config"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "env-audit",
+    "security",
+    "read-only"
+  ]
+}

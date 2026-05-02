@@ -1,0 +1,35 @@
+{
+  "file": "documentation/worker-protocol/progress-reporting.md",
+  "content_hash": "0bcb3085",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Detailed protocol for how workers populate their progress files: when to write (mandatory points: stage transitions, deviations, errors, completion), what to include (status, stage, message, milestones, deviations, logs, files_changed, annotations), and how the dashboard renders each field. Complements the schema reference in data-architecture/progress-files.md with operational guidance.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Logs should narrate the worker's reasoning, not just announce 'starting' / 'done'",
+    "files_changed must be populated incrementally as files are touched, not just at the end"
+  ],
+  "patterns": [
+    "Full-file overwrite per write (no partial JSON updates)",
+    "Append-only arrays for milestones/deviations/logs"
+  ],
+  "conventions": [
+    "summary field is descriptive on completion (e.g. 'Created auth middleware with rate limiting -- 3 endpoints')"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "worker-protocol",
+    "progress"
+  ],
+  "tags": [
+    "progress-file",
+    "reporting",
+    "logs",
+    "milestones"
+  ]
+}

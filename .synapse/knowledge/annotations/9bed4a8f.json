@@ -1,0 +1,82 @@
+{
+  "file": "src/ui/components/modals/AgentDetails.jsx",
+  "content_hash": "12ef431f",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Detailed view of a single swarm agent/task. Merges static plan data (from initialization.json's agents array, passed via the `agent` prop) with live progress data (from progress/{task_id}.json, passed in `progressData[agent.id]`) using object spread so progress overrides plan. Renders id+title header, status/wave/layer/directory/assigned_agent badges, summary, dependency chips (resolved through findAgentFn callback to get sibling status colors), meta grid (started/completed/duration/status), files-changed list, live in_progress stage+message panel, milestones list, deviations list (with warning emoji label), and an activity log box that auto-scrolls to bottom on mount. Clicking a changed file dispatches GIT_NAVIGATE_TO_FILE through AppContext to jump into the Git Manager view, then closes the modal.",
+  "exports": [
+    {
+      "name": "AgentDetails",
+      "kind": "component",
+      "signature": "{ onClose, agent, progressData, findAgentFn, projectRoot }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useRef",
+      "useEffect",
+      "useState"
+    ],
+    "src/ui/components/modals/Modal.jsx": [
+      "default"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useDispatch"
+    ],
+    "src/ui/utils/constants.js": [
+      "STATUS_COLORS",
+      "STATUS_BG_COLORS",
+      "colorWithAlpha"
+    ],
+    "src/ui/utils/format.js": [
+      "formatTime",
+      "calcDuration",
+      "formatElapsed"
+    ]
+  },
+  "gotchas": [
+    "Lifecycle data is merged with `{ ...agent, ...(agentProg || {}) }` — progress data wins on every conflict. If a plan field MUST be authoritative (e.g. wave, layer, directory) it must NOT also exist in the progress file or it will be overwritten silently.",
+    "Live elapsed-duration ticks every 1000ms via setInterval — ensure isRunning correctly transitions to false when completed_at appears, otherwise the interval leaks until unmount.",
+    "logsBoxRef autoscroll runs only ONCE on mount (empty deps array) — new log entries arriving via prop updates do NOT scroll to bottom. This is unlike LogsModal which has live autoscroll.",
+    "filesChanged path click dispatches an action to AppContext; the dispatch must be handled by GitManagerView's reducer or the click is silently ignored.",
+    "agent.id and agent.title come from initialization.json plan but merged.status/stage/message come from progress JSON — workers must write progress files in the dashboards/{id}/progress/ directory for live data to appear.",
+    "StatusBadge falls back to STATUS_COLORS.pending when status is unknown — invalid statuses render as 'pending' colored badges."
+  ],
+  "patterns": [
+    "Inline StatusBadge sub-component is duplicated across AgentDetails.jsx and TaskDetails.jsx — they share visual style but are NOT extracted to a shared module.",
+    "Wrapper title is empty string ('') because this modal renders its own custom header layout (id + title block) instead of using Modal's default title bar.",
+    "Optional sections (deps, meta, files, progress, milestones, deviations, logs) are conditionally rendered with truthy guards — empty data shows nothing rather than empty placeholders."
+  ],
+  "conventions": [
+    "Color values pulled from utils/constants STATUS_COLORS/STATUS_BG_COLORS rather than CSS variables to enable per-status alpha computation via colorWithAlpha.",
+    "splitFilePath uses lastIndexOf('/') — assumes POSIX-style paths in progress JSON, which is consistent with how workers report file changes."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/modals/Modal.jsx",
+      "src/ui/context/AppContext.jsx",
+      "src/ui/utils/constants.js",
+      "src/ui/utils/format.js"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/components/modals/TaskDetails.jsx",
+      "src/ui/components/AgentCard.jsx",
+      "src/ui/components/git/GitManagerView.jsx"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "agent-details",
+    "swarm-monitoring",
+    "progress-tracking"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "agent",
+    "progress",
+    "merge",
+    "git-navigation"
+  ]
+}

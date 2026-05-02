@@ -1,0 +1,140 @@
+{
+  "file": "src/server/services/WatcherService.js",
+  "content_hash": "ca47ebb4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The reactive heart of the server. Orchestrates THREE distinct watcher layers: (1) per-dashboard fs.watchFile polling on initialization.json + logs.json (INIT_POLL_MS interval) plus fs.watch on the progress/ directory for new/changed task progress files; (2) a top-level fs.watch on DASHBOARDS_DIR with debounced (RECONCILE_DEBOUNCE_MS) reconciliation that adds/removes dashboard watchers as folders appear/disappear; (3) a recursive fs.watch on QUEUE_DIR with the same debounce that broadcasts queue_changed. ALSO runs a periodic setInterval (RECONCILE_INTERVAL_MS) that walks every tracked dashboard's progress dir, comparing mtimeMs against an in-memory lastKnownProgress map to catch progress writes that fs.watch missed (a known Linux/macOS issue with fast bursts). Validates every payload against utils/json schema validators (isValidInitialization/isValidLogs/isValidProgress). When a progress file flips to status='completed', delays DEPENDENCY_CHECK_DELAY_MS then calls computeNewlyUnblocked and emits 'tasks_unblocked'. validateAndBroadcast (currently exported only via the module's top-block, not in module.exports) hard-rejects task_id-vs-filename mismatches and dashboard_id-vs-directory mismatches as 'write_rejected' SSE events.",
+  "exports": [
+    {
+      "name": "watchDashboard",
+      "kind": "function",
+      "signature": "(id, broadcastFn) => void"
+    },
+    {
+      "name": "unwatchDashboard",
+      "kind": "function",
+      "signature": "(id) => void"
+    },
+    {
+      "name": "startDashboardsWatcher",
+      "kind": "function",
+      "signature": "(broadcastFn) => void"
+    },
+    {
+      "name": "startQueueWatcher",
+      "kind": "function",
+      "signature": "(broadcastFn) => void"
+    },
+    {
+      "name": "startReconciliation",
+      "kind": "function",
+      "signature": "(broadcastFn) => void"
+    },
+    {
+      "name": "stopReconciliation",
+      "kind": "function",
+      "signature": "() => void"
+    },
+    {
+      "name": "stopAll",
+      "kind": "function",
+      "signature": "() => void"
+    }
+  ],
+  "imports_from": {
+    "fs": [
+      "default"
+    ],
+    "path": [
+      "default"
+    ],
+    "../utils/constants": [
+      "DASHBOARDS_DIR",
+      "QUEUE_DIR",
+      "INIT_POLL_MS",
+      "PROGRESS_RETRY_MS",
+      "PROGRESS_READ_DELAY_MS",
+      "RECONCILE_DEBOUNCE_MS",
+      "RECONCILE_INTERVAL_MS",
+      "DEPENDENCY_CHECK_DELAY_MS"
+    ],
+    "../utils/json": [
+      "readJSON",
+      "readJSONWithRetry",
+      "isValidInitialization",
+      "isValidProgress",
+      "isValidLogs"
+    ],
+    "./DashboardService": [
+      "getDashboardDir",
+      "ensureDashboard",
+      "listDashboards"
+    ],
+    "./QueueService": [
+      "listQueueSummaries"
+    ],
+    "./DependencyService": [
+      "computeNewlyUnblocked"
+    ]
+  },
+  "gotchas": [
+    "Mixed watcher mechanisms — fs.watchFile (polling) for init.json/logs.json because those files are written atomically (rename) and fs.watch can miss those, vs fs.watch (event-based) for progress/ directory. DO NOT switch one to the other without understanding why: fs.watchFile is needed for cross-platform reliability on rename-based atomic writes.",
+    "fs.watch on macOS uses kqueue and can drop events under fast bursts (worker writing progress every 200ms). The periodic reconciliation setInterval (RECONCILE_INTERVAL_MS) is a SAFETY NET specifically for this — if you remove or lengthen it, you will lose progress events under load and the dashboard will appear to stall.",
+    "Two independent code paths broadcast 'agent_progress' (the fs.watch listener inside watchDashboard AND reconcileProgressFiles in the interval loop). Both also fire computeNewlyUnblocked on completed status. This double-fire is INTENTIONAL — the dependency check is idempotent (it checks current state), and the duplicate is preferred over a missed dispatch. Listeners must dedupe.",
+    "PROGRESS_READ_DELAY_MS + PROGRESS_RETRY_MS exist because workers write JSON files non-atomically — the file may be partially written when fs.watch fires. The setTimeout delays the first read, and readJSONWithRetry retries on parse failure. Bypassing this (immediate read) WILL produce JSON parse errors under load.",
+    "validateAndBroadcast is defined but NOT in module.exports — it appears unused (orphan code). The watchDashboard handler does NOT call it; instead it uses isValidProgress. The hard task_id/dashboard_id mismatch checks in validateAndBroadcast are NOT enforced at runtime. This is either dead code or a TODO.",
+    "DEPENDENCY_CHECK_DELAY_MS exists because the completed progress file may be visible to fs.watch BEFORE the OS has finished updating directory metadata for a sibling write. Removing this delay can produce stale dispatches.",
+    "fs.unwatchFile is global per-path — if anything else in the process is also watching that exact file, this unwatches them too. WatcherService is the only watcher of these paths today.",
+    "lastKnownProgress (Map<dashboardId, Map<filename, mtimeMs>>) grows unbounded across the server lifecycle within a single dashboard, but is cleaned up per-reconcile pass for deleted files. Across dashboard deletion, the entry persists until stopAll/restart — minor memory leak but bounded by number of dashboards ever created in a session.",
+    "ensureDashboard is called inside watchDashboard — this seeds default initialization.json and logs.json if missing. Means watchDashboard is also a 'create-if-missing' operation, not just a passive watcher. Calling watchDashboard on a non-existent id will CREATE that dashboard's directory.",
+    "stopAll is the canonical shutdown — clears intervals, closes watchers, clears debounce timers. If you add a new watcher type, you MUST extend stopAll or the process won't exit cleanly."
+  ],
+  "patterns": [
+    "Three-tier watch architecture: per-file (fs.watchFile polling for atomic-write resilience) + per-dir (fs.watch for event-based progress) + periodic interval reconciliation (setInterval safety-net).",
+    "Debounced reconciliation (clearTimeout + setTimeout RECONCILE_DEBOUNCE_MS) on top-level fs.watch — prevents thundering-herd reconciles when dashboards/ receives multiple events in a burst.",
+    "Validate-then-broadcast: every payload runs through isValidInitialization/isValidLogs/isValidProgress; invalid payloads are logged but not broadcast — prevents corrupt state from reaching SSE/IPC consumers.",
+    "Lazy progress watcher creation — wrapped in try/catch so a missing progress/ directory doesn't fail the watcher setup (ensureDashboard creates it, but defense in depth).",
+    "Dependency-aware emission: status==='completed' triggers a delayed computeNewlyUnblocked + 'tasks_unblocked' SSE — the orchestrator (Electron SwarmOrchestrator) listens and dispatches the next wave automatically.",
+    "Map-based watcher registry (dashboardWatchers) keyed by id — single source of truth for active watchers, used by reconcileDashboards to compute add/remove deltas.",
+    "Hard schema guards in validateAndBroadcast (task_id matches filename, dashboard_id matches directory) — guards against cross-dashboard write contamination, broadcasts 'write_rejected' for UI surfacing. NOTE: this function is currently NOT wired into the live path."
+  ],
+  "conventions": [
+    "broadcastFn(eventName, data) is injected by the caller (server/index.js wires SSEManager.broadcast OR Electron pushes IPC) — service is transport-agnostic.",
+    "All console.error/warn messages are prefixed with `[watcher]` for log filtering.",
+    "Module-level state (dashboardWatchers Map, dashboardsDirWatcher, queueDirWatcher, lastKnownProgress, three timers) — singleton pattern, not safe to instantiate twice.",
+    "Event names emitted: 'initialization', 'logs', 'agent_progress', 'tasks_unblocked', 'dashboards_changed', 'queue_changed', 'write_rejected' — the canonical SSE/IPC event vocabulary."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/services/DashboardService.js",
+      "src/server/services/QueueService.js",
+      "src/server/services/DependencyService.js",
+      "src/server/utils/constants.js",
+      "src/server/utils/json.js"
+    ],
+    "depended_by": [
+      "src/server/index.js (wires broadcastFn=SSEManager.broadcast)",
+      "electron/main.js (wires broadcastFn=IPC push)",
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "src/server/SSEManager.js",
+      "src/ui/hooks/useDashboardData.js (consumer)",
+      "electron/preload.js (consumer-side IPC channels)"
+    ]
+  },
+  "domains": [
+    "file-watcher",
+    "dashboard-state",
+    "dependency-resolution"
+  ],
+  "tags": [
+    "server",
+    "service",
+    "watcher",
+    "sse",
+    "fs-watch",
+    "reconciliation",
+    "debounce"
+  ]
+}

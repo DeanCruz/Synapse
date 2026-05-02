@@ -1,0 +1,71 @@
+{
+  "file": "_commands/project/toc_generate.md",
+  "content_hash": "8b47f1f5",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !toc_generate slash command — full-rebuild generator of {project_root}/.synapse/toc.md plus sidecar files fingerprints.json and dep_graph.json by dispatching parallel agents per directory. Three-phase workflow: (1) Discovery — list project root, map subdirs to depth 2-3, read CLAUDE.md for project context; (2) Parallel Scan via !p dispatch — one agent per directory (3+ files) or grouped (1-2 files), each agent reads files and reports per-file: relative path, 1-3 sentence summary, 3-8 lowercase tags, related files, key exports, content hash (shasum -a 256 first 8 chars), and Semantic Fingerprint (purpose category from fixed list, key_exports with name+kind+params, key_imports project-internal only, complexity); (3) Streaming Assembly — write TOC incrementally with Project Overview at top (Summary/Tech Stack/Architecture/Key Directories) plus per-directory file index (`**filename**` — summary [tags] <!-- hash:8chars -->`), accumulate fingerprints in memory, after all returns write fingerprints.json and derive dep_graph.json by forward-pass copying imports + reverse-pass building imported_by + stub-creating unscanned files + sorting alphabetically. NON-NEGOTIABLE: master never reads source files; dispatch must be parallel batches; streaming writes (incremental, not batched).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "NON-NEGOTIABLE: master NEVER reads source files. Reads ONLY CLAUDE.md, ls output, agent returns. Reading source files defeats the swarm's purpose.",
+    "NON-NEGOTIABLE: dispatch in PARALLEL batches (multiple Task calls in single message), not sequential.",
+    "NON-NEGOTIABLE: streaming writes — TOC updated incrementally as agents return; protects against context loss.",
+    "Fingerprints are SIDECAR data in fingerprints.json, NOT inline in toc.md — TOC stays human-readable markdown; fingerprints/dep_graph are structured JSON for programmatic consumption.",
+    "dep_graph.json is DERIVED from fingerprints.json key_imports — agents do not report imported_by; the master computes the reverse mapping.",
+    "Content hash is MANDATORY in every entry — `<!-- hash:8chars -->` comment. Enables !toc_update to detect changes without re-reading. Use 00000000 placeholder if agent fails to report.",
+    "Project Overview section is MANDATORY at top — provides high-level context (Summary/Tech Stack/Architecture/Key Directories) that per-file entries cannot convey.",
+    "Skip node_modules/, .next/, dist/, .git/, *.lock, auto-generated. INCLUDE _commands/ directories.",
+    "Summaries must be USEFUL — 'A TypeScript file' is worthless; 'Rate limiter middleware — limits each IP to N requests per window, returns 429 with Retry-After' is useful.",
+    "Tags must be LOWERCASE and SEARCHABLE — technology + domain + role + feature.",
+    "Purpose category is from a FIXED list: component, service, utility, config, test, type-definition, route, middleware, hook, model, migration, script, documentation, command, style, entry-point, factory, context-provider, or other(description).",
+    "key_imports must be PROJECT-INTERNAL ONLY — strip leading ./ ../ and exclude npm packages.",
+    "key_exports entries always have all three fields (name/kind/params); default params=0 for non-callables.",
+    "If a file appears in imports but wasn't scanned, create a stub graph entry { imports: [], imported_by: [...] }."
+  ],
+  "patterns": [
+    "Master-as-orchestrator: discover → parallel dispatch → streaming assembly → derive sidecars.",
+    "Two-section TOC: Project Overview top + per-directory index below.",
+    "Sidecar JSON pattern: human TOC + machine fingerprints + derived dep_graph.",
+    "Reverse-pass graph derivation: forward (imports copied from fingerprints) → reverse (imported_by built by iteration).",
+    "Per-directory agent scoping with grouping for small dirs."
+  ],
+  "conventions": [
+    "Streaming writes throughout.",
+    "Hash format: first 8 chars of SHA-256 of file content.",
+    "Fingerprint purpose category from fixed enum.",
+    "Sort imports/imported_by arrays alphabetically for deterministic output.",
+    "Last updated date in TOC.",
+    "Dispatch via !p (lightweight parallel)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{project_root}/CLAUDE.md",
+      "_commands/Synapse/p.md",
+      ".claude/agents/swarm-worker.md"
+    ],
+    "depended_by": [
+      "_commands/project/toc_update.md",
+      "_commands/project/toc.md",
+      "_commands/project/initialize.md"
+    ],
+    "related": [
+      "_commands/project/learn.md",
+      "_commands/project/scope.md"
+    ]
+  },
+  "domains": [
+    "toc-management",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "toc",
+    "fingerprints",
+    "dep-graph",
+    "parallel-dispatch",
+    "non-negotiable-master",
+    "writes-files"
+  ]
+}

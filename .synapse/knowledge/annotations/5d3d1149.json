@@ -1,0 +1,79 @@
+{
+  "file": "src/ui/components/ide/DebugPanels.jsx",
+  "content_hash": "44410ea2",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "VS Code-style debug sidebar with four collapsible sections: Variables, Call Stack, Breakpoints, Watch Expressions. Reads exclusively from AppContext debug state (debugSession, debugScopes, debugVariables, debugCallStack, debugBreakpoints, debugWatchExpressions). VariablesSection iterates debugScopes and renders VariableRow recursively; rows with variable.variablesReference > 0 are lazy-expanded by calling window.electronAPI.debugGetVariables(variablesReference) on first click and caching children locally. CallStackSection lists frames; clicking a frame calls onNavigateToFrame(source, line, column) prop (wired by IDEView to dispatch IDE_OPEN_FILE + ideNavigateToLine). BreakpointsSection flattens debugBreakpoints (Object<filePath, line[]>) into a sorted list; checkbox click dispatches DEBUG_TOGGLE_BREAKPOINT, row click navigates. WatchSection adds expressions that are evaluated immediately via window.electronAPI.debugEvaluate (using top-of-stack callFrameId when paused) and stored in debugWatchExpressions; results are NOT auto-refreshed on pause changes — they capture the value at insertion time.",
+  "exports": [
+    {
+      "name": "DebugPanels",
+      "kind": "component",
+      "signature": "{ onNavigateToFrame, onNavigateToBreakpoint }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useCallback",
+      "useRef",
+      "useEffect"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/styles/ide-debug.css": [
+      "default-side-effect"
+    ]
+  },
+  "gotchas": [
+    "Variables only render when debugSession.status === 'paused' — when paused, debugScopes drives the layout, but if debugVariables[scope.variablesReference] hasn't been populated by IDEView's debug-paused handler, the row shows 'No variables' even though scopes exist.",
+    "Lazy variable expansion does NOT re-fetch on subsequent expand — once children loaded, they're cached in component state for the lifetime of the row. Resuming and re-pausing creates new variablesReference IDs (DAP/V8 inspector spec), so old cached values are simply unmounted on the next debug-paused dispatch when scopes change.",
+    "Watch expressions are static snapshots — entered values do NOT auto-refresh when the debugger steps. Users must remove and re-add to refresh.",
+    "BreakpointsSection's DEBUG_TOGGLE_BREAKPOINT dispatch uses a different shape than CodeEditor's: { filePath, line } vs { filePath, lineNumber, enabled }. Reducer must accept both or breakpoints will desync.",
+    "Watch expression IDs use Date.now()+random — fast double-clicks could collide (rare).",
+    "Truncation at 80 chars (60 for watch values) is hardcoded — long values are silently elided with '\\u2026' and shown in title attribute on hover."
+  ],
+  "patterns": [
+    "CollapsibleSection is a reusable inner component — used by all four sections for consistent header/chevron/count UI.",
+    "VariableRow is recursive: renders itself for each child after lazy-loaded expansion; depth controls paddingLeft visually (12 + depth * 16).",
+    "Empty/disabled state uses 'dbg-empty' class with messages like 'Not paused', 'No call frames', 'No breakpoints set'.",
+    "Navigation callbacks (onNavigateToFrame, onNavigateToBreakpoint) are PROP-DRIVEN — the panel itself never dispatches navigation; IDEView wires up the file-open + ideNavigateToLine flow."
+  ],
+  "conventions": [
+    "Inner SVG icon components (ChevronIcon, CheckboxCheckedIcon, AddIcon, RemoveIcon) follow currentColor stroke pattern.",
+    "Section CSS uses 'dbg-' prefix (dbg-section, dbg-var-row, dbg-stack-row, dbg-bp-row, dbg-watch-row).",
+    "Each section's JSX is wrapped in CollapsibleSection title + count props."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (electronAPI.debugGetVariables, debugEvaluate)"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": [
+      "src/ui/components/ide/CodeEditor.jsx",
+      "src/ui/components/ide/DebugConsolePanel.jsx",
+      "src/ui/components/ide/DebugToolbar.jsx",
+      "electron/services/DebugService.js"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "node-debugger",
+    "debug-panels",
+    "variables",
+    "call-stack"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "debug",
+    "node-debugger",
+    "watch-expressions",
+    "breakpoints"
+  ]
+}

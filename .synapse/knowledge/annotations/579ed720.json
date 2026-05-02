@@ -1,0 +1,48 @@
+{
+  "file": "documentation/project-integration/project-setup.md",
+  "content_hash": "15a0b3e0",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Step-by-step guide for connecting Synapse to a new project. Walks through pointing Synapse at the project (3 options: store path, CWD, --project), running !initialize (8-step process: verify prerequisites, detect tech stack, create .synapse/, scaffold CLAUDE.md, generate TOC, init dashboards, start server, report), reviewing CLAUDE.md, generating TOC, bootstrapping PKI with !learn, project-specific commands, disconnecting projects, and troubleshooting common setup issues.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "!initialize is idempotent -- safe to re-run, skips existing files",
+    "--skip-toc and --skip-claude flags available for partial init",
+    "Dashboards are swarm-specific not project-specific -- changing project doesn't affect existing dashboards",
+    "CLAUDE.md never overwritten without --force"
+  ],
+  "patterns": [
+    "Quick-start path: !project set -> !initialize -> !start -> !p_track",
+    "Tech stack detection via config file presence (package.json, tsconfig.json, etc.)",
+    "Monorepo detection: npm/pnpm workspaces, lerna, nx, turbo, cargo, go"
+  ],
+  "conventions": [
+    "Project root resolution priority: --project > stored config > CWD",
+    ".synapse/config.json links project to tracker_root with metadata",
+    "TOC generation parallelized via agent swarm"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/project-integration/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/project-integration/conventions.md",
+      "documentation/project-integration/toc-system.md",
+      "documentation/project-integration/pki-overview.md",
+      "_commands/project/initialize.md",
+      "_commands/Synapse/project.md"
+    ]
+  },
+  "domains": [
+    "project-integration-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "setup",
+    "initialization",
+    "onboarding"
+  ]
+}

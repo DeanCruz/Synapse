@@ -1,0 +1,54 @@
+{
+  "file": "agent/worker/return_format.md",
+  "content_hash": "7e92e3d6",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the structured terminal return format every worker agent must emit when its task ends — the text the master parses to log the result, build downstream prompts, and harvest PKI annotations. Lists the eight return sections (STATUS, SUMMARY, FILES CHANGED, EXPORTS, ANNOTATIONS, WARNINGS, ERRORS, DIVERGENT ACTIONS), which are conditional vs always-present, and the formatting rules for each. Specifies what qualifies as an EXPORT (new public functions/types/interfaces/endpoints/constants/files for downstream tasks), what qualifies as an ANNOTATION (deeply-read source files producing gotchas/patterns/conventions), and contrasts good vs bad SUMMARY values via concrete examples. The return format is the master's primary read after worker termination — bad summaries force the master to re-read progress files (context burn).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Summary is the master's single most important read — vague summaries ('Done', 'Made the changes') force the master to re-read progress files, burning context. Always specific + quantified.",
+    "STATUS is 'completed' for partial completion (80%+) too — 'failed' is reserved for zero-useful-output. Wrong status classification skews downstream dispatch decisions.",
+    "EXPORTS section is consumed by the master to construct the UPSTREAM RESULTS section of downstream worker prompts — missing exports cause downstream workers to operate on stale assumptions.",
+    "Annotations in the return format MUST match the annotations field in the progress file — mismatches break PKI merging.",
+    "Internal helpers do NOT qualify as exports — only items downstream tasks might depend on. Bloating EXPORTS with private utilities pollutes upstream context.",
+    "The DIVERGENT ACTIONS section in the return format is parallel to deviations[] in the progress file — both must agree, severity must be tagged."
+  ],
+  "patterns": [
+    "Plain-text key-value sections (not JSON) with colon separators — designed for grep/eyeballing in terminal output.",
+    "Conditional sections: omit ENTIRELY if empty (no 'EXPORTS: (none)'). EXPORTS, ANNOTATIONS, WARNINGS, ERRORS, DIVERGENT ACTIONS all follow this rule.",
+    "FILES CHANGED uses action prefix per line (created, modified, deleted) and parallels progress file files_changed[].",
+    "Export entry format: '- {type: function|type|interface|endpoint|constant|file} {name} — {brief description}' — type tag is a 6-value enum.",
+    "Annotation entry format: indented file path followed by gotchas/patterns/conventions sub-lines (any combination, all optional)."
+  ],
+  "conventions": [
+    "Em-dash separator in summaries to join action and qualifier.",
+    "DIVERGENT ACTIONS entries include severity in parentheses: '(severity: MODERATE)'.",
+    "Both 'completed' and 'failed' STATUS values lowercase; severity values uppercase (CRITICAL/MODERATE/MINOR)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/worker/progress_reporting.md"
+    ],
+    "depended_by": [
+      "agent/instructions/tracker_worker_instructions.md",
+      ".claude/agents/swarm-worker.md",
+      "agent/master/worker_prompts.md"
+    ],
+    "related": [
+      "agent/worker/deviations.md",
+      "agent/master/pki_integration.md",
+      "agent/master/role.md"
+    ]
+  },
+  "domains": [
+    "worker-protocol",
+    "return-format"
+  ],
+  "tags": [
+    "markdown",
+    "worker-agent",
+    "protocol",
+    "structured-output"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "file": "documentation/ide/ipc-handlers.md",
+  "content_hash": "aedda743",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Catalog of the 24 IDE-related IPC handlers: 9 file-system handlers (read/write/list/rename/etc.), 2 diagnostics handlers, and 13 debug handlers (start, stop, breakpoints, step in/over/out, pause/resume, evaluate, scopes). Documents request/response shapes and security validations.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "All paths validated against workspace root — escaping via .. is rejected",
+    "Debug session is single-instance — calling start while active errors out",
+    "File watcher events are debounced — rapid edits coalesce"
+  ],
+  "patterns": [
+    "Workspace-scoped path validation on every handler",
+    "CDP-driven debugger via DebugService",
+    "Standardized { success, data, error } responses"
+  ],
+  "conventions": [
+    "Handler names: ide-* and debug-*"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/ide/overview.md",
+      "documentation/electron/ipc-reference.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/ide/components.md",
+      "documentation/electron/services.md"
+    ]
+  },
+  "domains": [
+    "ide",
+    "electron"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "ipc",
+    "debug"
+  ]
+}

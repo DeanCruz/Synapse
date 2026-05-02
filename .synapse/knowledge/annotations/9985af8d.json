@@ -1,0 +1,33 @@
+{
+  "file": "documentation/swarm-lifecycle/planning-phase.md",
+  "content_hash": "5fefbddb",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Detailed walk-through of the planning phase: deep-thinking analysis, task decomposition, dependency mapping, layout choice (waves vs chains vs hybrid), shared-file conflict resolution, and final emission of plan.json. Documents the artifacts the planning phase produces and the quality gates the master applies before transitioning to dispatch.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Skipping plan.json and going straight to initialization.json loses the rationale needed for replanning",
+    "Tasks needing more than 2-3 sentences of description are usually too big and should be split"
+  ],
+  "patterns": [
+    "Spend more time planning than executing -- planning prevents most swarm failures"
+  ],
+  "conventions": [
+    "plan.json captures the why; initialization.json captures the what"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "swarm-lifecycle",
+    "planning"
+  ],
+  "tags": [
+    "planning",
+    "decomposition",
+    "plan-json"
+  ]
+}

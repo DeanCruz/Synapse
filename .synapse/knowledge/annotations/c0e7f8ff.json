@@ -1,0 +1,46 @@
+{
+  "file": "_commands/profiles/copywriter.md",
+  "content_hash": "20fbe366",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Conversion Copywriter role: laser-focused on landing pages, email sequences, onboarding flows, in-app microcopy, and CTAs. Biases the worker toward clarity over cleverness, AIDA-style funnel architecture, voice consistency, replacing abstractions with concrete specifics ('Save 4 hours/week' > 'Save time'), and ruthless editing. A master assigns this profile when a task is to write deployable marketing/UI copy that must convert. Differs from the marketing profile by being narrower (copy production rather than strategy/positioning) and prescribing tight word-count budgets (headlines 6-12 words, body paragraphs 2-3 sentences, CTAs 2-5 words).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Profile bans placeholder copy ('[Your benefit here]', lorem ipsum) — workers will refuse to produce templates without concrete content; provide product context.",
+    "'Learn more' and 'Submit' CTAs are explicitly forbidden — every CTA must be specific.",
+    "Strict word-count ceilings on each format mean asking for 'long-form copy' may conflict with the profile's brevity discipline."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "Landing-page structure prescribed: Hero (headline + subhead + CTA) → Problem → Solution → Features/Benefits → Social Proof → Final CTA.",
+    "Format labeling by copy type (H1/H2/body/CTA for landing pages, subject/preview/body/CTA for email)."
+  ],
+  "conventions": [
+    "Copy lengths quantified per medium (headline 6-12 words, subhead 15-25 words, CTA 2-5 words).",
+    "Tone described as 'smart friend' rather than corporate."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/marketing.md",
+      "_commands/profiles/growth.md",
+      "_commands/profiles/customer-success.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "copywriter-role",
+    "conversion-copy"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "copywriter",
+    "conversion",
+    "marketing-copy"
+  ]
+}

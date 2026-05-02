@@ -1,0 +1,94 @@
+{
+  "file": "src/ui/components/ide/CodeEditor.jsx",
+  "content_hash": "567b445f",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Monaco Editor wrapper that owns the IDE's primary code surface. Imports '@/utils/monacoWorkerSetup' BEFORE 'monaco-editor' to install the AMD worker URL shim. Creates a single Monaco editor instance once on mount with glyphMargin enabled, minimap, bracket pair colorization, and a dynamically-built 'synapse-dynamic-N' theme derived from CSS custom properties (--editor-bg, --editor-fg, etc.) so the editor live-tracks the Synapse theme via a MutationObserver on documentElement's data-theme/style attributes. Loads file contents via window.electronAPI.ideReadFile(filePath, workspacePath) and reapplies via editor.setValue + monaco.editor.setModelLanguage. Tracks dirty state via originalContentRef vs editor.getValue() and dispatches IDE_MARK_FILE_DIRTY/IDE_MARK_FILE_CLEAN. Owns three independent decoration layers (breakpoints, diagnostics, debug-current-line) each managed via deltaDecorations with its own ref. Breakpoints are stored in a module-level Map<filePath, Set<lineNumber>> (allBreakpoints) so they persist across file switches and component re-renders, and toggled via gutter-glyph or line-number clicks (onMouseDown filtering on MouseTargetType.GUTTER_GLYPH_MARGIN | GUTTER_LINE_NUMBERS). Diagnostics are debounced 500ms via diagnosticsTimerRef, fetched from window.electronAPI.ideCheckSyntax, applied as Monaco markers under owner 'synapse-diagnostics' (squiggles) and gutter glyphs (deduped by line, highest severity wins via severityRank map). Debug pause highlighting uses isWholeLine 'debug-current-line' decoration plus revealLineInCenter when state.debugSession.status === 'paused' AND pausedFile matches currentFilePathRef. Listens to state.ideNavigateToLine (revealLineInCenter + setPosition + focus) for cross-component navigation from ProblemsPanel/DebugPanels/SearchPanel.",
+  "exports": [
+    {
+      "name": "CodeEditor",
+      "kind": "component",
+      "signature": "{ filePath, workspaceId, workspacePath }"
+    }
+  ],
+  "imports_from": {
+    "@/utils/monacoWorkerSetup": [
+      "default-side-effect"
+    ],
+    "monaco-editor": [
+      "* as monaco"
+    ],
+    "react": [
+      "useEffect",
+      "useRef",
+      "useState",
+      "useCallback"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/styles/ide-editor.css": [
+      "default-side-effect"
+    ]
+  },
+  "gotchas": [
+    "Worker setup MUST be imported before monaco-editor (`import '@/utils/monacoWorkerSetup'` first) — otherwise Monaco language workers fail to spawn under Vite/Electron.",
+    "buildSynapseTheme() registers a NEW theme each call ('synapse-dynamic-' + ++_themeVersion) — do not call it in a tight loop or you'll leak named themes; it is intentionally invoked only on theme/style mutations and on initial mount.",
+    "Breakpoints live in a MODULE-LEVEL Map (allBreakpoints) — they persist across re-renders/file switches but also leak across full hot reloads in dev. Toggling dispatches DEBUG_TOGGLE_BREAKPOINT but the dispatch is wrapped in try/catch because the action may not exist yet (legacy comment).",
+    "Three decoration layers (breakpointDecorationsRef, diagnosticDecorationsRef, debugLineDecorationsRef) each call deltaDecorations independently — you MUST keep their decoration ID arrays separate, or one layer will wipe another.",
+    "Diagnostics owner string 'synapse-diagnostics' (DIAGNOSTICS_OWNER) must NOT collide with breakpoint or debug line markers — model markers are scoped per-owner.",
+    "currentFilePathRef is checked AFTER the async ideCheckSyntax IPC returns to detect tab-switch race; if user changed files, results are dropped silently.",
+    "Save command (Cmd/Ctrl+S) is re-registered on every handleSave change because Monaco's addCommand captures the closure — without re-registration, save would call a stale handler with old filePath.",
+    "If a file's read fails or it's binary, fileLoadFailedRef is set and runDiagnostics short-circuits — otherwise diagnostics IPC would error on every load.",
+    "automaticLayout is OFF; layout is driven by ResizeObserver on containerRef — wrapping container must have a deterministic size or the editor renders 0×0.",
+    "Editor is created ONCE (empty deps in mount effect); file/workspace changes load content into the existing model via setValue + setModelLanguage. Disposing/recreating the editor on every prop change would leak Monaco models."
+  ],
+  "patterns": [
+    "Module-level breakpoint state (allBreakpoints Map) survives React unmount; component-level refs hold per-mount editor instance + decoration IDs.",
+    "Debounced diagnostics (500ms) re-run after save (handleSave calls runDiagnostics) and on file load.",
+    "Theme is rebuilt from CSS variables and re-applied on documentElement attribute mutations (data-theme/style) — Synapse theme switches propagate to Monaco automatically.",
+    "Cross-component navigation pattern: external code dispatches { key:'ideNavigateToLine', value: { filePath, line, column, ts } } → CodeEditor effect compares filePath and reveals/sets position. The `ts` field forces re-trigger on identical line.",
+    "Dirty/clean state is dual-tracked: originalContentRef (local, for editor) + IDE_MARK_FILE_DIRTY action (global, for tabs).",
+    "Severity-to-glyph mapping is centralized via severityToGlyphClass + SEVERITY_MAP for consistency across diagnostics and Problems panel."
+  ],
+  "conventions": [
+    "Refs end with `Ref` (editorRef, modelRef, currentFilePathRef, fileIdRef, originalContentRef, diagnosticsTimerRef, fileLoadFailedRef, breakpointDecorationsRef, diagnosticDecorationsRef, debugLineDecorationsRef, gutterClickDisposableRef, onChangeDisposableRef).",
+    "Decoration arrays are RETURN VALUES of deltaDecorations and immediately reassigned — never push/splice into the existing array.",
+    "Section comments use `/* ── Title ─── */` divider style.",
+    "All IPC calls guarded by `window.electronAPI?.method` optional chaining."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/utils/monacoWorkerSetup.js",
+      "src/ui/context/AppContext.jsx",
+      "monaco-editor",
+      "electron/preload.js (electronAPI.ideReadFile, ideWriteFile, ideCheckSyntax)"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": [
+      "src/ui/components/ide/EditorTabs.jsx",
+      "src/ui/components/ide/DebugPanels.jsx",
+      "src/ui/components/ide/ProblemsPanel.jsx",
+      "src/ui/styles/ide-editor.css"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "monaco-editor",
+    "node-debugger",
+    "diagnostics"
+  ],
+  "tags": [
+    "react",
+    "monaco",
+    "ide",
+    "component",
+    "code-editor",
+    "diagnostics",
+    "breakpoints",
+    "syntax-highlighting"
+  ]
+}

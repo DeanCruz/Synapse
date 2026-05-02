@@ -45,11 +45,12 @@
 
 **Output files:**
 ```
-{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json              ← Master task file (single source of truth)
-{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md            ← Parallelization rationale (references source plan)
-{tracker_root}/dashboards/{dashboardId}/initialization.json             ← Static plan data (written once)
+{tracker_root}/dashboards/{dashboardId}/plan.json                       ← Canonical planning artifact (deep-thinking output, written FIRST)
+{tracker_root}/dashboards/{dashboardId}/initialization.json             ← Static plan data (written once, AFTER plan.json)
 {tracker_root}/dashboards/{dashboardId}/logs.json                       ← Timestamped event log
 ```
+
+> **Hook enforcement:** `validate-plan-required.sh` blocks `initialization.json` writes when `plan.json` is missing/invalid. `validate-approval-gate.sh` blocks worker dispatch until the user approves the plan via a `permission` → `info "Approval granted"` log entry pair.
 
 > **`{tracker_root}`** refers to the Synapse directory. Locate it relative to the project root.
 >

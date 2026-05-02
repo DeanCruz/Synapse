@@ -1,0 +1,43 @@
+{
+  "file": "_commands/project/profiles.md",
+  "content_hash": "18e277f9",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !profiles slash command — scans {tracker_root}/_commands/profiles/ for all .md files, extracts profile name (filename minus .md), role title (from ## Role heading or first line), and one-line summary, then renders a sorted table with Profile/Role/Best Used For columns. Includes usage reminder showing composition syntax: !{profile} {prompt}, !{profile} !{command} {prompt}, !{profile} !p {prompt}, !{profile} !p_track {prompt} (profiles compose with commands). Always scans live — never hardcode profile list. Reports 'No profiles found. Create one with: create a new profile called {name}' if directory empty/missing.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Always scan _commands/profiles/ LIVE — never hardcode the profile list. New profiles must surface automatically.",
+    "Read EACH profile file to extract accurate role/usage info — do not guess from filenames alone.",
+    "Profiles compose with commands via !{profile} !{command} syntax — output reminder must include this.",
+    "Empty/missing directory: emit specific guidance message rather than silent failure."
+  ],
+  "patterns": [
+    "Filesystem-driven discovery.",
+    "Composition syntax shown in output."
+  ],
+  "conventions": [
+    "Alphabetical sort by profile name.",
+    "Three-column table format: Profile / Role / Best Used For."
+  ],
+  "relationships": {
+    "depends_on": [
+      "_commands/profiles/"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/commands.md"
+    ]
+  },
+  "domains": [
+    "command-discovery",
+    "profile-system"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "profiles",
+    "discovery"
+  ]
+}

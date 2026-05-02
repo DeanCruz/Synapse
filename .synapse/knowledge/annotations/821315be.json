@@ -1,0 +1,53 @@
+{
+  "file": ".claude/skills/p/SKILL.md",
+  "content_hash": "449345fc",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "User-invocable forked-context Opus skill (`!p`) — lightweight parallel dispatch without full dashboard tracking. The master plans + dispatches workers with rich prompts, but skips progress files, master_state.json, and metrics.json. Decision matrix vs !p_track: <3 tasks/single wave/focused -> !p; 3+ tasks OR >1 wave OR live monitoring -> !p_track. Master writes only initialization.json (plan snapshot) + bookend logs.json entries. Workers write nothing to dashboard — coordination via conversation context only. Auto-escalation rule: if plan has 3+ agents or >1 wave, master SHOULD recommend !p_track. Defers to _commands/Synapse/p.md, agent/instructions/tracker_master_instructions.md, and {project_root}/CLAUDE.md.",
+  "exports": [],
+  "imports_from": {
+    "commands": [
+      "_commands/Synapse/p.md"
+    ],
+    "agent_modules": [
+      "agent/instructions/tracker_master_instructions.md"
+    ]
+  },
+  "gotchas": [
+    "No worker progress files = no live tracking = blind during execution",
+    "No master_state.json = no compaction recovery checkpoint",
+    "No metrics.json = no parallel efficiency calculations post-swarm",
+    "Auto-escalation is advisory — user can override and stay in !p mode",
+    "Workers use a different TEMPLATE_VERSION (p_v2) than !p_track (p_track_v2) — checked by validate-worker-prompt.sh with reduced required-section set"
+  ],
+  "patterns": [
+    "Lightweight dispatch: plan + bookend logs only",
+    "Auto-escalation recommendation pattern"
+  ],
+  "conventions": [
+    "Bookend logs: swarm-start + swarm-completion entries"
+  ],
+  "relationships": {
+    "depends_on": [
+      "_commands/Synapse/p.md",
+      "agent/instructions/tracker_master_instructions.md"
+    ],
+    "depended_by": [],
+    "related": [
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/hooks/validate-worker-prompt.sh"
+    ]
+  },
+  "domains": [
+    "skill-definition",
+    "lightweight-dispatch"
+  ],
+  "tags": [
+    "skill",
+    "user-invocable",
+    "fork",
+    "opus",
+    "lightweight",
+    "no-tracking"
+  ]
+}

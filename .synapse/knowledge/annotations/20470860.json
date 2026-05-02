@@ -1,0 +1,44 @@
+{
+  "file": "src/ui/styles/ide-layout.css",
+  "content_hash": "8e4f2b8d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top-level layout stylesheet for the IDE / Code Explorer view. Defines .ide-view (root flex column container, full width/height, var(--bg)) and the .workspace-tabs bar (36px high, horizontal-scrolling tabs hidden scrollbar, .workspace-tab elements with .active state, close buttons, dirty indicators). Acts as the structural skeleton hosting child IDE panels (file explorer, editor, search, debug panels) styled by sibling ide-*.css files.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Root class .ide-view is generic and could collide if another feature ever uses 'ide' nomenclature. Treat as namespace.",
+    "Workspace tabs use scrollbar-width:none + ::-webkit-scrollbar{display:none} — horizontal overflow is invisible to the user.",
+    "Loaded by main.jsx globally AND by IDEView.jsx — two import paths, but Vite dedupes."
+  ],
+  "patterns": [
+    "Structural container pattern: 100% width/height flex column, overflow:hidden to clip children.",
+    "Fixed-height bars (36px) with min-height + height + flex-shrink:0 lock zones."
+  ],
+  "conventions": [
+    "Class prefix: .ide-view, .workspace-tab-* (this file is the only one defining .workspace-* classes).",
+    "var(--token, fallback) pattern for resilience."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for variables (--bg, --surface, --border, --text, --text-secondary, --sans)"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx",
+      "src/ui/components/ide/WorkspaceTabs.jsx",
+      "src/ui/main.jsx (global pre-load)"
+    ],
+    "related": [
+      "src/ui/styles/git-manager.css (mirrors this layout structure)"
+    ]
+  },
+  "domains": [
+    "ide-styles"
+  ],
+  "tags": [
+    "css",
+    "ide",
+    "layout",
+    "workspace-tabs"
+  ]
+}

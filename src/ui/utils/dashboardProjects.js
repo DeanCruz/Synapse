@@ -22,6 +22,13 @@ export function saveDashboardProject(dashboardId, projectPath) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
 }
 
+export function clearDashboardProject(dashboardId) {
+  const map = getAllDashboardProjects();
+  if (map[dashboardId] === undefined) return;
+  delete map[dashboardId];
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+}
+
 // Per-dashboard additional context directories storage — uses localStorage
 // Each dashboard can have an array of additional context directory paths.
 

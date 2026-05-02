@@ -1,0 +1,52 @@
+{
+  "file": "_commands/Synapse/reset.md",
+  "content_hash": "0fec86d8",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!reset [dashboardId | --all]` command for clearing dashboards. Single-dashboard mode: build a history summary (with lessons_learned: deviations, failure_causes, warnings, patterns), write to history/{YYYY-MM-DD}_{task_name}.json, MANDATORILY archive the entire dashboard directory to Archive/{YYYY-MM-DD}_{task_name}/, then clear progress/*.json files and reset initialization.json+logs.json to empty state. --all mode: iterate every dashboard from listDashboards() applying the same flow.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Archive is MANDATORY — never skip; copies entire dashboard directory before clearing",
+    "Already-empty dashboards (task: null) must report 'already empty' and stop — do not archive empty state",
+    "History summary includes a `lessons_learned` object with 4 nested fields (deviations[], failure_causes[], warnings[], patterns) — different from the regular history summary used by the server",
+    "History filename format: {YYYY-MM-DD}_{task_name}.json — must match the convention used by HistoryService.js",
+    "Empty initialization.json after reset has shape: { task: null, agents: [], waves: [], chains: [], history: [] } — note the empty arrays",
+    "Empty logs.json after reset has shape: { entries: [] }",
+    "TASK_NAME shell extraction uses grep+head+cut — fragile to JSON formatting changes; archive name fallback is ${TASK_NAME:-unnamed}"
+  ],
+  "patterns": [
+    "6-step single-dashboard procedure: parse → check empty → build+save history summary → archive → clear progress + reset init+logs → report",
+    "--all mode replays steps 3-5 across all dashboards skipping empty ones",
+    "Two artifacts per reset: history JSON + Archive directory copy (both required)"
+  ],
+  "conventions": [
+    "Two parallel sub-sections: Single Dashboard Reset and Reset All (--all)",
+    "Bash code block for archive copy operation with TASK_NAME extraction",
+    "History summary fields enumerated as bulleted list with nested fields"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/history.md",
+      "_commands/Synapse/cancel.md",
+      "src/server/services/HistoryService.js",
+      "src/server/services/ArchiveService.js"
+    ]
+  },
+  "domains": [
+    "dashboard-monitoring",
+    "archival",
+    "housekeeping"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "destructive",
+    "history-summary"
+  ]
+}

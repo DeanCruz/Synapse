@@ -1,0 +1,34 @@
+{
+  "file": "documentation/swarm-lifecycle/dispatch-phase.md",
+  "content_hash": "043cb92e",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Mechanics of the dispatch phase: how the master spawns workers via the Task tool, how dispatch prompts are constructed (TEMPLATE_VERSION, paths, FILES, CRITICAL, UPSTREAM RESULTS), and how parallel dispatch is achieved by issuing multiple Task tool calls in a single message. Covers eager dispatch (dispatch as soon as deps are satisfied) vs wave-gated dispatch.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Multiple Task tool calls must go in a SINGLE message to actually run in parallel; sequential messages serialize",
+    "Each dispatch prompt is fully self-contained -- workers cannot call back to the master"
+  ],
+  "patterns": [
+    "Self-contained dispatch prompts with full context inlined",
+    "Eager dispatch where dependency satisfaction immediately unblocks downstream tasks"
+  ],
+  "conventions": [
+    "Prompts always include both {tracker_root} and {project_root} explicitly"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "swarm-lifecycle",
+    "dispatch"
+  ],
+  "tags": [
+    "dispatch",
+    "task-tool",
+    "prompt-construction"
+  ]
+}

@@ -1,0 +1,45 @@
+{
+  "file": "_commands/profiles/analyst.md",
+  "content_hash": "50fb5a7d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Senior Data Analyst role profile, biasing a worker toward SaaS metrics rigor: precise metric definitions (formula/source/owner/cadence), leading-vs-lagging indicator framing, segmentation discipline, statistical honesty (sample size, significance), and actionability. A master assigns this profile when a task involves designing KPI frameworks, dashboard specs, cohort analyses, or any data-driven recommendation document. The profile creates strong constraints against vanity metrics, correlation-causation conflation, and dashboards with more than 5-7 KPIs, and prescribes a specific document skeleton (Business Goals → Metric Categories → Definitions table → Dashboard Layout → Alert Thresholds → Review Cadence).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Worker will refuse to ship a metric without a precise calculation/formula table — masters must allow time for definition rigor.",
+    "Profile prohibits dashboards with >5-7 metrics per view; do not request 'comprehensive metric dashboards' without segmenting into multiple views.",
+    "Insists on actionability: every observation must be paired with a recommendation, which can balloon report length if scope is wide."
+  ],
+  "patterns": [
+    "Five-section profile spine: Role → Priorities (Ranked) → Constraints (Do NOT list) → Output Style → Success Criteria → Context Gathering.",
+    "Output format prescribes definition tables (metric, formula, source, owner, cadence) for every KPI."
+  ],
+  "conventions": [
+    "Filename matches role slug; H1 'Profile: <Role Name>'.",
+    "Numbered priorities with bold lead-phrase, numbered constraints with 'Do NOT' prefix.",
+    "Trailing 'Context Gathering' steps tell the worker to read existing analytics implementations and KPI docs first."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/growth.md",
+      "_commands/profiles/product.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "data-analyst-role",
+    "metrics-and-kpi"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "analyst",
+    "kpi",
+    "data"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "file": "agent/worker/sibling_comms.md",
+  "content_hash": "1ed87172",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the optional, non-blocking sibling-communication protocol for same-wave workers in a !p_track swarm. Workers may read other in-wave workers' progress files (specifically the shared_context object — exports, interfaces, patterns, notes) to align implementations, but they MUST NOT depend on sibling data and MUST NOT write to other workers' files. Specifies the SIBLING TASKS dispatch-prompt section that lists candidate sibling task IDs, the shared_context sub-schema, the mandatory log-entry-on-read and sibling_reads[] tracking requirements, and the strict rule that cross-wave coordination uses the formal upstream-dependency mechanism instead.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Sibling reads are SUPPLEMENTARY only — tasks must be completable without any sibling data. Blocking or retrying for missing sibling progress files is a protocol violation.",
+    "Each worker owns EXACTLY ONE progress file — its own task_id.json. Writing to another worker's progress file is absolutely forbidden (would cause write conflicts since both workers overwrite full file).",
+    "Sibling reads are only valid for SAME-WAVE tasks. Cross-wave coordination must use the formal upstream dependency mechanism (upstream_deps.md), where the master injects upstream results into the dispatch prompt.",
+    "If a sibling's progress file doesn't exist yet, is empty, or lacks shared_context, proceed without it — the sibling may not have started yet.",
+    "Reading a sibling REQUIRES both an info log entry documenting what was found AND adding the task ID to sibling_reads[] — the dashboard renders dashed sibling-connection lines from sibling_reads[]."
+  ],
+  "patterns": [
+    "shared_context shape: { exports: string[], interfaces: string[], patterns: string[], notes: string } — populated as early as possible in the implementing stage so siblings can read it.",
+    "Read-only sibling access via {tracker_root}/dashboards/{dashboardId}/progress/{sibling_task_id}.json — same path schema as own progress file.",
+    "Sibling read tracking: every sibling read appended to sibling_reads[] (string array of task IDs) AND logged at info level even if the read returned no useful data.",
+    "Use case shape: sibling A defines an interface in shared_context.interfaces; sibling B reads it to type its own implementation, avoiding redundant interface definition."
+  ],
+  "conventions": [
+    "sibling_reads[] elements are task ID strings (e.g., '2.1'), not objects.",
+    "shared_context.notes is free-form prose for context that doesn't fit exports/interfaces/patterns.",
+    "Single-writer invariant: only the worker whose task_id matches the file may write it."
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/worker/progress_reporting.md"
+    ],
+    "depended_by": [
+      "agent/instructions/tracker_worker_instructions.md",
+      ".claude/agents/swarm-worker.md"
+    ],
+    "related": [
+      "agent/worker/upstream_deps.md",
+      "agent/core/parallel_principles.md",
+      "agent/core/dashboard_features.md"
+    ]
+  },
+  "domains": [
+    "worker-protocol",
+    "sibling-coordination"
+  ],
+  "tags": [
+    "markdown",
+    "worker-agent",
+    "protocol",
+    "non-blocking",
+    "shared-context"
+  ]
+}

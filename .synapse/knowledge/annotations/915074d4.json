@@ -1,0 +1,70 @@
+{
+  "file": "src/ui/components/AgentCard.jsx",
+  "content_hash": "563cdd79",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Renders a single agent task tile inside WavePipeline / ChainPipeline. Composed of a colored left border driven by status, top row (id badge, status dot, title), meta row (layer/directory/assigned_agent badges), and a status-dependent bottom row that shows summary+duration for completed, stage+ElapsedTimer+latest milestone for in_progress, fail text, or 'Waiting...' for pending. Also surfaces a deviation badge and a files-changed badge when applicable. Exports a sub-component StatusBadge used by WavePipeline/ChainPipeline headers, and a local ElapsedTimer that ticks 1Hz off `started_at`. Click handler suppresses navigation while text is selected.",
+  "exports": [
+    {
+      "name": "AgentCard",
+      "kind": "component",
+      "signature": "{ agent: AgentObj, onClick?: (agent) => void }"
+    },
+    {
+      "name": "StatusBadge",
+      "kind": "component",
+      "signature": "{ status: string }"
+    }
+  ],
+  "imports_from": {
+    "@/utils/constants.js": [
+      "STATUS_COLORS",
+      "STATUS_BG_COLORS",
+      "colorWithAlpha"
+    ],
+    "@/utils/format.js": [
+      "formatElapsed",
+      "calcDuration"
+    ]
+  },
+  "gotchas": [
+    "ElapsedTimer creates a setInterval per in_progress card — many simultaneous in_progress agents can mean many tickers. Effect cleanup is correct, but renders cascade through StatsBar's elapsed timer on the same cadence.",
+    "The component reads many optional fields from `agent` (stage, message, deviations, files_changed); these come from worker progress files merged with initialization.json — missing fields silently render nothing.",
+    "data-agent-id is load-bearing — WavePipeline's drawDependencyLines uses `[data-agent-id]` to look up DOM nodes for SVG line endpoints."
+  ],
+  "patterns": [
+    "Status drives border, dot, and bg color via STATUS_COLORS / STATUS_BG_COLORS lookup with 'pending' fallback.",
+    "Inline style overrides allow per-status border/background while keeping all layout in CSS classes.",
+    "Click guard `window.getSelection().toString()` prevents accidental modal opens during text selection — also used in ChainPipeline cards."
+  ],
+  "conventions": [
+    "Pure functional component, no internal state apart from ElapsedTimer's display string.",
+    "StatusBadge is a sibling export rather than a default to allow direct import in pipeline headers."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/utils/constants.js",
+      "src/ui/utils/format.js"
+    ],
+    "depended_by": [
+      "src/ui/components/WavePipeline.jsx",
+      "src/ui/components/ChainPipeline.jsx",
+      "src/ui/components/modals/AgentDetails.jsx"
+    ],
+    "related": [
+      "src/ui/components/WavePipeline.jsx",
+      "src/ui/components/ChainPipeline.jsx"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering",
+    "swarm-pipeline"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "agent-card",
+    "status-display"
+  ]
+}
