@@ -1,0 +1,58 @@
+{
+  "file": "index.html",
+  "content_hash": "413b27d8",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Vite-served HTML entrypoint for the React renderer. Exists at the project root (per `root: '.'` in vite.config.js) and bootstraps the SPA with a single `<div id=\"root\">` plus a `<script type=\"module\" src=\"/src/ui/main.jsx\">`. Imports two Google Font families (DM Sans, Space Grotesk) used by the design system. After `vite build`, this file is rewritten into `dist/index.html` and loaded by Electron's main process.",
+  "exports": [],
+  "imports_from": {
+    "fonts.googleapis.com": [
+      "DM Sans (300;400;500;600)",
+      "Space Grotesk (400;500;600)"
+    ],
+    "src/ui": [
+      "main.jsx"
+    ]
+  },
+  "gotchas": [
+    "Loads Google Fonts from a CDN — the bundled Electron app will fail to render fonts correctly when offline; consider self-hosting if offline use is a requirement.",
+    "Hard-coded `/src/ui/main.jsx` script URL — Vite rewrites this to a hashed asset path during `vite build`, but the dev server serves it as-is.",
+    "Has only `<div id=\"root\">` — no SSR, no fallback content, no noscript message.",
+    "No CSP meta tag — content-security-policy is set elsewhere (likely electron/main.js); editing this file alone won't tighten security.",
+    "No `<meta name=\"theme-color\">` or PWA tags — Synapse is desktop-only, so this is intentional but easy to miss when copying for a web build."
+  ],
+  "patterns": [
+    "Standard Vite + React entrypoint: empty body, single mount node, single ES module script.",
+    "Font preconnect pattern (preconnect + crossorigin) for performance — present even though the app is desktop and cold-start performance is dominated by Electron startup."
+  ],
+  "conventions": [
+    "Two-space indentation.",
+    "DOCTYPE html5, lang=\"en\".",
+    "Title is the bare product name 'Synapse'."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/main.jsx",
+      "vite.config.js"
+    ],
+    "depended_by": [
+      "dist/index.html",
+      "electron/main.js"
+    ],
+    "related": [
+      "package.json"
+    ]
+  },
+  "domains": [
+    "renderer-entry",
+    "build-config",
+    "html-entrypoint"
+  ],
+  "tags": [
+    "html",
+    "vite",
+    "react",
+    "entrypoint",
+    "fonts"
+  ]
+}

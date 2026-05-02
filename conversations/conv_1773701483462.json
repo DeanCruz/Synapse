@@ -3,6 +3,7 @@
   "name": "the saved conversations seems to turn up empty her...",
   "created": "2026-03-16T22:51:23.462Z",
   "sessionId": "2bae82aa-b918-4411-96df-f3ba801115a0",
+  "dashboardId": "ab9c26",
   "messages": [
     {
       "id": "welcome",
@@ -321,5 +322,5 @@
       "text": "Two changes made:\n\n1. **`preload.js`** — added `createConversation: (name) => ipcRenderer.invoke('create-conversation', name)` to the context bridge\n2. **`ipc-handlers.js`** — imported `createConversation` from `ConversationService` and registered the `'create-conversation'` IPC handler\n\nWith these in place, `createNewConversation()` in `ClaudeView.js` will no longer bail out early, conversations will be created on disk, and `listConversations` will return them properly. Restart the Electron app to pick up the changes."
     }
   ],
-  "updated": "2026-03-16T22:51:23.465Z"
+  "updated": "2026-05-02T06:00:20.027Z"
 }

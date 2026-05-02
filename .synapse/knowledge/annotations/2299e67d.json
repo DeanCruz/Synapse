@@ -1,0 +1,35 @@
+{
+  "file": ".claude/README.md",
+  "content_hash": "0dd35aee",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Brief overview of the .claude/ directory structure for humans browsing the codebase. Lists the four sub-areas (hooks/, agents/, skills/, settings.json) with one-line purposes, and clarifies the relationship to other Synapse directories (_commands/, agent/, CLAUDE.md). Points to MIGRATION.md for the 'why' behind the structure.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Very high-level overview — actual hook/skill/agent contracts live in their respective files",
+    "Does not enumerate the 18 hooks or 10 skills — see directory listings for current set"
+  ],
+  "patterns": [
+    "Directory README pattern: table of subdirs + relationships + see-also"
+  ],
+  "conventions": [],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      ".claude/MIGRATION.md",
+      "CLAUDE.md"
+    ]
+  },
+  "domains": [
+    "directory-readme",
+    "documentation"
+  ],
+  "tags": [
+    "markdown",
+    "readme",
+    "documentation",
+    "overview"
+  ]
+}

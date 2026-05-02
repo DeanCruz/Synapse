@@ -1,0 +1,91 @@
+{
+  "file": "electron/main.js",
+  "content_hash": "d01a1764",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Electron main process entry point. Creates the BrowserWindow with persisted dimensions/position from settings, registers a custom 'app://' privileged protocol scheme (synchronously, BEFORE app.whenReady) for production asset loading from the project root / dist/ / public/ subdirectories, attaches preload.js to the renderer with contextIsolation enabled and webviewTag enabled (needed for the Live Preview tab), and wires app lifecycle: on whenReady it initializes settings, sets the macOS dock icon, registers all IPC handlers via registerIPCHandlers, creates the window, and bootstraps AutoUpdateService with a forwarding callback that pushes update events to the renderer. The dev/prod load split is determined by VITE_DEV_SERVER_URL env var: dev mode loads from Vite (HMR), production loads from app://synapse/dist/index.html. On window-all-closed, it stops watchers, disposes the auto-updater, and kills all spawned worker child processes via ClaudeCodeService.killAllWorkers() before app.quit() — without this, orphaned Claude CLI workers would survive past app exit.",
+  "exports": [
+    {
+      "name": "getMainWindow",
+      "kind": "function",
+      "signature": "() => BrowserWindow|null"
+    }
+  ],
+  "imports_from": {
+    "electron": [
+      "app",
+      "BrowserWindow",
+      "protocol",
+      "net",
+      "nativeImage",
+      "dialog"
+    ],
+    "./settings": [
+      "init",
+      "get",
+      "set"
+    ],
+    "./ipc-handlers": [
+      "registerIPCHandlers",
+      "stopWatchers"
+    ],
+    "./services/AutoUpdateService": [
+      "initAutoUpdater",
+      "disposeAutoUpdater"
+    ],
+    "./services/ClaudeCodeService": [
+      "killAllWorkers"
+    ]
+  },
+  "gotchas": [
+    "protocol.registerSchemesAsPrivileged MUST run synchronously at module load before app.whenReady — moving it inside whenReady breaks the app:// scheme registration",
+    "The app:// protocol handler tries PROJECT_ROOT first, then dist/, then public/ — adding a new asset directory requires editing the fallback chain in protocol.handle('app', ...)",
+    "webPreferences.webviewTag: true is required for the Live Preview tab's <webview> embedding — removing it silently breaks PreviewView.jsx",
+    "Window state is debounced with a 500ms timeout via saveWindowTimeout — calling settings.set on every resize/move event would thrash the JSON file",
+    "saveWindowState explicitly skips persistence when isMaximized() to preserve restore bounds (windowMaximized is tracked separately via the 'maximize'/'unmaximize' events)",
+    "killAllWorkers + stopWatchers + disposeAutoUpdater are wrapped in try/catch on quit — any throw would abort app.quit() and leave the process hanging",
+    "Renderer console messages are forwarded to main process stdout via webContents.on('console-message') — useful for debugging but means renderer console output appears in the terminal that launched npm start"
+  ],
+  "patterns": [
+    "Module-scoped mainWindow let with getMainWindow() accessor passed by reference to dependencies (registerIPCHandlers, AutoUpdateService) — allows late binding because the window may not exist when handlers are registered",
+    "Lazy require() inside lifecycle handlers (require('./settings'), require('./ipc-handlers')) so module load order doesn't trigger early instantiation",
+    "Debounced window state persistence (500ms) — settings writes are I/O and would otherwise hammer disk during drag-resize",
+    "Protocol fallback chain: direct path -> dist/ -> public/ — accommodates both Vite-built assets and legacy public/ files",
+    "Forwarding broadcast wrapper for AutoUpdateService: every emit checks win.isDestroyed() and webContents.isDestroyed() before send to avoid 'Object has been destroyed' errors during shutdown"
+  ],
+  "conventions": [
+    "PROJECT_ROOT computed once via path.resolve(__dirname, '..')",
+    "Mac dock icon prefers 512x512 PNG over .icns (PNGs are more reliable in Electron's nativeImage)",
+    "backgroundColor: '#0a0a0c' set on BrowserWindow to avoid white flash before renderer paints",
+    "titleBarStyle: 'hiddenInset' on darwin only, 'default' elsewhere"
+  ],
+  "relationships": {
+    "depends_on": [
+      "electron/settings.js",
+      "electron/ipc-handlers.js",
+      "electron/services/AutoUpdateService.js",
+      "electron/services/ClaudeCodeService.js"
+    ],
+    "depended_by": [
+      "package.json (main field)"
+    ],
+    "related": [
+      "electron/preload.js",
+      "src/ui/main.jsx",
+      "vite.config.js"
+    ]
+  },
+  "domains": [
+    "electron-shell",
+    "app-lifecycle",
+    "asset-protocol"
+  ],
+  "tags": [
+    "electron",
+    "main-process",
+    "browserwindow",
+    "protocol",
+    "lifecycle",
+    "auto-update"
+  ]
+}

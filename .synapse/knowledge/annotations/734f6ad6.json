@@ -1,0 +1,47 @@
+{
+  "file": "_commands/project/trace.md",
+  "content_hash": "8eaf1fe0",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !trace {target} slash command — end-to-end trace of an API endpoint, function, type, or data flow across the project from origin to destination. Identifies target type (endpoint/function/type/dataflow) and applies matching strategy (endpoint: frontend call site → route → middleware → handler → database → response; function: definition → call sites → callers; type: definition → consumers → transformations; dataflow: UI component → form handler → API → backend → DB → triggers). Greps for exact term, finds origin definition, walks the chain forward following imports/calls/API requests/event emissions across layer boundaries, notes every transformation/validation/side-effect, flags inconsistencies (type drift, missing error handling, undocumented side effects). Outputs numbered chain with [Layer] tags + Type Flow analysis + Notes section. Read-only investigation.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Read-only — never modifies files.",
+    "Follow the chain COMPLETELY — don't stop at layer boundaries. The whole point is full-stack tracing.",
+    "FLAG inconsistencies: type mismatches, missing error handling, undocumented side effects must be called out.",
+    "Target-type-aware strategy: endpoint vs function vs type vs natural-language flow each have different starting points and traversal directions.",
+    "Each chain step labels its layer ([Frontend], [Backend], etc.) so reader can see boundary crossings."
+  ],
+  "patterns": [
+    "Origin-first traversal: find definition → walk forward.",
+    "Layer-tagged chain output for visibility into boundary crossings.",
+    "Type Flow as a separate section to surface type drift across layers."
+  ],
+  "conventions": [
+    "Read-only.",
+    "Serial execution.",
+    "Chain numbered with `**[Layer]** path:line` format."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "_commands/project/scope.md",
+      "_commands/project/contracts.md",
+      "_commands/project/context.md"
+    ]
+  },
+  "domains": [
+    "code-review",
+    "project-context"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "tracing",
+    "cross-layer",
+    "read-only"
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "file": "src/ui/components/git/QuickActions.jsx",
+  "content_hash": "0e45d9ab",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Large-format one-click git operations bar, optimized for non-coders. Renders a slim button row (with current branch chip) that opens a centered modal grid organized into four categories: Common (Save My Work, Update from Remote, Share My Changes), Remote (Fetch, Sync), Branch & Stash (Move to New Branch, Stash, Pop Stash), Undo / Reset (Undo Last Commit, Discard All Changes). Each action card has an icon, title, description, variant (primary/success/warning/danger), and disabled-with-reason. Selecting an action opens a confirmation dialog from SafetyDialogs (ConfirmDialog or DoubleConfirmDialog with type-DISCARD challenge for hard reset). Implements composite operations: 'Save My Work' = stageAll → commit (with auto-generated 'Update X, Y, and N other files' message); 'Move to New Branch' = stash → createBranch → stashPop with rollback; 'Sync' = pull → push; 'Undo Last Commit' = soft reset to HEAD~1; 'Discard All' = hard reset to HEAD with double confirmation requiring typed 'DISCARD'.",
+  "exports": [
+    {
+      "name": "QuickActions",
+      "kind": "component",
+      "signature": "{ repoPath: string }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useCallback",
+      "useEffect"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "./SafetyDialogs.jsx": [
+      "ConfirmDialog",
+      "DoubleConfirmDialog"
+    ]
+  },
+  "gotchas": [
+    "generateCommitMessage produces semi-natural-language summaries: 'Update foo.js', 'Update foo.js and bar.js', 'Update foo.js, bar.js, and N other files' — these are NOT conventional commit format. If the project enforces conventional commits, this auto-message will fail commit hooks.",
+    "Move to New Branch is a 3-step composite: stash → createBranch → stashPop. If createBranch fails, it attempts gitStashPop to restore changes (best-effort, .catch(() => {})). If stashPop fails after createBranch succeeds, the user is told their changes are still in the stash list.",
+    "'Discard All Changes' uses DoubleConfirmDialog with confirmText='DISCARD' — user must type the word exactly to enable the final confirm. Affected file count is interpolated into the second message.",
+    "All disabled-state reasons are surfaced via the `title` attribute on the card, only when disabled — non-disabled cards have no tooltip.",
+    "Buttons that depend on hasRemotes (pull/push/fetch/sync) are disabled with reason 'No remote configured' — but RemotePanel may still expose Push, leading to slight redundancy.",
+    "Refresh after every action calls refreshGitData (status+branches+currentBranch+log) — a heavy refresh; metrics may suffer on huge repos.",
+    "The hard-reset 'Discard All Changes' destroys untracked files via gitReset hard — but the IPC handler may or may not also include `git clean -fd`. Verify the IPC implementation matches the user's expectation."
+  ],
+  "patterns": [
+    "Single activeDialog state ('save'|'pull'|'push'|'fetch'|'sync'|'moveBranch'|'stash'|'stashPop'|'undoCommit'|'discardAll') controls which ConfirmDialog renders — mutually exclusive.",
+    "Dangerlevel mapping: safe (pull/push/fetch/sync/save/stash/stashPop), warning (undoCommit, moveBranch via inline dialog), danger (discardAll with type-to-confirm).",
+    "Modal closes on Escape via window keydown listener attached only when modalOpen.",
+    "showSuccess sets a transient success message that auto-clears after 3 seconds — distinct from per-dialog error which lives in `error` state."
+  ],
+  "conventions": [
+    "Each handle*Confirm function follows the pattern: setLoading(true) → setError(null) → try/catch IPC call → refreshGitData → setActiveDialog(null) → showSuccess(...).",
+    "Inline SVG icons (SaveIcon, MoveBranchIcon, UndoIcon, DiscardIcon, PullIcon, PushIcon, StashIcon, StashPopIcon, FetchIcon, SyncIcon, plus small ChevronIcon, BranchSmallIcon, CloseIcon, SuccessCheckIcon, ErrorXIcon) — large icons for cards, small icons for chips/buttons.",
+    "Move to New Branch uses an inline custom dialog (NOT ConfirmDialog) because it needs a text input."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/components/git/SafetyDialogs.jsx",
+      "electron/preload.js (gitStatus, gitStageAll, gitCommit, gitStash, gitStashPop, gitCreateBranch, gitReset, gitPull, gitPush, gitFetch, gitBranches, gitCurrentBranch, gitLog)"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx"
+    ],
+    "related": [
+      "src/ui/components/git/RemotePanel.jsx",
+      "src/ui/components/git/BranchPanel.jsx (overlapping ops)"
+    ]
+  },
+  "domains": [
+    "git-manager",
+    "git-safety"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "quick-actions",
+    "modal",
+    "composite-ops"
+  ]
+}

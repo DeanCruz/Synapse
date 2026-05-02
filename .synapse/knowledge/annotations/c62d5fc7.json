@@ -1,0 +1,89 @@
+{
+  "file": "src/ui/components/ClaudeView.jsx",
+  "content_hash": "b1558112",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The full in-app agent chat surface — a ~3000-line behemoth that renders streaming worker output (assistant text, thinking, tool_use, tool_result, task_progress, compaction, errors), supports multi-tab chat per dashboard with persistent session resumption, image attachments, drag/drop/paste, permission relay (control_request → PermissionModal), provider/model switching (Claude or Codex), conversation auto-save, and complete dashboard+tab routing of streamed output even when the user switches contexts mid-stream. Reads/writes via `getClaudeSlice(state, surface)` so 'code' and 'chat' surfaces hold independent slices (messages, status, isProcessing, tabs, attachments). Dispatches CLAUDE_APPEND_MSG / CLAUDE_UPDATE_MESSAGES / CLAUDE_STASH_APPEND_MSG / CLAUDE_TAB_STASH_APPEND_MSG for current vs stashed contexts; uses extensive refs for stream-state so React doesn't rerender per-character.",
+  "exports": [
+    {
+      "name": "ClaudeView",
+      "kind": "component",
+      "signature": "{ onClose?, hideHeader?, viewMode?, tab?='code', chatAgentId?: string|null, surface?='code' }"
+    }
+  ],
+  "imports_from": {
+    "../context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch",
+      "getClaudeSlice"
+    ],
+    "../utils/markdown.js": [
+      "renderMarkdown"
+    ],
+    "../utils/dashboardProjects.js": [
+      "getDashboardProject",
+      "getDashboardAdditionalContext"
+    ],
+    "./modals/PermissionModal.jsx": [
+      "default"
+    ]
+  },
+  "gotchas": [
+    "MASSIVE ref surface — 25+ refs (sessionMapRef, taskDashboardMapRef, taskTabMapRef, taskPidMapRef, toolCallIndexRef, streamingBlocksRef, stashStreamingBlocksRef, etc.). Adding a feature here without understanding stash/route logic will silently drop streamed output for non-active tabs.",
+    "`surface` ('code'|'chat') gates which slice of AppContext is read; chat-mode dashboards must be 'chat-agent-XXXX' ids. Code surface explicitly rejects any dashboardId starting with 'chat-agent-' to prevent context bleed.",
+    "Three independent buffer/flush systems: text (32ms), thinking (32ms), activity stderr (500ms). Each has its own commit + flush + index ref. Forgetting to flush before a context switch loses partial messages.",
+    "isResumedSessionRef gates whether assistant/user events are shown — when --resume is used, history replay events should be DROPPED (already in UI). The flag clears on init, content_block_start, message_stop, result, or compaction.",
+    "sawStreamingRef de-duplicates the trailing 'assistant' summary event vs the streaming content_block events that already added the same content.",
+    "Health-check polls getActiveWorkers every 8s and tolerates 3 consecutive failures before hard-resetting active task tracking — a single transient IPC error must not wipe state.",
+    "Auto-save (debounced 500ms) writes to convId for ANY messages, but only marks the conversation 'official' once a user message exists. Closing the app before debounce fires loses the last seconds of input.",
+    "Per-dashboard:tab prompt text stash (promptStashRef) — switching tabs swaps the textarea's value invisibly. Forgetting to stash on tab/dashboard switch erases the user's draft.",
+    "Codex provider has a separate code path: `item.completed` events stream agent_message text differently, and `codexStreamedTaskIdsRef` flags whether the trailing lastMessage from worker-complete should be appended (avoid double).",
+    "Permission auto-approve (allowedToolsRef Set) is session-scoped only — survives within a tab but is wiped on full reload."
+  ],
+  "patterns": [
+    "Streaming state lives entirely in refs; React state updates are dispatched through the context reducer with a functional updater (CLAUDE_UPDATE_MESSAGES + updater fn) to avoid stale closures.",
+    "Stashing pattern: when the active dashboard or tab changes, every relevant ref (activeTaskIdsRef, codexStreamedTaskIdsRef, currentTextIndexRef, toolCallIndexRef) is written to a per-dashboard stash map and re-loaded from the target's stash.",
+    "Three routing paths in worker-output: (a) active-dashboard+active-tab → handleChunk/processEvent, (b) active-dashboard+other-tab → routeToTabStash, (c) inactive-dashboard → buffer to dashboard stash slice. Each path duplicates the JSON event parsing.",
+    "Tool calls render via ToolCallBlock with rich per-tool formatters (Read/Edit/Write/Bash/Grep/Glob/Task/WebFetch/WebSearch/TodoWrite/NotebookEdit) — Edit/Write default to expanded, others collapsed.",
+    "AskUserQuestion tool_use renders an interactive options card; submitting calls back through onSendAnswer→sendText to keep the chat as a normal turn.",
+    "Conversation history injected only on FRESH sessions (no sessionId) — once a CLI --resume sessionId exists, the CLI owns history; injecting it again would double-context."
+  ],
+  "conventions": [
+    "Surface-aware dispatch actions: CLAUDE_APPEND_MSG / CLAUDE_STASH_APPEND_MSG / CLAUDE_TAB_STASH_APPEND_MSG / CLAUDE_UPDATE_MESSAGES all carry `surface`.",
+    "Tab IDs: 'default' for the first tab; new tabs get string ids assigned by the reducer.",
+    "MODEL_OPTIONS hard-coded at module scope; resolveModel() falls back to provider's first option if saved value is invalid.",
+    "Conversation IDs: 'conv_' + Date.now(); stored to disk via api.saveConversation."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/utils/markdown.js",
+      "src/ui/utils/dashboardProjects.js",
+      "src/ui/components/modals/PermissionModal.jsx"
+    ],
+    "depended_by": [
+      "src/ui/components/chat/ChatInstanceView.jsx",
+      "src/ui/App.jsx (ClaudeFloatingPanel)",
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": [
+      "electron/services/ClaudeCodeService.js",
+      "electron/services/CodexService.js",
+      "electron/services/ConversationService.js"
+    ]
+  },
+  "domains": [
+    "chat-view",
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "claude-chat",
+    "streaming",
+    "tool-rendering",
+    "multi-tab",
+    "session-resume"
+  ]
+}

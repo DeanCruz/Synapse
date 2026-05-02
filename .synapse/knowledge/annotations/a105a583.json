@@ -1,0 +1,82 @@
+{
+  "file": "agent/instructions/tracker_master_instructions.md",
+  "content_hash": "58ff2f42",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The master agent's primary reference / hub. Defines the absolute non-negotiable constraints (master never writes code, all implementation dispatched to workers, dashboard mandatory, full-tracking thresholds at 3+ agents or >1 wave, master writes progress in lightweight mode, long prompts mean MORE planning not direct execution, read the command file every time). Provides a Module Index pointing at the nine files in agent/master/* (role, dashboard_writes, ui_map, eager_dispatch, failure_recovery, worker_prompts, compaction_recovery, dashboard_protocol, pki_integration), a high-level overview of how the dashboard works, eager dispatch summary, failure recovery summary with circuit breaker thresholds, worker-prompt construction summary, PKI integration summary, dashboard-write summary, role-and-constraints summary, compaction-recovery summary, the tracker layout tree, and a quick common-mistakes table. Master agents read this FIRST when invoking !p_track or any swarm command.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "ABSOLUTE CONSTRAINT 1: The master agent NEVER writes code — not a single line, not a 'quick fix', not even one helper. Every implementation is dispatched to a worker via the Task tool. Violating this defeats the entire purpose of Synapse.",
+    "Long or complex user prompts mean MORE decomposition and dispatching — never an excuse for the master to do the work directly.",
+    "PATH SAFETY: Always resolve {tracker_root} to absolute. Relative `dashboards/` paths from project_root CWD will write into the target project; a PreToolUse hook blocks misplaced writes.",
+    "Full-tracking thresholds (3+ agents OR >1 wave) are NON-NEGOTIABLE for multi-wave swarms — only `!p` lightweight mode is exempt.",
+    "In lightweight mode, the master MUST create minimal progress files from worker returns (files_changed, summary, completion logs) — otherwise dashboard shows no per-task file changes.",
+    "initialization.json is write-once. Only repair-task append and circuit-breaker replanning are exceptions.",
+    "Eager dispatch is on every worker completion, scanning ALL remaining tasks across ALL waves — never wait for a wave to finish, never batch by wave number.",
+    "Failed tasks do NOT satisfy dependencies — repair tasks (with `r`-suffixed IDs) replace them in the dependency chain.",
+    "Circuit breaker triggers automatic replanning when 3+ tasks fail in a wave, a single failure blocks 3+ downstream tasks, or a single failure blocks majority of remaining tasks.",
+    "Master may resume normal behavior (writing code) ONLY after the swarm completes — not 'almost done'."
+  ],
+  "patterns": [
+    "Hub-and-modules layout: this file gives constraints + summary + module index, agent/master/*.md contain detailed procedures.",
+    "Five master responsibilities: Gather Context, Plan, Dispatch, Status, Report — nothing else.",
+    "Convention map → per-task filtered injection — master extracts CLAUDE.md categories from {project_root}, includes only relevant ones in each worker prompt.",
+    "Worker-prompt budget target ~8000 tokens (~800 lines), task duration target 1-5 minutes.",
+    "Master writes exactly four dashboard files: initialization.json (write-once static plan), logs.json (append-only event log), master_state.json (state checkpoint after every event), metrics.json (once at swarm end).",
+    "All dashboard writes are atomic — read full file, modify in memory, write full file.",
+    "PKI integration as enhancement-not-requirement — if no manifest.json exists, master proceeds with standard planning."
+  ],
+  "conventions": [
+    "Top-of-file blockquote section for ABSOLUTE CONSTRAINTS — bolded, numbered, with explicit STOP fallback line.",
+    "Module Index table with When-to-Read and per-row Constraint reminder columns.",
+    "Tracker layout shown as ASCII directory tree with comment annotations (e.g., `← Reserved (IDE agent...)`).",
+    "Quick Common Mistakes table at the end as a final scannable summary."
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/master/role.md",
+      "agent/master/dashboard_writes.md",
+      "agent/master/ui_map.md",
+      "agent/master/eager_dispatch.md",
+      "agent/master/failure_recovery.md",
+      "agent/master/worker_prompts.md",
+      "agent/master/compaction_recovery.md",
+      "agent/master/dashboard_protocol.md",
+      "agent/master/pki_integration.md"
+    ],
+    "depended_by": [
+      ".claude/skills/master-protocol",
+      ".claude/agents/master-orchestrator.md",
+      "agent/_commands/p_track_planning.md (Step 2)",
+      "agent/instructions/tracker_multi_plan_instructions.md (child masters read this)",
+      "_commands/Synapse/p_track.md"
+    ],
+    "related": [
+      "CLAUDE.md (project root)",
+      "agent/instructions/common_pitfalls.md",
+      "agent/instructions/dashboard_resolution.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/instructions/failed_task.md"
+    ]
+  },
+  "domains": [
+    "master-orchestration",
+    "agent-protocol",
+    "dashboard-writes"
+  ],
+  "tags": [
+    "markdown",
+    "agent-doc",
+    "protocol",
+    "master-agent",
+    "hub",
+    "non-negotiable",
+    "module-index",
+    "constraints",
+    "no-code-rule",
+    "eager-dispatch",
+    "circuit-breaker",
+    "pki"
+  ]
+}

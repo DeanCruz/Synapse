@@ -1,0 +1,33 @@
+{
+  "file": "documentation/swarm-lifecycle/monitoring-phase.md",
+  "content_hash": "5208fbd6",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Describes the live monitoring phase between dispatch and completion: how the master polls progress files, surfaces deviations and errors, decides when to dispatch the next wave, and streams status snapshots to the user. Details the read patterns (full progress directory scan vs targeted reads) and the cadence at which the master checks for state changes.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Reading a progress file mid-write may yield malformed JSON -- retry once after ~80ms",
+    "fs.watch on the progress directory provides immediate notification but does not include file content"
+  ],
+  "patterns": [
+    "Polling-with-retry for resilient progress reads"
+  ],
+  "conventions": [
+    "Status snapshots favor specificity (wave/agent IDs and stages) over vague summaries"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "swarm-lifecycle",
+    "monitoring"
+  ],
+  "tags": [
+    "monitoring",
+    "polling",
+    "live-status"
+  ]
+}

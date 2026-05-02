@@ -1,0 +1,46 @@
+{
+  "file": "_commands/profiles/sales.md",
+  "content_hash": "50bd26b5",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Senior Sales Strategist role: B2B SaaS sales processes, outreach sequences, objection handling, competitive positioning, deal enablement. Biases the worker toward buyer empathy (sell to their reality, not feature list), objection preemption, repeatable process design (cadences, qualification, demo flows), competitive battlecards, and non-manipulative urgency creation. A master assigns this profile for outreach sequences, battlecards, objection-response libraries, sales playbooks, and qualification frameworks. Forces multi-touch sequences with timing/channel and feature-to-business-outcome translation in every message.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Bans high-pressure tactics, fake scarcity, and pushy copy — workers will reject aggressive outreach asks.",
+    "Generic outreach openers ('I noticed your company is growing fast') are flagged as spam — provide specific prospect research.",
+    "Single-touch outreach is treated as not a strategy — every plan includes a follow-up cadence.",
+    "Outreach emails capped at 3-5 sentences — long-form sales letters will be restructured."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "Outreach sequence skeleton: Audience Definition → Sequence Map (touchpoints + timing) → Email/Call Templates → Objection Responses → Qualification Checklist.",
+    "Templates use [bracketed placeholders] for personalization; battlecards use comparison tables."
+  ],
+  "conventions": [
+    "Tone 'consultative, confident, peer-to-peer' — trusted advisor not telemarketer."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/marketing.md",
+      "_commands/profiles/customer-success.md",
+      "_commands/profiles/pricing.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "sales-strategist-role",
+    "outreach-and-deal-enablement"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "sales",
+    "outreach",
+    "battlecards"
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "file": "src/ui/components/modals/CommandsModal.jsx",
+  "content_hash": "38b3c142",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Browse, view, edit, add, and delete command markdown files across three scopes: Synapse built-in (read-only), Project-level _commands/ (read-only here), and User-level (full CRUD plus folder creation). Layout is sidebar (collapsible folder groups with command lists) + viewer pane on the right. Viewer has four states: 'placeholder' (default), 'view' (read content), 'edit' (markdown textarea editor), and 'generate' (Claude-CLI-driven natural-language command synthesis via api.generateCommand or api.generateUserCommand). The CommandGenerator sub-component spawns Claude with a description prompt to produce a comprehensive new command file rather than the bare COMMAND_TEMPLATE used by manual edit. Loads three command sets via api.listCommands / api.listProjectCommands(projectDir) / api.listUserCommands.",
+  "exports": [
+    {
+      "name": "CommandsModal",
+      "kind": "component",
+      "signature": "{ onClose, projectDir }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useEffect",
+      "useCallback"
+    ],
+    "src/ui/components/modals/Modal.jsx": [
+      "default"
+    ]
+  },
+  "gotchas": [
+    "Folder identity for User commands uses 'General' as a sentinel for the root user-commands folder — when activeUserFolder === null it means General. Several handlers (handleNewUserCommand, selectCommand) translate between 'General' string and null.",
+    "The Synapse and Project sections are always readOnly — passing the readOnly prop hides the new-command + button. The User section is the only writable place; mixing edit-attempts elsewhere will silently no-op due to the readOnly guard.",
+    "selectCommand uses three different IPC variants (api.getUserCommand, api.getCommand with dir, api.getCommand without dir) — ordering of isUser then commandsDir checks is critical; flipping the order breaks user-folder routing.",
+    "Generation flow: CommandGenerator's onGenerated re-uses newCommandFolder which is set in handleNewUserCommand — if user manually swaps active state during generation, the post-gen selectCommand may target the wrong folder.",
+    "Uses native confirm() / alert() throughout instead of themed modals.",
+    "loadCommands runs three IPC calls in parallel and just sets state when each resolves — no error handling. If listCommands rejects, the panel stays empty silently."
+  ],
+  "patterns": [
+    "Multi-scope sidebar with collapsible folders and per-folder Add (+) buttons — same expand/collapse pattern as IDE FileExplorer but lighter weight.",
+    "Viewer state machine ('placeholder'|'view'|'edit'|'generate') drives which sub-component renders — clean state isolation between view/edit/generate flows.",
+    "User can choose between bare-template manual creation (CommandEditor with COMMAND_TEMPLATE) and AI-generated rich command (CommandGenerator)."
+  ],
+  "conventions": [
+    "Sub-components (CommandFolder, CommandViewer, CommandEditor, CommandGenerator) live in the same file rather than separate modules — convention for tightly-coupled modal-internal pieces.",
+    "Class names: .commands-* prefix throughout."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/modals/Modal.jsx"
+    ],
+    "depended_by": [],
+    "related": [
+      "electron/services/CommandsService.js",
+      "_commands/Synapse",
+      "_commands/project"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "command-management",
+    "ai-generation",
+    "markdown-editor"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "commands",
+    "ipc",
+    "ai",
+    "claude-cli",
+    "crud"
+  ]
+}

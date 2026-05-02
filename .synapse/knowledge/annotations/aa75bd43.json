@@ -1,0 +1,52 @@
+{
+  "file": "_commands/project/context.md",
+  "content_hash": "2ec02bd9",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !context {topic} slash command — performs a deep, read-only context gather about a feature/domain in the target project. Has dual-mode execution: when {project_root}/.synapse/knowledge/manifest.json exists (PKI bootstrapped), it queries domain_index, tag_index, and concept_map for instant routing then reads matched annotations; otherwise falls back to grep/glob search. PKI data is additive — it never replaces grep, only enriches it. Outputs a structured Files-by-Area / Architecture / Connections / Key Observations summary, with an extra PKI Context section (Gotchas, Patterns, Relationships) when annotations contributed. Always verifies candidates and flags stale annotations.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "PKI is additive, NOT required — command must work identically when no PKI exists. Always proceed to Step 2 (grep/glob) even after PKI hits.",
+    "Stale annotations (stale: true in manifest) must be flagged AND the actual file must be re-read — annotation may be outdated.",
+    "PKI tags/domains feed back into Step 2 search terms — annotations may surface terms you wouldn't have guessed.",
+    "Coverage gaps: files found by grep/glob but NOT in PKI must be flagged as unannotated (new/recent files).",
+    "If PKI coverage <50% on relevant files, suggest !learn_update; if PKI absent entirely, suggest !learn at the bottom of the output.",
+    "Output must fit ~50-150 lines — extract facts, do not dump file contents."
+  ],
+  "patterns": [
+    "Dual-mode workflow: PKI-fast-path → grep/glob fallback → merge → enriched summary.",
+    "Term expansion: original topic → synonyms → likely identifiers → cast wide net before filtering.",
+    "Annotation-driven traversal: use relationships array (serves/consumes/mirrors/extends) to trace connections without re-reading files."
+  ],
+  "conventions": [
+    "Read-only command — never modifies files.",
+    "Output structure differs based on PKI availability (with-PKI version has extra PKI Context section).",
+    "Section structure: # title → Overview → Usage → Execution Steps → Rules."
+  ],
+  "relationships": {
+    "depends_on": [
+      ".synapse/knowledge/manifest.json",
+      ".synapse/knowledge/annotations/",
+      ".synapse/toc.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/learn.md",
+      "_commands/project/learn_update.md",
+      "_commands/project/toc.md"
+    ]
+  },
+  "domains": [
+    "project-context",
+    "pki-query"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "pki",
+    "context-gathering",
+    "read-only"
+  ]
+}

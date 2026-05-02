@@ -1,0 +1,35 @@
+{
+  "file": "documentation/master-agent/planning.md",
+  "content_hash": "d7890753",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Specifies the planning phase the master executes before any swarm runs: deep-thinking analysis, task decomposition, dependency graph construction, wave/chain layout choice, and writing the canonical plan.json before initialization.json. Includes guidance on right-sizing tasks (1-5 minute scope) and resolving shared-file conflicts via Pattern A/B/C.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "plan.json must exist before initialization.json -- it is the canonical planning artifact",
+    "Shared file ownership across tasks is the #1 cause of swarm bottlenecks; prefer Pattern C (separate files)"
+  ],
+  "patterns": [
+    "Waves for phase-grouping, chains for linear deps, hybrid for most real swarms",
+    "Pattern A/B/C decision tree for shared-file conflict resolution"
+  ],
+  "conventions": [
+    "Tasks described in 2-3 sentences max; longer descriptions indicate over-large tasks"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "master-agent",
+    "planning"
+  ],
+  "tags": [
+    "planning",
+    "decomposition",
+    "waves",
+    "chains"
+  ]
+}

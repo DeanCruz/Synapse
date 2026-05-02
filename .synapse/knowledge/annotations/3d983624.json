@@ -1,0 +1,61 @@
+{
+  "file": ".claude/agents/master-orchestrator.md",
+  "content_hash": "e6100608",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the master-orchestrator subagent role for Claude Code. YAML frontmatter declares its name, description (Synapse swarm master), the four skills auto-loaded for it (p-track, worker-protocol, master-protocol, failure-protocol), and the role-specific hooks (PreToolUse on Edit|Write -> validate-master-write.sh; Stop -> verify-final-report.sh). The body restates the master's five responsibilities (Gather Context, Plan, Dispatch, Status, Report) and the hard constraint that the master writes ONLY to dashboards/{id}/{plan,initialization,logs,master_state,metrics}.json + Archive/, never project source code. References that plan.json must be written BEFORE initialization.json (hook-enforced via validate-plan-required.sh).",
+  "exports": [],
+  "imports_from": {
+    "skills": [
+      "p-track",
+      "worker-protocol",
+      "master-protocol",
+      "failure-protocol"
+    ],
+    "hooks": [
+      ".claude/hooks/validate-master-write.sh",
+      ".claude/hooks/verify-final-report.sh"
+    ]
+  },
+  "gotchas": [
+    "YAML frontmatter is structural — Claude Code parses skills[] and hooks[] from it; bad indentation breaks the agent definition silently",
+    "Role-specific hooks here are duplicated in .claude/settings.json (which applies globally) — the agent-level hook block declares the agent's own enforcement contract",
+    "The 'never write project code' rule is enforced by validate-master-write.sh — but this file is the prose source of truth that humans read"
+  ],
+  "patterns": [
+    "Subagent definition pattern: YAML frontmatter (name/description/skills/hooks) + Markdown body with role description",
+    "References skills by short name (no path) — Claude Code resolves to .claude/skills/{name}/SKILL.md"
+  ],
+  "conventions": [
+    "Filename matches frontmatter `name` field",
+    "Description starts with capital, summarizes when to use",
+    "Body opens with 'You are...' second-person framing"
+  ],
+  "relationships": {
+    "depends_on": [
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/skills/worker-protocol/SKILL.md",
+      ".claude/skills/master-protocol/SKILL.md",
+      ".claude/skills/failure-protocol/SKILL.md",
+      ".claude/hooks/validate-master-write.sh",
+      ".claude/hooks/verify-final-report.sh"
+    ],
+    "depended_by": [],
+    "related": [
+      ".claude/agents/swarm-worker.md",
+      "agent/master/role.md",
+      "CLAUDE.md"
+    ]
+  },
+  "domains": [
+    "master-agent-definition",
+    "agent-config"
+  ],
+  "tags": [
+    "agent-definition",
+    "master",
+    "yaml-frontmatter",
+    "claude-code",
+    "swarm-orchestration"
+  ]
+}

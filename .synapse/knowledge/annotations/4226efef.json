@@ -1,0 +1,79 @@
+{
+  "file": "_commands/Synapse/p_track.md",
+  "content_hash": "d9c5dc15",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the PRIMARY swarm command `!p_track [--dashboard {id}] {prompt}` — full parallel swarm with dependency-aware dispatch and live dashboard tracking. The invoking agent becomes the master orchestrator and runs three phases: Phase 1 Planning (deep analysis, write plan.json with deep-thinking output, then initialization.json+logs.json, present plan, await approval), Phase 2 Execution (dispatch with eager dependency-driven scan after every event, full self-contained worker prompts, circuit breaker on failures), Phase 3 Completion (verify, write metrics.json, deliver NON-NEGOTIABLE final report, save history). Output: dashboards/{dashboardId}/plan.json (canonical), initialization.json, logs.json, progress/{task_id}.json (workers), master_state.json (master), metrics.json.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "p_track requires plan.json BEFORE initialization.json — validate-plan-required.sh hook will block initialization.json writes when plan.json is missing/invalid",
+    "agents.length in initialization.json MUST equal plan.tasks.length — hook enforced",
+    "Dispatch FIRST, update tracker AFTER — the agent must be launched before logs.json is updated; this is the single most important dispatch rule",
+    "Dependency-driven dispatch, NOT wave-driven — waves are visual only; dispatch logic looks ONLY at individual task depends_on",
+    "Full Dashboard Tracking is MANDATORY at 3+ parallel agents OR >1 wave — multi-wave is non-negotiable",
+    "started_at and completed_at for the overall swarm are NO LONGER written by the master to initialization.json — derived client-side from worker progress files",
+    "If 3+ tasks fail in same wave, OR a failure blocks >50% remaining, circuit breaker triggers — pause and reassess with user (Step 15G)",
+    "Workers own ALL lifecycle data (status, started_at, completed_at, summary, milestones, deviations, logs) via progress files — master never writes these",
+    "Cancellation is THE one exception where master writes progress files",
+    "If deep-thinking context is forgotten (e.g., after compaction), redo the analysis until each task's `approach` clearly fulfills the original prompt",
+    "Permission requests: write `permission` level log entry to logs.json FIRST (triggers dashboard popup), THEN ask in terminal",
+    "Master MUST NOT write code — every implementation, file edit, code change goes through worker agents via Task tool",
+    "Final report is NON-NEGOTIABLE — read all progress files, logs, master task; deliver complete written report covering summary/files/deviations/improvements/future-steps every time"
+  ],
+  "patterns": [
+    "Three phases: Phase 1 Planning (Steps 1-11) → Phase 2 Execution (Steps 12-16) → Phase 3 Completion (Step 17)",
+    "Phase 1 detail deferred to agent/_commands/p_track_planning.md; Phase 2 to p_track_execution.md; Phase 3 to p_track_completion.md",
+    "Shared File Decision Tree: separate files (Pattern C) > integration task (Pattern B) > owner task (Pattern A)",
+    "Right-sizing: 1-5 minutes per task, 1-2 files modified, 2-3 files read",
+    "Atomic write protocol: read → modify in memory → write the full file; never write partial JSON",
+    "Convention map filtering: master extracts CLAUDE.md sections per worker (per Convention Relevance Checklist in worker_prompts.md); workers don't re-read",
+    "Upstream result cache: every completion's summary/files/exports/deviations stored in master memory; injected into downstream prompts' UPSTREAM RESULTS section",
+    "Eager dispatch loop: every event (completion/failure) → scan all pending tasks → dispatch ALL whose deps are now complete → in same cycle"
+  ],
+  "conventions": [
+    "Top-of-file NON-NEGOTIABLE RULES blockquote (5 numbered rules — no code, must read instructions, must use dashboard, must dispatch via workers, must deliver final report)",
+    "Decision matrix table: !p vs !p_track conditions",
+    "Output Files block listing the canonical artifacts and their hook enforcement",
+    "Final Rules section with 31 numbered rules grouped by domain (Dispatch+Tracking, Statusing, Agent Prompts, Upstream+Caching, Planning, Parallelization, Verification+Reporting, Permission Requests)",
+    "Embedded Shared File Decision Tree as ASCII flowchart"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/_commands/p_track_planning.md",
+      "agent/_commands/p_track_execution.md",
+      "agent/_commands/p_track_completion.md",
+      "agent/master/worker_prompts.md",
+      "agent/master/eager_dispatch.md",
+      "agent/master/dashboard_writes.md",
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [
+      "_commands/Synapse/p_track_plan.md",
+      "_commands/Synapse/p_track_resume.md",
+      "_commands/Synapse/track_resume.md",
+      "_commands/Synapse/dispatch.md",
+      "_commands/Synapse/retry.md",
+      "_commands/Synapse/add_task.md"
+    ],
+    "related": [
+      "_commands/Synapse/p.md",
+      "_commands/Synapse/master_plan_track.md",
+      ".claude/skills/p-track/"
+    ]
+  },
+  "domains": [
+    "swarm-command",
+    "parallel-dispatch",
+    "dashboard-tracking"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "primary-command",
+    "non-negotiable",
+    "three-phase"
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "file": "documentation/electron/update-on-master.md",
+  "content_hash": "f9325c22",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Release-management guide for shipping desktop builds tracking the master branch via electron-updater. Describes the auto-update flow, two release options (auto-on-master vs build-on-master/release-on-tag), version bump strategy, and required macOS signing/notarization secrets in GitHub Actions.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "Without code signing on macOS, auto-update behavior is degraded and Gatekeeper warnings appear",
+    "Auto-update check runs 10 seconds after launch, downloads in background"
+  ],
+  "patterns": [
+    "Tag-driven release pipeline",
+    "Push-event update broadcasting to renderer (update-status channel)"
+  ],
+  "conventions": [
+    "Tags formatted vMAJOR.MINOR.PATCH",
+    "Commit markers #minor / #major to override default patch bump"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/electron/services.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/electron/overview.md"
+    ]
+  },
+  "domains": [
+    "electron"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "release",
+    "auto-update"
+  ]
+}

@@ -1,0 +1,47 @@
+{
+  "file": ".claude/hooks/validate-worker-prompt.sh",
+  "content_hash": "72d2503b",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Task. Blocks worker dispatches whose prompt is missing required sections. Detects the prompt's TEMPLATE_VERSION marker — non-worker Task calls (research/explore) lack TEMPLATE_VERSION: and pass through. Two template versions: (a) TEMPLATE_VERSION: p_track_v2 — full set, requires 7 sections (YOUR PROGRESS FILE, YOUR TASK ID, YOUR AGENT LABEL, RETURN FORMAT, PROJECT ROOT, TRACKER ROOT, INSTRUCTION MODE); (b) TEMPLATE_VERSION: p_v2 — reduced set, requires 4 (no progress-file fields). Unknown TEMPLATE_VERSION values fail-open (allow). Block message lists every missing section so the master can patch and retry.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Detection pivots on the literal string 'TEMPLATE_VERSION:' — research/explore Task calls lack it and pass",
+    "p_track_v2 vs p_v2 have different required sets (8 vs 5 originally; 7 vs 4 enforced here — YOUR PROGRESS FILE label was 'YOUR PROGRESS FILE:' specifically)",
+    "Unknown template version is fail-open — adding a v3 template requires updating this hook OR clients fall back to allow",
+    "Prompt-content grep is plain string match (fixed substring) — section markers must match exactly"
+  ],
+  "patterns": [
+    "Template-versioned prompt validation",
+    "Required-section accumulator pattern"
+  ],
+  "conventions": [
+    "Section markers are uppercase with trailing colon (YOUR PROGRESS FILE:, RETURN FORMAT, PROJECT ROOT:, etc.)"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      ".claude/skills/p-track/SKILL.md (worker prompt template)",
+      "agent/master/worker_prompts.md",
+      ".claude/hooks/validate-approval-gate.sh"
+    ]
+  },
+  "domains": [
+    "worker-prompt-validation",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PreToolUse",
+    "Task-matcher",
+    "prompt-validation",
+    "dispatch-gate"
+  ]
+}

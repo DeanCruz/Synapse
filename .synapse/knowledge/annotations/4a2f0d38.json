@@ -1,0 +1,44 @@
+{
+  "file": "_commands/Synapse/logs.md",
+  "content_hash": "9302943c",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!logs [dashboardId] {filter}` command for displaying log entries from logs.json in the terminal. Supports filters: --level (error/warn/info/debug/permission/deviation), --task {id}, --agent {name}, --last {N}, --since {HH:MM}. Filters can be combined. Renders a 5-column table (Time/Task/Agent/Level/Message) and a summary line counting entries by level. Read-only.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Custom log levels: `permission` triggers an amber popup on the dashboard alerting the user to check the terminal; `deviation` shows with a yellow badge in the log panel — both are non-standard log levels",
+    "--since uses HH:MM format and filters to entries after that time TODAY",
+    "Filters are applied in sequence — --last is applied AFTER other filters",
+    "Argument disambiguation: dashboardId (non-flag, non-task-id) vs filters (start with --) — task IDs contain dots"
+  ],
+  "patterns": [
+    "6-step procedure: parse → read logs.json → apply filters in sequence → render table → handle empty → summary line",
+    "Summary counts: total + per-level counts (info/warn/error/deviation)",
+    "Combined filter example: `!logs --level error --last 10`"
+  ],
+  "conventions": [
+    "Syntax block lists every filter variant explicitly",
+    "Log Levels reference table at the bottom documenting all 6 level values and their dashboard rendering behavior"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/status.md",
+      "_commands/Synapse/inspect.md"
+    ]
+  },
+  "domains": [
+    "dashboard-monitoring",
+    "log-filtering"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "filtering"
+  ]
+}

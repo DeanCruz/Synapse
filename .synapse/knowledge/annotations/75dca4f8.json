@@ -1,0 +1,44 @@
+{
+  "file": ".claude/hooks/validate-progress-file.sh",
+  "content_hash": "4874d38d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PostToolUse hook on Write. Validates that progress files at dashboards/{id}/progress/*.json have the required fields (task_id, status, assigned_agent, stage) and a valid status value (in_progress|completed|failed). PostToolUse cannot block — issues `{message: ...}` warnings for missing fields or invalid status. Reads file from disk after the write so it sees the actual state. Companion to validate-progress-log-detail.sh which checks log quality.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "PostToolUse: warn-only, cannot block",
+    "Field set is the bare minimum — full schema is much richer (see worker-protocol skill)",
+    "Status enum: in_progress|completed|failed — no other values accepted"
+  ],
+  "patterns": [
+    "Required-field accumulator + status-enum validation",
+    "PostToolUse warn-only progress validator"
+  ],
+  "conventions": [],
+  "relationships": {
+    "depends_on": [
+      "jq"
+    ],
+    "depended_by": [
+      ".claude/settings.json",
+      ".claude/agents/swarm-worker.md"
+    ],
+    "related": [
+      ".claude/hooks/validate-progress-log-detail.sh",
+      ".claude/skills/worker-protocol/SKILL.md"
+    ]
+  },
+  "domains": [
+    "progress-file-validation",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PostToolUse",
+    "Write-matcher",
+    "progress-file",
+    "warn-only"
+  ]
+}

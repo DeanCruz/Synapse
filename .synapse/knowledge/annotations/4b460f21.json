@@ -1,0 +1,56 @@
+{
+  "file": "documentation/troubleshooting/common-issues.md",
+  "content_hash": "a0cf803e",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Comprehensive troubleshooting guide for Synapse errors and failure modes. Covers dependency graph validation errors (self-reference, dangling, circular, orphan), progress file validation errors (task_id/dashboard_id mismatch, missing fields, invalid status/stage/timestamps), dashboard isolation violations, initialization schema errors (task.name format, type, count mismatches, agent IDs, immutability), circuit breaker triggers, JSON/file I/O issues, path confusion (tracker_root vs project_root), worker context exhaustion, stale ghost agents, and shared file conflicts. Each entry includes exact error message, cause, and fix.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "task_id field must EXACTLY match filename (without .json) -- hard rejection",
+    "dashboard_id must match dashboard directory name -- hard rejection",
+    "Master cannot write to {project_root} during active swarm (validate-master-write hook)",
+    "Dashboard files MUST be under {tracker_root}/dashboards/ -- enforced by hook",
+    "task.name is write-once after planning (immutable except for repair/replan/!add_task)",
+    "Invalid stages: must be reading_context|planning|implementing|testing|finalizing|completed|failed",
+    "Hooks fail open by default -- if jq missing or script errors, tool call allowed",
+    "SYNAPSE_SKIP_SCHEMA=1 bypass available only for validate-initialization-schema.sh",
+    "completed_at must be null when status is in_progress"
+  ],
+  "patterns": [
+    "Validation via Kahn's topological sort algorithm in src/server/utils/validation.js",
+    "Two-tier validation: hooks (block) + watcher service (broadcast filter)",
+    "Hard rejection vs warning distinction (REJECTED prefix vs Warning)",
+    "Circuit breaker thresholds: 3+ wave failures OR blast radius > 50%"
+  ],
+  "conventions": [
+    "Agent IDs: '{wave}.{index}' format, repair tasks use 'r' suffix",
+    "Status values: in_progress, completed, failed (exact strings)",
+    "Atomic writes via tmp-then-rename to avoid partial reads",
+    "ISO 8601 string timestamps or null"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/troubleshooting/faq.md"
+    ],
+    "related": [
+      "src/server/utils/validation.js",
+      "src/server/services/WatcherService.js",
+      ".claude/hooks/",
+      "agent/instructions/common_pitfalls.md",
+      "documentation/data-architecture/"
+    ]
+  },
+  "domains": [
+    "troubleshooting-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "troubleshooting",
+    "errors",
+    "validation",
+    "hooks"
+  ]
+}

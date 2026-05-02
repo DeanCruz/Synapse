@@ -1,0 +1,33 @@
+{
+  "file": "documentation/worker-protocol/upstream-results.md",
+  "content_hash": "118cfece",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Specifies how a worker with depends_on tasks must read upstream progress files before implementing. Workers extract status, summary, deviations (especially CRITICAL), milestones, and warning logs from each dependency to adapt their approach to what was actually built (vs what was planned). Defines the upstream-reading subroutine that runs during the reading_context stage.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "CRITICAL upstream deviations may invalidate the worker's planned approach -- must adapt before implementing",
+    "Failed upstream tasks may still produce useful partial output; assess whether to proceed"
+  ],
+  "patterns": [
+    "Read-upstream-then-adapt pattern instead of assuming the plan held"
+  ],
+  "conventions": [
+    "Worker logs a summary of upstream findings before transitioning to implementing"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "worker-protocol",
+    "dependencies"
+  ],
+  "tags": [
+    "upstream",
+    "depends-on",
+    "deviation-propagation"
+  ]
+}

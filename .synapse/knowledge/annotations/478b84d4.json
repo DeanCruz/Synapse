@@ -1,0 +1,50 @@
+{
+  "file": "_commands/project/review.md",
+  "content_hash": "b6518a29",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !review slash command — code review of recent changes (uncommitted, staged, or specific commits) WITH full project context. Identifies changed files via git diff (no arg = all uncommitted, 'staged' = git diff --staged, range like HEAD~3..HEAD = git diff range, directory = scoped diff). Reads each changed file fully (not just diff) plus project CLAUDE.md, finds consumers of changed shared types/endpoints. Reviews for code quality (CLAUDE.md convention compliance, bugs, edge cases, error handling, security), cross-layer impact (broken contracts, shared types, missing co-changes, env/config), and completeness (related files needing updates, missing tests, doc updates). Outputs Issues (Critical/Warning/Suggestion) + Cross-Layer Impact + Missing Changes + Summary. Read-only.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Use git diff against base/range — do NOT scan full repo. The argument controls the diff range.",
+    "Read the FULL file (not just the diff) for context — diff hunks alone miss surrounding logic.",
+    "Cross-layer impact is the unique value: single-file bugs are easy; contract breakage across frontend/backend/config is what this command catches.",
+    "Be honest, not harsh — flag REAL issues, don't nitpick style preferences not in the project's CLAUDE.md.",
+    "Conventions sourced from project CLAUDE.md — if absent, fall back to obvious code-quality issues."
+  ],
+  "patterns": [
+    "Diff-scoped reading: identify changed files → read each fully → check consumers of touched types/endpoints.",
+    "Three-axis review: code quality / cross-layer impact / completeness.",
+    "Severity classification: Critical / Warning / Suggestion."
+  ],
+  "conventions": [
+    "Read-only.",
+    "Serial execution.",
+    "Argument forms: blank, 'staged', commit range, directory."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{project_root}/CLAUDE.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/contracts.md",
+      "_commands/project/health.md",
+      "_commands/project/scope.md"
+    ]
+  },
+  "domains": [
+    "code-review",
+    "auditing"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "review",
+    "git-diff",
+    "cross-layer",
+    "read-only"
+  ]
+}

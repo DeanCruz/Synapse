@@ -1,0 +1,47 @@
+{
+  "file": "_commands/Synapse/dispatch.md",
+  "content_hash": "82de4c5e",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!dispatch [dashboardId] {task_id | --ready}` command for manual task dispatch. Two modes: single-task dispatch (validates task exists, has no progress or pending status, all deps satisfied; reads plan.json for context; dispatches with full prompt template) and `--ready` mode (scans all agents and dispatches every task whose deps are satisfied). Produces logs.json dispatch entries but does NOT write progress files (workers create their own).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Master MUST NOT write a progress file when dispatching — the worker creates its own when it starts",
+    "Worker prompt MUST include {dashboardId}, {tracker_root}, AND {project_root} so the worker writes progress to the right dashboard and does code work in the right project",
+    "Validation rejects tasks with status other than pending — failed tasks must use !retry, completed tasks should not be re-dispatched",
+    "The simpler !dispatch --ready uses basic prompt construction — for production-quality prompts with conventions and upstream injection, use !eager_dispatch instead"
+  ],
+  "patterns": [
+    "9-step single-task procedure: parse → read init → read progress → validate (existence, status, deps) → read plan → resolve project_root → dispatch with prompt → log → confirm",
+    "--ready mode replays steps 1-2 then iterates through all pending agents checking dep satisfaction",
+    "Worker prompt skeleton must always include three paths: PROJECT ROOT, TRACKER ROOT, and the progress file write path"
+  ],
+  "conventions": [
+    "Two parallel sub-sections for the two modes",
+    "Inline note callout about not writing progress files",
+    "References p_track.md Step 14 for the prompt template (avoids duplication)"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md",
+      "_commands/Synapse/p_track.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/eager_dispatch.md",
+      "_commands/Synapse/retry.md",
+      "_commands/Synapse/add_task.md"
+    ]
+  },
+  "domains": [
+    "swarm-command",
+    "manual-dispatch"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "dispatch"
+  ]
+}

@@ -1,0 +1,79 @@
+{
+  "file": "src/ui/components/git/BranchPanel.jsx",
+  "content_hash": "75e96c59",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Owns the entire branch management surface inside Git Manager. Renders three internal subsystems: (1) a current-branch header with ahead/behind badges plus 'New' and 'Move' action buttons, (2) a custom SVG BranchGraph (commit topology with colored lanes, merge curves, ref labels, and HEAD highlighting) computed via buildGraphLayout from up to 80 commits returned by api.gitGraph, and (3) collapsible Local/Remote branch lists with inline search filtering, ahead/behind chips per upstream-tracking branch, and per-branch action buttons (switch/checkout, merge, delete). Owns several local dialog implementations (ConfirmDialog and MergePreviewDialog) plus a multi-step 'Move uncommitted changes to a new branch' flow that orchestrates stash → createBranch → stashPop with rollback semantics. Branch operations call gitCheckout, gitCreateBranch, gitDeleteBranch, gitMerge, gitStash/StashPop, gitAheadBehind, gitGraph, gitLog (for merge preview commits) and dispatch GIT_SET_BRANCHES / GIT_SET_CURRENT_BRANCH / GIT_SET_STATUS to refresh global state.",
+  "exports": [
+    {
+      "name": "BranchPanel",
+      "kind": "component",
+      "signature": "{ repoPath?: string }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useEffect",
+      "useCallback",
+      "useMemo",
+      "useRef"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/styles/git-manager.css": []
+  },
+  "gotchas": [
+    "classifyBranches uses a naive heuristic — any branch name containing '/' is classified as remote, so any local branch with a slash (e.g. feature/foo) will be misclassified. Consult b.upstream / b.remote fields if available rather than relying on the slash check.",
+    "Delete branch tries safe `-d` first; on failure it shows a force-delete dialog with the original error in errorDetail — do not bypass this two-step flow.",
+    "Switching branches with uncommitted changes opens a switch dialog that offers stash-first; if checkout fails after stashing, performSwitchBranch must call gitStashPop to roll back, otherwise the user's work is lost in the stash list.",
+    "performMoveChanges executes stash → createBranch → stashPop. Each step must rollback on failure; if pop fails after a successful create, the changes remain in the stash list and the user is told so explicitly.",
+    "BranchGraph fetches up to 80 commits via api.gitGraph; it depends on commits including .parents (multi-parent for merges) and .refs arrays — backend must populate these fields.",
+    "Branch name validation rejects whitespace, ~, ^, :, ?, *, [, \\, leading -, trailing ., or consecutive '..' — keep this in sync with git's stricter ref-name rules if extending.",
+    "aheadBehindMap is fetched per local branch with an upstream — this is N sequential awaits inside a useEffect; for repos with many upstream-tracking branches this can be slow."
+  ],
+  "patterns": [
+    "Local + remote sections use independent collapse state (localCollapsed default open, remoteCollapsed default closed).",
+    "Inline-defined ConfirmDialog and MergePreviewDialog (NOT shared with SafetyDialogs.jsx) — closes on Escape via window keydown listener.",
+    "Merge action loads a preview by running `gitLog(repoPath, 50, [`${currentBranch}..${sourceBranch}`])` to display the commits that would be merged.",
+    "Graph lane colors derive from getComputedStyle (--color-in-progress) at module load, then use a fixed palette of 10 stable colors keyed by lane index.",
+    "Operation errors show in a banner above the lists and auto-clear after 8 seconds.",
+    "GraphCell uses cubic-Bezier curves to draw merge connections with 0.4 vertical control offsets — keeps merge curves visually smooth across rows."
+  ],
+  "conventions": [
+    "All git API calls go through window.electronAPI.git* and check `result.success` before reading `result.data`. Errors surface via setOperationError state.",
+    "Refresh helpers `refreshBranches` (branches+currentBranch) and `refreshAll` (also status) are reused by every mutation handler.",
+    "Inline SVG icons (IconBranch, IconChevron, IconPlus, IconTrash, IconMerge, IconSwitch, IconMove, IconWarning, IconCheck, IconCloud, IconSearch, IconStar, IconRemote) — no external icon library."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (window.electronAPI.git*)",
+      "src/ui/styles/git-manager.css"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx"
+    ],
+    "related": [
+      "src/ui/components/git/RemotePanel.jsx",
+      "src/ui/components/git/SafetyDialogs.jsx",
+      "src/ui/components/git/HistoryPanel.jsx"
+    ]
+  },
+  "domains": [
+    "git-manager",
+    "git-safety"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "branches",
+    "graph",
+    "svg",
+    "merge",
+    "stash"
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "file": ".gitignore",
+  "content_hash": "2fa00a58",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Git ignore rules for the Synapse repo. Excludes runtime swarm data (every dashboard's progress files, initialization.json, logs.json, plus the entire dashboards/, tasks/, Archive/, history/, queue/ trees), build output (dist/), dependencies (node_modules/), macOS metadata (.DS_Store), user-local commands (_commands/user/), an entire `_parent/*` carve-out (and its claude-code settings), and saved conversations (conversations/*). Effectively encodes the boundary between source-controlled artifacts and per-machine runtime/user data.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Lines 1-7 ignore SPECIFIC files inside dashboards/* (progress/*.json, initialization.json, logs.json), but lines 30-35 ignore the ENTIRE dashboards/, queue/, history/, Archive/, tasks/ trees with a wildcard. The wildcard at the bottom supersedes the granular rules — meaning even the parent dashboard directories are git-ignored, not just their JSON contents.",
+    "`conversations/*` is ignored but the `conversations/` directory itself is tracked (because of the wildcard, not a slash) — empty conversations directory will show as untracked unless a placeholder file exists.",
+    "`_parent/*` and `_parent/.claude/settings.local.json` look like leftover scaffolding from a previous repo layout where Synapse lived inside a parent project — the rule is preserved for safety but the directory may not exist in clean clones.",
+    "No `.env`, `.env.local`, or secrets glob — Synapse currently has no env files, but if any are added in the future, they will accidentally be tracked unless this file is updated.",
+    "`node_modules/` is ignored without a trailing `/**` — git treats both forms identically for directories, but linters may flag this.",
+    "No `.vscode/` or `.idea/` — IDE configs are not ignored; commit hygiene depends on individual contributors."
+  ],
+  "patterns": [
+    "Layered ignore pattern: granular ignores at the top (specific files) plus broad wildcard ignores at the bottom (entire directories) — the wildcard wins, so the granular rules are de facto redundant in this repo.",
+    "Runtime-vs-source separation: every directory that holds runtime swarm artifacts (dashboards, tasks, Archive, history, queue) is excluded; everything else (electron/, src/, _commands/, agent/, documentation/) is tracked.",
+    "Section headers in comments (`# Runtime data`, `# Build output`, `# Dependencies`, `# OS`) document the ignore taxonomy."
+  ],
+  "conventions": [
+    "Hash-prefixed comments (`# Runtime data`, etc.) group related rules.",
+    "Trailing slashes denote directories.",
+    "Wildcard `*` follows directory paths (e.g., `dashboards/*`)."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      ".git/"
+    ],
+    "related": [
+      "package.json",
+      "dashboards/",
+      "Archive/",
+      "history/",
+      "conversations/",
+      "tasks/",
+      "queue/"
+    ]
+  },
+  "domains": [
+    "git-config",
+    "project-config"
+  ],
+  "tags": [
+    "gitignore",
+    "config",
+    "git",
+    "version-control"
+  ]
+}

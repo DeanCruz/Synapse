@@ -1,0 +1,47 @@
+{
+  "file": "_commands/profiles/technical-writer.md",
+  "content_hash": "aac9ddb8",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Senior Technical Writer role: API docs, developer guides, user help docs, tutorials, changelogs, KB articles. Biases the worker toward task orientation (every doc answers 'how do I do X?'), accuracy verified against the actual codebase (not memory), progressive disclosure, findability (descriptive headings, TOCs), and maintainability. A master assigns this profile for API reference docs, tutorial writing, changelog generation, README/onboarding doc production, and developer guide authoring. Forces verification of every code example against running code and prohibits mixing conceptual/tutorial/reference content in the same document.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Workers will read source code and verify endpoints/parameters before writing — adds context-gathering time.",
+    "Refuses to mix conceptual, tutorial, and reference content — large doc requests get split into multiple files.",
+    "Bans internal jargon without definition — outputs may include glossary additions you didn't ask for.",
+    "Code examples must be syntactically correct and use current APIs — workers may flag deprecated endpoints in the codebase."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "API doc skeleton: Endpoint → Method → Description → Parameters (table) → Request Example → Response Example → Error Codes.",
+    "Procedures rendered as numbered steps; warnings/notes as callout blocks; code blocks always tagged with language."
+  ],
+  "conventions": [
+    "Tone 'clear, helpful, neutral' — not chatty, not cold; README-style.",
+    "Tutorials sized to need; API reference concise per endpoint; changelog one line per change grouped by type."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/product.md",
+      "_commands/profiles/architect.md",
+      "_commands/profiles/devops.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "technical-writer-role",
+    "developer-documentation"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "technical-writer",
+    "documentation",
+    "api-docs"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "file": "documentation/master-agent/statusing.md",
+  "content_hash": "cffde3cb",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Documents the master's monitoring and statusing protocol: how it reads progress files to derive overall state, when to append to logs.json, how to surface deviations, and the user-facing status reports it produces during long-running swarms. Defines the cadence and shape of status updates the master streams to the chat.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Stat counters are derived, not stored -- the master never maintains its own counts",
+    "Reading progress files mid-write requires the same retry pattern the server uses"
+  ],
+  "patterns": [
+    "Derived state from progress file scans rather than maintained counters"
+  ],
+  "conventions": [
+    "Status snapshots include wave-level rollups plus per-agent stage info"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "master-agent",
+    "monitoring"
+  ],
+  "tags": [
+    "statusing",
+    "progress",
+    "logs"
+  ]
+}

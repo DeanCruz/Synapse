@@ -1,0 +1,95 @@
+{
+  "file": "electron/services/ClaudeCodeService.js",
+  "content_hash": "e909ba76",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Spawns and manages Claude Code CLI worker processes for swarm tasks. Builds the args list (--print, --output-format stream-json, --verbose, --add-dir for Synapse + project dirs, --append-system-prompt, --dangerously-skip-permissions or --permission-prompt-tool stdio + --input-format stream-json), feeds the prompt via stdin, parses NDJSON output line-by-line and rebroadcasts each parsed event to the renderer over `worker-output`. Tracks every spawned process in `activeWorkers` keyed by PID for kill/dispatch/inspect. Forwards stderr verbatim as a separate worker-output frame so the UI can display tool activity. Emits `worker-complete` with full output + exit code on close, and `worker-error` on spawn failures.",
+  "exports": [
+    {
+      "name": "init",
+      "kind": "function",
+      "signature": "(broadcast) => void"
+    },
+    {
+      "name": "spawnWorker",
+      "kind": "function",
+      "signature": "(opts) => {pid, taskId, dashboardId}"
+    },
+    {
+      "name": "killWorker",
+      "kind": "function",
+      "signature": "(pid) => boolean"
+    },
+    {
+      "name": "killAllWorkers",
+      "kind": "function",
+      "signature": "() => count"
+    },
+    {
+      "name": "getActiveWorkers",
+      "kind": "function",
+      "signature": "() => Worker[]"
+    },
+    {
+      "name": "getActiveCountForDashboard",
+      "kind": "function",
+      "signature": "(dashboardId) => number"
+    },
+    {
+      "name": "writeToWorker",
+      "kind": "function",
+      "signature": "(pid, data) => boolean"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "ELECTRON_RUN_AS_NODE and CLAUDECODE env vars MUST be deleted before spawn — otherwise the child Claude binary detects nested Claude/Electron context and either misbehaves or refuses to run.",
+    "Output is NDJSON. The line-buffer split-on-newline strategy means the FINAL chunk often does not end with `\\n`; the close handler explicitly flushes `worker.lineBuffer` or the terminal `result` event would be lost (this bug was already fixed and the comment highlights the exact failure mode).",
+    "When dangerouslySkipPermissions=false the service switches to `--permission-prompt-tool stdio` + `--input-format stream-json`, wraps the prompt in an NDJSON `{type:'user',message:{role:'user',content:promptText}}` envelope, and KEEPS stdin open so the renderer can relay permission decisions via writeToWorker(). Forgetting either flag breaks the permission relay.",
+    "`--add-dir` is added FIRST for synapseRoot then for projectDir — workers must always have access to Synapse/agent/instructions or the worker protocol cannot be loaded. Order matters because the agent reads instructions before project files.",
+    "Any worker resolved-dir that equals synapseRoot or projectDir is deduped — passing duplicates would cause the CLI to error.",
+    "`SYNAPSE_DASHBOARD_ID` env var is injected so PreToolUse hooks (.claude/hooks/) can enforce dashboard isolation. Removing this breaks the validate-master-write/validate-progress-file hooks.",
+    "There is a stale `buildArgs(opts)` function declared AFTER module.exports — it is dead code (older path that did NOT inject synapse_root or context dirs). Do not refactor callers to use it.",
+    "The 10s `gotOutput` watchdog references `worker.errorOutput` from a closure but `worker` is declared AFTER that setTimeout — the closure works because of var-hoisting only; refactoring to const/let would break it."
+  ],
+  "patterns": [
+    "PID-keyed activeWorkers map is the single source of truth; every callback (stdout/stderr/close/error) checks-and-mutates this map.",
+    "All renderer notifications are pushed over three named channels: `worker-output`, `worker-complete`, `worker-error` — kept stable so ipc-handlers/preload only needs to expose those three.",
+    "stream-json NDJSON parsing: each line is JSON.parse'd inside a try/catch and forwarded as `{chunk, parsed}` so the renderer can use either the raw text or structured event.",
+    "killWorker double-tap: SIGTERM, then a 5s SIGKILL fallback to guarantee dead workers."
+  ],
+  "conventions": [
+    "Console-log every lifecycle transition prefixed with `[ClaudeCodeService]` for easy log-grepping.",
+    "All public functions take a single `opts` object (taskId, dashboardId, projectDir, prompt, systemPrompt, model, cliPath, dangerouslySkipPermissions, additionalContextDirs, resumeSessionId).",
+    "Return shape from spawnWorker is intentionally minimal `{pid, taskId, dashboardId}` — full state lives in the activeWorkers map and is fetched via getActiveWorkers()."
+  ],
+  "relationships": {
+    "depends_on": [
+      "child_process.spawn",
+      "node:path"
+    ],
+    "depended_by": [
+      "electron/services/SwarmOrchestrator.js",
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "electron/services/CodexService.js",
+      "electron/services/PromptBuilder.js"
+    ]
+  },
+  "domains": [
+    "cli-process-management",
+    "swarm-orchestration",
+    "claude-cli-integration"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "claude-cli",
+    "child-process",
+    "ndjson-streaming",
+    "ipc-broadcast",
+    "permission-relay"
+  ]
+}

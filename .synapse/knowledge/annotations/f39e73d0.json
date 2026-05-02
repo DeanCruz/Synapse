@@ -1,0 +1,53 @@
+{
+  "file": "agent/utils/token_estimate.js",
+  "content_hash": "766a1eab",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "A planning-time token-budget estimator used by the master agent to size worker prompts before dispatch. Exports three functions: estimateTokens(text, type) which divides text length by a content-type ratio (prose=4, code=3, mixed=3.5) and ceils the result; formatBudget(sections, budgetLimit=8000) which produces a markdown table with per-section tokens, percentages, [!] flags for sections >40% of budget, and a WARNING line if total exceeds budget; checkBudget(sections, budgetLimit=8000) which returns a programmatic { total, overBudget, sections } object. CommonJS module — used by the master to keep worker prompts within the ~8000-token target documented in project_discovery.md.",
+  "exports": [
+    "estimateTokens",
+    "formatBudget",
+    "checkBudget"
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Token estimation is APPROXIMATE — uses character-per-token ratios (prose=4, code=3, mixed=3.5) not actual tokenization. Real token counts may differ significantly especially for unusual content.",
+    "Default budget is 8000 tokens — matches the worker prompt target documented in agent/core/project_discovery.md. If you change one, change the other to keep them aligned.",
+    "Mixed-content ratio (3.5) here MUST match the worker-side estimate in agent/worker/progress_reporting.md (Math.ceil(totalChars / 3.5)) — a divergence would produce inconsistent prompt_size reporting.",
+    "Unknown type values fall back to CHAR_RATIOS.mixed (no validation/error) — passing an unexpected type silently uses the mixed ratio.",
+    "[!] flag triggers at 40% of budget per section, NOT 50% — so any section >3200 tokens (default budget) is flagged even if total is under budget.",
+    "Module uses CommonJS exports (module.exports) — not ESM. Importing via `import` syntax requires interop shim."
+  ],
+  "patterns": [
+    "Three-function public API: estimateTokens (single text), formatBudget (markdown table for human review), checkBudget (programmatic check).",
+    "Section-keyed sections object: { [name]: { text, type } } — same shape consumed by both formatBudget and checkBudget.",
+    "Per-section + total reporting with [!] flag at 40% of budget threshold.",
+    "Math.ceil rounding so token estimates never under-report."
+  ],
+  "conventions": [
+    "Default budgetLimit = 8000 across both formatBudget and checkBudget.",
+    "Char-per-token ratios as named constants (CHAR_RATIOS) at module top.",
+    "JSDoc on every exported function with @param/@returns annotations."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "agent/master/worker_prompts.md"
+    ],
+    "related": [
+      "agent/core/project_discovery.md",
+      "agent/worker/progress_reporting.md",
+      "electron/services/PromptBuilder.js"
+    ]
+  },
+  "domains": [
+    "token-budget",
+    "planning-utility"
+  ],
+  "tags": [
+    "javascript",
+    "util",
+    "commonjs",
+    "estimator"
+  ]
+}

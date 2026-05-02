@@ -1,0 +1,108 @@
+{
+  "file": "src/ui/components/ide/IDEView.jsx",
+  "content_hash": "acf9c55b",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top-level Code Explorer layout. Composes WorkspaceTabs + (FileExplorer | SearchPanel) + draggable divider + EditorTabs + DebugToolbar + CodeEditor + DebugPanels (right sidebar) + BottomPanel (Terminal/Output/Problems/Debug Console/Ports). Owns the resizable explorer-panel width state (180-500px, default 250). Bridges debug IPC: subscribes to push events 'debug-paused' (sets session, callStack, scopes; flushes nested variables for each scope), 'debug-resumed' (status running, clears pausedFile/Line), 'debug-stopped' (DEBUG_CLEAR_SESSION). Wires DebugToolbar callbacks to window.electronAPI.debug{Launch,Continue,Pause,StepOver,StepInto,StepOut,Stop} and implements Restart as stop-then-relaunch with a 300ms timeout (using debugLaunchConfigRef to remember script/cwd across the stop). Wires DebugPanels' onNavigateToFrame/onNavigateToBreakpoint to dispatch IDE_OPEN_FILE + ideNavigateToLine — same flow used by ProblemsPanel via BottomPanel's onNavigate prop. Registers Cmd/Ctrl+Shift+F global keydown to switch to search sidebar and focus '.ide-search-input'. Syncs currentDashboardId to active workspace's dashboard via getWorkspaceDashboard(ideActiveWorkspaceId). Mounts IDEWelcome (with embedded BottomPanel) when ideWorkspaces.length === 0.",
+  "exports": [
+    {
+      "name": "IDEView",
+      "kind": "component",
+      "signature": "()"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useRef",
+      "useCallback",
+      "useEffect"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/components/ide/WorkspaceTabs.jsx": [
+      "WorkspaceTabs"
+    ],
+    "src/ui/components/ide/FileExplorer.jsx": [
+      "FileExplorer"
+    ],
+    "src/ui/components/ide/SearchPanel.jsx": [
+      "SearchPanel"
+    ],
+    "src/ui/components/ide/EditorTabs.jsx": [
+      "EditorTabs"
+    ],
+    "src/ui/components/ide/CodeEditor.jsx": [
+      "CodeEditor"
+    ],
+    "src/ui/components/ide/IDEWelcome.jsx": [
+      "IDEWelcome"
+    ],
+    "src/ui/components/ide/DebugToolbar.jsx": [
+      "DebugToolbar"
+    ],
+    "src/ui/components/ide/DebugPanels.jsx": [
+      "DebugPanels"
+    ],
+    "src/ui/components/BottomPanel.jsx": [
+      "BottomPanel"
+    ],
+    "src/ui/utils/dashboardProjects.js": [
+      "getDashboardProject"
+    ],
+    "src/ui/utils/ideWorkspaceManager.js": [
+      "getWorkspaceDashboard"
+    ]
+  },
+  "gotchas": [
+    "Comment in source: 'Workspace-dashboard creation is handled exclusively by WorkspaceTabs.jsx' — IDEView MUST NOT call createWorkspaceDashboard or you'll get duplicate dashboards.",
+    "Restart logic uses setTimeout(300ms) after debugStop().then() — empirical delay for V8 inspector teardown; reducing it causes 'address in use' errors.",
+    "Two file-tree-loading paths exist: this component's effect calls window.electronAPI.ideReadDir (note: ReadDir not ListDir!) when no cached tree, while FileExplorer.jsx calls window.electronAPI.ideListDir. Two different IPC methods producing different shapes — both must be kept in sync.",
+    "debug-paused handler iterates data.scopes and dispatches DEBUG_SET_VARIABLES for each scope.variables — assumes the IPC payload nests variables inside scopes (not all DAP backends do this; Synapse's DebugService does).",
+    "Cmd+Shift+F handler uses setTimeout(50) before focusing '.ide-search-input' — without it, the SearchPanel hasn't mounted yet.",
+    "ResizeObserver-style divider drag uses document-level mousemove/mouseup + body class 'ide-dragging' for cursor — must clean up on unmount or you'll have ghost listeners.",
+    "When no workspaces exist, IDEWelcome is mounted alongside BottomPanel — bottom panel is ALWAYS shown."
+  ],
+  "patterns": [
+    "Multi-effect debug IPC subscription pattern: an array of cleanup functions accumulated then iterated on unmount.",
+    "Draggable divider via mousedown→document mousemove/mouseup with ref-stored startX/startWidth.",
+    "Conditional rendering of DebugToolbar + DebugPanels only when debugSession.status !== 'idle' — they appear/disappear with the session.",
+    "Embedded BottomPanel (`embedded` prop) in both welcome and main layouts."
+  ],
+  "conventions": [
+    "Layout CSS classes 'ide-view', 'ide-main', 'ide-explorer-panel', 'ide-divider', 'ide-editor-area', 'ide-editor-content', 'ide-editor-and-debug', 'ide-editor-main', 'ide-debug-sidebar', 'ide-editor-empty'.",
+    "Constants MIN_/MAX_/DEFAULT_EXPLORER_WIDTH at top of file."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/components/BottomPanel.jsx",
+      "src/ui/utils/dashboardProjects.js",
+      "src/ui/utils/ideWorkspaceManager.js",
+      "all 11 sibling components"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "electron/services/DebugService.js",
+      "electron/preload.js"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "ide-layout",
+    "node-debugger",
+    "workspace-tabs"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "layout",
+    "debug",
+    "resizable"
+  ]
+}

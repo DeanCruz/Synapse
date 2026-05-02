@@ -1,0 +1,43 @@
+{
+  "file": "documentation/troubleshooting/faq.md",
+  "content_hash": "a764a37a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "30 frequently asked questions across 7 sections (General, Project Setup, Swarm Execution, Dashboard/Monitoring, Hooks/Validation, Configuration, Profiles/Commands). Covers !p_track vs !p, parallel vs serial execution, waves vs chains, tracker_root vs project_root, project setup, CLAUDE.md, PKI, parallel worker limits, mid-flight task addition, retries, failures, replanning, resume, dashboard updates, multi-dashboard, monitoring commands, cancellation, reset, archives, hooks, configuration storage, server timing, Live Preview, profiles, and command discovery.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Auto-escalation suggests !p_track at 3+ subtasks",
+    "Hooks fail open by default; SYNAPSE_SKIP_SCHEMA=1 only bypasses validate-initialization-schema",
+    "Common dashboard-not-updating causes: wrong dashboard_id, validation rejection, server not running, stale browser cache",
+    "validate-archive-before-clear.sh enforces archival before progress file deletion",
+    "No hardcoded parallel worker limit -- bound by API rate limits and system resources"
+  ],
+  "patterns": [
+    "Q&A organized by topic with cross-references to common-issues.md",
+    "Decision-tree style guidance (when to use which command)"
+  ],
+  "conventions": [
+    "Cross-references to common-issues.md for error specifics",
+    "Multi-section organization: General, Project Setup, Swarm Execution, Dashboard, Hooks, Config, Profiles"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "documentation/troubleshooting/common-issues.md",
+      "documentation/commands/",
+      "documentation/configuration/"
+    ]
+  },
+  "domains": [
+    "troubleshooting-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "faq",
+    "troubleshooting",
+    "questions"
+  ]
+}

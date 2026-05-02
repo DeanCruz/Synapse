@@ -1,0 +1,48 @@
+{
+  "file": "_commands/Synapse/cancel-safe.md",
+  "content_hash": "f4753564",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!cancel-safe [dashboardId]` command for graceful swarm shutdown. Sets an internal master flag to prevent further dispatches, polls progress files every 10 seconds waiting for in-progress agents to finish naturally, then marks remaining never-dispatched pending tasks as failed/cancelled. Preserves all completed and naturally-finishing work. Produces logs.json entries for shutdown initiation, per-agent finishes, and final completion summary, plus progress files for cancelled-pending tasks.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "This is one of the rare exceptions where the master writes progress files (only for never-dispatched pending tasks)",
+    "10-minute timeout warning prompts user to either keep waiting or escalate to `!cancel --force`",
+    "Completed and failed progress files are LEFT ALONE — never overwritten",
+    "The graceful shutdown flag lives in the master's working memory only — it does not persist across master sessions",
+    "Polling cadence is 10 seconds — not configurable; aggressive polling would conflict with worker writes"
+  ],
+  "patterns": [
+    "11-step procedure: parse → read init → read progress → set flag → log initiation → display message → poll loop → mark cancelled-pending → update master task → log completion → display final report",
+    "Three-state classification of agents at finalization: completed (preserve), failed during execution (preserve), never-dispatched (write cancelled progress file)",
+    "Status emoji used in summary tables (Completed/Failed/Cancelled)"
+  ],
+  "conventions": [
+    "Contrasts itself explicitly with `!cancel` in a callout block",
+    "Numbered Steps with embedded JSON code blocks for log/progress file shapes",
+    "Final markdown report template with three result tables (Completed/Cancelled/Failed)"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/cancel.md",
+      "_commands/Synapse/p_track.md"
+    ]
+  },
+  "domains": [
+    "swarm-command",
+    "cancellation",
+    "graceful-shutdown"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "polling",
+    "lifecycle"
+  ]
+}

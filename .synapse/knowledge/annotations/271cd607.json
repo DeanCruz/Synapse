@@ -1,0 +1,46 @@
+{
+  "file": "src/ui/styles/preview-view.css",
+  "content_hash": "5c8028f5",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Stylesheet for the Live Preview tab (PreviewView.jsx). Styles the entire preview surface: .preview-view container (flex column, fills parent), .preview-toolbar (40px high, nav buttons + URL form + detect button), .preview-nav-btn (28x28 transparent buttons with hover/active/disabled states), .preview-url-form/.preview-url-input (monospace URL bar with focus ring and animated loading bar beneath), .preview-no-project-banner (amber warning when no project is set for inline editing), .preview-content (relative container for webview + overlays), .preview-webview (the embedded Electron webview with white background), .preview-loading-overlay (z-index 10 dim layer with .preview-spinner — 32px spinning border), .preview-error (z-index 15 full-cover error state with retry button), .preview-empty (centered empty-state with icon and prompt), .preview-detect-btn (dev-server detect with spinner), and .preview-edit-toast (z-index 20 bottom-center success/error toast with slide-in animation).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "All classes prefixed .preview-* — DO NOT add unprefixed selectors here, they would leak globally since this is concatenated with index.css at runtime.",
+    "Z-index local scale: .preview-loading-overlay=10, .preview-error=15, .preview-edit-toast=20. Values are local to .preview-content stacking context.",
+    "Hard-coded fallback color #6c5ce7 (used as --color-accent fallback) does NOT match index.css's actual --color-accent value (#9b7cf0). If --color-accent fails to load the visual will drift.",
+    ".preview-webview has hard-coded white background (#fff) — ensures embedded sites without their own background look right but breaks dark-mode previews briefly during load.",
+    "Animations (preview-loading-slide, preview-spin, preview-toast-in) are scoped by name but live in global keyframe space — renaming an existing global @keyframes 'preview-spin' could collide."
+  ],
+  "patterns": [
+    "Heavy use of var(--token, fallback) pattern for graceful degradation.",
+    "Toolbar uses min-height + height + flex-shrink:0 to lock its size.",
+    "Loading bar absolutely positioned within URL form with translateX keyframe animation."
+  ],
+  "conventions": [
+    "All classes prefixed with .preview-* (BEM-flat style).",
+    "Modifier classes: .preview-edit-toast--success / --error (BEM double-dash).",
+    "Section banners: /* ----- Title ----- */."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for CSS variables (--bg, --surface, --border, --text-primary/secondary/tertiary, --color-accent, --mono, --surface-hover, --surface-active)"
+    ],
+    "depended_by": [
+      "src/ui/components/preview/PreviewView.jsx (only consumer, side-effect imports it)"
+    ],
+    "related": [
+      "src/ui/preview/inject-overlay.js (the overlay injects its own scoped styles for highlighted-on-hover indicators)"
+    ]
+  },
+  "domains": [
+    "preview-styles"
+  ],
+  "tags": [
+    "css",
+    "live-preview",
+    "webview",
+    "scoped-styles"
+  ]
+}

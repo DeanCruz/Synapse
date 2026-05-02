@@ -1,0 +1,60 @@
+{
+  "file": "src/ui/components/git/GitWelcome.jsx",
+  "content_hash": "b20fae21",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Empty-state landing card shown by GitManagerView when no repositories are open (gitRepos.length === 0). Renders a centered card with a branch icon, a 'Git Manager' title, descriptive text, and a single primary 'Open Repository' button that invokes api.ideSelectFolder() (reusing the IDE view's folder picker) then dispatches GIT_OPEN_REPO with id=String(Date.now()), the picked path, and the trailing folder name as the tab label. Mirrors IDEWelcome.jsx visually.",
+  "exports": [
+    {
+      "name": "GitWelcome",
+      "kind": "component",
+      "signature": "() — no props"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useCallback"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useDispatch"
+    ]
+  },
+  "gotchas": [
+    "Reuses api.ideSelectFolder (from the IDE namespace) rather than a git-specific picker — if that IPC is renamed, both GitWelcome and RepoTabs break.",
+    "Repo id is generated via String(Date.now()) — opening two repos in the same millisecond would collide. Acceptable for human-driven use but not for automated tests.",
+    "ideSelectFolder may return either a string or an object with .path — the helper handles both shapes; do not assume one or the other when extending.",
+    "If user cancels the picker, folderPath is falsy and the function returns early without error — no toast or feedback."
+  ],
+  "patterns": [
+    "Empty-state pattern: git-manager-empty container + git-manager-empty-icon + title + text + primary action button.",
+    "Folder name extraction: replace trailing slashes, split on / or \\, take last segment — handles cross-platform paths."
+  ],
+  "conventions": [
+    "Inline SVG icons (GitBranchIcon, FolderOpenIcon) at top of file.",
+    "Console.error for unexpected failures, no UI error state."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (ideSelectFolder)"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx"
+    ],
+    "related": [
+      "src/ui/components/git/RepoTabs.jsx",
+      "src/ui/components/ide/IDEWelcome.jsx"
+    ]
+  },
+  "domains": [
+    "git-manager",
+    "git-init"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "empty-state",
+    "welcome"
+  ]
+}

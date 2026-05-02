@@ -1,0 +1,46 @@
+{
+  "file": "_commands/profiles/security.md",
+  "content_hash": "9b55abcc",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Senior Security Engineer role: appsec, threat modeling, compliance (SOC2/GDPR/HIPAA), vulnerability assessment, secure development. Biases the worker toward threat-modeling-first analysis (STRIDE etc.), defense in depth, least privilege, treating compliance as a floor not a ceiling, and exploitability/impact-based prioritization (a critical CVE in an unreachable internal service ranks lower than a medium SQLi on login). A master assigns this profile for security reviews, threat models, audit reports, compliance gap analyses, and remediation plans. Forces every recommendation to tie to a specific risk and remain implementable without breaking usability.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Will not produce generic security checklists — every recommendation must be system-specific.",
+    "Refuses 'security through obscurity' approaches; assumes attackers have full architecture knowledge.",
+    "Includes the human element (phishing, social engineering, insider threats) — pure-technical-controls outputs are flagged as incomplete.",
+    "Compliance treated as minimum baseline; passing-the-audit-only outputs will be expanded with real protections."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "Security review skeleton: Scope → Threat Model → Attack Surface Analysis → Findings (by severity) → Remediation (prioritized) → Compliance Status → Monitoring Recommendations.",
+    "Threat models use STRIDE; audit findings use severity/likelihood/impact matrices; compliance uses requirement-to-control mapping."
+  ],
+  "conventions": [
+    "Tone 'security consultant briefing the CTO' — direct, risk-focused."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/architect.md",
+      "_commands/profiles/devops.md",
+      "_commands/profiles/legal.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "security-engineer-role",
+    "threat-modeling-and-compliance"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "security",
+    "threat-model",
+    "compliance"
+  ]
+}

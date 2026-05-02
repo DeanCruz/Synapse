@@ -1,0 +1,49 @@
+{
+  "file": "documentation/commands/swarm-commands.md",
+  "content_hash": "db405667",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference documentation for all commands in {tracker_root}/_commands/Synapse/. Covers swarm lifecycle (!p_track, !p_track_plan, !p, !master_plan_track, !dispatch, !retry, !resume, !track_resume, !p_track_resume, !add_task, !eager_dispatch, !export, !cancel, !cancel-safe), monitoring (!status, !logs, !inspect, !deps, !history, !update_dashboard), server control (!start, !stop, !reset), and project management (!project). Includes comparison tables for overlapping resume/dispatch commands.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "!p_track agents become MASTER agents -- they NEVER write code",
+    "!cancel marks in-progress as failed but agents may still run; !cancel-safe waits gracefully",
+    "Comparison: !p_track_resume (full lifecycle) vs !track_resume (dispatch-focused) vs !dispatch --ready (pending only) vs !retry (single task)",
+    "!add_task only modifies pending tasks -- never completed/in_progress",
+    "!eager_dispatch is one-shot dispatch only -- does not monitor, retry, or report",
+    "!cancel writing progress files is the ONE exception where master writes them directly"
+  ],
+  "patterns": [
+    "Three-phase swarm structure: Context/Planning -> Execution -> Report",
+    "Hierarchical multi-stream: meta-planner -> child master agents -> worker agents",
+    "Dependency-driven dispatch: tasks dispatched the instant deps satisfied",
+    "Circuit breaker auto-replan: 3+ failures or blast radius > 50%"
+  ],
+  "conventions": [
+    "Dashboard arg defaults to assigned via DASHBOARD ID: directive",
+    "All commands document Purpose, Syntax, Arguments, Key Behavior, and Produces files",
+    "Comparison tables for commands with overlapping scope"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/commands/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "agent/master/",
+      "_commands/Synapse/",
+      "documentation/swarm-lifecycle/"
+    ]
+  },
+  "domains": [
+    "command-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "swarm-commands",
+    "orchestration",
+    "lifecycle"
+  ]
+}

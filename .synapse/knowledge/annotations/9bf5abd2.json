@@ -1,0 +1,35 @@
+{
+  "file": "documentation/architecture/data-flow.md",
+  "content_hash": "bc414db9",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Describes how data flows through Synapse end-to-end: workers write progress JSON, the WatcherService detects changes, the server validates and broadcasts via SSE/IPC, and the React dashboard merges static plan with dynamic progress to render. Covers the dual transport model (Electron IPC for the desktop app, SSE for browser clients) and the broadcast bridge that fans events to both.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Server validates progress writes and rejects mismatched dashboard_id with a write_rejected SSE event",
+    "Workers do code work in {project_root} but write progress to {tracker_root} -- conflating the two breaks dashboard rendering"
+  ],
+  "patterns": [
+    "Event-driven file watching with SSE/IPC fan-out",
+    "Client-side merge of static plan + dynamic progress via mergeState"
+  ],
+  "conventions": [
+    "Atomic file writes via write-temp-then-rename for all JSON files"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "architecture",
+    "data-flow"
+  ],
+  "tags": [
+    "sse",
+    "ipc",
+    "watcher",
+    "broadcast"
+  ]
+}

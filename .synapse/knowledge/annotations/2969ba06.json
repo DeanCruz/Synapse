@@ -1,0 +1,45 @@
+{
+  "file": "documentation/git-manager/overview.md",
+  "content_hash": "41ebf26f",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Architectural overview of Synapse's built-in Git UI: multi-repository tabs, staging/unstaging, unified diffs, commit authoring, branch management, SVG commit graph, remote operations, quick actions for non-coders, and tiered safety dialogs. Covers state shape (GIT_* actions), 3-second status polling, security model (execFile only), and complete file structure (~8,800 lines).",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "Status polls every 3 seconds while git view is active — disabled when hidden",
+    "Repo list persists to localStorage; live git data is always fetched fresh",
+    "Pushing to main/master triggers a protected-branch warning"
+  ],
+  "patterns": [
+    "Multi-tab repo workspace model (mirrors IDE)",
+    "Resizable sidebar layout (220-500px)",
+    "Lane-based SVG branch graph with cubic bezier merges"
+  ],
+  "conventions": [
+    "GIT_* reducer action prefix",
+    "CSS classes prefixed .git-manager-*"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/electron/overview.md"
+    ],
+    "depended_by": [
+      "documentation/git-manager/components.md",
+      "documentation/git-manager/ipc-handlers.md"
+    ],
+    "related": [
+      "documentation/dashboard/state-management.md",
+      "documentation/electron/services.md"
+    ]
+  },
+  "domains": [
+    "git-manager"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "git",
+    "overview"
+  ]
+}

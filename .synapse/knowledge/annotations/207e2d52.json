@@ -1,0 +1,66 @@
+{
+  "file": "agent/instructions/dashboard_resolution.md",
+  "content_hash": "c837f0a4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Shared protocol describing how every Synapse command resolves the {id} parameter, claims a dashboard, derives swarm status, and reads dashboard data. Defines the data path map (initialization.json/logs.json/progress/{task_id}.json), the parameter-parsing rules for first-positional {id}, the read-vs-write resolution rules, the selectDashboard() claiming algorithm with mandatory pre-assigned-dashboard isolation, the deriveOverallStatus() algorithm from progress files, the reading-agent-data merge pattern, derived stats formulas, IDE dashboard reservation, and worker-routing rule. Read by every command that touches dashboard data.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Pre-assigned dashboards (system prompt `DASHBOARD ID:` directive) are ABSOLUTE and UNCONDITIONAL — agents have NO read or write access to any other dashboard, enforced by the enforce-dashboard-isolation.sh PreToolUse hook via SYNAPSE_DASHBOARD_ID env var.",
+    "Auto-archive on a non-empty pre-assigned dashboard is automatic and non-destructive — never ask the user for confirmation.",
+    "There is NO auto-selection or scanning algorithm — every agent MUST have a dashboard via system prompt or --dashboard flag, otherwise ask the user.",
+    "The `ide` dashboard is permanently reserved for the IDE agent — swarm agents must never use it.",
+    "Status is DERIVED from progress files, never stored in initialization.json. The master never maintains counters — derivation is the dashboard client's job.",
+    "When an agent has no progress file yet, status defaults to `pending` (not missing/null) — do not skip it.",
+    "Mix of completed and pending without any in_progress still counts as `in_progress` overall (dispatch is ongoing).",
+    "Workers must use the absolute progress path the master tells them — `{tracker_root}/dashboards/{id}/progress/{task_id}.json` — never construct a relative dashboards/ path from CWD."
+  ],
+  "patterns": [
+    "First-positional-{id} parameter rule — non-flag, non-task-id strings are consumed as dashboard IDs (6-char hex, `ide`, or legacy `dashboardN`).",
+    "Resolution order: (1) pre-assigned via system prompt `DASHBOARD ID:` (highest priority) → (2) explicit --dashboard flag → (no fallback).",
+    "Archive-then-clear-then-verify when reusing a pre-assigned dashboard with prior data: copy to Archive/{date}_{task_name}/, rm -f progress/*.json, reset logs.json, verify ls is empty before writing initialization.json.",
+    "Status derivation algorithm — read agents[] from initialization.json, build {taskId: progressData} map from progress/, fold per-agent statuses into overall status using fixed condition table.",
+    "Two-source merge pattern: initialization.json provides {id, title, wave, layer, directory, depends_on}; progress/{id}.json provides {status, started_at, completed_at, summary, stage, message, milestones, deviations, logs}.",
+    "Wave status is derived per-wave: completed if ALL agents terminal, in_progress if ANY active, pending otherwise."
+  ],
+  "conventions": [
+    "Path tables (`Path | Contents | Written By`) for both per-dashboard and global directories.",
+    "Resolution-order numbered sections with explicit 'No auto-selection. No scanning. No fallback.' callout.",
+    "Status-derivation condition table mapping aggregate state → overall status."
+  ],
+  "relationships": {
+    "depends_on": [
+      ".claude/hooks/enforce-dashboard-isolation.sh",
+      "electron/services/SwarmOrchestrator.js (sets SYNAPSE_DASHBOARD_ID)"
+    ],
+    "depended_by": [
+      "agent/_commands/p_track_planning.md (Step 11-PRE references it)",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/instructions/tracker_multi_plan_instructions.md",
+      "_commands/Synapse/status.md, logs.md, inspect.md, deps.md (read commands)"
+    ],
+    "related": [
+      "agent/core/data_architecture.md",
+      "agent/master/dashboard_writes.md",
+      "agent/master/ui_map.md",
+      "src/server/utils/validation.js"
+    ]
+  },
+  "domains": [
+    "dashboard-resolution",
+    "agent-protocol",
+    "master-orchestration"
+  ],
+  "tags": [
+    "markdown",
+    "agent-doc",
+    "protocol",
+    "dashboard",
+    "shared-reference",
+    "selectDashboard",
+    "deriveOverallStatus",
+    "ide-dashboard",
+    "isolation"
+  ]
+}

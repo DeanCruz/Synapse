@@ -1,0 +1,49 @@
+{
+  "file": "Start Synapse.command",
+  "content_hash": "f01e49aa",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "End-user-friendly macOS double-clickable launcher. Unlike launch_synapse.command (self-relocating, dev mode), this one MUST live in the Synapse repo (it cd's to its own directory) and runs `npm start` (production build via Vite + Electron). Performs the same port-3456 conflict check as start.sh and refuses to launch when the app is already running. Adds a 'Press any key to close...' prompt on error so the Terminal window stays visible for the user.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Filename CONTAINS A SPACE — when scripting it from another shell, always quote the path: `\"Start Synapse.command\"`.",
+    "Cannot be relocated — `cd \"$DIR\"` resolves to the script's own directory, so moving this file out of the Synapse repo breaks it (use launch_synapse.command for the movable version).",
+    "Runs `npm start` (production build), NOT `npm run dev` — slower iteration but matches the README's official launch flow.",
+    "Same port-3456 hardcoding as start.sh.",
+    "If `npm start` fails partway through, the .command Terminal window may close before the user sees the error — consider adding a trap-on-error keypress."
+  ],
+  "patterns": [
+    "Production-launch pattern: build via Vite, then exec Electron — same as `npm start`.",
+    "Banner pattern: prints a divider/title before any action so the Terminal output is recognizable at a glance.",
+    "Conflict-check pattern: same port-busy check as start.sh, with the same 'use Stop Synapse.command' guidance."
+  ],
+  "conventions": [
+    "Shebang `#!/bin/bash`.",
+    "Title bars use `=` characters and centered spacing.",
+    "Echo blank lines before/after status messages for readability in the Terminal popup window."
+  ],
+  "relationships": {
+    "depends_on": [
+      "package.json"
+    ],
+    "depended_by": [],
+    "related": [
+      "Stop Synapse.command",
+      "launch_synapse.command",
+      "start.sh"
+    ]
+  },
+  "domains": [
+    "launcher-script",
+    "macos-launcher"
+  ],
+  "tags": [
+    "shell",
+    "bash",
+    "macos",
+    "command-file",
+    "launcher",
+    "production"
+  ]
+}

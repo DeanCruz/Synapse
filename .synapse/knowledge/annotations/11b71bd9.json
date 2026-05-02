@@ -1,0 +1,32 @@
+{
+  "file": "documentation/master-agent/overview.md",
+  "content_hash": "4da3489b",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Introduces the master agent's role: planning, dispatching workers, monitoring, and finalizing swarms. Enumerates what the master may write (initialization.json, logs.json, master_state.json, metrics.json, plan.json) and what it must never touch (progress files, project source code). Establishes the master's invariants that hooks enforce at runtime.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "validate-master-write hook will block any attempt by the master to edit files in {project_root}",
+    "Master must populate initialization.json before any worker is dispatched"
+  ],
+  "patterns": [
+    "Coordinator pattern with strict write-ownership boundaries"
+  ],
+  "conventions": [
+    "Master uses Task tool to spawn workers; never invokes implementation tools directly"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "master-agent"
+  ],
+  "tags": [
+    "overview",
+    "role",
+    "ownership"
+  ]
+}

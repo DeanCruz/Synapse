@@ -2350,6 +2350,20 @@ a:hover {
   min-height: calc(100vh - 53px); /* below header */
 }
 
+/* App shell wrappers — both chat and code shells are always mounted so
+   their IPC listeners and ref-held state remain alive across mode toggles.
+   The inactive shell is hidden via display:none. !important defeats inline
+   styles bleeding from fixed-positioned children (e.g. ClaudeFloatingPanel). */
+.app-shell-chat,
+.app-shell-code {
+  display: contents; /* let children participate in .dashboard-layout flex flow */
+}
+
+.app-shell-chat.hidden,
+.app-shell-code.hidden {
+  display: none !important;
+}
+
 .dashboard-content {
   flex: 1;
   min-width: 0;

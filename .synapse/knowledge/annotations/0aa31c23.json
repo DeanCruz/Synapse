@@ -1,0 +1,72 @@
+{
+  "file": "agent/instructions/tracker_multi_plan_instructions.md",
+  "content_hash": "e860a463",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for the meta-planner agent running !master_plan_track. Establishes the three-tier hierarchy (meta-planner → child master agents → workers), data architecture (dashboards as live slots vs queue/queueN as identical-schema staging slots not watched by the server), the in-memory stream registry schema, slot management protocol with auto-archive, the queue-to-dashboard promotion algorithm (promoteFromQueue) that runs on every child master return, the child-master dispatch prompt template (with required reading, scope, conventions, cross-stream context, execution rules, and return format), processing-child-master-returns flow (parse → update registry → terminal confirmation → cache for downstream → promotion scan → unblock check), cross-stream dependency mechanics, stream-level failure handling and circuit breaker, write-timing summary, common mistakes table, and reconstruction-after-compaction procedure. The meta-planner reads ONLY this file and never directly manages workers.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Meta-planner ONLY dispatches child-master agents — never workers directly. Each child master is a fully autonomous !p_track orchestrator.",
+    "Queue slots have IDENTICAL file structure to dashboards but the server does NOT watch them — never dispatch a child master for a queue slot, that swarm would have no live visualization.",
+    "promoteFromQueue() runs on EVERY child-master return — skipping it leaves queued streams idle even when dashboards are free.",
+    "Stream registry is in-memory only (NOT written to disk) — after compaction, reconstruct by scanning dashboards/ and queue/ initialization.json files.",
+    "Cross-stream dependencies are between STREAMS (S1, S3) not individual tasks — a queued stream with unmet deps stays queued even if a dashboard is available.",
+    "Always confirm dashboard is truly available (all progress files terminal) before promoting — promoting onto active workers overwrites in-progress data.",
+    "Always archive (copy to Archive/{date}_{task_name}/) a freed dashboard before promotion — never clear without archiving.",
+    "Worker-level failures are the child master's problem — meta-planner only sees stream-level results. Trying to manage worker failures from meta-planner duplicates work.",
+    "Stream-level circuit breaker fires at 2+ child-master failures (not their workers — the masters themselves), pause all dispatch and assess with the user.",
+    "Do NOT auto-promote a queue item to a FAILED dashboard — partial work may need a recovery master.",
+    "Always include both tracker_master_instructions.md AND tracker_worker_instructions.md paths in child-master prompts — the child master needs the worker path to embed in its own dispatches."
+  ],
+  "patterns": [
+    "Three-tier hierarchy: meta-planner (multi-stream) → child master (one stream/dashboard) → workers (one task each).",
+    "Identical schema between dashboards/{id}/ and queue/{queueId}/ — promotion is a file copy plus log entry plus registry update plus queue clear.",
+    "Stream registry shape: {stream_id, slug, slot_type, slot_id, status, depends_on (cross-stream), child_master_agent_id, total_tasks, completed_tasks, failed_tasks}.",
+    "Slot assignment priority: available dashboards first (in listDashboards order), then queue slots queue1/queue2/... for overflow.",
+    "Promotion priority when multiple eligible: cross-stream-deps-satisfied first, then lower queue number, then more downstream dependents.",
+    "Child-master prompt is fully self-contained: dashboard ID + required reading + stream scope + affected directories + conventions (extracted from CLAUDE.md by meta-planner) + reference code + cross-stream context + job sequence + execution rules + return format.",
+    "On every child-master return: parse → update registry → one-line terminal confirmation → cache for downstream → promotion scan → check entire queue for newly-unblocked streams (a single completion may satisfy deps for non-first-in-line queue items)."
+  ],
+  "conventions": [
+    "ASCII box diagram for the three-tier hierarchy at the top of the file.",
+    "Step-A-through-F labelling within the promotion algorithm (Archive → Copy → Log → Update registry → Clear queue → Dispatch).",
+    "Write-timing summary table: Moment | File | What.",
+    "Common Mistakes table: Mistake | Consequence | Fix."
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/tracker_master_instructions.md (child masters read this)",
+      "agent/instructions/tracker_worker_instructions.md (path passed through to workers)",
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [
+      ".claude/skills/master-plan-track",
+      "_commands/Synapse/master_plan_track.md"
+    ],
+    "related": [
+      "queue/ (filesystem location for overflow queues)",
+      "dashboards/ (live slot location)",
+      "Archive/",
+      "history/"
+    ]
+  },
+  "domains": [
+    "meta-planner-orchestration",
+    "multi-stream-coordination",
+    "queue-management"
+  ],
+  "tags": [
+    "markdown",
+    "agent-doc",
+    "protocol",
+    "meta-planner",
+    "multi-plan",
+    "master-plan-track",
+    "stream-registry",
+    "queue-promotion",
+    "child-master",
+    "cross-stream-deps",
+    "non-negotiable"
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "file": "documentation/server/configuration.md",
+  "content_hash": "b50d0eae",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Server configuration reference: PORT env var, directory constants (DASHBOARDS_DIR, QUEUE_DIR, ARCHIVE_DIR, HISTORY_DIR, CONVERSATIONS_DIR), timing constants (INIT_POLL_MS, PROGRESS_RETRY_MS, RECONCILE_INTERVAL_MS, HEARTBEAT_MS, etc.), MIME map, default JSON shapes, and json.js read/write/atomic/validation helpers.",
+  "exports": [
+    "ROOT",
+    "DASHBOARDS_DIR",
+    "QUEUE_DIR",
+    "ARCHIVE_DIR",
+    "HISTORY_DIR",
+    "CONVERSATIONS_DIR",
+    "PORT",
+    "INIT_POLL_MS",
+    "PROGRESS_RETRY_MS",
+    "PROGRESS_READ_DELAY_MS",
+    "RECONCILE_DEBOUNCE_MS",
+    "RECONCILE_INTERVAL_MS",
+    "HEARTBEAT_MS",
+    "DEPENDENCY_CHECK_DELAY_MS",
+    "DEFAULT_INITIALIZATION",
+    "DEFAULT_LOGS",
+    "MIME_TYPES",
+    "readJSON",
+    "readJSONAsync",
+    "readJSONWithRetry",
+    "writeAtomic",
+    "writeAtomicAsync",
+    "isValidInitialization",
+    "isValidProgress",
+    "isValidLogs"
+  ],
+  "imports_from": [],
+  "gotchas": [
+    "ROOT is computed three levels up from constants.js — moving the file breaks all paths",
+    "writeAtomic uses .tmp+rename — readers always see complete files",
+    "readJSONWithRetry is essential for progress files (mid-write race)",
+    "isValidProgress can hard-reject task_id/dashboard_id mismatches"
+  ],
+  "patterns": [
+    "Atomic write via tempfile + rename",
+    "Retry-once read for in-progress writes",
+    "Schema validators are lenient on optional fields"
+  ],
+  "conventions": [
+    "Constants UPPER_SNAKE_CASE in src/server/utils/constants.js",
+    "Default port 3456"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/server/overview.md"
+    ],
+    "depended_by": [
+      "documentation/server/services.md",
+      "documentation/server/api-reference.md",
+      "documentation/server/sse-events.md"
+    ],
+    "related": []
+  },
+  "domains": [
+    "server"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "configuration",
+    "constants"
+  ]
+}

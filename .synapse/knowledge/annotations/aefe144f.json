@@ -1,0 +1,57 @@
+{
+  "file": "src/ui/utils/markdown.js",
+  "content_hash": "2708cac3",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Lightweight zero-dependency Markdown renderer specifically tuned for the subset Claude produces. Used by ClaudeView/MetricsPanel/AgentDetails to render assistant messages safely as innerHTML. Supports fenced code blocks, inline code, bold/italic, H1-H3, ordered/unordered lists, paragraphs (blank-line separated), single-newline→<br>, horizontal rules, blockquotes, and pipe-delimited tables with alignment. Uses placeholder substitution to protect code blocks from inline processing, then HTML-escapes raw text before applying inline formatting — output is safe for direct innerHTML assignment.",
+  "exports": [
+    {
+      "name": "renderMarkdown",
+      "kind": "function",
+      "signature": "(text: string) => string — HTML-safe"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "The output is HTML-escaped + tagged — assigning to innerHTML is safe BUT only if you trust this exact implementation; do not concatenate with unescaped text afterwards.",
+    "Fenced code block regex /```(\\w*)\\n?([\\s\\S]*?)```/ is non-greedy — nested or unclosed code fences will cause unexpected output.",
+    "Inline code is processed BEFORE bold/italic via placeholder \\x00IC\\x01{idx}\\x00 to avoid `**foo**` being bolded inside backticks.",
+    "Bold/italic order matters — bold (**) processed first because the italic regex would match the inner asterisks otherwise.",
+    "Blockquote detection looks for ^&gt;\\s? (after HTML-escaping) NOT ^>\\s? — the input has already been escaped at this stage.",
+    "Tables require a separator row matching |---| pattern on the line AFTER the header — without it the line is treated as a paragraph.",
+    "Single newline within a paragraph is converted to <br> via paraLines.join('<br>') — multi-paragraph text MUST use blank lines.",
+    "Horizontal rule '---' must be the entire trimmed line — '--- something' becomes a paragraph.",
+    "No support for: links ([text](url)), images, nested lists, task lists, strikethrough, or HTML passthrough — Claude rarely produces these so they were intentionally skipped.",
+    "Empty/non-string inputs return '' silently — no error."
+  ],
+  "patterns": [
+    "Placeholder + restore pattern (fenced code blocks → \\x00CODE_BLOCK_N\\x00 → restored at end) — keeps protected content untouched by intermediate transforms.",
+    "Block-level processing line-by-line with i counter (manual incrementing) — allows lookahead (table separator) and multi-line consumption.",
+    "HTML-escape before applying tags so output is XSS-safe — the inverse order would produce bypasses."
+  ],
+  "conventions": [
+    "Public API: single renderMarkdown(text) — keep additional features internal."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/components/ClaudeView.jsx",
+      "src/ui/components/chat/ChatInstanceView.jsx",
+      "src/ui/components/MetricsPanel.jsx",
+      "src/ui/components/modals/AgentDetails.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "markdown-rendering",
+    "xss-safety",
+    "react-dashboard"
+  ],
+  "tags": [
+    "markdown",
+    "renderer",
+    "xss-safe",
+    "html-escape",
+    "claude-output"
+  ]
+}

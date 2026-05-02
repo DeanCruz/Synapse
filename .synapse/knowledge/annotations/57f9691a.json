@@ -1,0 +1,44 @@
+{
+  "file": "documentation/electron/overview.md",
+  "content_hash": "80be4d76",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top-level Electron architecture overview: process model (main/renderer/worker), preload bridge security model (contextIsolation, no nodeIntegration), service layer organization, app:// protocol, and end-to-end data flow examples for swarm dispatch and dashboard updates.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "Worker child processes are killed on window-all-closed — long jobs must persist via files",
+    "Renderer has no direct ipcRenderer access; everything is proxied via preload"
+  ],
+  "patterns": [
+    "Main delegates business logic to services/",
+    "Two communication modes: push events vs pull invokes",
+    "Process-per-task spawning model for CLI workers"
+  ],
+  "conventions": [
+    "electron/ contains main.js, preload.js, ipc-handlers.js, services/",
+    "Services single-purpose, named XxxService.js"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/electron/configuration.md",
+      "documentation/electron/services.md",
+      "documentation/electron/ipc-reference.md",
+      "documentation/electron/update-on-master.md"
+    ],
+    "related": [
+      "documentation/dashboard/overview.md",
+      "documentation/server/overview.md"
+    ]
+  },
+  "domains": [
+    "electron"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "overview",
+    "architecture"
+  ]
+}

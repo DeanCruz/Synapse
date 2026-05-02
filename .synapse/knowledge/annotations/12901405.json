@@ -1,0 +1,54 @@
+{
+  "file": "agent/core/path_convention.md",
+  "content_hash": "89398e2e",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the path placeholder convention used throughout Synapse: {tracker_root} = absolute path to Synapse repo, {project_root} = absolute path to target project. Always absolute, always distinct. Specifies the three-tier {project_root} resolution order (--project flag > {tracker_root}/.synapse/project.json > agent CWD), the integration model with arbitrary projects (Synapse can live anywhere; .synapse/ goes inside the target; all Synapse data stays in {tracker_root}), the multi-project support via per-dashboard task.project_root, the portability checklist (zero npm deps for server, no hardcoded paths, etc.), and the timestamp protocol (always live via `date -u +\"%Y-%m-%dT%H:%M:%SZ\"`).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "{tracker_root} and {project_root} are ALWAYS DIFFERENT locations — workers do code work in {project_root} and write progress files to {tracker_root}. Confusing them is the canonical worker failure.",
+    "{project_root} resolution order is strict: --project flag overrides everything, then stored config, then CWD. Never assume CWD without checking the higher-priority sources first.",
+    "Only the {project_root}/.synapse/ directory is written into the target project — everything else (dashboards/, tasks/, history/, logs.json) stays at {tracker_root}. Add .synapse/ to project's .gitignore.",
+    "Timestamps must always be live via `date -u +\"%Y-%m-%dT%H:%M:%SZ\"` — guessed/estimated/hardcoded timestamps break the elapsed timer (which derives durations from these values).",
+    "Multi-project support: each dashboard's task.project_root identifies its target project; commands like !status/!logs use the agent's assigned dashboard, not a globally-active project."
+  ],
+  "patterns": [
+    "Three-tier {project_root} resolution: --project flag > {tracker_root}/.synapse/project.json > agent CWD.",
+    "Workers receive BOTH {tracker_root} and {project_root} explicitly in their dispatch prompts.",
+    "Synapse-anywhere: tools dir, home folder, or anywhere on disk — the only constraint is that paths are absolute.",
+    "Per-dashboard project binding: task.project_root in initialization.json identifies which project a swarm targets.",
+    "Portability invariants: zero npm deps for server, no hardcoded paths, no project-specific assumptions, server configurable via PORT env var, works offline."
+  ],
+  "conventions": [
+    "ISO 8601 UTC timestamps: `date -u +\"%Y-%m-%dT%H:%M:%SZ\"`.",
+    "Project metadata location inside target: {project_root}/.synapse/ (gitignored).",
+    "All paths use {tracker_root}/{project_root} placeholders in docs — never hardcoded actual paths."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "CLAUDE.md",
+      "agent/core/project_discovery.md",
+      "agent/worker/progress_reporting.md",
+      "_commands/Synapse/project.md"
+    ],
+    "related": [
+      "agent/core/data_architecture.md",
+      "agent/core/dashboard_features.md",
+      "electron/services/ProjectService.js"
+    ]
+  },
+  "domains": [
+    "core-conventions",
+    "path-resolution",
+    "project-integration"
+  ],
+  "tags": [
+    "markdown",
+    "core",
+    "paths",
+    "convention",
+    "portability"
+  ]
+}

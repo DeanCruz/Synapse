@@ -1,0 +1,56 @@
+{
+  "file": "src/ui/components/ide/SearchResults.jsx",
+  "content_hash": "eebc2baf",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Renders search results returned by SearchPanel. Each file is a FileGroup with collapsible header (chevron + file icon + filename + dirPath + match count). Match rows show line number + MatchHighlight component which slices the matched range out of the full line content and wraps it in <mark> tags. defaultExpanded={results.length <= 20} — auto-expand when ≤20 files, otherwise collapse to keep the list scannable. Click on a match row calls onResultClick(file, line, column). Loading/error/empty/no-result states all return distinct UI fragments. truncated flag adds '(truncated)' to summary.",
+  "exports": [
+    {
+      "name": "SearchResults",
+      "kind": "component",
+      "signature": "{ results, loading, totalMatches, truncated, onResultClick, error }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState"
+    ]
+  },
+  "gotchas": [
+    "MatchHighlight strips leading whitespace (`before.replace(/^\\s+/, '')`) — visually compacted, but if all of `before` is whitespace AND trimmed is empty, the JSX renders empty string (the ternary `trimCount > 0 && trimmed.length === 0 ? '' : trimmed` is intentional but obscure).",
+    "FileGroup's expanded state is LOCAL — collapsing/expanding does NOT persist across re-renders triggered by new searches. A new query resets all groups to defaultExpanded.",
+    "defaultExpanded threshold is hardcoded at 20 — searches with 21+ files all start collapsed.",
+    "Match key `match.line + '-' + match.column + '-' + i` — multiple matches on same line+column would still be distinct via index.",
+    "No virtualization — large result sets (>1000 matches across many files) will render slowly."
+  ],
+  "patterns": [
+    "Stateless presentational component — receives all data via props.",
+    "Inline <mark> for highlighting — picks up CSS via .ide-search-match-highlight class.",
+    "fileResult.relativePath optional — falls back to fileResult.file when missing."
+  ],
+  "conventions": [
+    "Inline SVG icons (ChevronIcon, FileIcon).",
+    "CSS class 'ide-search-' prefix."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/components/ide/SearchPanel.jsx"
+    ],
+    "related": [
+      "src/server/services/... search backend (via electronAPI.ideSearch)"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "search",
+    "search-results"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "search-results",
+    "presentational"
+  ]
+}

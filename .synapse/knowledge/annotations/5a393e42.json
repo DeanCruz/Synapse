@@ -1,0 +1,51 @@
+{
+  "file": ".claude/hooks/validate-progress-log-detail.sh",
+  "content_hash": "23f7732b",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PostToolUse hook on Write. Quality validator for progress file logs — enforces narrative depth on workers. 8 checks: (1) logs[] non-empty (hard warn), (2) message field >= 15 chars, (3) latest log entry >= 20 chars, (4) no lazy/vague patterns ('starting...', 'done', 'in progress', 'continuing', etc. — explicit blacklist), (5) minimum log count per stage (planning>=2, implementing>=3, testing>=4, finalizing/completed>=5), (6) no consecutive duplicate log messages, (7) milestones[] non-empty for stages implementing+, (8) files_changed[] non-empty for stages implementing+ (and especially completed). Aggregates all warnings into one message. Cannot block — purely coaching feedback.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Lazy-pattern blacklist is case-insensitive but exact-string match — 'Starting work' (with extra word) passes; 'Starting...' alone fails",
+    "Stage thresholds are minimums — workers writing more is fine",
+    "PostToolUse: warn-only, cannot block; relies on agent to read the message and self-correct",
+    "completed stage with files_changed=0 is flagged as a hard quality issue ('the dashboard renders this as a clickable file list')",
+    "Single warn() call aggregates all WARNINGS — agent gets one big message per write"
+  ],
+  "patterns": [
+    "Multi-check aggregator with single emission at the end",
+    "Stage-progressive thresholds (more rigor required as the worker advances)",
+    "Explicit blacklist of lazy phrases"
+  ],
+  "conventions": [
+    "All checks emit '• ...' bullet items into a WARNINGS string",
+    "Final message prefixed with emoji '⚠️ PROGRESS LOG QUALITY:'"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      ".claude/hooks/validate-progress-file.sh",
+      ".claude/skills/worker-protocol/SKILL.md"
+    ]
+  },
+  "domains": [
+    "progress-file-validation",
+    "log-quality",
+    "worker-coaching"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PostToolUse",
+    "Write-matcher",
+    "log-quality",
+    "warn-only",
+    "narrative-enforcement"
+  ]
+}

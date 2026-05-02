@@ -1,0 +1,49 @@
+{
+  "file": ".claude/hooks/validate-approval-gate.sh",
+  "content_hash": "b07b23e6",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Task. Blocks worker dispatches until the user has explicitly approved the master's plan. Per .claude/skills/p-track/SKILL.md Step 11E: master writes a `permission`-level log entry 'Plan ready for review: ...', halts, then on user approval writes an `info`-level 'Approval granted ...'. This hook extracts the dashboard ID from the worker prompt's progress-file path (only acts when prompt contains TEMPLATE_VERSION:, i.e. is a real worker dispatch), reads logs.json, finds the latest 'Plan ready for review' permission entry, then verifies an 'Approval granted' info entry exists at a higher index. Repair/verification dispatches inherit the original approval — the gate is one-shot.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Only gates prompts containing TEMPLATE_VERSION: (skips research/explore Task calls)",
+    "Once 'Approval granted' lands after the latest 'Plan ready for review', every subsequent dispatch passes — no per-task re-approval",
+    "Block message points the master at .claude/skills/p-track/SKILL.md Step 11E for the protocol",
+    "Uses jq's `to_entries[] | .key` indexing — depends on logs.json having an `entries[]` array shape",
+    "Block if logs.json missing — prevents dispatching before plan is even written"
+  ],
+  "patterns": [
+    "Index-aware log search: find latest permission entry, then check info entries at higher indices",
+    "Hook-enforced protocol gate referenced by skill prose ('NON-NEGOTIABLE')"
+  ],
+  "conventions": [
+    "Approval signal is the literal string 'Approval granted' (case-insensitive) at info level"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq",
+      "dashboards/{id}/logs.json"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/hooks/validate-worker-prompt.sh"
+    ]
+  },
+  "domains": [
+    "plan-gate",
+    "approval-gate",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PreToolUse",
+    "Task-matcher",
+    "approval",
+    "dispatch-gate"
+  ]
+}

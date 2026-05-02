@@ -1,0 +1,88 @@
+{
+  "file": "package.json",
+  "content_hash": "f7182de0",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "npm package manifest and the operational entrypoint definition for Synapse. Declares `electron/main.js` as the application entry, defines five scripts (build/start/dev/dist/release plus postinstall), configures electron-builder for macOS DMG+ZIP packaging with GitHub publishing, and pins runtime/dev dependencies including Electron 41, React 19, Monaco Editor, node-pty, xterm, and electron-updater. The build.files array determines what gets bundled into the .dmg, and the postinstall step rebuilds node-pty against the current Electron ABI.",
+  "exports": [
+    "scripts.build",
+    "scripts.start",
+    "scripts.dev",
+    "scripts.dist",
+    "scripts.release",
+    "scripts.postinstall",
+    "build (electron-builder config)",
+    "main = electron/main.js"
+  ],
+  "imports_from": {
+    "node_modules": [
+      "react@^19.2.4",
+      "react-dom@^19.2.4",
+      "electron@^41.0.3",
+      "electron-builder@^26.8.1",
+      "electron-updater@^6.8.3",
+      "vite@^8.0.0",
+      "@vitejs/plugin-react@^6.0.1",
+      "monaco-editor@^0.55.1",
+      "node-pty@^1.1.0",
+      "@xterm/xterm@^6.0.0",
+      "@xterm/addon-fit@^0.11.0",
+      "concurrently@^9.2.1",
+      "@electron/rebuild@^4.0.3"
+    ]
+  },
+  "gotchas": [
+    "`npm start` is `vite build && unset ELECTRON_RUN_AS_NODE && electron .` — it builds for production each time, so iterative UI dev should use `npm run dev` instead. The `unset ELECTRON_RUN_AS_NODE` exists because some shell environments set this var, which would force Electron to run as plain Node and break the GUI.",
+    "`postinstall` runs `electron-rebuild -f -w node-pty` — this REQUIRES Xcode Command Line Tools on macOS; without them install fails silently with native compile errors.",
+    "Strange dependency: `\"nvm\": \"^0.0.4\"` — this is the npm package named 'nvm', NOT the popular shell version manager. It's almost certainly a stale/unused dependency; verify before removing.",
+    "build.files INCLUDES `dashboards/**/*` and extraResources copies `dashboards` into the packaged app — packaged Synapse ships with whatever dashboards exist at build time. For clean releases, clear dashboards/ before `npm run dist`.",
+    "Targets only `--mac dmg zip` — there is no Windows/Linux build config; `npm run dist` on those platforms will fail or produce an unsigned/unsupported artifact.",
+    "Electron-builder publish target points at `DeanCruz/Synapse` GitHub — releases go to that specific repo; forks will need to override.",
+    "React 19 is bleeding-edge; some libraries (especially Monaco wrappers) may not have caught up yet."
+  ],
+  "patterns": [
+    "Pattern: build chain — `vite build` → produces dist/ → Electron loads dist/index.html via app:// protocol (per electron/main.js).",
+    "Pattern: dev chain — `concurrently -k \"vite\" \"electron .\"` runs Vite dev server (port 5174 per vite.config.js) AND Electron in parallel; -k kills both when one exits.",
+    "Pattern: native module rebuild — `electron-rebuild` pins node-pty's binary ABI to the installed Electron version every time deps change.",
+    "Pattern: extraResources + files separation — files are bundled into the asar archive, extraResources are copied alongside (so dashboards/ stays writable on disk after install)."
+  ],
+  "conventions": [
+    "Two-space JSON indentation.",
+    "Versions use caret `^` ranges (allow minor and patch updates).",
+    "No `engines` field — Node version is stated only in README.md (18+).",
+    "No `type: module` — project mixes CommonJS (electron services) and ESM (vite/react via .jsx)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "electron/main.js",
+      "vite.config.js"
+    ],
+    "depended_by": [
+      "launch.sh",
+      "start.sh",
+      "launch_synapse.command",
+      "Start Synapse.command",
+      "dist/",
+      "node_modules/"
+    ],
+    "related": [
+      "package-lock.json",
+      ".gitignore",
+      "README.md"
+    ]
+  },
+  "domains": [
+    "npm-package",
+    "build-config",
+    "electron-app"
+  ],
+  "tags": [
+    "json",
+    "npm",
+    "electron",
+    "vite",
+    "build",
+    "electron-builder",
+    "dependencies"
+  ]
+}

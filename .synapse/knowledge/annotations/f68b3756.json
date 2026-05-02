@@ -1,0 +1,49 @@
+{
+  "file": ".claude/hooks/validate-archive-before-clear.sh",
+  "content_hash": "c360bfb8",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Bash. Blocks `rm` commands targeting dashboard progress directories unless the dashboard data has been archived first. Extracts the dashboard ID from the rm command, reads the dashboard's initialization.json to determine if a swarm is/was active (task field non-null) and the task name. Then scans Archive/ for any directory whose name matches either the dashboard ID or the task name (case-insensitive, sanitized). If no matching archive exists, blocks with a copy-paste-ready cp command (`cp -r {tracker_root}/dashboards/{id}/* {tracker_root}/Archive/$(date +%Y-%m-%d)_task_name/`). Allow-list: ide dashboard (permanent, never archived), no Archive/ dir absent of swarm data, dashboards with task=null.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Pattern matches both `*rm*dashboards/*/progress*` and `*rm*dashboards/*` — broader rm sweeps caught too",
+    "Archive matching is fuzzy (case-insensitive + space-to-underscore + grep-i) — rename collisions possible",
+    "Skips ide dashboard — it's reserved for the IDE workspace, never holds swarm runs",
+    "If task name has special chars (slashes, etc.), sanitization may not match the archive dir name"
+  ],
+  "patterns": [
+    "Fuzzy archive matching by either dashboard ID or sanitized task name",
+    "Block message includes a ready-to-run cp command with $(date +...) substitution"
+  ],
+  "conventions": [
+    "Archive layout: Archive/{YYYY-MM-DD}_{task_name}/"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq",
+      "dashboards/{id}/initialization.json",
+      "Archive/"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      "_commands/Synapse/reset.md",
+      "_commands/Synapse/cancel-safe.md"
+    ]
+  },
+  "domains": [
+    "archive-enforcement",
+    "data-preservation",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PreToolUse",
+    "Bash-matcher",
+    "archive",
+    "data-safety"
+  ]
+}

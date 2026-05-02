@@ -1,0 +1,47 @@
+{
+  "file": ".claude/hooks/validate-log-entry.sh",
+  "content_hash": "e280e7c8",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PostToolUse hook on Write. Validates that the latest entry in dashboards/{id}/logs.json has the required fields (timestamp, task_id, agent, level, message) and a valid level value (info|warn|error|deviation|permission|debug). PostToolUse cannot block (write already landed) — emits a `{message: ...}` warning the agent sees. Reads the file from disk after the write (not from tool_input) so it sees the actual state. Skips if not a logs.json file, file missing, or invalid JSON.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Validates only the LAST entry (entries[-1]) — older malformed entries slip through",
+    "PostToolUse cannot block — only warn; the file is already on disk",
+    "Reads file from disk (cat $FILE_PATH), not from tool_input.content — sees post-write state",
+    "Level enum is fixed: info/warn/error/deviation/permission/debug — adding a new level requires updating this hook"
+  ],
+  "patterns": [
+    "PostToolUse warn-only validator (cannot block)",
+    "Last-entry sampling for incremental writes"
+  ],
+  "conventions": [
+    "warn() emits {message: ...}; ok() exits silently"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      ".claude/hooks/validate-master-state.sh",
+      ".claude/hooks/validate-progress-file.sh",
+      "agent/master/dashboard_writes.md"
+    ]
+  },
+  "domains": [
+    "log-validation",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PostToolUse",
+    "Write-matcher",
+    "logs-json",
+    "warn-only"
+  ]
+}

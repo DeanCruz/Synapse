@@ -1,0 +1,66 @@
+{
+  "file": "src/ui/components/git/CommitPanel.jsx",
+  "content_hash": "7004ddab",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Compose-and-execute commit panel anchored at the bottom of the Git Manager sidebar. Two textareas (subject + optional body) with the Conventional Commits 50/72 rule visualized via live character counters and a soft-limit warning. The commit button's enabled state derives from `subject.trim().length > 0 && (stagedCount > 0 || amend) && !committing`. Wires Cmd/Ctrl+Enter shortcuts (and a globally focused .git-manager-commit-input element from GitManagerView's Ctrl+Enter shortcut). On success calls api.gitCommit(repoPath, message), then refreshes both gitStatus and gitLog and invokes onCommitComplete (used by the parent to refresh upstream views). Includes an Amend checkbox with a dismissable orange warning banner ('Amend rewrites history'), but amend is currently NOT supported by the backend IPC — the handler short-circuits with an explicit error message.",
+  "exports": [
+    {
+      "name": "CommitPanel",
+      "kind": "component",
+      "signature": "{ repoPath: string, onCommitComplete?: () => void }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useCallback",
+      "useRef"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/styles/git-manager.css": []
+  },
+  "gotchas": [
+    "Amend is wired in the UI but the IPC handler does not accept --amend — clicking commit while amend is checked surfaces a hard-coded error and aborts. To enable amend, extend gitCommit IPC to accept an options object.",
+    "Newlines are explicitly stripped from the subject onChange (`val.replace(/\\n/g, '')`) AND Enter without modifier is preventDefaulted in handleSubjectKeyDown — both guards exist because the textarea has rows=2 but is treated as a single-line field.",
+    "The full commit message is built as `subject.trim() + '\\n\\n' + body.trim()` only when body is non-empty — the blank line separator is mandatory git convention.",
+    "Cmd/Ctrl+Enter is handled in TWO places: handleSubjectKeyDown (for subject textarea) and handleKeyDown (for body textarea). Plus a third handler in GitManagerView focuses .git-manager-commit-input on a global Ctrl+Enter — keep all three coherent if changing the shortcut.",
+    "commitResult is auto-cleared after 4 seconds via a ref-tracked timeout — clearing the timeout on the next showResult call prevents stale messages from clobbering newer ones.",
+    "The amend warning's 'I understand' button only sets amendWarningDismissed but does NOT enable commit — commit is still gated on the amend-not-supported error."
+  ],
+  "patterns": [
+    "Subject character counter color flips to var(--color-blocked) when subjectLen > 50; body wrap indicator flips when any line exceeds 72.",
+    "Commit button shows an inline staged-count badge (rounded pill with stagedCount) when not amending — visual confirmation of what will be committed.",
+    "Refresh after commit fires gitStatus + gitLog in parallel via Promise.all — both must complete before onCommitComplete is invoked."
+  ],
+  "conventions": [
+    "Inline styles dominate for the result/warning/counter elements rather than CSS classes — keeps everything self-contained but makes themeing harder.",
+    "Uses showResult abstraction with type 'success'|'error' that maps to var(--color-completed)|var(--color-failed)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (gitCommit, gitStatus, gitLog)"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx"
+    ],
+    "related": [
+      "src/ui/components/git/ChangesPanel.jsx"
+    ]
+  },
+  "domains": [
+    "git-manager"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "commit",
+    "form",
+    "keyboard-shortcut"
+  ]
+}

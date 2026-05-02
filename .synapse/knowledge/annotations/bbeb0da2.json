@@ -1,0 +1,60 @@
+{
+  "file": "src/ui/components/LogPanel.jsx",
+  "content_hash": "81643e5b",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Collapsible log panel with filter buttons and bottom-anchored auto-scroll. Toggles between collapsed (just header counter) and expanded states. Shows level filters (all/info/warn/error/deviation) with per-level counts computed via memoized single-pass reduction. Auto-scrolls to bottom on new entries ONLY when user is already within 40px of the bottom (preserves manual scroll position). Each row shows timestamp, task_id, agent, level chip, message.",
+  "exports": [
+    {
+      "name": "LogPanel",
+      "kind": "component",
+      "signature": "{ logs: { entries: [...] }, activeFilter: string, onFilterChange: (level) => void }"
+    }
+  ],
+  "imports_from": {
+    "@/utils/constants.js": [
+      "LEVEL_COLORS",
+      "LEVEL_BG_COLORS"
+    ],
+    "@/utils/format.js": [
+      "formatTime"
+    ]
+  },
+  "gotchas": [
+    "Auto-scroll only triggers when the panel is open (`!isOpen` early-return); switching filters while collapsed and then opening will not snap to bottom.",
+    "Counts are computed in a useMemo over `entries` — on a long-running swarm with thousands of entries this re-runs on every entries array reference change.",
+    "FILTER_LEVELS is hard-coded; new log levels won't get a filter button without updating this constant."
+  ],
+  "patterns": [
+    "Smart auto-scroll guard: `el.scrollHeight - el.scrollTop - el.clientHeight < 40` — same idiom used in ClaudeView (with 80px threshold).",
+    "Single-pass count aggregation in useMemo to avoid filtering N times for N levels."
+  ],
+  "conventions": [
+    "Activate via the wrapper div className `log-panel.expanded`; the collapse/expand chevron is &#8964; (▾).",
+    "Row keying combines timestamp + index to handle duplicates."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/utils/constants.js",
+      "src/ui/utils/format.js"
+    ],
+    "depended_by": [
+      "src/ui/components/BottomPanel.jsx",
+      "src/ui/components/modals/LogsModal.jsx"
+    ],
+    "related": [
+      "src/server/services/WatcherService.js"
+    ]
+  },
+  "domains": [
+    "log-panel",
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "log-panel",
+    "filters"
+  ]
+}

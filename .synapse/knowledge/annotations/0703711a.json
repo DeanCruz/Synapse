@@ -1,0 +1,50 @@
+{
+  "file": "documentation/commands/project-commands.md",
+  "content_hash": "cb2fc9be",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference documentation for all commands in {tracker_root}/_commands/project/. Documents project setup commands (!initialize, !onboard, !scaffold, !create_claude), analysis commands (!context, !review, !health, !plan, !scope, !trace, !contracts, !env_check), TOC commands (!toc, !toc_generate, !toc_update), PKI commands (!learn, !learn_update), instrumentation (!instrument), audit (!prompt_audit), and discovery (!commands, !profiles, !help, !guide). Most are read-only and run in serial mode.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Most project commands are read-only by design -- they do not modify project files",
+    "!scaffold never overwrites existing CLAUDE.md without --force",
+    "!create_claude vs !scaffold: scaffold documents what IS, create_claude prescribes what SHOULD BE",
+    "!learn requires no PKI; !learn_update requires existing manifest.json",
+    "!toc_generate dispatches parallel agents -- master never reads source files directly"
+  ],
+  "patterns": [
+    "Each command documented with Purpose / Syntax / Key Behavior",
+    "Commands grouped by lifecycle (setup -> analysis -> TOC -> PKI -> audit -> discovery)",
+    "Parallel dispatch commands (!toc_generate, !learn) use !p mode internally"
+  ],
+  "conventions": [
+    "Read-only by default; modifying commands explicitly stated",
+    "Serial mode default; parallel mode noted explicitly",
+    "Idempotency for commands like !initialize that may be re-run"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/commands/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/project-integration/pki-overview.md",
+      "documentation/project-integration/toc-system.md",
+      "documentation/project-integration/project-setup.md",
+      "_commands/project/"
+    ]
+  },
+  "domains": [
+    "command-docs",
+    "project-integration-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "project-commands",
+    "analysis",
+    "toc",
+    "pki"
+  ]
+}

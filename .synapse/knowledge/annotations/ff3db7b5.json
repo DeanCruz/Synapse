@@ -1,0 +1,76 @@
+{
+  "file": "src/ui/components/ide/FileExplorer.jsx",
+  "content_hash": "04f652c2",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Recursive file-tree view rendered from state.ideFileTrees[workspaceId]. On workspace change/mount, fetches root via window.electronAPI.ideListDir(workspace.path) and dispatches IDE_SET_FILE_TREE. Polls the root every 10s to pick up external file additions/deletions. TreeNode children with type==='directory' lazy-load on first expand: when expandedPaths gains a path whose children===null, loadChildren() calls ideListDir(dirPath) and dispatches IDE_UPDATE_FILE_TREE_NODE. expandedPaths and loadingPaths are local Set state. File click dispatches IDE_OPEN_FILE with { path, name } payload. Header includes a Search button that dispatches { key:'ideSidebarView', value:'search' } (swapping in SearchPanel) and a Refresh button that resets expandedPaths and re-fetches. File-type icons resolved by extension via getFileIcon: JS/JSX/MJS/CJS, TS/TSX, CSS/SCSS/LESS, JSON, HTML, MD/MDX → distinct colored SVGs; default is GenericFileIcon.",
+  "exports": [
+    {
+      "name": "FileExplorer",
+      "kind": "component",
+      "signature": "()"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useCallback",
+      "useEffect",
+      "useRef"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/styles/ide-explorer.css": [
+      "default-side-effect"
+    ]
+  },
+  "gotchas": [
+    "Two effects load the root: the mount/workspace-change effect AND a 10-second polling interval — both call ideListDir(workspace.path). On a slow filesystem this could cause overlapping fetches; the 10s poll silently swallows errors via try/catch.",
+    "Mount effect's dep array EXCLUDES `tree` (comment: '// removed `tree` dep — always refresh on mount') so a fresh fetch happens every time the component mounts even if cached tree exists. This is intentional but means switching to/from the search panel triggers a refetch.",
+    "expandedPaths is local Set state — collapsing/expanding does NOT persist across workspace switches or panel switches.",
+    "Lazy-load assumes `node.children === null` to indicate 'unloaded' — empty directories have children: [] and won't trigger a fetch (correct behavior, but worth noting).",
+    "data-depth is capped at Math.min(depth, 10) — deeply nested trees beyond 10 levels share the same indentation visually.",
+    "Refresh resets expandedPaths to empty then sets to {workspace.path} — all currently-expanded folders collapse on refresh.",
+    "Polling interval persists for the lifetime of the workspace selection — heavy on large workspaces."
+  ],
+  "patterns": [
+    "Lazy directory loading: setLoadingPaths(prev → add) → ideListDir → dispatch IDE_UPDATE_FILE_TREE_NODE → setLoadingPaths(prev → delete).",
+    "TreeNode is RECURSIVE — renders itself for each child when expanded.",
+    "getFileIcon uses ext.toLowerCase() of last dot segment; multi-extension files like .test.js resolve as 'js'.",
+    "Sidebar view toggle via dispatch({ key:'ideSidebarView', value:'search'|'explorer' }) — IDEView swaps SearchPanel ↔ FileExplorer based on this."
+  ],
+  "conventions": [
+    "Inline SVG icon components per file type (JsIcon, TypeScriptIcon, CssIcon, JsonIcon, HtmlIcon, MarkdownIcon, GenericFileIcon, FolderIcon, FolderOpenIcon).",
+    "All icons styled via CSS vars (--icon-folder, --icon-folder-bg, --icon-generic-bg).",
+    "CSS class 'ide-explorer-' prefix for all elements."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (electronAPI.ideListDir)"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": [
+      "src/ui/components/ide/SearchPanel.jsx",
+      "src/ui/components/ide/EditorTabs.jsx",
+      "src/ui/components/ide/CodeEditor.jsx"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "file-tree",
+    "workspace"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "file-tree",
+    "lazy-load",
+    "polling"
+  ]
+}

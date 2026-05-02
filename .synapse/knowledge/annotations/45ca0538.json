@@ -1,0 +1,81 @@
+{
+  "file": "src/ui/hooks/useDashboardData.js",
+  "content_hash": "0d6efad6",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Single-instance hook (called once in App.jsx) that wires Electron IPC push events to AppContext dispatches and merges init.json + progress files into a unified status object via mergeState(). Owns all live data ingest for the dashboard view: subscribes to 'initialization', 'logs', 'agent_progress', 'all_progress', 'init_state', 'dashboards_list', 'dashboards_changed', 'queue_changed', 'tasks_unblocked', 'write_rejected', 'heartbeat'. Maintains per-dashboard caches in refs (initRef, progressRef, dashboardListRef) to avoid stale-closure bugs. Detects new swarms (task name/created changed) and flushes stale progress cache. Implements connection-health monitoring that re-fetches if no events arrive for 60s.",
+  "exports": [
+    {
+      "name": "mergeState",
+      "kind": "function",
+      "signature": "(init, progress, logs) => { active_task, agents, waves, chains, history }"
+    },
+    {
+      "name": "useDashboardData",
+      "kind": "hook",
+      "signature": "() => void — must be called once at App level"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useEffect",
+      "useCallback",
+      "useRef"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ]
+  },
+  "gotchas": [
+    "MUST be called exactly once at the App level — calling it twice creates duplicate IPC listeners and double-dispatches.",
+    "currentDashboardIdRef is intentionally maintained because the IPC listener closure (registered once on mount) would otherwise see a stale state.currentDashboardId from initial render.",
+    "The push-listener useEffect has empty deps [] — the listeners are mounted once for the component lifetime; dispatch is captured via closure.",
+    "mergeState examines logs.entries for 'Circuit breaker triggered' WARN entries followed by 'Replanning complete' INFO entries — replanning UI banner depends on these exact log message strings.",
+    "Progress merge logic guards against three race conditions: (1) bulk all_progress overwriting more-recent agent_progress, (2) re-fetch overwriting cached entries, (3) leftover stale entries from a previous swarm leaking into a new one. The merge keeps existing entries when their status is more advanced (in_progress > pending, completed > everything, failed > pending).",
+    "On 'initialization' push, isNewSwarm detection compares prev.task.name AND prev.task.created — if a new swarm reuses the same name/created, the cache flush won't happen.",
+    "fetchDashboardData filters out cached progress entries whose task IDs are NOT in the current init's agent list — prevents prior swarm's progress from showing on the new plan.",
+    "Connection health uses a 60s STALE_THRESHOLD with 30s polling — agent_progress AND heartbeat events both reset lastEventTime; if neither fires for 60s, fetchDashboardData re-runs.",
+    "deriveDashboardStatus is computed for the SIDEBAR DOT ONLY — uses a different status taxonomy ('idle','waiting','in_progress','completed','error') than the main task.overall_status.",
+    "dashboards_list AND dashboards_changed use JSON.stringify equality check before dispatching — avoids unnecessary re-renders AND avoids triggering the SET_DASHBOARDS_LIST auto-switch logic.",
+    "tasks_unblocked is dispatched only if data.dashboardId === currentDashboardIdRef.current — silently ignored for non-active dashboards (no global tracking).",
+    "write_rejected only console.error's — no UI surfacing yet; if this fires it indicates a hook violation by the master agent."
+  ],
+  "patterns": [
+    "Cache + ref pattern: progressRef.current[dashboardId] = ... lets stale-closure-safe IPC handlers read latest cache without depending on React state.",
+    "mergeState is pure (init+progress+logs in, status object out) — easy to test and reuse outside the hook.",
+    "Listener cleanup uses listenersRef.current array of {channel, handle} — handle is the function returned by api.on(), called to unsubscribe.",
+    "Health-check via interval polling lastEventTime — preferred over connection events from main process which are not pushed.",
+    "Re-merge effect: useEffect with deps [currentInit, currentProgress, currentLogs] dispatches SET_STATUS — keeps currentStatus derived but in-store for cheap component reads."
+  ],
+  "conventions": [
+    "Hook named useDashboardData (singular) — only ONE caller, do not duplicate.",
+    "Push event handlers always check data.dashboardId before dispatching to avoid undefined-keyed updates."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (for window.electronAPI)"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "electron/ipc-handlers.js",
+      "src/server/services/WatcherService.js"
+    ]
+  },
+  "domains": [
+    "ipc-bridge-frontend",
+    "global-state",
+    "react-dashboard"
+  ],
+  "tags": [
+    "react",
+    "hook",
+    "ipc",
+    "push-events",
+    "dashboard-merge",
+    "race-condition-safety"
+  ]
+}

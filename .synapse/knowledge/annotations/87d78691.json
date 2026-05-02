@@ -1,0 +1,80 @@
+{
+  "file": "documentation/server/services.md",
+  "content_hash": "3fbf6296",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Per-service reference for src/server/services/: DashboardService (CRUD + file I/O), WatcherService (hybrid fs.watch + fs.watchFile + reconciliation + write rejection), DependencyService (graph resolution), ArchiveService, HistoryService, QueueService, plus SSEManager and the validation utility (validateDependencyGraph using Kahn's algorithm).",
+  "exports": [
+    "getDashboardDir",
+    "ensureDashboard",
+    "readDashboardInit",
+    "readDashboardLogs",
+    "readDashboardProgress",
+    "clearDashboardProgress",
+    "listDashboards",
+    "deleteDashboard",
+    "nextDashboardId",
+    "getFullDashboardState",
+    "watchDashboard",
+    "unwatchDashboard",
+    "startDashboardsWatcher",
+    "startQueueWatcher",
+    "startReconciliation",
+    "stopAll",
+    "getDispatchableTasks",
+    "computeNewlyUnblocked",
+    "getDependencyStatus",
+    "listArchives",
+    "archiveDashboard",
+    "deleteArchive",
+    "listHistory",
+    "buildHistorySummary",
+    "saveHistorySummary",
+    "listQueue",
+    "listQueueSummaries",
+    "broadcast",
+    "addClient",
+    "removeClient",
+    "startHeartbeat",
+    "stopHeartbeat",
+    "closeAll",
+    "validateDependencyGraph"
+  ],
+  "imports_from": [],
+  "gotchas": [
+    "WatcherService rejects task_id/dashboard_id mismatches with a write_rejected SSE event",
+    "Reconciliation interval (5s) is a safety net — fs.watch can miss events",
+    "computeNewlyUnblocked is incremental; do not call full graph scan on every completion",
+    "Validation runs in master agent (planning), not in server runtime"
+  ],
+  "patterns": [
+    "Pure-function services exporting standalone functions",
+    "Hybrid file-watch strategy (fs.watch + fs.watchFile + periodic reconcile)",
+    "SSE broadcast with optional per-client dashboard filter"
+  ],
+  "conventions": [
+    "Service files: src/server/services/<Domain>Service.js",
+    "All file paths absolute via constants.js"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/server/overview.md",
+      "documentation/server/configuration.md"
+    ],
+    "depended_by": [
+      "documentation/server/api-reference.md"
+    ],
+    "related": [
+      "documentation/server/sse-events.md"
+    ]
+  },
+  "domains": [
+    "server"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "services",
+    "watcher"
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "file": "_commands/profiles/qa.md",
+  "content_hash": "7bacbe32",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Senior QA Engineer role: test strategy, edge case discovery, regression prevention, quality frameworks. Biases the worker toward edge-case thinking (boundaries, null states, concurrency, permission edges), risk-based testing (deep on payment/auth/data, smoke on low-risk), regression-as-test conversion, reproducibility (steps/expected/actual/env), and reliable test architecture (independent, fast, non-flaky). A master assigns this profile for test plans, bug report templates, regression suites, test-strategy documents, and coverage matrices. Forces explicit negative testing and performance/load consideration whenever concurrent users or large datasets are involved.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Profile rejects happy-path-only test suites; expect significantly more cases than 'just the requirements'.",
+    "Vague test cases ('test that login works') will be rewritten into specific assertable cases.",
+    "Bans tests with shared state or order dependence — workers may flag existing test design as broken.",
+    "Always includes negative testing — outputs may surprise users who expected functional-only test plans."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "Test plan skeleton: Feature Overview → Risk Assessment → Test Scenarios (table: ID, Category, Scenario, Steps, Expected Result, Priority) → Edge Cases → Regression Considerations → Environment Requirements.",
+    "Test strategies use coverage matrices mapping features to test types."
+  ],
+  "conventions": [
+    "Tone 'systematic, thorough, devil's-advocate' — comprehensive coverage with rationale."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/product.md",
+      "_commands/profiles/devops.md",
+      "_commands/profiles/security.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "qa-engineer-role",
+    "testing-and-coverage"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "qa",
+    "testing",
+    "regression"
+  ]
+}

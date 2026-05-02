@@ -1,0 +1,48 @@
+{
+  "file": ".claude/skills/dashboard-ops/SKILL.md",
+  "content_hash": "b9effb2d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "User-invocable router skill for dashboard monitoring/operation commands. Maps !status, !logs, !inspect, !deps, !history, !cancel, !cancel-safe, !reset, !start, !stop, !guide, !update_dashboard, !export to their _commands/Synapse/*.md spec files. Also documents dashboard resolution rules (use SYNAPSE_DASHBOARD_ID or DASHBOARD ID directive — never scan or auto-detect), dashboard ID formats (ide, 6-hex, dashboardN legacy), and the key principle that dashboard stats are derived from progress files (master maintains no counters). Includes shell preprocessing (`!\\`...\\``) that injects TRACKER_ROOT and DASHBOARDS list into the prompt at load time.",
+  "exports": [],
+  "imports_from": {
+    "commands": [
+      "_commands/Synapse/{status,logs,inspect,deps,history,cancel,cancel-safe,reset,start,stop,guide,update_dashboard,export}.md"
+    ]
+  },
+  "gotchas": [
+    "Dispatcher skill — does NOT contain the actual command logic; that lives in _commands/Synapse/*.md",
+    "Dashboard resolution is strict: use assigned dashboard, never scan",
+    "Shell preprocessing runs at skill-load time, injecting live state into the prompt",
+    "argument-hint is `<command> [args]` — user types the command name as argument"
+  ],
+  "patterns": [
+    "Router skill: routing table + shell preprocessing + 'read the spec file' instruction",
+    "user-invocable: true — directly callable as a slash command"
+  ],
+  "conventions": [
+    "All routed commands use ! prefix",
+    "Shell blocks use !` ... ` syntax with backticks"
+  ],
+  "relationships": {
+    "depends_on": [
+      "_commands/Synapse/*.md"
+    ],
+    "depended_by": [],
+    "related": [
+      ".claude/skills/project-workflow/SKILL.md (sibling router)"
+    ]
+  },
+  "domains": [
+    "skill-definition",
+    "command-router",
+    "dashboard-ops"
+  ],
+  "tags": [
+    "skill",
+    "yaml-frontmatter",
+    "router",
+    "dashboard",
+    "user-invocable"
+  ]
+}

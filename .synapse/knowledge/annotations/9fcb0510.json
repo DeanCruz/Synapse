@@ -1,0 +1,36 @@
+{
+  "file": "documentation/data-architecture/xml-task-files.md",
+  "content_hash": "4343c1f5",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Schema reference for task files at tasks/{MM_DD_YY}/parallel_{name}.json -- the authoritative master record for each swarm with full task descriptions, context, critical instructions, file lists, dependencies, statuses, and completion summaries. Differentiates task files (rich, master-updated on every completion) from initialization.json (minimal, write-once, dashboard-driving). Note: filename retains 'xml' for historical reasons but task files are JSON.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Filename says xml but the format is JSON -- legacy naming preserved to avoid breaking links",
+    "Task file status fields are updated on every worker completion (unlike initialization.json which is write-once)",
+    "Repair tasks are appended with id suffix 'r' to the relevant wave's tasks array"
+  ],
+  "patterns": [
+    "Mutable authoritative record vs write-once dashboard plan",
+    "Wave-grouped task arrays with descriptive wave names for human readability"
+  ],
+  "conventions": [
+    "Task IDs use 'wave.index' format and match agents[].id in initialization.json",
+    "Companion plan_{name}.md captures rationale; .json captures structure"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "data-architecture",
+    "schema"
+  ],
+  "tags": [
+    "task-file",
+    "schema",
+    "master-record"
+  ]
+}

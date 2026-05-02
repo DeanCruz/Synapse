@@ -1,0 +1,49 @@
+{
+  "file": "src/ui/components/MetricsPanel.jsx",
+  "content_hash": "e6e8a010",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Collapsible panel showing post-swarm performance metrics fetched from GET /api/dashboards/:id/metrics. Displays Elapsed, Parallel Efficiency, Min/Avg/Max Duration, Failure Rate, Max Concurrent, Deviations as MetricCards. Polls every 10s while open and refetches on dashboardId change. Shows 'Metrics available after swarm completion' when the API returns null. Failure rate and deviation counts trigger a `metric-warn` modifier class when > 0.",
+  "exports": [
+    {
+      "name": "MetricsPanel",
+      "kind": "component",
+      "signature": "{ dashboardId: string }"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "POLL_INTERVAL=10000 is hard-coded; closing+reopening the panel restarts the timer cleanly but the useEffect cleanup is sensitive to fetchMetrics identity changes (it's wrapped in useCallback to keep stable).",
+    "API may return either `{ metrics: {...} }` or the metrics object directly; the code handles both with `data.metrics || data` fallback.",
+    "formatDuration handles only positive seconds; negative or NaN values render as '—'."
+  ],
+  "patterns": [
+    "useCallback wraps fetchMetrics so the polling effect's deps stay stable.",
+    "POLL only when expanded — closes interval in cleanup so collapsed panels don't burn requests."
+  ],
+  "conventions": [
+    "Metric card subcomponent (MetricCard) accepts label/value/sublabel/warn props; warn toggles a CSS modifier.",
+    "Helper formatters (formatDuration, formatPct) defined at module scope."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "src/server/routes/apiRoutes.js (metrics endpoint)",
+      "agent/master/dashboard_writes.md"
+    ]
+  },
+  "domains": [
+    "metrics-panel",
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "metrics",
+    "polling"
+  ]
+}

@@ -1,0 +1,150 @@
+{
+  "file": "electron/services/SwarmOrchestrator.js",
+  "content_hash": "1a4c8abb",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The GUI swarm dispatch engine — the in-app replacement for a terminal-based master agent. Reads dashboards/{id}/initialization.json, tracks dispatched/completed/failed tasks in memory, and dispatches every task whose `depends_on` is satisfied by spawning a Claude or Codex worker. Drives the full lifecycle: startSwarm, pauseSwarm, resumeSwarm, cancelSwarm, retryTask, handleProgressUpdate (called by the watcher on progress-file writes). Implements two circuit breakers: 3+ failures in same wave OR a single failure that blocks 3+ remaining tasks (or >50% of remaining tasks). When the breaker trips, spawns a Claude CLI replanner with the buildReplanPrompt output, parses the returned JSON {modified, added, removed, retry}, mutates initialization.json on disk, and resumes dispatch. On swarm completion (success or partial failure), runs extractSwarmKnowledge() which harvests worker annotations from progress files, generates swarm insights (dependency_insights from CRITICAL deviations, failure_patterns from failed tasks, architecture_notes from MODERATE deviations), and merges everything into the project's `.synapse/knowledge/` PKI manifest + annotations.",
+  "exports": [
+    {
+      "name": "init",
+      "kind": "function",
+      "signature": "(broadcast) => void"
+    },
+    {
+      "name": "startSwarm",
+      "kind": "function",
+      "signature": "(dashboardId, opts) => {success, error?}"
+    },
+    {
+      "name": "pauseSwarm",
+      "kind": "function",
+      "signature": "(dashboardId) => result"
+    },
+    {
+      "name": "resumeSwarm",
+      "kind": "function",
+      "signature": "(dashboardId) => result"
+    },
+    {
+      "name": "cancelSwarm",
+      "kind": "function",
+      "signature": "(dashboardId) => result"
+    },
+    {
+      "name": "retryTask",
+      "kind": "function",
+      "signature": "(dashboardId, taskId) => result"
+    },
+    {
+      "name": "getSwarmStates",
+      "kind": "function",
+      "signature": "() => {[id]: {state, dispatched, completed, failed}}"
+    },
+    {
+      "name": "isActive",
+      "kind": "function",
+      "signature": "(dashboardId) => boolean"
+    },
+    {
+      "name": "handleProgressUpdate",
+      "kind": "function",
+      "signature": "(dashboardId, taskId, progressData) => void"
+    },
+    {
+      "name": "extractSwarmKnowledge",
+      "kind": "function",
+      "signature": "(dashboardId, projectPath) => void"
+    }
+  ],
+  "imports_from": {
+    "src/server/utils/constants": [
+      "DASHBOARDS_DIR"
+    ],
+    "src/server/services/DashboardService": [
+      "readDashboardInit",
+      "readDashboardProgress"
+    ],
+    "electron/services/ClaudeCodeService": [
+      "init",
+      "spawnWorker",
+      "killWorker",
+      "getActiveWorkers"
+    ],
+    "electron/services/CodexService": [
+      "init",
+      "spawnWorker",
+      "killWorker",
+      "getActiveWorkers"
+    ],
+    "electron/services/PromptBuilder": [
+      "buildSystemPrompt",
+      "buildTaskPrompt",
+      "readUpstreamResults",
+      "buildReplanPrompt",
+      "buildReplanSystemPrompt"
+    ],
+    "electron/services/ProjectService": [
+      "getProjectContextWithFallback"
+    ]
+  },
+  "gotchas": [
+    "activeSwarms is in-memory only — restarting Electron loses all dispatch state. Recovery flow relies on reading progress files via handleProgressUpdate when the watcher fires for existing files at server start.",
+    "Two breakers exist and either trips: (1) 3+ failures in same wave, (2) a single failure that blocks >=3 OR >50% of remaining tasks. The blast-radius breaker is more aggressive than the documented 'circuit breaker' rule and can pause swarms even with a single failure.",
+    "When the replanner CLI fails (non-zero exit, malformed JSON, spawn error), the swarm is set to `paused`, NOT cancelled — manual user intervention required via UI.",
+    "applyReplan applies modifications in the order: removed, modified, added, retry. Retry tasks have their failed flag cleared AND their progress file deleted on disk so the worker starts fresh.",
+    "extractSwarmKnowledge runs on EVERY swarm completion — including partially failed swarms. It is wrapped in try/catch and explicitly marked non-blocking; failures only emit a warn log.",
+    "isSwarmComplete considers a task 'finished' if it is completed, failed, OR blocked by a failed dependency — meaning a long failure-chain marks the swarm complete sooner than naive task-counting suggests.",
+    "Provider switching happens at task dispatch time via `var service = swarm.provider === 'codex' ? CodexService : ClaudeCodeService;` — there is no fallback if codex is selected but its CLI is not on PATH.",
+    "primaryContexts vs additionalContexts is partitioned by path.resolve(swarm.projectPath) + path.sep prefix — symlinked project paths can land in the wrong bucket if realpath differs from the stored path.",
+    "appendLog reads + parses + rewrites the entire logs.json on every entry — for swarms that emit thousands of log lines this is O(n^2) write traffic.",
+    "The PKI insights_index in the manifest is capped at 50 entries (slice(-50)) — long-lived projects with many swarms naturally lose history beyond that window."
+  ],
+  "patterns": [
+    "Single in-memory state map `activeSwarms[dashboardId] = {state, projectPath, provider, model, cliPath, dispatchedTasks, completedTasks, failedTasks, ...}`.",
+    "Reactive dispatch loop: every onTaskComplete / onTaskFailed / resumeSwarm calls dispatchReady() which scans the agents[] for tasks with all deps satisfied and spawns workers for them.",
+    "Provider-agnostic worker dispatch: ClaudeCodeService and CodexService share the spawnWorker(opts) signature, swapped at call site.",
+    "Two-phase replan: spawn CLI -> parse JSON -> mutate initialization.json on disk -> resume. The CLI runs single-turn (--print, --output-format text, no streaming).",
+    "Post-swarm knowledge extraction: deviation severity drives insight category (CRITICAL -> dependency_insights, MODERATE -> architecture_notes, failed status -> failure_patterns).",
+    "appendLog always re-reads logs.json (defensive against external writers) and pushes a fixed schema {timestamp, task_id, agent, level, message, task_name}."
+  ],
+  "conventions": [
+    "All public functions return `{success, error?}` for action endpoints.",
+    "broadcastFn channels in use: `swarm-state` (state transitions only). Worker output / completion events flow through ClaudeCodeService/CodexService.",
+    "Dashboard state values: 'running', 'paused', 'replanning', 'cancelled', 'completed'."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/services/DashboardService",
+      "src/server/utils/constants",
+      "electron/services/ClaudeCodeService",
+      "electron/services/CodexService",
+      "electron/services/PromptBuilder",
+      "electron/services/ProjectService"
+    ],
+    "depended_by": [
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "src/server/services/WatcherService.js",
+      "agent/master/role.md"
+    ]
+  },
+  "domains": [
+    "swarm-orchestration",
+    "circuit-breaker-replan",
+    "pki-knowledge-extraction",
+    "dispatch-engine"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "swarm",
+    "orchestrator",
+    "replan",
+    "circuit-breaker",
+    "pki",
+    "dispatch",
+    "lifecycle"
+  ]
+}

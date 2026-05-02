@@ -1,0 +1,50 @@
+{
+  "file": "documentation/commands/creating-commands.md",
+  "content_hash": "6fe65585",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Guide for authoring custom Synapse commands. Documents the four-tier command resolution hierarchy (Synapse > project > profiles > project_root/_commands), command file templates (standard and overview-style), structural patterns (flags, phased commands, output files, NON-NEGOTIABLE blockquotes), naming conventions, profile templates, duplicate detection, and best practices for writing effective commands.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Custom project commands at {project_root}/_commands/ have the LOWEST priority -- they cannot override built-in Synapse or project commands",
+    "File name must match command name exactly (eager_dispatch -> eager_dispatch.md)",
+    "Use underscores not hyphens (cancel-safe is a rare exception variant)",
+    "Use {project_root}/{tracker_root} placeholders, never hardcode paths"
+  ],
+  "patterns": [
+    "Standard template: Purpose / Syntax / Steps / Rules",
+    "Overview template: Overview / Usage / Execution Steps / Rules",
+    "Phased commands reference sub-files in agent/_commands/{command}_phase.md",
+    "Profile template uses Role / Priorities / Constraints / Output Style / Success Criteria / Context Gathering"
+  ],
+  "conventions": [
+    "Front-load NON-NEGOTIABLE rules in blockquotes for critical commands",
+    "Document every flag and argument variant in Syntax section",
+    "Include When-to-Use comparison table for overlapping commands",
+    "Most commands should be read-only and run in serial mode by default"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/commands/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/commands/swarm-commands.md",
+      "documentation/commands/project-commands.md",
+      "_commands/Synapse/",
+      "_commands/project/",
+      "_commands/profiles/"
+    ]
+  },
+  "domains": [
+    "command-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "commands",
+    "authoring-guide",
+    "templates"
+  ]
+}

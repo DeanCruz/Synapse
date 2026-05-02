@@ -1,0 +1,56 @@
+{
+  "file": "src/ui/components/modals/PermissionModal.jsx",
+  "content_hash": "fbccf996",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Dual-mode permission popup for agent tool requests. Mode 1 (informational, backward-compatible): shown when an agent requests permission OUT-OF-BAND (e.g. classic Claude CLI in terminal) — shows 'Respond in your terminal to continue' with a Dismiss button. Mode 2 (interactive): shown when the harness intercepts a Claude SDK tool-permission request — displays toolName + formatted toolInput (file_path / command / path / first stringy value), Approve/Deny buttons, and an optional 'Always allow {tool}' checkbox that calls onAlwaysAllow(toolName) before approving so future calls of that tool auto-approve. Bypasses Modal.jsx base — implements its own .permission-overlay structure to give it distinct positioning and styling, including a warning icon header.",
+  "exports": [
+    {
+      "name": "PermissionModal",
+      "kind": "component",
+      "signature": "{ onClose, message, agent, interactive, onApprove, onDeny, toolName, toolInput, onAlwaysAllow }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useEffect",
+      "useState"
+    ]
+  },
+  "gotchas": [
+    "Does NOT extend the Modal base — duplicates ESC handling and backdrop-click logic. If Modal's behavior is updated (e.g. focus trap added), this modal will diverge.",
+    "Interactive mode checkbox 'alwaysAllow' calls onAlwaysAllow BEFORE onApprove — order matters so that the persistent permission is registered before the agent receives the approval and proceeds with the next tool call.",
+    "formatToolInput's fallback (first stringy value) can leak unexpected fields — for tools with multiple string args, the displayed value is whatever Object.values returns first (insertion order), which may be the wrong arg.",
+    "The 'agent' prop is just a display string ('from {agent}') — the actual agent identity for routing approvals lives in the parent's state, NOT in this modal.",
+    "interactive mode showing detail string can be very long (e.g. full command) and the UI renders it in a single .permission-tool-input div without truncation by default — relies on CSS for overflow handling."
+  ],
+  "patterns": [
+    "Single component handles two distinct modes via a boolean prop — simpler than two separate components but increases prop API surface.",
+    "Uses unicode escapes for icon (\\u26A0 = warning triangle, \\u2192 = right arrow) rather than emoji — consistent ASCII rendering across platforms."
+  ],
+  "conventions": [
+    "Class names: .permission-* prefix throughout (.permission-overlay, .permission-modal, .permission-header, .permission-actions)."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "src/ui/components/modals/Modal.jsx",
+      "electron/services/ClaudeCodeService.js",
+      "electron/services/SwarmOrchestrator.js"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "permission-flow",
+    "agent-control"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "permissions",
+    "tool-use",
+    "approval",
+    "interactive"
+  ]
+}

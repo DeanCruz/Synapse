@@ -1,0 +1,53 @@
+{
+  "file": "agent/worker/deviations.md",
+  "content_hash": "f3443751",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the worker agent deviation reporting protocol used in !p_track swarms. Specifies what counts as a deviation (anything done that was not explicitly specified in the dispatch prompt), the three-tier severity classification (CRITICAL/MODERATE/MINOR) used by the master to decide whether to replan, the exact JSON entry shape for the deviations[] array, the dual-write requirement (deviations[] AND a corresponding logs[] entry at level 'deviation' in the same write), and how the master uses each severity tier. Also covers the ambiguity-resolution protocol where unclear requirements must produce a documented MODERATE deviation rather than a silent guess.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Deviations must be written IMMEDIATELY when they occur — never batched for end-of-task. The dashboard yellow badge appears in real-time from this write.",
+    "A deviation REQUIRES two simultaneous updates in the same progress file write: an entry in deviations[] AND a logs[] entry at level 'deviation'. Skipping either is a failure.",
+    "CRITICAL severity may trigger replanning of downstream tasks — misclassifying a function-signature change as MODERATE will cause downstream workers to fail against stale interfaces.",
+    "Silent guesses at ambiguous requirements look like bugs to the master; documented conservative choices look like good judgment. Never resolve ambiguity without a deviation entry.",
+    "Modifying any file not in the FILES list is a MODERATE deviation by default — workers commonly forget that scope expansion is itself reportable.",
+    "Timestamps must be captured live via `date -u +\"%Y-%m-%dT%H:%M:%SZ\"` — never constructed from memory."
+  ],
+  "patterns": [
+    "Severity-tagged deviations: every deviation entry MUST include a severity field (CRITICAL/MODERATE/MINOR), not optional.",
+    "Dual-write protocol: deviations[] entry + logs[] entry at level 'deviation' written together atomically.",
+    "Ambiguity resolution: choose most conservative option (changes least, breaks nothing, follows existing patterns), document as MODERATE deviation, log at warn level.",
+    "Severity decision rule: any change affecting an interface/API/contract downstream tasks depend on => CRITICAL; same outcome via different means => MODERATE; cosmetic/naming with no functional impact => MINOR."
+  ],
+  "conventions": [
+    "Deviation entry shape: { at: ISO8601, severity: 'CRITICAL'|'MODERATE'|'MINOR', description: string }",
+    "Use em-dash separator in descriptions: 'What changed — why' (matches example pattern through file).",
+    "Mandatory write #4 in the progress protocol corresponds to deviation reporting."
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/worker/progress_reporting.md"
+    ],
+    "depended_by": [
+      "agent/instructions/tracker_worker_instructions.md",
+      ".claude/agents/swarm-worker.md"
+    ],
+    "related": [
+      "agent/worker/return_format.md",
+      "agent/master/failure_recovery.md",
+      "agent/core/parallel_principles.md"
+    ]
+  },
+  "domains": [
+    "worker-protocol",
+    "deviation-reporting"
+  ],
+  "tags": [
+    "markdown",
+    "worker-agent",
+    "protocol",
+    "swarm",
+    "p_track"
+  ]
+}

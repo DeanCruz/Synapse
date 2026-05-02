@@ -1,0 +1,65 @@
+{
+  "file": ".claude/skills/p-track-resume/SKILL.md",
+  "content_hash": "dc405a13",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "User-invocable forked-context Opus skill (`!p_track_resume`). Resume protocol for stalled/interrupted/partially-completed swarms. 5 phases / 16+ steps: Phase 1 State Reconstruction (resolve dashboard, read full state, read plan.json — regenerate if missing, read project context, rebuild upstream cache); Phase 2 Health Check & Classification (check agent health via 10-min/20-min activity windows, classify each task as Completed/Failed/Likely Alive/Stale In-Progress/Pending Ready/Pending Blocked, present resume plan, await approval); Phase 3 Cleanup, Dispatch, Monitor (clean stale progress files, build self-contained worker prompts with RESUME CONTEXT block including PREVIOUS ATTEMPT details, dispatch all ready tasks); Phase 4 Execution Loop (process completions, eager dispatch, handle monitoring/failures/compaction); Phase 5 Completion (update task file, append final log, post-swarm verification, compute metrics, NON-NEGOTIABLE final report with Resume Details section, save to history).",
+  "exports": [],
+  "imports_from": {
+    "skills": [
+      "master-protocol",
+      "failure-protocol"
+    ],
+    "agent_modules": [
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/master/worker_prompts.md",
+      "agent/_commands/p_track_completion.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/master/failure_recovery.md"
+    ]
+  },
+  "gotchas": [
+    "Health classification thresholds: 10 min for milestone activity, 20 min for started_at — older = stale",
+    "Likely-alive workers must NOT be re-dispatched — would clobber a running agent and produce double work",
+    "Stage 'completed' but status 'in_progress' = Likely Completed (worker finished but master never processed return)",
+    "Plan.json regeneration is required if missing/invalid — hooks block dispatch otherwise",
+    "Final report includes a REQUIRED 'Resume Details' section listing tasks completed-before-resume / re-dispatched-stale / retried-failed / dispatched-fresh / agents-found-alive",
+    "Worker prompt for re-dispatch includes PREVIOUS ATTEMPT subsection with prior status/stage/summary/milestones/logs/deviations + ROOT CAUSE ANALYSIS + REMEDIATION GUIDANCE",
+    "context: fork — runs in a forked Claude context; model: opus"
+  ],
+  "patterns": [
+    "Multi-phase resume: state -> classification -> dispatch -> execution -> completion",
+    "Health check via activity windows (10 min / 20 min)",
+    "RESUME CONTEXT prompt block with deeply-nested previous-attempt context"
+  ],
+  "conventions": [
+    "Same final-report structure as p-track but with extra Resume Details section",
+    "Same dispatch and validation gates apply (validate-plan-required, validate-approval-gate)"
+  ],
+  "relationships": {
+    "depends_on": [
+      ".claude/skills/master-protocol/SKILL.md",
+      ".claude/skills/failure-protocol/SKILL.md",
+      "agent/master/worker_prompts.md"
+    ],
+    "depended_by": [],
+    "related": [
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/skills/eager-dispatch/SKILL.md",
+      "_commands/Synapse/p_track_resume.md"
+    ]
+  },
+  "domains": [
+    "skill-definition",
+    "swarm-resume",
+    "swarm-recovery"
+  ],
+  "tags": [
+    "skill",
+    "user-invocable",
+    "fork",
+    "opus",
+    "resume",
+    "health-check"
+  ]
+}

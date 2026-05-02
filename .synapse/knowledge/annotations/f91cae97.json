@@ -1,0 +1,47 @@
+{
+  "file": "_commands/Synapse/guide.md",
+  "content_hash": "7c5a4aea",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!guide` command — an interactive command decision tree that helps users pick the right Synapse command for their situation. Displays a flowchart organized by intent (project setup, parallel work, monitoring, actions, resume, history, server, analysis, PKI, instrumentation, TOC, profiles, housekeeping), then a complete command reference table grouped by category, then a 'Quick Tips' section. Read-only static documentation rendered to terminal.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Some category boxes are duplicated in the flowchart (e.g., 'Monitor a running swarm' appears twice) — this is the file as-shipped",
+    "The Project Workflow categories (PKI, Instrumentation, TOC, Profiles & discovery) are listed but each command's actual definition lives in _commands/project/, not Synapse/",
+    "Quick tips emphasize: !p_track is the default, !cancel-safe over !cancel, each chat uses its assigned dashboard",
+    "This is the only command in this directory that has no Steps section — it is purely declarative output"
+  ],
+  "patterns": [
+    "Three-block output: Decision Tree (intent flowchart) → Command Reference (categorical table) → Quick Tips",
+    "Decision tree uses ASCII tree art with ├── and └── connectors",
+    "Command reference is grouped by domain: Project Management, Swarm Lifecycle, Resume & Recovery, Monitoring, Server Control, Housekeeping, Project Analysis, PKI, TOC, Profiles & Discovery"
+  ],
+  "conventions": [
+    "Three numbered Steps each containing one large markdown block to display",
+    "Category headers use ### inside the displayed flowchart",
+    "Each command shown with backticked syntax in the reference table"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/p.md",
+      "_commands/project/help.md",
+      "_commands/project/commands.md"
+    ]
+  },
+  "domains": [
+    "dashboard-monitoring",
+    "command-discovery",
+    "user-guidance"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "static-output",
+    "decision-tree"
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "file": "src/ui/styles/ide-debug-console.css",
+  "content_hash": "4f2d8481",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Standalone stylesheet for the IDE Debug Console (REPL-style panel). Defines .debug-console container (#1a1a1a bg, #cccccc fg, monospace 'Cascadia Code'/'Fira Code'/'Consolas'), header with controls (clear/filter), output area, expression input prompt with chevron, and entry rows distinguished by type (log, warn, error, command, result).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "DUPLICATE: ide-debug.css ALSO defines .debug-console styles (lines 417-640 there). When changing, edit BOTH files or the styles may diverge.",
+    "Hard-coded colors (#1a1a1a, #1e1e1e, #cccccc, #333333, #999999) — does not respect theme switching.",
+    "Loaded ONLY by IDEView.jsx — relies on import order to override ide-debug.css's overlapping rules."
+  ],
+  "patterns": [
+    "Monospace font stack 'Cascadia Code', 'Fira Code', 'Consolas' for REPL feel.",
+    "Uppercase 0.04em letter-spaced title."
+  ],
+  "conventions": [
+    "Class prefix: .debug-console-*."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for --sans fallback"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx",
+      "src/ui/components/ide/DebugConsolePanel.jsx"
+    ],
+    "related": [
+      "src/ui/styles/ide-debug.css (overlapping rules)"
+    ]
+  },
+  "domains": [
+    "ide-styles"
+  ],
+  "tags": [
+    "css",
+    "ide",
+    "debugger",
+    "console",
+    "repl"
+  ]
+}

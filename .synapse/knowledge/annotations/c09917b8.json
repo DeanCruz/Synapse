@@ -1,0 +1,44 @@
+{
+  "file": ".claude/hooks/enforce-tracker-root-writes-bash.sh",
+  "content_hash": "bcc487e3",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PreToolUse hook on Bash. Defense-in-depth companion to enforce-tracker-root-writes.sh — blocks bash commands that would write dashboard files (initialization.json, logs.json, master_state.json, metrics.json, progress/*.json) to {project_root}/dashboards/ instead of {tracker_root}/dashboards/. Reads project_root from .synapse/project.json, computes tracker_root from script location. If tracker_root == project_root (Synapse targeting itself), no conflict possible — allow. Otherwise blocks any command containing `{project_root}/dashboards/` and tells the agent the correct path.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Pattern matches with shell case globs — won't catch quoted paths inside JSON-escaped strings",
+    "Only inspects literal command text — variables like `cd $DIR/dashboards` may slip through if $DIR holds project_root",
+    "Fail-open if .synapse/project.json missing or project_root unset — supports unconfigured Synapse"
+  ],
+  "patterns": [
+    "Glob-based command pattern matching for write redirects targeting tracker file shapes",
+    "Compares tracker_root vs project_root resolved via .synapse/project.json"
+  ],
+  "conventions": [],
+  "relationships": {
+    "depends_on": [
+      "jq",
+      ".synapse/project.json"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      ".claude/hooks/enforce-tracker-root-writes.sh",
+      ".claude/hooks/enforce-dashboard-isolation-bash.sh"
+    ]
+  },
+  "domains": [
+    "tracker-root-enforcement",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "validation",
+    "PreToolUse",
+    "Bash-matcher",
+    "path-enforcement"
+  ]
+}

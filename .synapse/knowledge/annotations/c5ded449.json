@@ -1,0 +1,95 @@
+{
+  "file": "electron/services/PromptBuilder.js",
+  "content_hash": "4db74c5d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Constructs the two prompts every worker receives: the system prompt (worker instructions + dispatch context) and the task prompt (task description + PKI knowledge + CLAUDE.md project context + read-only additional context dirs + upstream task results). Also builds the circuit-breaker REPLAN prompt + system prompt that gets fed to a Claude CLI process when the swarm hits 3+ failures in one wave. The buildSystemPrompt function defensively validates that the dashboardId matches a known shape (`ide`, 6-char hex, or `dashboardN`) — if a master agent passed a made-up dashboardId, this throws rather than silently routing progress files into a wrong directory. PKI integration: reads `{projectPath}/.synapse/knowledge/manifest.json` and matches task title+description against domain_index, tag_index, concept_map; pulls top-8 relevant annotations and recent insights and injects them as a 'PKI Knowledge' block in the task prompt.",
+  "exports": [
+    {
+      "name": "buildSystemPrompt",
+      "kind": "function",
+      "signature": "({taskId, dashboardId, trackerRoot, projectPath, additionalContextDirs}) => string"
+    },
+    {
+      "name": "buildTaskPrompt",
+      "kind": "function",
+      "signature": "({task, taskDescription, projectContexts, upstreamResults, additionalContextPaths, projectPath}) => string"
+    },
+    {
+      "name": "readUpstreamResults",
+      "kind": "function",
+      "signature": "(dashboardId, dependsOn, trackerRoot) => [{taskId, summary, deviations}]"
+    },
+    {
+      "name": "buildReplanPrompt",
+      "kind": "function",
+      "signature": "({dashboardId, init, progress, failedTasks, completedTasks, failedInWave}) => string"
+    },
+    {
+      "name": "buildReplanSystemPrompt",
+      "kind": "function",
+      "signature": "() => string"
+    },
+    {
+      "name": "readPKIKnowledge",
+      "kind": "function",
+      "signature": "(projectPath, task) => string"
+    }
+  ],
+  "imports_from": {
+    "src/server/utils/constants": [
+      "ROOT"
+    ]
+  },
+  "gotchas": [
+    "DASHBOARD_ID_SHAPE = /^(ide|[a-f0-9]{6}|dashboard[0-9]+)$/ is the SOURCE OF TRUTH for valid dashboard IDs. Any ID that doesn't match throws from buildSystemPrompt — adding a new ID format requires updating this regex first.",
+    "If WORKER_INSTRUCTIONS_PATH (agent/instructions/tracker_worker_instructions.md) is missing, the system prompt falls back to a one-line 'Write progress to ...' instruction. Workers in this fallback state lack the full progress reporting protocol and tend to skip writing dashboards.",
+    "PKI knowledge is OPTIONAL and silently no-ops when manifest.json is missing — but if manifest.json is malformed, the entire prompt build still succeeds; the worker just gets no PKI block.",
+    "The gotchas section of the PKI block has NO budget cap (unlike patterns 15 / conventions 10) — a project with hundreds of gotchas would blow the prompt context.",
+    "readUpstreamResults reads `progress/<depTaskId>.json` per dependency — if a dep is reported completed in the swarm tracker but its progress file is missing, the upstream summary becomes '(progress file not found)' silently.",
+    "The replan prompt embeds the FULL agents array as JSON — for very large swarms (50+ tasks) this can balloon and exceed context; the replanner uses --output-format text (not stream-json) and is single-turn.",
+    "PKI relevance scoring: high-complexity files get +2, stale files get -1, concept matches get +2 weight. If no matches score above zero the block is omitted entirely."
+  ],
+  "patterns": [
+    "Three-stage prompt construction (system / task / replan) all using a parts[] array + final parts.join('\\n') idiom.",
+    "PKI auto-enrichment runs at prompt-build time — workers don't see knowledge unless their task title/description match an indexed domain/tag/concept.",
+    "Hard-coded budgets: top-8 relevant files, top-15 patterns, top-10 conventions, top-8 insights, last-5 swarm insights — keeps the PKI block under ~100 lines.",
+    "Defensive ID validation: buildSystemPrompt throws on invalid dashboardId rather than letting the worker write into the wrong dashboard."
+  ],
+  "conventions": [
+    "All path tokens emitted in the prompt use backtick-wrapped absolute paths so the worker's parser/markdown can render them verbatim.",
+    "Dashboard binding fields are explicit: Synapse_Instance_Location, DashboardID, Synapse_Dashboard, Target_Directory, Context_Directories — these names appear in agent/master and worker docs and must stay stable.",
+    "Replan output schema is fixed: {summary, modified[], added[], removed[], retry[]} — see SwarmOrchestrator.applyReplan for the consumer."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/utils/constants",
+      "node:fs",
+      "node:path"
+    ],
+    "depended_by": [
+      "electron/services/SwarmOrchestrator.js",
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/master/initialization_blueprint.md"
+    ]
+  },
+  "domains": [
+    "prompt-construction",
+    "pki-integration",
+    "swarm-orchestration",
+    "circuit-breaker-replan"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "prompt-builder",
+    "pki",
+    "system-prompt",
+    "replan",
+    "worker-protocol"
+  ]
+}

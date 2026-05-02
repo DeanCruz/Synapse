@@ -1,0 +1,68 @@
+{
+  "file": ".claude/settings.json",
+  "content_hash": "c98a6d85",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Central hook wiring for Claude Code. Maps tool events (PreToolUse, PostToolUse, Stop) and tool matchers (Edit|Write, Task, Bash) to the executable hook scripts in .claude/hooks/. Wires 14 distinct hook invocations: PreToolUse on Edit|Write fires 6 hooks (dashboard isolation, tracker-root writes, master-write gate, plan-required, init immutability, init schema); PreToolUse on Task fires 2 (worker prompt validation, approval gate); PreToolUse on Bash fires 3 (dashboard isolation bash, tracker-root writes bash, archive-before-clear); PostToolUse on Write fires 5 (progress validation, log detail, mark stale, log entry, master state); PostToolUse on Edit|Write fires nudge-progress-update; Stop fires verify-final-report. This is the single source of truth for which hook runs when — the harness reads this file to know what to execute.",
+  "exports": [],
+  "imports_from": {
+    "hooks": [
+      ".claude/hooks/enforce-dashboard-isolation.sh",
+      ".claude/hooks/enforce-tracker-root-writes.sh",
+      ".claude/hooks/validate-master-write.sh",
+      ".claude/hooks/validate-plan-required.sh",
+      ".claude/hooks/validate-initialization-immutable.sh",
+      ".claude/hooks/validate-initialization-schema.sh",
+      ".claude/hooks/validate-worker-prompt.sh",
+      ".claude/hooks/validate-approval-gate.sh",
+      ".claude/hooks/enforce-dashboard-isolation-bash.sh",
+      ".claude/hooks/enforce-tracker-root-writes-bash.sh",
+      ".claude/hooks/validate-archive-before-clear.sh",
+      ".claude/hooks/validate-progress-file.sh",
+      ".claude/hooks/validate-progress-log-detail.sh",
+      ".claude/hooks/mark-annotation-stale.sh",
+      ".claude/hooks/validate-log-entry.sh",
+      ".claude/hooks/validate-master-state.sh",
+      ".claude/hooks/nudge-progress-update.sh",
+      ".claude/hooks/verify-final-report.sh"
+    ]
+  },
+  "gotchas": [
+    "Hooks listed under the same matcher run sequentially in declaration order — PreToolUse Edit|Write runs all 6 hooks for every Edit/Write call (even if the first one allows)",
+    "Hook commands are relative paths (`.claude/hooks/X.sh`) — Claude Code resolves them relative to project root; CWD must be tracker_root",
+    "PostToolUse hooks cannot block (the write already happened) — they emit `{message: ...}` warnings the agent sees as feedback",
+    "Adding a new hook requires both: chmod +x the .sh file AND wire it in this JSON; either alone has no effect",
+    "agent-level hooks in .claude/agents/*.md are ALSO declared (master-orchestrator.md re-declares validate-master-write/verify-final-report) — these are agent-scoped, this file is global"
+  ],
+  "patterns": [
+    "Matcher is a regex-like alternation: 'Edit|Write' matches both tools",
+    "Each event type (PreToolUse/PostToolUse/Stop) is an array of {matcher, hooks[]} groups"
+  ],
+  "conventions": [
+    "Hook command paths are relative to project root with `.sh` extension",
+    "type field is always `command` (no other type used)",
+    "Order within hooks[] = execution order"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "all 18 .claude/hooks/*.sh scripts (referenced as commands)"
+    ],
+    "related": [
+      ".claude/agents/master-orchestrator.md",
+      ".claude/agents/swarm-worker.md",
+      ".claude/MIGRATION.md"
+    ]
+  },
+  "domains": [
+    "claude-code-settings",
+    "hook-wiring"
+  ],
+  "tags": [
+    "json",
+    "settings",
+    "claude-code",
+    "hooks",
+    "configuration"
+  ]
+}

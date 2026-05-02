@@ -1,0 +1,47 @@
+{
+  "file": "_commands/project/onboard.md",
+  "content_hash": "dfc488f4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !onboard slash command — produces a comprehensive project orientation: what it does, how it's structured, how to run things, key architectural decisions, and where to find what. Two modes: !onboard for full walkthrough, !onboard {area} for area-specific deep dive (e.g., 'api', 'frontend', 'auth'). Reads .synapse/toc.md, CLAUDE.md, package.json/tsconfig.json/etc., and .env.example to source content. Outputs Project Overview / Structure table / Architecture / How Things Connect / Quick Start / Key Conventions / Available Commands / Environment Setup / Where to Find Things sections. Designed for new sessions or new contributors. Read-only.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Source EVERYTHING from actual files — don't invent setup steps; read them from CLAUDE.md, package.json, README.md.",
+    "Keep it ACTIONABLE — a new contributor should be able to start working after reading the output.",
+    "Two output structures: full walkthrough (!onboard) vs deep-dive (!onboard {area}) — they share no template."
+  ],
+  "patterns": [
+    "Source-of-truth-first: read actual files, never invent.",
+    "Two-mode output: full vs area-specific."
+  ],
+  "conventions": [
+    "Read-only.",
+    "Serial execution.",
+    "Quick-start steps sourced from CLAUDE.md or package.json."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{project_root}/CLAUDE.md",
+      "{project_root}/.synapse/toc.md",
+      "{project_root}/package.json",
+      "{project_root}/.env.example"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/context.md",
+      "_commands/project/help.md"
+    ]
+  },
+  "domains": [
+    "project-context",
+    "onboarding"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "orientation",
+    "read-only"
+  ]
+}

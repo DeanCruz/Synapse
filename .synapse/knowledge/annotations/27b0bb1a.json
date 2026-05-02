@@ -1,0 +1,70 @@
+{
+  "file": "_commands/project/toc_update.md",
+  "content_hash": "f51cd47e",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !toc_update slash command — incremental updater of {project_root}/.synapse/toc.md by detecting new/deleted/moved/semantically-changed files since last generation. Three-phase workflow: (1) Diff Detection — read current TOC, scan filesystem with stack-appropriate Globs, detect renames via `git diff --name-status -M HEAD~10` (R lines), detect modified files via fingerprints.json (`git diff --since={generated_at}` or `find -newer`) AND via content hash comparison against `<!-- hash:xxx -->` comments, compute new/deleted/modified/renamed/unchanged sets; (2) Parallel Scan via !p dispatch — group new+modified files by directory, dispatch agents with previous TOC entry data + previous fingerprint data for modified files (so agents produce focused diffs), agents return updated entries + new fingerprints + new content hashes; compare old vs new fingerprints to detect PURPOSE CHANGE / API CHANGE (>50% export names differ) / SIGNATURE CHANGE (kind differs or params delta ≥2) / DEPENDENCY CHANGE (imports added/removed); (3) TOC Update — apply deletions + additions (in correct directory section) + modifications (preserve position, update hash comment) + renames (carry metadata, update path, update cross-references), update Project Overview if structural changes, set Last updated date, update fingerprints.json and dep_graph.json (forward+reverse edge updates: remove deleted files from old targets' imported_by, add new files to new targets' imported_by). Handles legacy TOCs without hash comments by treating them as unchanged.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Master does NOT read source files — agents read new/modified files; master only reads TOC, ls, CLAUDE.md, agent returns.",
+    "Only scan NEW and MODIFIED files — never re-read files with unchanged content hashes. Speed is the entire point.",
+    "Preserve unchanged entries VERBATIM — never rewrite/rephrase/improve them.",
+    "Backward compatible: TOC entries without `<!-- hash:xxx -->` comments are treated as unchanged (legacy TOCs); they gain hashes when next modified.",
+    "Renames preserve metadata: when file renamed but not modified, carry summary/tags/related/exports to new path; ALSO update Related: entries in OTHER TOC entries that referenced old path.",
+    "Renames detected by `git diff --name-status -M` — R lines indicate renames; verify old-in-TOC + new-on-disk to confirm.",
+    "Fingerprint detection has TWO independent sources: (a) git diff --since={generated_at} for files changed in git, (b) content hash mismatch against TOC. Deduplicate the union.",
+    "Semantic change flags are INFORMATIONAL — they surface architectural shifts but do not block the update. Always reported when fingerprints exist.",
+    "API CHANGE threshold: >50% of export names differ between old and new sets.",
+    "SIGNATURE CHANGE: kind changed OR params delta ≥2.",
+    "If diff is large (50+ new files), suggest !toc_generate for cleaner result.",
+    "If zero changes detected, exit immediately with 'TOC is up to date'.",
+    "Always update Last updated to today's date when changes are made.",
+    "fingerprints.json/dep_graph.json updates are OPTIONAL — only run those steps if the files exist; gracefully skip otherwise (backward compat).",
+    "Atomic writes for fingerprints.json/dep_graph.json: read full file → apply all changes in memory → write complete file. Never partial appends.",
+    "dep_graph reverse-edge maintenance: when modifying file F, for each old import not in new — remove F from target's imported_by; for each new import not in old — add F to target's imported_by."
+  ],
+  "patterns": [
+    "Three-phase incremental update: diff detection → parallel scan → TOC apply.",
+    "Multi-source change detection: git history + content hash + fingerprint date.",
+    "Semantic change classification: PURPOSE / API / SIGNATURE / DEPENDENCY.",
+    "Atomic JSON updates with full read-modify-write.",
+    "Backward-compatible operation when sidecars (fingerprints.json/dep_graph.json) absent."
+  ],
+  "conventions": [
+    "Dispatched via !p.",
+    "Hash comment format: `<!-- hash:8chars -->`.",
+    "Update Last updated to today.",
+    "Old fingerprint included in agent prompt for fingerprinted modified files.",
+    "Old TOC entry included in agent prompt for content-hash-modified files."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{project_root}/.synapse/toc.md",
+      "{project_root}/.synapse/fingerprints.json",
+      "{project_root}/.synapse/dep_graph.json",
+      "_commands/Synapse/p.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/toc_generate.md",
+      "_commands/project/toc.md"
+    ]
+  },
+  "domains": [
+    "toc-management",
+    "incremental-update"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "toc",
+    "incremental",
+    "fingerprints",
+    "dep-graph",
+    "semantic-diff",
+    "parallel-dispatch",
+    "writes-files"
+  ]
+}

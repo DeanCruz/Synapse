@@ -1,0 +1,72 @@
+{
+  "file": "src/ui/components/modals/WorkerTerminal.jsx",
+  "content_hash": "3b5fd995",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Live worker output viewer rendering the agent's tool-use stream as a Claude-style conversation. Subscribes to the `worker-output` and `worker-complete` IPC events filtered by taskId, parses each chunk as line-delimited JSON (NDJSON stream-json), and dispatches events through processEvent: assistant text blocks accumulate into a single growing message (currentTextIdxRef merges sequential text deltas into one bubble); assistant tool_use blocks become collapsible ToolCallBlock entries (toolMapRef maps tool_use_id → message index so the matching user.tool_result event can be backfilled into the same block as ._result); user tool_result blocks attach to the parent tool call OR render as standalone if orphaned. Provides a Codex compatibility path: thread.started/turn.started are no-ops; item.completed of type agent_message accumulates text; on worker-complete, lastMessage is appended only if streaming text wasn't seen (sawCodexStreamTextRef gate). Toolbar Kill button calls api.killWorker(pid); Clear button wipes local message state.",
+  "exports": [
+    {
+      "name": "WorkerTerminal",
+      "kind": "component",
+      "signature": "{ onClose, taskId, title, pid }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useEffect",
+      "useRef"
+    ],
+    "src/ui/components/modals/Modal.jsx": [
+      "default"
+    ]
+  },
+  "gotchas": [
+    "handleChunkRef pattern is critical — the IPC listener inside useEffect captures a STALE handleChunk closure if not redirected through ref. Without this, processEvent would reference initial state. ALWAYS update handleChunkRef.current = handleChunk on every render (line outside useEffect).",
+    "currentTextIdxRef is a numeric index into messages — if Clear is pressed mid-stream, messages becomes [] but currentTextIdxRef may still point to a non-existent index; the appendText guard `currentTextIdxRef.current < prev.length` covers this but flushText must be called after Clear to prevent cross-stream merging.",
+    "toolMapRef maps tool_use.id → message index. If the same tool_use_id arrives twice (shouldn't happen but possible with retries), the SECOND mapping overwrites and the first tool block becomes orphaned w.r.t. its result.",
+    "Codex 'item.completed' agent_message handling appends text and immediately flushText — preventing accumulation across items, which differs from Claude's stream where consecutive text blocks merge.",
+    "Codex worker-complete fallback: data.lastMessage is appended ONLY if sawCodexStreamTextRef.current is false. If Codex ever emits BOTH streaming text AND a final lastMessage, this gate prevents duplication; if Codex emits NEITHER, no text appears.",
+    "thread.started/turn.started are explicitly silenced — adding new Codex event types may need similar handling.",
+    "Auto-scroll on new messages always scrolls to bottom (no smart-scroll like LogsModal) — user reading earlier output gets yanked to bottom on every new chunk.",
+    "killWorker is sent the PID, not taskId — prop must be the actual OS pid, not the synthetic taskId.",
+    "JSON.parse failures fall back to appendText(trimmed + '\\n') — non-JSON output is shown raw which is useful for stderr/debug logs but may be confusing for normal users."
+  ],
+  "patterns": [
+    "Stream-JSON event router (processEvent switch) with provider parity (Claude SDK + Codex stream-json) — same parsing strategy used in PlanningModal.extractJSON.",
+    "Tool call + tool result correlation via id-to-index map — enables collapsed result expansion without parent re-render.",
+    "handleChunkRef.current = handleChunk pattern — workaround for IPC listener closure capturing stale state."
+  ],
+  "conventions": [
+    "Class names: .claude-* prefix throughout (.claude-conversation, .claude-tool-call, .claude-message-text) — reflects original Claude-SDK styling that has been kept even when adapted for Codex.",
+    "Sub-components ToolCallBlock, ConversationItem inline in same file."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/modals/Modal.jsx"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/components/ClaudeView.jsx",
+      "electron/services/ClaudeCodeService.js",
+      "electron/services/CodexService.js",
+      "src/ui/components/modals/PlanningModal.jsx"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "worker-output",
+    "live-streaming",
+    "tool-use-rendering"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "worker",
+    "stream-json",
+    "claude",
+    "codex",
+    "tool-use",
+    "ipc"
+  ]
+}

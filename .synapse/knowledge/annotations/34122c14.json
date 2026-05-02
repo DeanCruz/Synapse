@@ -1,0 +1,44 @@
+{
+  "file": "src/ui/styles/ide-editor.css",
+  "content_hash": "08ae96e6",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Stylesheet for the IDE editor surface: .editor-tabs-bar (36px tab strip, horizontal scroll with hidden scrollbar) and individual .editor-tab elements with active state, accent top-border on active, dirty-state dot, close button. Styles the tab UI surrounding Monaco; Monaco itself is themed via JS (vs-dark + custom palette in monacoWorkerSetup).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    ".editor-tab and .editor-tabs-bar are generic class names — guard against future collisions with other 'tab' UIs.",
+    "Active tab top-border accent is via ::before pseudo — overflow-hidden on parent will clip it.",
+    "Hidden scrollbar via scrollbar-width:none + ::-webkit hide — horizontal overflow is silent."
+  ],
+  "patterns": [
+    "Tab top-accent via pseudo-element rather than border-top to avoid layout shift.",
+    "Focus-visible outline-offset: -2px to inset focus ring."
+  ],
+  "conventions": [
+    "Class prefix: .editor-tab*, .editor-tabs-bar."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for --bg, --border, --text-secondary, --text, --surface, --sans"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/CodeEditor.jsx",
+      "src/ui/components/ide/EditorTabs.jsx",
+      "src/ui/main.jsx"
+    ],
+    "related": [
+      "src/ui/utils/monacoWorkerSetup.js (Monaco theme palette)"
+    ]
+  },
+  "domains": [
+    "ide-styles"
+  ],
+  "tags": [
+    "css",
+    "ide",
+    "editor",
+    "tabs",
+    "monaco"
+  ]
+}

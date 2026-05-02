@@ -1,0 +1,61 @@
+{
+  "file": "src/ui/components/git/RepoTabs.jsx",
+  "content_hash": "838dd9e5",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Horizontal tab strip at the top of GitManagerView showing every open repository. Each tab displays a branch icon, the repo's tab label (folder basename), the current branch as a subtle chip when active, and an X close button. A trailing '+' button opens a new repository via api.ideSelectFolder() and dispatches GIT_OPEN_REPO. Clicking a tab dispatches GIT_SWITCH_REPO; clicking the X dispatches GIT_CLOSE_REPO (stopPropagation prevents tab activation). Mirrors the WorkspaceTabs.jsx pattern from the IDE view.",
+  "exports": [
+    {
+      "name": "RepoTabs",
+      "kind": "component",
+      "signature": "() — no props"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useCallback"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ]
+  },
+  "gotchas": [
+    "Repo id generated as String(Date.now()) — same collision risk as GitWelcome (acceptable for human pace).",
+    "Reuses api.ideSelectFolder from the IDE namespace — coupling Git to IDE; if that IPC is renamed or specialized, fix this too.",
+    "GIT_CLOSE_REPO does not prompt for confirmation — closing a tab loses any in-memory state for that repo (selected file, diffs) immediately.",
+    "Only the active tab shows the current branch chip (gitCurrentBranch is global, not per-repo) — switching tabs reloads the branch for the new repo, so the old tab's branch isn't displayed even if it had one.",
+    "ideSelectFolder may return string or {path}; helper handles both shapes — the same pattern lives in GitWelcome."
+  ],
+  "patterns": [
+    "Active state determined by `repo.id === gitActiveRepoId` — repo.id is the dispatch key, not the path (paths can be moved or duplicated).",
+    "Title attribute on each tab shows the full path — useful when names truncate.",
+    "stopPropagation on the close button is essential because the parent button has its own onClick."
+  ],
+  "conventions": [
+    "Inline SVG icons (GitBranchTabIcon and inline path elements for + and × in the header)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (ideSelectFolder)"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx"
+    ],
+    "related": [
+      "src/ui/components/git/GitWelcome.jsx",
+      "src/ui/components/ide/WorkspaceTabs.jsx"
+    ]
+  },
+  "domains": [
+    "git-manager"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "tabs",
+    "multi-repo"
+  ]
+}

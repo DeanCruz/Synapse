@@ -1,0 +1,36 @@
+{
+  "file": "documentation/posts/linkedin-synapse-introduction.md",
+  "content_hash": "9db53eea",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Marketing/announcement post for LinkedIn introducing Synapse. Frames the problem (sequential agent loops, parallelism without coordination), describes Synapse's solution (orchestration/execution separation, master agent planning, parallel worker dispatch, live dashboard, deep planning context, circuit breaker recovery, multi-dashboard), and concludes with positioning ('developers directing agents with clarity and control'). Open-source, standalone, zero-dependency framing with hashtags.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Marketing/external content -- not for agent behavioral instruction",
+    "Short LinkedIn-style format with hashtags at end"
+  ],
+  "patterns": [
+    "Problem -> obvious answer (parallelism) -> reframe as coordination problem -> Synapse's solution",
+    "Concrete capability descriptions: dispatch, dashboard, planning, recovery"
+  ],
+  "conventions": [
+    "Hashtags: #AI #AgentSwarms #DeveloperTools #SoftwareEngineering #Orchestration #Synapse",
+    "Conversational/declarative tone targeted at developer audience"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "marketing-posts"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "linkedin",
+    "marketing",
+    "announcement"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "file": "documentation/data-architecture/overview.md",
+  "content_hash": "da3ff611",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "High-level overview of Synapse's file-based data architecture: no database, JSON files watched by the server and broadcast via SSE, strict file ownership per writer, and derived (not stored) statistics. Explains the static-plan vs dynamic-lifecycle vs event-log split, the mergeState client-side merge, and the file-watching mechanisms (fs.watchFile polling for init/logs, fs.watch for progress).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Statistics are derived at render time -- never stored as counters; modifying counters introduces drift",
+    "fs.watch on progress/ uses OS events; fs.watchFile on init/logs polls at 100ms intervals",
+    "Reconciliation runs every 5s as a safety net for missed OS events on network filesystems"
+  ],
+  "patterns": [
+    "Derived state from authoritative file reads",
+    "Sole-writer-per-file ownership preventing write conflicts",
+    "Atomic temp-write-then-rename for crash safety"
+  ],
+  "conventions": [
+    "Default empty states defined in src/server/utils/constants.js (DEFAULT_INITIALIZATION, DEFAULT_LOGS)",
+    "Dashboard IDs are 6-character hex strings"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "data-architecture"
+  ],
+  "tags": [
+    "overview",
+    "file-based",
+    "watcher",
+    "merge-state"
+  ]
+}

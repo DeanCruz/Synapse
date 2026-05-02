@@ -1,0 +1,40 @@
+{
+  "file": "src/ui/styles/ide-explorer.css",
+  "content_hash": "91f8792b",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Stylesheet for the IDE File Explorer panel and IDE Welcome screen. Defines .ide-explorer container (flex column), header with title + actions, file/folder rows with icons, hover/selected states, indentation for nested directories, plus the welcome screen styles shown when no workspace is open.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    ".ide-explorer-* classes are scoped by prefix; .ide-explorer is the root anchor.",
+    "Loaded via main.jsx globally AND by FileExplorer.jsx + IDEWelcome.jsx — Vite dedupes but be aware."
+  ],
+  "patterns": [
+    "Action buttons sized 22x22 (slightly smaller than nav buttons elsewhere — IDE compactness convention).",
+    "Uppercase letter-spaced 0.06em titles for section headers."
+  ],
+  "conventions": [
+    "Class prefix: .ide-explorer-*."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for --border, --text-secondary, --sans"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/FileExplorer.jsx",
+      "src/ui/components/ide/IDEWelcome.jsx",
+      "src/ui/main.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "ide-styles"
+  ],
+  "tags": [
+    "css",
+    "ide",
+    "file-explorer",
+    "welcome"
+  ]
+}

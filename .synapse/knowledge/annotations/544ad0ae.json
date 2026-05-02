@@ -1,0 +1,50 @@
+{
+  "file": "_commands/Synapse/update_dashboard.md",
+  "content_hash": "9a51b222",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!update_dashboard [dashboardId]` command for generating a visual progress report of the current swarm. Reads initialization.json + all progress files; identifies most-recently-completed task by latest completed_at; computes swarm stats (completed/in_progress/failed/pending counts, pct, overall_status, elapsed, wave_summary). Renders a richly formatted markdown report: header with truncated prompt → Status/Project/Elapsed → Progress (text bar + counts) → Waves table → Latest Completed (with Milestones + Deviations) → Completed Tasks table → cross-swarm Deviations → Remaining tasks grouped by wave. Read-only — does not modify any files.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Read-only — explicitly does NOT modify progress files or logs (despite the command name suggesting it might)",
+    "Progress bar width is 20 chars; mini bar is 10 chars; uses █ filled and ░ empty",
+    "Latest completed is determined by latest completed_at (not started_at, not progress file mtime)",
+    "Duration format depends on magnitude: <60s = `Ns`, 60-3600s = `Mm Ss`, >3600s = `Hh Mm`",
+    "Wave status logic: ✅done = all completed, 🔴failed = any failed, 🔵running = any in_progress, ⚪pending = all pending (failed status takes precedence)",
+    "Summary text in Completed Tasks table is truncated to 80 chars; prompt in header is truncated to 120 chars + …"
+  ],
+  "patterns": [
+    "6-step procedure: parse → read init → read progress → identify latest completed → compute stats → render report",
+    "Report sections in fixed order: header → status line → Progress bar → Waves table → Latest Completed → Completed Tasks → Deviations Across Swarm → Remaining (grouped by wave)",
+    "Progress bar formula: filled = round((completed/total)*20); bar = '█'.repeat(filled) + '░'.repeat(20-filled)",
+    "Conditional sections (only render if data present): Latest Completed milestones, Latest Completed deviations, Deviations Across Swarm, Remaining"
+  ],
+  "conventions": [
+    "Trailing read-only note callout",
+    "Format reference subsections (Progress Bar, Mini Bar, Status Emojis, Wave Status, Duration) at the bottom",
+    "Markdown render template uses {placeholder} interpolation syntax with comments inside braces explaining computed values"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/status.md",
+      "_commands/Synapse/export.md",
+      "_commands/Synapse/inspect.md"
+    ]
+  },
+  "domains": [
+    "dashboard-monitoring",
+    "visual-reporting"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "progress-bar",
+    "read-only"
+  ]
+}

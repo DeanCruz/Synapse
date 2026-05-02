@@ -6,7 +6,7 @@
 // Allows sending follow-up messages while an agent is still running.
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useAppState, useDispatch } from '../context/AppContext.jsx';
+import { useAppState, useDispatch, getClaudeSlice } from '../context/AppContext.jsx';
 import { renderMarkdown } from '../utils/markdown.js';
 import { getDashboardProject, getDashboardAdditionalContext } from '../utils/dashboardProjects.js';
 import PermissionModal from './modals/PermissionModal.jsx';
@@ -771,30 +771,40 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }
 // per-context state (messages, tabs, attachments) off the agent rather than a
 // code dashboard. Use it to branch behavior that should differ between the
 // two surfaces.
-export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code', chatAgentId = null }) {
+export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code', chatAgentId = null, surface = 'code' }) {
   const api = window.electronAPI || null;
   const state = useAppState();
   const dispatch = useDispatch();
 
-  // Pull persistent state from context
-  const messages = state.claudeMessages;
-  const isProcessing = state.claudeIsProcessing;
-  const status = state.claudeStatus;
-  // In chat mode the chat tab provides its own agent context, so prefer
-  // chatAgentId. The downstream code treats this as an opaque string id —
-  // storage keys and tab maps don't care whether it points at a dashboard
-  // or a chat agent.
-  const dashboardId = (tab === 'chat' && chatAgentId) ? chatAgentId : state.currentDashboardId;
+  // Pull persistent state from the surface-appropriate slice. Each surface
+  // ('code' | 'chat') keeps its own messages/processing/status/tabs/etc. so
+  // both ClaudeView instances can be mounted simultaneously without sharing
+  // global state.
+  const slice = getClaudeSlice(state, surface);
+  const messages = slice.messages;
+  const isProcessing = slice.isProcessing;
+  const status = slice.status;
+  // Surface-aware dashboardId resolution. The chat surface uses the
+  // chat-agent context id supplied by ChatInstanceView; the code surface
+  // uses the global currentDashboardId BUT rejects any id that begins with
+  // 'chat-agent-' so chat-tab state can never bleed into the code view.
+  let dashboardId;
+  if (surface === 'chat') {
+    dashboardId = chatAgentId || null;
+  } else {
+    const cdid = state.currentDashboardId;
+    dashboardId = (cdid && !cdid.startsWith('chat-agent-')) ? cdid : null;
+  }
   if (!dashboardId) {
-    if (tab === 'chat') {
+    if (surface === 'chat') {
       return <div className="claude-view-empty">Create a new chat to begin</div>;
     }
     return <div className="claude-view-empty">Select a dashboard to begin</div>;
   }
-  const pendingAttachments = state.claudePendingAttachments;
+  const pendingAttachments = slice.pendingAttachments;
   const pendingPermission = state.pendingPermission;
-  const tabs = state.claudeTabs[dashboardId] || [{ id: 'default', name: 'Chat 1' }];
-  const activeTabId = state.claudeActiveTabId;
+  const tabs = slice.tabs[dashboardId] || [{ id: 'default', name: 'Chat 1' }];
+  const activeTabId = slice.activeTabId;
   const [processingTabId, setProcessingTabId] = useState(null);
 
   const [prompt, setPrompt] = useState('');
@@ -890,6 +900,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         created: convCreatedRef.current || now,
         sessionId: sessionIdRef.current,
         dashboardId,
+        surface,
         messages: currentMsgs,
       }).catch(() => {});
     }, 500);
@@ -897,7 +908,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [messages, dashboardId, api]);
+  }, [messages, dashboardId, api, surface]);
 
   // Auto-resize textarea when prompt changes programmatically (tab/dashboard switch)
   useEffect(() => {
@@ -1044,12 +1055,14 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     }
   }, [api]);
 
-  // Load conversation list when history panel opens (filtered by current dashboard)
+  // Load conversation list when history panel opens (filtered by current dashboard
+  // AND surface — code-tab listings include legacy entries with no surface field,
+  // chat-tab listings exclude them, so the two histories never bleed).
   useEffect(() => {
     if (showHistory && api) {
-      api.listConversations(dashboardId).then(res => setConversations(res?.conversations || res || [])).catch(() => {});
+      api.listConversations(dashboardId, surface).then(res => setConversations(res?.conversations || res || [])).catch(() => {});
     }
-  }, [showHistory, api, dashboardId]);
+  }, [showHistory, api, dashboardId, surface]);
 
   useEffect(() => {
     if (!api) return;
@@ -1104,15 +1117,15 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
               if (block.type === 'text') {
                 const cleaned = stripAnsi(block.text);
                 if (cleaned && cleaned.trim()) {
-                  dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'assistant', text: cleaned } });
+                  dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: targetTab, msg: { type: 'assistant', text: cleaned } });
                 }
               } else if (block.type === 'tool_use' || block.type === 'server_tool_use') {
                 // Skip tool_use if streaming events already added them (avoids duplicates)
                 if (!sawStreaming) {
-                  dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
+                  dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: targetTab, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
                 }
               } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
-                dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'thinking', text: block.thinking || '' } });
+                dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: targetTab, msg: { type: 'thinking', text: block.thinking || '' } });
               }
             }
           } else if (evt.type === 'content_block_start') {
@@ -1123,7 +1136,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
             if (block.type === 'tool_use' || block.type === 'server_tool_use') {
               const stashKey = 'tab:' + targetTab + ':' + idx;
               stashStreamingBlocksRef.current[stashKey] = { type: 'tool_use', id: block.id, name: block.name, input_json: '' };
-              dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: {}, _streaming: true } } });
+              dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: targetTab, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: {}, _streaming: true } } });
             }
           } else if (evt.type === 'content_block_delta') {
             const idx = evt.index ?? 0;
@@ -1140,7 +1153,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
               let input = {};
               try { input = JSON.parse(acc.input_json); } catch (e) { /* partial */ }
               const toolId = acc.id;
-              dispatch({ type: 'CLAUDE_TAB_STASH_UPDATE_MESSAGES', tabId: targetTab, updater: (prev) => {
+              dispatch({ type: 'CLAUDE_TAB_STASH_UPDATE_MESSAGES', surface, tabId: targetTab, updater: (prev) => {
                 // Find and update the matching streaming tool call
                 const idx2 = prev.findLastIndex(m => m.type === 'tool_call' && m.block?.id === toolId);
                 if (idx2 < 0) return prev;
@@ -1157,7 +1170,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
               if (block.type === 'tool_result') {
                 const resultContent = evt.tool_use_result || block.content;
                 const toolUseId = block.tool_use_id;
-                dispatch({ type: 'CLAUDE_TAB_STASH_UPDATE_MESSAGES', tabId: targetTab, updater: (prev) => {
+                dispatch({ type: 'CLAUDE_TAB_STASH_UPDATE_MESSAGES', surface, tabId: targetTab, updater: (prev) => {
                   const idx2 = prev.findLastIndex(m => m.type === 'tool_call' && m.block?.id === toolUseId);
                   if (idx2 < 0) return [...prev, { id: Date.now() + Math.random(), type: 'tool_result_standalone', content: resultContent }];
                   const updated = prev.slice();
@@ -1168,12 +1181,12 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
             }
           } else if (evt.type === 'system') {
             if (evt.subtype === 'init') {
-              dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'system', text: `Connected — model: ${evt.model || '?'}, ${(evt.tools || []).length} tools available` } });
+              dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: targetTab, msg: { type: 'system', text: `Connected — model: ${evt.model || '?'}, ${(evt.tools || []).length} tools available` } });
             } else if (evt.subtype === 'task_progress' || evt.subtype === 'task_started' || evt.subtype === 'task_completed' || evt.subtype === 'task_failed') {
-              dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'system', isTaskEvent: true, taskEventData: evt, text: evt.description || evt.subtype } });
+              dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: targetTab, msg: { type: 'system', isTaskEvent: true, taskEventData: evt, text: evt.description || evt.subtype } });
             }
           } else if (evt.type === 'error') {
-            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: targetTab, msg: { type: 'system', text: evt.message || 'Agent error', isError: true } });
+            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: targetTab, msg: { type: 'system', text: evt.message || 'Agent error', isError: true } });
           } else if (evt.type === 'message_stop') {
             stashSawStreamingRef.current[tabStreamKey] = false;
           } else if (evt.type === 'result') {
@@ -1220,16 +1233,16 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
                 if (block.type === 'text') {
                   const cleaned = stripAnsi(block.text);
                   if (cleaned && cleaned.trim()) {
-                    dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'assistant', text: cleaned } });
+                    dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'assistant', text: cleaned } });
                     dispatch({ type: 'SET_CHAT_PREVIEW', dashboardId: targetDash, text: cleaned.substring(0, 60), isStreaming: true });
                   }
                 } else if (block.type === 'tool_use' || block.type === 'server_tool_use') {
                   // Skip tool_use if streaming events already added them (avoids duplicates)
                   if (!sawStreaming) {
-                    dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
+                    dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: block.input } } });
                   }
                 } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
-                  dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'thinking', text: block.thinking || '' } });
+                  dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'thinking', text: block.thinking || '' } });
                 }
               }
             } else if (evt.type === 'content_block_start') {
@@ -1240,7 +1253,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
               if (block.type === 'tool_use' || block.type === 'server_tool_use') {
                 const stashKey = 'dash:' + targetDash + ':' + idx;
                 stashStreamingBlocksRef.current[stashKey] = { type: 'tool_use', id: block.id, name: block.name, input_json: '' };
-                dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: {}, _streaming: true } } });
+                dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'tool_call', block: { id: block.id, name: block.name, input: {}, _streaming: true } } });
               }
             } else if (evt.type === 'content_block_delta') {
               const idx = evt.index ?? 0;
@@ -1257,7 +1270,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
                 let input = {};
                 try { input = JSON.parse(acc.input_json); } catch (e) { /* partial */ }
                 const toolId = acc.id;
-                dispatch({ type: 'CLAUDE_STASH_UPDATE_MESSAGES', dashboardId: targetDash, updater: (prev) => {
+                dispatch({ type: 'CLAUDE_STASH_UPDATE_MESSAGES', surface, dashboardId: targetDash, updater: (prev) => {
                   const idx2 = prev.findLastIndex(m => m.type === 'tool_call' && m.block?.id === toolId);
                   if (idx2 < 0) return prev;
                   const updated = prev.slice();
@@ -1273,7 +1286,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
                 if (block.type === 'tool_result') {
                   const resultContent = evt.tool_use_result || block.content;
                   const toolUseId = block.tool_use_id;
-                  dispatch({ type: 'CLAUDE_STASH_UPDATE_MESSAGES', dashboardId: targetDash, updater: (prev) => {
+                  dispatch({ type: 'CLAUDE_STASH_UPDATE_MESSAGES', surface, dashboardId: targetDash, updater: (prev) => {
                     const idx2 = prev.findLastIndex(m => m.type === 'tool_call' && m.block?.id === toolUseId);
                     if (idx2 < 0) return [...prev, { id: Date.now() + Math.random(), type: 'tool_result_standalone', content: resultContent }];
                     const updated = prev.slice();
@@ -1284,12 +1297,12 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
               }
             } else if (evt.type === 'system') {
               if (evt.subtype === 'init') {
-                dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: `Connected — model: ${evt.model || '?'}, ${(evt.tools || []).length} tools available` } });
+                dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'system', text: `Connected — model: ${evt.model || '?'}, ${(evt.tools || []).length} tools available` } });
               } else if (evt.subtype === 'task_progress' || evt.subtype === 'task_started' || evt.subtype === 'task_completed' || evt.subtype === 'task_failed') {
-                dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', isTaskEvent: true, taskEventData: evt, text: evt.description || evt.subtype } });
+                dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'system', isTaskEvent: true, taskEventData: evt, text: evt.description || evt.subtype } });
               }
             } else if (evt.type === 'error') {
-              dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: evt.message || 'Agent error', isError: true } });
+              dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'system', text: evt.message || 'Agent error', isError: true } });
             } else if (evt.type === 'message_stop') {
               stashSawStreamingRef.current[dashStreamKey] = false;
             } else if (evt.type === 'result') {
@@ -1323,6 +1336,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
           if (data.errorOutput) {
             dispatch({
               type: 'CLAUDE_APPEND_MSG',
+              surface,
               msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true }
             });
           }
@@ -1331,6 +1345,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
           if (data.exitCode && data.exitCode !== 0 && !sawStreamingRef.current) {
             dispatch({
               type: 'CLAUDE_APPEND_MSG',
+              surface,
               msg: { type: 'system', text: 'Agent process exited with code ' + data.exitCode + ' without producing a response. Try sending your message again.', isError: true }
             });
           }
@@ -1338,10 +1353,10 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         } else {
           // Different tab on same dashboard — route to tab stash
           if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
-            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: taskTab, msg: { type: 'assistant', text: data.lastMessage } });
+            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: taskTab, msg: { type: 'assistant', text: data.lastMessage } });
           }
           if (data.errorOutput) {
-            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: taskTab, msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true } });
+            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: taskTab, msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true } });
           }
           // Lightweight cleanup (skip auto-save — messages persisted in stash)
           activeTaskIdsRef.current.delete(data.taskId);
@@ -1350,8 +1365,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
           delete taskTabMapRef.current[data.taskId];
           delete taskPidMapRef.current[data.taskId];
           if (activeTaskIdsRef.current.size === 0) {
-            dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
-            dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+            dispatch({ type: 'CLAUDE_SET_PROCESSING', surface, value: false });
+            dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Ready' });
             setProcessingTabId(null);
           }
           if (api && prevDashboardRef.current) {
@@ -1363,17 +1378,17 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         const targetDash = getStashedDashboard(data.taskId);
         if (!targetDash) return;
         if (data.provider === 'codex' && data.lastMessage) {
-          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'assistant', text: data.lastMessage } });
+          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'assistant', text: data.lastMessage } });
         }
         if (data.errorOutput) {
-          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true } });
+          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true } });
         }
         // Remove from stashed active tasks and update processing state
         const stashedSet = activeTaskStashRef.current[targetDash];
         if (stashedSet) {
           stashedSet.delete(data.taskId);
           if (stashedSet.size === 0) {
-            dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', dashboardId: targetDash, value: false, status: 'Ready' });
+            dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', surface, dashboardId: targetDash, value: false, status: 'Ready' });
           }
         }
         delete taskDashboardMapRef.current[data.taskId];
@@ -1393,30 +1408,31 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         if (isActiveTab) {
           dispatch({
             type: 'CLAUDE_APPEND_MSG',
+            surface,
             msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly' + (data.error ? ': ' + data.error : '.'), isError: true }
           });
           if (finishRef.current) finishRef.current(data.taskId);
         } else {
-          dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: taskTab, msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly.', isError: true } });
+          dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: taskTab, msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly.', isError: true } });
           activeTaskIdsRef.current.delete(data.taskId);
           delete taskDashboardMapRef.current[data.taskId];
           delete taskTabMapRef.current[data.taskId];
           delete taskPidMapRef.current[data.taskId];
           if (activeTaskIdsRef.current.size === 0) {
-            dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
-            dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+            dispatch({ type: 'CLAUDE_SET_PROCESSING', surface, value: false });
+            dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Ready' });
             setProcessingTabId(null);
           }
         }
       } else {
         const targetDash = getStashedDashboard(data.taskId);
         if (targetDash) {
-          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: targetDash, msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly.', isError: true } });
+          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly.', isError: true } });
           const stashedSet = activeTaskStashRef.current[targetDash];
           if (stashedSet) {
             stashedSet.delete(data.taskId);
             if (stashedSet.size === 0) {
-              dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', dashboardId: targetDash, value: false, status: 'Ready' });
+              dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', surface, dashboardId: targetDash, value: false, status: 'Ready' });
             }
           }
           delete taskDashboardMapRef.current[data.taskId];
@@ -1432,7 +1448,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       if (errorListener) errorListener();
       if (previewFlushTimerRef.current) clearTimeout(previewFlushTimerRef.current);
     };
-  }, [api, dispatch]);
+  }, [api, dispatch, surface]);
 
   // --- Process health check: detect orphaned tasks where the subprocess died silently ---
   // Polls getActiveWorkers() every 8s and compares against locally tracked tasks.
@@ -1470,10 +1486,11 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
           if (isActiveTab) {
             dispatch({
               type: 'CLAUDE_APPEND_MSG',
+              surface,
               msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly. You can send a new message to continue.', isError: true }
             });
           } else {
-            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', tabId: taskTab, msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly.', isError: true } });
+            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: taskTab, msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly.', isError: true } });
           }
 
           activeTaskIdsRef.current.delete(taskId);
@@ -1484,8 +1501,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         }
 
         if (orphanedTasks.length > 0 && activeTaskIdsRef.current.size === 0) {
-          dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
-          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+          dispatch({ type: 'CLAUDE_SET_PROCESSING', surface, value: false });
+          dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Ready' });
           setProcessingTabId(null);
         }
 
@@ -1500,14 +1517,14 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
             }
           }
           for (const taskId of stashedOrphans) {
-            dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', dashboardId: dashId, msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly.', isError: true } });
+            dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: dashId, msg: { type: 'system', text: '⚠ Connection lost — the agent process stopped unexpectedly.', isError: true } });
             stashedSet.delete(taskId);
             delete taskDashboardMapRef.current[taskId];
             delete taskTabMapRef.current[taskId];
             delete taskPidMapRef.current[taskId];
           }
           if (stashedOrphans.length > 0 && stashedSet.size === 0) {
-            dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', dashboardId: dashId, value: false, status: 'Ready' });
+            dispatch({ type: 'CLAUDE_STASH_SET_PROCESSING', surface, dashboardId: dashId, value: false, status: 'Ready' });
           }
         }
       } catch (e) {
@@ -1519,26 +1536,27 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         if (healthFailCountRef.current >= 3 && activeTaskIdsRef.current.size > 0) {
           dispatch({
             type: 'CLAUDE_APPEND_MSG',
+            surface,
             msg: { type: 'system', text: '⚠ Connection lost — unable to reach the agent process. You can send a new message to continue.', isError: true }
           });
           activeTaskIdsRef.current.clear();
           taskPidMapRef.current = {};
           taskDashboardMapRef.current = {};
           taskTabMapRef.current = {};
-          dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
-          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+          dispatch({ type: 'CLAUDE_SET_PROCESSING', surface, value: false });
+          dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Ready' });
           setProcessingTabId(null);
         }
       }
     }, HEALTH_CHECK_INTERVAL);
 
     return () => clearInterval(healthTimer);
-  }, [api, dispatch]);
+  }, [api, dispatch, surface]);
 
   // --- State mutation helpers using functional updater (avoids stale closures) ---
 
   function appendMsg(msg) {
-    dispatch({ type: 'CLAUDE_APPEND_MSG', msg });
+    dispatch({ type: 'CLAUDE_APPEND_MSG', surface, msg });
   }
 
   // --- Buffered streaming for maximum throughput ---
@@ -1566,7 +1584,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     textBufferRef.current = '';
     textFlushTimerRef.current = null;
 
-    dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
+    dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', surface, updater: (prev) => {
       if (currentTextIndexRef.current !== null && currentTextIndexRef.current < prev.length) {
         const idx = currentTextIndexRef.current;
         const updated = prev.slice();
@@ -1600,7 +1618,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     thinkingBufferRef.current = '';
     thinkingFlushTimerRef.current = null;
 
-    dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
+    dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', surface, updater: (prev) => {
       if (currentThinkingIndexRef.current !== null && currentThinkingIndexRef.current < prev.length) {
         const idx = currentThinkingIndexRef.current;
         const updated = prev.slice();
@@ -1672,7 +1690,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     flushText();
     if (pendingToolCountRef.current > 0) pendingToolCountRef.current--;
     if (toolUseId && toolCallIndexRef.current[toolUseId] !== undefined) {
-      dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
+      dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', surface, updater: (prev) => {
         const idx = toolCallIndexRef.current[toolUseId];
         if (idx >= prev.length) return prev;
         const updated = prev.slice();
@@ -1689,7 +1707,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     flushText();
     flushThinking();
     pendingToolCountRef.current++;
-    dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
+    dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', surface, updater: (prev) => {
       if (block.id) {
         toolCallIndexRef.current[block.id] = prev.length;
       }
@@ -1699,7 +1717,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
 
   function updateToolCall(toolUseId, input) {
     if (toolUseId && toolCallIndexRef.current[toolUseId] !== undefined) {
-      dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', updater: (prev) => {
+      dispatch({ type: 'CLAUDE_UPDATE_MESSAGES', surface, updater: (prev) => {
         const idx = toolCallIndexRef.current[toolUseId];
         if (idx >= prev.length) return prev;
         const updated = prev.slice();
@@ -1732,7 +1750,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       for (const line of lines) {
         const cleaned = stripAnsi(line).trim();
         if (cleaned && !isProgressBarLine(cleaned) && cleaned.length < 200) {
-          dispatch({ type: 'CLAUDE_SET_STATUS', value: cleaned });
+          dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: cleaned });
           // Surface as activity in the conversation so background work is visible
           appendActivityLine(cleaned);
         }
@@ -1828,7 +1846,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
               input: block.input,
             });
           } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
-            dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
+            dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Thinking...' });
             appendMsg({ type: 'thinking', text: block.thinking || '' });
           }
         }
@@ -1846,15 +1864,15 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
           streamingBlocksRef.current[idx] = {
             type: 'tool_use', id: block.id, name: block.name, input_json: '',
           };
-          dispatch({ type: 'CLAUDE_SET_STATUS', value: `Tool: ${block.name}` });
+          dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: `Tool: ${block.name}` });
           // Show tool call in chat immediately (before input is fully streamed)
           addToolCall({ id: block.id, name: block.name, input: {}, _streaming: true });
         } else if (block.type === 'thinking' || block.type === 'extended_thinking') {
           streamingBlocksRef.current[idx] = { type: 'thinking', thinking: '' };
-          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
+          dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Thinking...' });
         } else if (block.type === 'text') {
           streamingBlocksRef.current[idx] = { type: 'text', text: '' };
-          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Responding...' });
+          dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Responding...' });
         }
         break;
       }
@@ -1915,9 +1933,9 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         isResumedSessionRef.current = false;
         // Don't show 'Ready' while tools are still executing
         if (pendingToolCountRef.current > 0) {
-          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Executing...' });
+          dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Executing...' });
         } else {
-          dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+          dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Ready' });
         }
         break;
 
@@ -1943,7 +1961,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         isResumedSessionRef.current = false;
         pendingToolCountRef.current = 0;
         if (evt.session_id) sessionIdRef.current = evt.session_id;
-        dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+        dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Ready' });
         break;
       }
 
@@ -1953,7 +1971,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       }
 
       case 'turn.started':
-        dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
+        dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Thinking...' });
         break;
 
       case 'item.completed':
@@ -1991,7 +2009,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
               timestamp: Date.now(),
             },
           });
-          dispatch({ type: 'CLAUDE_SET_STATUS', value: `Permission: ${toolName}` });
+          dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: `Permission: ${toolName}` });
           appendMsg({
             type: 'system',
             text: `Permission requested for tool: ${toolName}`,
@@ -2021,8 +2039,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     delete taskPidMapRef.current[taskId];
     // Only mark as not processing when ALL workers are done
     if (activeTaskIdsRef.current.size === 0) {
-      dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
-      dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+      dispatch({ type: 'CLAUDE_SET_PROCESSING', surface, value: false });
+      dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Ready' });
       setProcessingTabId(null);
     }
 
@@ -2073,6 +2091,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         created: convCreatedRef.current || now,
         sessionId: sessionIdRef.current,
         dashboardId: taskDashId,
+        surface,
         messages: currentMsgs,
       }).catch(() => {});
     }
@@ -2163,6 +2182,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       reader.onload = (e) => {
         dispatch({
           type: 'CLAUDE_ADD_ATTACHMENT',
+          surface,
           attachment: {
             id: Date.now() + Math.random(),
             name: file.name,
@@ -2210,6 +2230,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     if (result && result.base64) {
       dispatch({
         type: 'CLAUDE_ADD_ATTACHMENT',
+        surface,
         attachment: {
           id: Date.now() + Math.random(),
           name: result.name || 'image',
@@ -2245,8 +2266,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     // User sent a message — always scroll to show it
     isAtBottomRef.current = true;
     setNewMsgCount(0);
-    dispatch({ type: 'CLAUDE_SET_PROCESSING', value: true });
-    dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Thinking...' });
+    dispatch({ type: 'CLAUDE_SET_PROCESSING', surface, value: true });
+    dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Thinking...' });
     currentTextIndexRef.current = null;
     sawStreamingRef.current = false;
     isResumedSessionRef.current = !!sessionIdRef.current;
@@ -2331,8 +2352,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       appendMsg({ type: 'system', text: 'Error: ' + (err.message || String(err)), isError: true });
       activeTaskIdsRef.current.delete(taskId);
       if (activeTaskIdsRef.current.size === 0) {
-        dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
-        dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Ready' });
+        dispatch({ type: 'CLAUDE_SET_PROCESSING', surface, value: false });
+        dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Ready' });
         setProcessingTabId(null);
       }
     }
@@ -2349,7 +2370,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     const currentTab = tabs.find(t => t.id === activeTabId);
     if (text && currentTab && currentTab.name.startsWith('Chat ')) {
       const preview = text.substring(0, 25) + (text.length > 25 ? '...' : '');
-      dispatch({ type: 'CLAUDE_RENAME_TAB', tabId: activeTabId, name: preview });
+      dispatch({ type: 'CLAUDE_RENAME_TAB', surface, tabId: activeTabId, name: preview });
     }
 
     let finalPrompt = text;
@@ -2370,7 +2391,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       } catch (err) {
         // proceed without paths if save fails
       }
-      dispatch({ type: 'CLAUDE_CLEAR_ATTACHMENTS' });
+      dispatch({ type: 'CLAUDE_CLEAR_ATTACHMENTS', surface });
     }
 
     await sendText(finalPrompt, attachmentsSnapshot);
@@ -2523,7 +2544,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
 
   function clearChat() {
     if (!isProcessing) {
-      dispatch({ type: 'CLAUDE_CLEAR_MESSAGES' });
+      dispatch({ type: 'CLAUDE_CLEAR_MESSAGES', surface });
       sessionIdRef.current = null;
       convIdRef.current = null;
       convCreatedRef.current = null;
@@ -2551,6 +2572,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       created: cCreated,
       sessionId: sId,
       dashboardId,
+      surface,
       messages: msgs,
     }).catch(() => {});
   }
@@ -2570,7 +2592,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     // Save current tab's conversation to disk before switching
     saveTabToDisk(activeTabId);
     // Dispatch tab switch (stashes current messages, loads target)
-    dispatch({ type: 'CLAUDE_SWITCH_TAB', tabId });
+    dispatch({ type: 'CLAUDE_SWITCH_TAB', surface, tabId });
     // Reset streaming state for new tab context
     currentTextIndexRef.current = null;
     currentThinkingIndexRef.current = null;
@@ -2616,7 +2638,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     toolCallIndexRef.current = {};
 
     // Clear messages to fresh state (also clears localStorage entry + pending attachments)
-    dispatch({ type: 'CLAUDE_CLEAR_MESSAGES' });
+    dispatch({ type: 'CLAUDE_CLEAR_MESSAGES', surface });
   }
 
   function closeTab(tabId) {
@@ -2624,7 +2646,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     const stashKey = dashboardId + ':' + tabId;
     const tabMsgs = tabId === activeTabId
       ? messagesRef.current
-      : (state.claudeTabStash[stashKey] || null);
+      : (slice.tabStash[stashKey] || null);
     saveTabToDisk(tabId, tabMsgs);
     // Clean up prompt stash for the closed tab
     delete promptStashRef.current[stashKey];
@@ -2638,7 +2660,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         setPrompt(promptStashRef.current[dashboardId + ':' + nextTab.id] || '');
       }
     }
-    dispatch({ type: 'CLAUDE_CLOSE_TAB', tabId });
+    dispatch({ type: 'CLAUDE_CLOSE_TAB', surface, tabId });
   }
 
   async function stopChat() {
@@ -2670,10 +2692,10 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     }
     currentTextIndexRef.current = null;
     if (activeTaskIdsRef.current.size === 0) {
-      dispatch({ type: 'CLAUDE_SET_PROCESSING', value: false });
+      dispatch({ type: 'CLAUDE_SET_PROCESSING', surface, value: false });
       setProcessingTabId(null);
     }
-    dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Stopped' });
+    dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Stopped' });
     appendMsg({ type: 'system', text: 'Agent stopped by user.' });
   }
 
@@ -2690,7 +2712,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       api.writeWorker(pid, response);
     }
     dispatch({ type: 'PERMISSION_RESOLVED', requestId });
-    dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Running' });
+    dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Running' });
     appendMsg({ type: 'system', text: `Permission approved for: ${toolName}` });
   }
 
@@ -2706,7 +2728,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       api.writeWorker(pid, response);
     }
     dispatch({ type: 'PERMISSION_RESOLVED', requestId });
-    dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Running' });
+    dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Running' });
     appendMsg({ type: 'system', text: `Permission denied for: ${toolName}` });
   }
 
@@ -2728,7 +2750,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         api.writeWorker(pid, response);
       }
       dispatch({ type: 'PERMISSION_RESOLVED', requestId });
-      dispatch({ type: 'CLAUDE_SET_STATUS', value: 'Running' });
+      dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Running' });
       appendMsg({ type: 'system', text: `Permission auto-approved for: ${toolName}` });
     }
   }, [pendingPermission]);
@@ -2738,7 +2760,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     try {
       const full = await api.loadConversation(conv.id);
       if (!full) return;
-      dispatch({ type: 'CLAUDE_SET_MESSAGES', messages: full.messages || [] });
+      dispatch({ type: 'CLAUDE_SET_MESSAGES', surface, messages: full.messages || [] });
       sessionIdRef.current = full.sessionId || null;
       convIdRef.current = full.id;
       convCreatedRef.current = full.created;
@@ -2971,7 +2993,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
               <span className="claude-attachment-chip-name">{a.name}</span>
               <button
                 className="claude-attachment-chip-remove"
-                onClick={() => dispatch({ type: 'CLAUDE_REMOVE_ATTACHMENT', id: a.id })}
+                onClick={() => dispatch({ type: 'CLAUDE_REMOVE_ATTACHMENT', surface, id: a.id })}
                 title="Remove"
               >✕</button>
             </div>

@@ -1,0 +1,53 @@
+{
+  "file": "src/ui/styles/git-manager.css",
+  "content_hash": "590670f3",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Stylesheet for the Git Manager view (.git-manager-* classes, 2401 lines). Mirrors the IDE layout pattern: repo tabs across top, sidebar + divider + content area beneath. Sections: container/repo-tab-bar (with active/icon/branch-badge styling), main layout (flex sidebar+content), sidebar (changes list at ~300px default with resize divider), changes panel (staged/unstaged file lists with stage/unstage controls), commit panel (message input + commit button), divider (resizable separator), content area (right panel showing diff/history/branches), diff viewer (green/red line-level highlighting), branch panel (branch list + merge/rebase controls), history panel (commit log table), quick actions bar (bottom action strip with centered modal popup variant), confirmation/safety dialog, loading spinner & loading-state full-panel overlay, empty states, error state, generic tooltip, generic count/status badge, stash list, merge/rebase conflict indicator, keyboard shortcut hints, and scrollbar overrides for git-manager panels.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "All classes are .git-manager-* prefixed — DO NOT introduce unprefixed selectors. Doing so will conflict with global index.css and ide-*.css selectors.",
+    "Hidden scrollbars via scrollbar-width:none + ::-webkit-scrollbar{display:none} in repo-tabs-scroll mean horizontal overflow is silent — users discover scrollability only via touch/wheel.",
+    "Layout structurally mirrors ide-layout.css — divergence between the two will cause visual inconsistency in user-facing ergonomics. Keep height/min-height/padding values aligned when changing.",
+    "Diff viewer uses literal green/red colors for added/removed lines (not theme variables) — palette drift in custom themes.",
+    "Quick Actions Bar exists in TWO variants in this file: bottom-strip (line 1358) and centered modal (line 2156). Don't conflate the two when editing — each has its own .git-manager-quick-actions-* selectors."
+  ],
+  "patterns": [
+    "Strict prefix scoping (.git-manager-*) to enable safe coexistence with other feature stylesheets.",
+    "Layout via flex containers with fixed heights and flex-shrink:0 lock-zones.",
+    "Glass surfaces using --surface and --border tokens consumed from index.css."
+  ],
+  "conventions": [
+    "Section banners: /* ============ Title ============ */",
+    "Sub-section banners: /* ----- Title ----- */",
+    "Class naming: .git-manager-{section}-{element}-{state}."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for variables (--bg, --surface, --surface-hover, --border, --text, --text-secondary, --text-tertiary, --sans, --color-accent)"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx",
+      "src/ui/components/git/BranchPanel.jsx",
+      "src/ui/components/git/ChangesPanel.jsx",
+      "src/ui/components/git/CommitPanel.jsx",
+      "src/ui/components/git/DiffViewer.jsx",
+      "src/ui/components/git/HistoryPanel.jsx",
+      "src/ui/components/git/RemotePanel.jsx"
+    ],
+    "related": [
+      "src/ui/styles/ide-layout.css (mirrored layout structure)"
+    ]
+  },
+  "domains": [
+    "git-manager-styles"
+  ],
+  "tags": [
+    "css",
+    "git-manager",
+    "scoped-styles",
+    "diff-viewer",
+    "branch-panel"
+  ]
+}

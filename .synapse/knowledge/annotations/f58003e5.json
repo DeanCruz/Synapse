@@ -1,0 +1,37 @@
+{
+  "file": "documentation/multi-dashboard/dashboard-selection.md",
+  "content_hash": "703d94fc",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Specifies how Synapse commands choose which dashboard to act on. Defines two mechanisms: claiming (for write ops via priority chain: pre-assigned DASHBOARD ID directive > --dashboard flag > ask user) and detection (for read ops, defaulting to the assigned dashboard). Critically establishes mandatory dashboard isolation -- agents have NO read or write access to dashboards other than their assigned one.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "There is NO auto-selection or scanning -- agents must have an assigned dashboard or ask the user",
+    "When the assigned dashboard already has data, the agent must ASK the user before archiving and reusing -- never proceed silently",
+    "Pre-assigned dashboards (from system prompt DASHBOARD ID directive) are always authoritative; --dashboard flag is secondary",
+    "Each chat view in the Electron app is bound to exactly one dashboard for isolation"
+  ],
+  "patterns": [
+    "Strict dashboard isolation per agent/chat",
+    "Priority-chain selection with explicit user prompts on conflict"
+  ],
+  "conventions": [
+    "First positional argument matching 6-char hex format is parsed as dashboardId; task IDs use N.N format; flags use --",
+    "Worker dispatch prompts always include {dashboardId} alongside {tracker_root} and {project_root}"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "multi-dashboard",
+    "selection"
+  ],
+  "tags": [
+    "dashboard-selection",
+    "isolation",
+    "claiming"
+  ]
+}

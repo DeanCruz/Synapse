@@ -1,0 +1,59 @@
+{
+  "file": "src/ui/components/modals/ArchiveModal.jsx",
+  "content_hash": "1e4356d9",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Lists archived swarm snapshots from the {tracker_root}/Archive/ directory. Loads archives via api.getArchives() (Electron IPC) on mount, displays each as a row with task name, optional type badge, agent count badge, date prefix from the archive name (first 10 chars expected to be YYYY-MM-DD), and a trash button. Clicking the row invokes onItemClick(archive.name) and closes the modal — typically the parent restores or inspects the archive. Trash button uses native confirm() then either delegates to onDelete callback (parent owns delete API call) or falls back to direct fetch DELETE to /api/archives/. Local archive list is optimistically pruned after delete.",
+  "exports": [
+    {
+      "name": "ArchiveModal",
+      "kind": "component",
+      "signature": "{ onClose, onItemClick, onDelete }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useEffect"
+    ],
+    "src/ui/components/modals/Modal.jsx": [
+      "default"
+    ]
+  },
+  "gotchas": [
+    "Uses native window.confirm() rather than ConfirmModal — keeps the modal stack-flat but breaks visual consistency with the rest of the app's themed dialogs.",
+    "Date string is sliced from archive.name with archive.name.slice(0, 10) — assumes archive names ALWAYS start with ISO date prefix YYYY-MM-DD; an archive with a different naming convention will display garbage in the date column.",
+    "Has TWO delete code paths: parent-owned (onDelete callback with successCb) and fallback fetch DELETE — these can diverge in error handling. The parent path is preferred and almost always set.",
+    "Trash click stops propagation explicitly with e.stopPropagation() so clicking the icon does NOT also fire onClick on the row container.",
+    "Falls back to direct fetch('/api/archives/...') which only works in standalone-server mode, not inside Electron unless the IPC fetch shim is set up. The onDelete path is preferred."
+  ],
+  "patterns": [
+    "Same header comment notes 'Mirrors ArchiveModal.js' — this is the JSX rewrite of an older vanilla version. Multiple modal files carry this 'Mirrors X.js' note (HistoryModal, SettingsModal, TaskDetails).",
+    "Optimistic UI: setArchives prev.filter(...) is called before any server confirmation in fallback path — diverges from convention where server confirms first."
+  ],
+  "conventions": [
+    "Inner sub-component ArchiveEntry encapsulates one row; same one-component-per-row pattern as HistoryModal's HistoryEntry and AnalyticsSection."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/modals/Modal.jsx"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/components/modals/HistoryModal.jsx"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "archive-management",
+    "swarm-history"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "archives",
+    "ipc",
+    "list",
+    "delete"
+  ]
+}

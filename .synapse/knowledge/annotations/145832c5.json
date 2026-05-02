@@ -1,0 +1,45 @@
+{
+  "file": "_commands/profiles/growth.md",
+  "content_hash": "8317d2d3",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Growth Engineer role: acquisition channels, conversion optimization, SEO content, viral loops, experiment design. Biases the worker toward metric-driven recommendations (every tactic ties to a measurable outcome), channel-strategy fit by stage, hypothesis-framed experiments ('If X, then Y by Z over W'), compounding loops over one-shot campaigns, and full-funnel awareness (acquisition → activation → retention → referral → revenue). A master assigns this profile for growth plans, SEO/content briefs, experiment design docs, funnel diagnostics, and channel strategy. Differs from marketing/copywriter profiles by being analytical and funnel-stage-aware rather than copy-production-focused.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Vague directives like 'improve SEO' will be replaced with specific keyword/page recommendations — provide funnel context.",
+    "Profile bans dark patterns and growth hacks that sacrifice trust.",
+    "Defaults to organic/product-led channels first; explicitly request paid acquisition if needed."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "Growth plan skeleton: Current State/Metrics → Funnel Analysis → Opportunities (ranked by impact/effort) → Recommended Experiments → Measurement Plan → Timeline.",
+    "Each growth play documented with hypothesis + tactic + expected impact + measurement + timeline."
+  ],
+  "conventions": [
+    "Tone 'analytical, direct, data-informed' — growth advisor briefing format."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/marketing.md",
+      "_commands/profiles/copywriter.md",
+      "_commands/profiles/analyst.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "growth-engineer-role",
+    "funnel-optimization"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "growth",
+    "experiments",
+    "seo"
+  ]
+}

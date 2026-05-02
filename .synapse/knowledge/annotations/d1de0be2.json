@@ -1,0 +1,46 @@
+{
+  "file": "documentation/electron/ipc-reference.md",
+  "content_hash": "17792ecc",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Comprehensive catalog of every IPC channel in the Electron app: 26 push channels (main → renderer) and roughly 140 pull handlers (renderer → main) grouped by 17+ feature domains (dashboard, claude, git, ide, debug, terminal, conversations, swarm, settings, etc.). Defines payload shapes and triggering conditions.",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "Push channels are whitelisted in preload.js — adding a channel requires editing both sides",
+    "Pull handlers always return { success, data?, error? } — renderer must check success",
+    "Dashboard-scoped events include dashboardId; global events do not"
+  ],
+  "patterns": [
+    "ipcRenderer.invoke for request/response, ipcRenderer.on for push",
+    "Whitelisted channels in contextBridge for security",
+    "Consistent { success, data, error } envelope"
+  ],
+  "conventions": [
+    "Push channel names: snake_case domain-led (agent_progress, ide-file-change)",
+    "Pull handler names: kebab-case action-led (git-status, ide-read-file)"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/electron/overview.md"
+    ],
+    "depended_by": [
+      "documentation/electron/services.md",
+      "documentation/dashboard/hooks.md",
+      "documentation/git-manager/ipc-handlers.md",
+      "documentation/ide/ipc-handlers.md"
+    ],
+    "related": [
+      "documentation/server/sse-events.md"
+    ]
+  },
+  "domains": [
+    "electron"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "ipc",
+    "reference"
+  ]
+}

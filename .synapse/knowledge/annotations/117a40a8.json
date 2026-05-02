@@ -1,0 +1,46 @@
+{
+  "file": "_commands/Synapse/inspect.md",
+  "content_hash": "2d0e2f61",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!inspect [dashboardId] {task_id}` command for deep-diving into a specific task. Reads initialization.json (find agent entry), the task's progress file (lifecycle data), the canonical plan (full description/approach/files), filtered logs.json entries, and ALL other progress files (to resolve dependency and downstream statuses). Renders a comprehensive single-task report covering Status, Timeline, Agent, Milestones, Deviations, upstream Dependencies, downstream Blocks, Context, Critical Details, Files, Worker Logs, and Dashboard Logs. Read-only.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Must read ALL other progress files (not just the target task's) to resolve dependency statuses and downstream blocks",
+    "If no progress file exists for the target task, the task is treated as 'pending' with no lifecycle data — many sections will be empty/skipped",
+    "Context, Critical Details, and Files come from plan.json (not initialization.json) — that's where the deep-thinking output lives",
+    "Worker Logs come from progress file logs[] array; Dashboard Logs come from logs.json filtered by task_id — these are different sources"
+  ],
+  "patterns": [
+    "7-step procedure: parse → read init → read target progress → read plan → read+filter logs → read other progress files → render report",
+    "Report sections in fixed order: Status/Wave/Layer/Directory header → Timeline table → Agent → Milestones → Deviations → Dependencies (needs) → Blocks (downstream) → Context → Critical Details → Files → Worker Logs → Dashboard Logs",
+    "Cross-task resolution: depends_on entries get status emoji from THEIR progress files, downstream blocks get same treatment"
+  ],
+  "conventions": [
+    "Status emojis used inline in each section header",
+    "Two-column tables (event/timestamp, time/label) for Timeline and Milestones",
+    "Bulleted lists for Dependencies and Blocks with cross-referenced statuses"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/status.md",
+      "_commands/Synapse/deps.md",
+      "_commands/Synapse/logs.md"
+    ]
+  },
+  "domains": [
+    "dashboard-monitoring",
+    "task-introspection"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "deep-dive"
+  ]
+}

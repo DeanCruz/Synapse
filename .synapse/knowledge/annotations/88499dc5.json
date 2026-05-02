@@ -1,0 +1,47 @@
+{
+  "file": "_commands/profiles/marketing.md",
+  "content_hash": "41d0e5e9",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Senior Marketing Strategist role: positioning, copywriting, audience psychology, GTM execution. Biases the worker toward audience clarity, benefit-led messaging, differentiation against alternatives, immediate actionability (no abstract strategy decks), and genuinely distinct multi-variation outputs (each variant testing a different psychological lever). A master assigns this profile for positioning frameworks, multi-angle ad copy, marketing strategy docs, hook generation, and GTM messaging. Distinct from the copywriter profile by being broader (strategy + production) and from growth by being qualitative/audience-psychology rather than funnel-metric. Notably uses second-person 'You are a Senior Marketing Strategist' framing whereas most other profiles use third-person nominal phrasing.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Profile bans specific cliches: 'game-changer', 'revolutionary', 'seamless', 'cutting-edge', 'unlock your potential' — outputs avoid these even if requested.",
+    "Defaults to conversational/direct tone; requesting formal corporate copy must be explicit.",
+    "Multi-variation outputs must test genuinely different angles — minor rewrites are rejected.",
+    "Voice quirk: uses 'You are a...' framing unlike sibling profiles' 'Senior X specializing in...' style."
+  ],
+  "patterns": [
+    "Standard profile spine, plus a Context Gathering closing section that adds an explicit fallback rule for bare prompts.",
+    "Multi-variation output structure prescribed: ## Angle [N]: [Name] / Hook / Body / CTA / Why this works.",
+    "Variation labeling tied to psychological lever ('Pain-point lead', 'Social proof lead')."
+  ],
+  "conventions": [
+    "Tone 'confident, direct, conversational' — adapt to brand voice if defined.",
+    "Match length to medium — explicitly warns against over- and under-producing for the format."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/copywriter.md",
+      "_commands/profiles/growth.md",
+      "_commands/profiles/founder.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "marketing-strategist-role",
+    "positioning-and-messaging"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "marketing",
+    "positioning",
+    "messaging"
+  ]
+}

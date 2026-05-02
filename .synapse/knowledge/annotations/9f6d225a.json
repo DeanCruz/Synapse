@@ -1,0 +1,35 @@
+{
+  "file": "documentation/multi-dashboard/queue-system.md",
+  "content_hash": "ed61f23e",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Describes Synapse's overflow queue at {tracker_root}/queue/ that holds swarm plans when all active dashboards are occupied. Each queue item mirrors dashboard structure (initialization.json + logs.json + progress/) so promotion is a directory copy. Documents how items enter the queue (when selectDashboard finds none free), queue read operations (listQueue, readQueueInit/Progress/Logs), and the promotion-to-dashboard process.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Queue items have no live workers running -- progress/ stays empty until promoted to a dashboard",
+    "Queue is unlimited in size; dashboards have no fixed slot count either (despite legacy 'slots 1-5' wording in some places)",
+    "Promotion requires archiving the target dashboard first if it has previous data"
+  ],
+  "patterns": [
+    "Same-shape directory structure between queue items and dashboards (enables copy-based promotion)"
+  ],
+  "conventions": [
+    "Queue subdirectories named queue1, queue2, ... in insertion order",
+    "QueueService is the canonical reader; promotion handled by master/orchestrator logic"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "multi-dashboard",
+    "queue"
+  ],
+  "tags": [
+    "queue",
+    "overflow",
+    "promotion"
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "file": "src/ui/components/ide/ProblemsPanel.jsx",
+  "content_hash": "cffe1bdd",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Aggregates state.diagnostics (Object<filePath, Array<{line,column,message,severity,source}>>) into a VS Code-style 'Problems' panel embedded in BottomPanel. Computes per-severity counts (error/warning/info, with hint mapped to info) and groups visible diagnostics by file path. Provides three filter toggle buttons (errors/warnings/info) that hide categories. Within a file, items sort by SEVERITY_ORDER (error<warning<info<hint), then by line, then by column. Each row shows SeverityIcon + message + optional source + [line:column]. Row click invokes onNavigate(filePath, line, column) prop — IDEView wires this to IDE_OPEN_FILE + ideNavigateToLine, opening the file in CodeEditor and revealing the line. shortenPath collapses by stripping prefix up to known project markers ('/src/', '/lib/', '/app/', '/pages/', '/components/', '/electron/').",
+  "exports": [
+    {
+      "name": "ProblemsPanel",
+      "kind": "component",
+      "signature": "{ onNavigate }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useMemo",
+      "useCallback"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState"
+    ],
+    "src/ui/styles/ide-debug.css": [
+      "default-side-effect"
+    ]
+  },
+  "gotchas": [
+    "Diagnostics with severity 'hint' are rebucketed into 'info' — the original severity is lost in counts but preserved on the row's SeverityIcon (which renders the same info SVG anyway).",
+    "shortenPath markers are HARDCODED — projects without /src/, /lib/, etc. fall back to last-3-segments path. Custom layouts will look noisy.",
+    "useMemo dep is [diagnostics, activeFilters] — rebuilds on every diagnostics state change, which fires per-file via DIAGNOSTICS_SET (debounced 500ms upstream in CodeEditor).",
+    "Empty filter state shows 'All problems filtered out' — distinct from initial empty state ('No problems detected').",
+    "diagnostic.severity falsy → defaults to 'info' for sort/filter; SEVERITY_ORDER lookup falls through to 3 (treats as hint).",
+    "Row keys use `${filePath}-${line}-${column}-${idx}` — same diagnostic appearing twice on same line/column would still be unique via idx but visually duplicate."
+  ],
+  "patterns": [
+    "Pure-derivation-from-state via useMemo — no local mutation of diagnostics.",
+    "SeverityIcon is severity-driven SVG: red circle for error, yellow triangle for warning, purple circle for info/hint.",
+    "Filter toggles are buttons with 'active' modifier class; clicking flips activeFilters[severity]."
+  ],
+  "conventions": [
+    "CSS class 'problems-' prefix for all elements.",
+    "Severity colors via CSS vars (var(--color-failed,#FF6B6B), var(--color-warning,#FFD93D), var(--color-in-progress,#9B7CF0))."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx"
+    ],
+    "depended_by": [
+      "src/ui/components/BottomPanel.jsx (Problems tab)"
+    ],
+    "related": [
+      "src/ui/components/ide/CodeEditor.jsx (writes diagnostics)",
+      "src/ui/components/ide/IDEView.jsx (wires onNavigate)"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "diagnostics",
+    "problems-panel"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "diagnostics",
+    "problems",
+    "navigation"
+  ]
+}

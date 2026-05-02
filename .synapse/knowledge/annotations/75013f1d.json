@@ -1,0 +1,53 @@
+{
+  "file": "_commands/Synapse/deps.md",
+  "content_hash": "7e389fbc",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!deps [dashboardId] [task_id] [--critical] [--blocked] | validate` command for dependency graph visualization and validation. Three modes: full graph (ASCII visualization with status indicators, critical path, bottlenecks), single-task trace (upstream and downstream chains), and `validate` subcommand which runs five structural checks (circular detection via Kahn's algorithm, broken references, wave consistency, island detection, completeness/agent-wave count match). Read-only — produces no artifacts.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Wave consistency check is WARN-level (non-blocking) — same-wave or reverse-wave dependencies may be intentional but typically indicate planning errors",
+    "Island detection EXCLUDES Wave 1 tasks (they're expected to have no deps) — only flags non-root disconnected tasks",
+    "Validation Overall status: PASS = no warnings/failures; WARN = warnings only; FAIL = any failure (one FAIL trumps any number of PASSes)",
+    "Argument disambiguation: first non-flag arg may be either a dashboard ID or a task ID — task IDs contain a dot (e.g., `2.3`) while dashboard IDs do not"
+  ],
+  "patterns": [
+    "Three command modes share Steps 1-3 (parse → read init → read progress) then diverge",
+    "ASCII graph rendering uses ──→ arrows and ┘ joins; status emojis on each node (✅🔵⚪🔴)",
+    "Critical path = longest chain from any root to any terminal task",
+    "Bottleneck identification = in-progress tasks with most downstream waiters",
+    "Validate subcommand: build adjacency lists (forward + backward edges) then run all 5 checks in sequence",
+    "Validation output: 5-row results table, then detail messages grouped by check number under Warnings/Failures sub-headers"
+  ],
+  "conventions": [
+    "Section per command mode (full graph, single task, validate)",
+    "Validation checks numbered 1-5 with PASS/WARN/FAIL outcomes per check",
+    "Code fences for ASCII graphs",
+    "Result-table convention: rows = checks, columns = check name + result"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/inspect.md",
+      "_commands/Synapse/status.md",
+      "src/server/utils/validation.js"
+    ]
+  },
+  "domains": [
+    "dashboard-monitoring",
+    "dependency-validation",
+    "graph-visualization"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "dag",
+    "kahns-algorithm",
+    "ascii-graph"
+  ]
+}

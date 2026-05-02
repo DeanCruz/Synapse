@@ -1,0 +1,47 @@
+{
+  "file": ".claude/skills/project-workflow/SKILL.md",
+  "content_hash": "e8f13423",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "User-invocable router skill for project setup, discovery, auditing, and analysis commands. Maps 22 project commands across 5 categories: Setup (!project, !initialize, !onboard, !scaffold, !create_claude), Analysis & Auditing (!context, !review, !health, !scope, !trace, !contracts, !env_check, !plan, !prompt_audit), PKI & Instrumentation (!learn, !learn_update, !instrument), TOC Management (!toc, !toc_generate, !toc_update), Discovery (!commands, !profiles, !help). Each routes to a _commands/{Synapse|project}/*.md spec file. Includes shell preprocessing to inject PROJECT_ROOT into the prompt at load time.",
+  "exports": [],
+  "imports_from": {
+    "commands": [
+      "_commands/Synapse/project.md",
+      "_commands/project/*.md (22 files)"
+    ]
+  },
+  "gotchas": [
+    "Dispatcher only — does NOT contain command logic; routes to _commands/{Synapse,project}/*.md",
+    "Mixes _commands/Synapse/project.md (the !project command) with _commands/project/*.md (analysis commands)",
+    "argument-hint is `<command> [args]` — user types the command name as argument"
+  ],
+  "patterns": [
+    "Router skill pattern: routing tables grouped by category + 'read the spec file' instruction"
+  ],
+  "conventions": [
+    "Category grouping: Setup / Analysis / PKI / TOC / Discovery"
+  ],
+  "relationships": {
+    "depends_on": [
+      "_commands/Synapse/project.md",
+      "_commands/project/*.md"
+    ],
+    "depended_by": [],
+    "related": [
+      ".claude/skills/dashboard-ops/SKILL.md (sibling router)"
+    ]
+  },
+  "domains": [
+    "skill-definition",
+    "command-router",
+    "project-workflow"
+  ],
+  "tags": [
+    "skill",
+    "yaml-frontmatter",
+    "router",
+    "project",
+    "user-invocable"
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "file": "src/ui/utils/format.js",
+  "content_hash": "c306df7a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Three small time-formatting helpers used across panels and cards: formatElapsed (since-start in 'Hh Mm' or 'Mm Ss'), formatTime (HH:MM:SS), calcDuration (between two timestamps in 'Mm Ss' or 'Ss').",
+  "exports": [
+    {
+      "name": "formatElapsed",
+      "kind": "function",
+      "signature": "(startISO: string) => string — 'Xh Ym' or 'Xm Ys'"
+    },
+    {
+      "name": "formatTime",
+      "kind": "function",
+      "signature": "(isoString: string) => string — 'HH:MM:SS'"
+    },
+    {
+      "name": "calcDuration",
+      "kind": "function",
+      "signature": "(startISO, endISO) => string — 'Xm Ys' or 'Ys'"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "formatElapsed uses Date.now() — calling repeatedly during a render does NOT auto-refresh; components must rerender on a tick to update.",
+    "All three swallow invalid date inputs by relying on Math.max(0, ...) and NaN→0 implicit coercion in arithmetic — output will be '0s' or 'NaNm NaNs' depending on path.",
+    "formatTime uses local timezone (getHours/getMinutes/getSeconds) — server-rendered timestamps look different across timezones."
+  ],
+  "patterns": [
+    "Pure functions — no React, no state — usable inside render loops freely."
+  ],
+  "conventions": [
+    "Time inputs are ISO strings; outputs are display strings.",
+    "Switch from 'Hh Mm' to 'Mm Ss' format triggered when hours > 0 or minutes > 0 respectively."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/components/AgentCard.jsx",
+      "src/ui/components/StatsBar.jsx",
+      "src/ui/components/LogPanel.jsx",
+      "src/ui/components/TimelinePanel.jsx",
+      "src/ui/components/MetricsPanel.jsx",
+      "src/ui/components/HomeView.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "time-formatting",
+    "react-dashboard"
+  ],
+  "tags": [
+    "formatter",
+    "time",
+    "duration",
+    "iso8601"
+  ]
+}

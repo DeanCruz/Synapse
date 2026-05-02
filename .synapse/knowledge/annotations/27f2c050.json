@@ -1,0 +1,49 @@
+{
+  "file": ".claude/skills/master-plan-track/SKILL.md",
+  "content_hash": "97f8b039",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "User-invocable forked-context Opus skill (`!master_plan_track`). Multi-stream orchestration: invoking agent becomes a meta-planner that decomposes large work into multiple independent planning streams, dispatches PLANNER agents to create plans in parallel, then dispatches CHILD MASTER agents to execute each stream on its own dashboard. Decision matrix: <5 tasks -> !p; 5+ tasks single swarm -> !p_track; multiple independent swarms -> !master_plan_track; 2+ sequential !p_track runs -> !master_plan_track. Five non-negotiable rules (meta-planner never writes code/manages workers directly, read CLAUDE.md before planning, each stream gets its own dashboard, archive before clear). Defers to _commands/Synapse/master_plan_track.md for the full protocol.",
+  "exports": [],
+  "imports_from": {
+    "commands": [
+      "_commands/Synapse/master_plan_track.md"
+    ]
+  },
+  "gotchas": [
+    "Three-tier hierarchy: meta-planner -> planner agents -> child master agents -> workers",
+    "Each stream MUST have its own dashboard — never multiplex",
+    "context: fork — runs in a forked Claude context; model: opus",
+    "Meta-planner level adds an extra indirection vs !p_track which is direct master->workers"
+  ],
+  "patterns": [
+    "Meta-orchestration with parallel planner dispatch + parallel child master dispatch",
+    "Per-stream dashboard isolation"
+  ],
+  "conventions": [
+    "Decision matrix at top distinguishes from !p, !p_track, sequential !p_track"
+  ],
+  "relationships": {
+    "depends_on": [
+      "_commands/Synapse/master_plan_track.md"
+    ],
+    "depended_by": [],
+    "related": [
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/skills/master-protocol/SKILL.md",
+      "queue/"
+    ]
+  },
+  "domains": [
+    "skill-definition",
+    "multi-stream-orchestration"
+  ],
+  "tags": [
+    "skill",
+    "user-invocable",
+    "fork",
+    "opus",
+    "meta-planner",
+    "multi-dashboard"
+  ]
+}

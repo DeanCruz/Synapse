@@ -1,0 +1,41 @@
+{
+  "file": "documentation/data-architecture/progress-files.md",
+  "content_hash": "e5a1b7a5",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Authoritative schema reference for worker progress files at dashboards/{id}/progress/{task_id}.json. Each worker is the sole writer; the file captures status, stage, message, milestones, deviations, logs, files_changed, prompt_size, shared_context, sibling_reads, and annotations. Documents server validation (isValidProgress), file watching with read-delay/retry, dependency dispatch on completion, and complete lifecycle examples from initial write through completion with deviations.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "task_id must match the filename and dashboard_id must match the directory -- the server hard-rejects mismatches with a write_rejected SSE event",
+    "completed_at must be null while status is 'in_progress' (server validation)",
+    "Server applies a 30ms read-delay and 80ms retry to handle mid-write reads",
+    "files_changed, annotations, template_version, prompt_size, shared_context, sibling_reads are NOT validated by isValidProgress -- workers are responsible for shape"
+  ],
+  "patterns": [
+    "Sole-writer file with full-file overwrite on every update",
+    "Append-only arrays (milestones, deviations, logs) that grow across writes",
+    "Stage state machine (reading_context -> planning -> implementing -> testing -> finalizing -> completed/failed)"
+  ],
+  "conventions": [
+    "Always use Write tool (atomic) -- never echo/cat shell redirects",
+    "summary on completion is descriptive; partial completion uses status:'completed' with summary explaining the blocker",
+    "annotations key by relative file path; lightweight subset of full PKI annotation schema"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "data-architecture",
+    "worker-protocol",
+    "schema"
+  ],
+  "tags": [
+    "progress-file",
+    "schema",
+    "validation",
+    "lifecycle"
+  ]
+}

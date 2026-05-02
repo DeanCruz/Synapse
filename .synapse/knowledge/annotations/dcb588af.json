@@ -1,0 +1,34 @@
+{
+  "file": "documentation/architecture/directory-structure.md",
+  "content_hash": "adfd9183",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Complete reference for the Synapse repository's directory layout, listing every top-level directory and explaining what each contains -- _commands/, agent/, electron/, src/server/, src/ui/, dashboards/, Archive/, history/, queue/, conversations/, documentation/, etc. Serves as the authoritative map any agent or developer can use to locate code by responsibility.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "tasks/{date}/ is legacy -- planning artifacts now live in dashboards/{id}/plan.json",
+    "Some hook/skill names in CLAUDE.md must be cross-referenced here; mismatches indicate one is stale"
+  ],
+  "patterns": [
+    "Hierarchical directory map with one-line purpose annotations"
+  ],
+  "conventions": [
+    "Forward-slash paths relative to {tracker_root}",
+    "Tree-style indented listings with connector characters"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "architecture",
+    "documentation"
+  ],
+  "tags": [
+    "directory-tree",
+    "reference",
+    "layout"
+  ]
+}

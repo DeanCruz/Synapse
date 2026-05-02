@@ -1,0 +1,47 @@
+{
+  "file": "_commands/Synapse/status.md",
+  "content_hash": "8752678c",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!status [dashboardId]` command for displaying a quick swarm summary in the terminal. Reads initialization.json + all progress files, merges them per the standard merge pattern (for each agent in init, look up progress; missing = pending), computes status counts + overall_status (via deriveOverallStatus()) + elapsed time (earliest started_at to latest completed_at or now). Renders Swarm header + Agents table + Wave Summary table + history hint. Read-only.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Uses the same merge pattern as !export and !inspect — for each agent in initialization.json, look up its progress file; if no file, status='pending'",
+    "Elapsed time computation: earliest started_at to NOW if any in-progress, else to latest completed_at",
+    "deriveOverallStatus() is the canonical function (defined elsewhere) for swarm-level status — do not reimplement",
+    "Argument disambiguation: dashboard ID vs anything else — accepts 6-char hex, `ide`, and legacy dashboardN"
+  ],
+  "patterns": [
+    "6-step procedure: parse → read init → read progress → merge+derive stats → display → history hint",
+    "Two output tables: Agents (id/title/wave/status/agent/summary) and Wave Summary (id/name/status/progress)",
+    "Status emojis: completed=✅, in_progress=🔵, failed=🔴, pending=⚪"
+  ],
+  "conventions": [
+    "Compact command doc — single-section Steps with embedded markdown render template",
+    "Status emojis enumerated in a bulleted list",
+    "Trailing history note pointing to !history command"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/inspect.md",
+      "_commands/Synapse/deps.md",
+      "_commands/Synapse/update_dashboard.md",
+      "_commands/Synapse/export.md"
+    ]
+  },
+  "domains": [
+    "dashboard-monitoring",
+    "swarm-summary"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "read-only"
+  ]
+}

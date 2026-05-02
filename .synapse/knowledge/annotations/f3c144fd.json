@@ -1,0 +1,71 @@
+{
+  "file": "src/ui/components/modals/PlanningModal.jsx",
+  "content_hash": "a56f8580",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "AI-powered task planner that decomposes a natural-language work request into a parallel task swarm structure (initialization.json shape: task, agents[], waves[], chains[], history[]). Builds a strict prompt with embedded JSON-only output rules, calls api.spawnWorker with the configured agentProvider (claude or codex) using a synthetic taskId='_planner', subscribes to worker-output (accumulating chunks into planOutputRef) and worker-complete events. extractJSON tries multiple parse strategies: direct regex, NDJSON line-by-line accumulating assistant.message.content text blocks (Claude SDK stream-json format), flat-format fallback, and result message — robust to multiple stream formats. Once parsed, renders PlanPreview (waves with nested agents and dependency arrows) and offers 'Edit Plan' or 'Accept & Launch' — both call onPlanReady(plan) so the parent can either open the SwarmBuilder or launch directly.",
+  "exports": [
+    {
+      "name": "PlanningModal",
+      "kind": "component",
+      "signature": "{ onClose, dashboardId, projectPath, onPlanReady }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useEffect",
+      "useRef"
+    ],
+    "src/ui/components/modals/Modal.jsx": [
+      "default"
+    ],
+    "src/ui/utils/dashboardProjects.js": [
+      "getDashboardAdditionalContext"
+    ]
+  },
+  "gotchas": [
+    "Listener cleanup is fragile — outputListenerRef.current and completeListenerRef.current are unsubscribe functions returned by api.on(). They are nulled inside complete handler AND in unmount cleanup. If the user closes the modal mid-generation, complete may never fire, but unmount will still clean up — verify both paths work.",
+    "spawnWorker uses taskId='_planner' as a sentinel. All worker-output / worker-complete events are filtered by data.taskId !== '_planner'. This prevents cross-talk with real swarm events but means concurrent planning sessions on different dashboards cannot run simultaneously without taskId collision.",
+    "dangerouslySkipPermissions: true is hardcoded — the planner never asks permission. Acceptable because it only writes to its prompt, but worth noting if security policy changes.",
+    "extractJSON regex /\\{[\\s\\S]*\"task\"[\\s\\S]*\"agents\"[\\s\\S]*\\}/ is greedy — matches from FIRST { to LAST } containing both keys; if Claude prepends commentary including stray braces, parse may fail or capture extra.",
+    "Both 'Edit Plan' and 'Accept & Launch' currently invoke the same onPlanReady(generatedPlan) and close — there is no actual divergence between the two paths in this file; the parent must decide what mode to enter based on its own state.",
+    "getDashboardAdditionalContext is called synchronously to build additionalContextDirs — if localStorage is empty, returns []."
+  ],
+  "patterns": [
+    "Provider-agnostic agent spawn: settings.agentProvider toggles between claude/codex, settings.{provider}CliPath supplies binary path. Same pattern in ProjectModal, ChatInstanceView, etc.",
+    "Tri-format stream-json parser (direct/NDJSON/result) — robust to streaming variants from Claude SDK, Claude CLI, and Codex.",
+    "useRef for listener-unsub functions and accumulated output, useState for reactive UI flags — splits mutable refs from rendered state correctly."
+  ],
+  "conventions": [
+    "PlanPreview is an inner sub-component for the modal's preview block.",
+    "Planning prompt is a multi-line concatenation in buildPlanningPrompt — JSON schema is inlined verbatim."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/modals/Modal.jsx",
+      "src/ui/utils/dashboardProjects.js"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/components/SwarmBuilder.jsx",
+      "electron/services/ClaudeCodeService.js",
+      "electron/services/CodexService.js"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "planning-ui",
+    "ai-generation",
+    "task-decomposition"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "planning",
+    "ai",
+    "claude",
+    "codex",
+    "stream-json"
+  ]
+}

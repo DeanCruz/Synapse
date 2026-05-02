@@ -1,0 +1,56 @@
+{
+  "file": "src/ui/components/git/InitFlow.jsx",
+  "content_hash": "73e57586",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Wizard surface shown by GitManagerView when the active repo's folder exists but lacks a .git directory (api.gitIsRepo returned false). Renders a centered card with a 'Not a Git Repository' title and an 'Initialize Repository' primary button. On click, calls api.gitInit(repoPath) and on success transitions through three visual states: initializing → success (CheckIcon + 'Repository Initialized') → onInitComplete callback (delayed 800ms so the user sees the success state). On failure, displays the error inline via git-manager-error class.",
+  "exports": [
+    {
+      "name": "InitFlow",
+      "kind": "component",
+      "signature": "{ repoPath: string, repoName: string, onInitComplete?: () => void }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useCallback"
+    ]
+  },
+  "gotchas": [
+    "onInitComplete fires after a 800ms setTimeout to let the user see the success state — but the timeout is not cleared on unmount, so if the component unmounts during the delay the callback may fire on an unmounted parent (low-impact but a React-warning candidate).",
+    "api.gitInit is the only required IPC method — if missing, the button does nothing silently.",
+    "There is no retry mechanism on error — the user can click again because initializing resets to false in finally, but error state persists until the next click.",
+    "After success the parent (GitManagerView.handleInitComplete) calls setIsGitRepo(true) which triggers the data-load useEffect — InitFlow itself doesn't load any git data."
+  ],
+  "patterns": [
+    "Three-state UI: idle/initializing/success — driven by initializing and success flags.",
+    "Reuses git-manager-empty container class for the centered card — same style as GitWelcome."
+  ],
+  "conventions": [
+    "Inline SVG icons (GitInitIcon, CheckIcon, SpinnerIcon) at top of file.",
+    "Error display via git-manager-error class with git-manager-error-message child."
+  ],
+  "relationships": {
+    "depends_on": [
+      "electron/preload.js (gitInit)"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx"
+    ],
+    "related": [
+      "src/ui/components/git/GitWelcome.jsx"
+    ]
+  },
+  "domains": [
+    "git-init",
+    "git-manager"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "init",
+    "wizard"
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "file": "electron/services/CodexService.js",
+  "content_hash": "5f3535d0",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "OpenAI Codex CLI counterpart to ClaudeCodeService — spawns codex worker processes for swarm tasks. Builds Codex-specific args (`exec --json` or `exec resume --json`, `--full-auto` or `--dangerously-bypass-approvals-and-sandbox`, `--skip-git-repo-check`, `-C projectDir`), passes the prompt via stdin, and parses NDJSON output line-by-line. Writes Codex's `last message` to a temp file (`-o /tmp/synapse_codex_last_message_*.txt`) which is read on close and included in the `worker-complete` payload as `lastMessage`. Strips Codex's noisy `Reading prompt from stdin...` line from stderr.",
+  "exports": [
+    {
+      "name": "init",
+      "kind": "function",
+      "signature": "(broadcast) => void"
+    },
+    {
+      "name": "spawnWorker",
+      "kind": "function",
+      "signature": "(opts) => {pid, taskId, dashboardId}"
+    },
+    {
+      "name": "killWorker",
+      "kind": "function",
+      "signature": "(pid) => boolean"
+    },
+    {
+      "name": "killAllWorkers",
+      "kind": "function",
+      "signature": "() => count"
+    },
+    {
+      "name": "getActiveWorkers",
+      "kind": "function",
+      "signature": "() => Worker[]"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Unlike Claude, the system prompt is not a CLI flag — it is prepended into the prompt text itself ('Follow these operating instructions exactly:\\n<systemPrompt>\\n\\nUser request:\\n<prompt>'). Bypass this and the worker will ignore worker-protocol instructions.",
+    "`--dangerously-bypass-approvals-and-sandbox` is the Codex equivalent of Claude's `--dangerously-skip-permissions`; without it Codex defaults to `--full-auto`. There is no permission-relay path equivalent to Claude's stdio mode.",
+    "The temp file `outputLastMessagePath` is created via Date.now() + Math.random() — very low collision risk, but if multiple workers spawn within the same ms and Math.random() collides the second worker's lastMessage will be lost.",
+    "Codex resume uses `exec resume --json <sessionId>` and intentionally omits `-C projectDir` because Codex stores the project association in its own session metadata.",
+    "`cleanErrorOutput` filters the literal string 'Reading prompt from stdin...' — if Codex changes that wording the noise will reappear in the UI."
+  ],
+  "patterns": [
+    "Mirrors ClaudeCodeService's PID-keyed activeWorkers + 3-channel broadcast pattern (`worker-output`, `worker-complete`, `worker-error`) so callers can swap providers transparently.",
+    "lastMessage roundtrip via tmpfile because Codex doesn't surface the final assistant message in NDJSON the way Claude does.",
+    "Provider field on every event payload (`provider: 'codex'`) lets the renderer distinguish events when both providers run side-by-side."
+  ],
+  "conventions": [
+    "Same `[CodexService]` log prefix convention as the Claude service.",
+    "All three error/exit code paths converge on delete-from-activeWorkers + broadcast — no leaks even on spawn error.",
+    "Same `opts.dangerouslySkipPermissions` boolean used for both providers — the service maps it internally to the provider-appropriate flag."
+  ],
+  "relationships": {
+    "depends_on": [
+      "child_process.spawn",
+      "node:os",
+      "node:fs"
+    ],
+    "depended_by": [
+      "electron/services/SwarmOrchestrator.js",
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "electron/services/ClaudeCodeService.js"
+    ]
+  },
+  "domains": [
+    "cli-process-management",
+    "swarm-orchestration",
+    "codex-cli-integration"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "codex-cli",
+    "child-process",
+    "ndjson-streaming",
+    "tmpfile-roundtrip"
+  ]
+}

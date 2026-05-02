@@ -1,0 +1,60 @@
+{
+  "file": "src/ui/components/SwarmBuilder.jsx",
+  "content_hash": "f98f880c",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Embedded swarm builder/editor view used to compose initialization.json before launching a swarm. Manages swarmName, swarmType (Waves|Chains toggle), agents list, and waves list. Tasks are grouped by wave and sorted by wave id. Add/Edit opens TaskEditorModal which calls back with task data; new tasks auto-resolve a wave (existing waves[0], explicit `_newWaveName`, or default 'Wave 1') and assign sub-ids `{waveId}.{nextSub}`. Delete cascades by removing the agent and stripping its id from all `depends_on` arrays. Launch composes a final initData payload (task metadata, agents, waves, empty chains+history) and invokes onLaunch.",
+  "exports": [
+    {
+      "name": "SwarmBuilder",
+      "kind": "component",
+      "signature": "{ onLaunch: (initData) => void, onCancel?: () => void, initData?: object, dashboardId: string }"
+    }
+  ],
+  "imports_from": {
+    "../context/AppContext.jsx": [
+      "useDispatch"
+    ],
+    "./modals/TaskEditorModal.jsx": [
+      "default"
+    ]
+  },
+  "gotchas": [
+    "Task IDs are generated as `{wave}.{subIndex}` — if a user reorders waves or creates a new wave with the same id as a deleted one, ids can collide.",
+    "Chains array is hard-coded as `[]` in the launch payload — even when swarmType==='Chains', SwarmBuilder produces no chain definitions; the consumer must derive chains downstream.",
+    "recalcWaves DROPS waves whose total === 0 — a user creating an empty wave has it removed on the next agent change.",
+    "Launch is disabled only on empty name OR zero agents — does not validate dependency cycles or duplicate ids."
+  ],
+  "patterns": [
+    "recalcWaves(agentList, waveList) is called everywhere the agents change to keep wave counts in sync and prune empty waves.",
+    "Modal state lives in this component (taskEditorOpen + editingTask) and the modal is conditionally mounted only when open."
+  ],
+  "conventions": [
+    "Default Wave 1 created when first agent is added with no existing waves.",
+    "_newWaveName is a temporary marker passed through TaskEditorModal — stripped before persisting."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/components/modals/TaskEditorModal.jsx"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx",
+      "src/ui/components/modals/PlanningModal.jsx"
+    ],
+    "related": [
+      "electron/services/TaskEditorService.js"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering",
+    "swarm-pipeline"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "swarm-builder",
+    "task-editor"
+  ]
+}

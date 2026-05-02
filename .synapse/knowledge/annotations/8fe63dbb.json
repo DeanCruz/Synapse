@@ -1,0 +1,63 @@
+{
+  "file": "src/ui/utils/monacoWorkerSetup.js",
+  "content_hash": "4a65f383",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "One-shot Monaco Editor web-worker bootstrap for Vite. Imports the five worker entries (editor, json, css, html, ts) using Vite's ?worker query suffix and registers self.MonacoEnvironment.getWorker so Monaco can spawn the right worker per language. Without this, Monaco falls back to synchronous mode and syntax highlighting, code completion, and validation all degrade. Must be imported ONCE before any Monaco editor instance is constructed (typically by IDEView's CodeEditor).",
+  "exports": [],
+  "imports_from": {
+    "monaco-editor/esm/vs/editor/editor.worker": [
+      "default"
+    ],
+    "monaco-editor/esm/vs/language/json/json.worker": [
+      "default"
+    ],
+    "monaco-editor/esm/vs/language/css/css.worker": [
+      "default"
+    ],
+    "monaco-editor/esm/vs/language/html/html.worker": [
+      "default"
+    ],
+    "monaco-editor/esm/vs/language/typescript/ts.worker": [
+      "default"
+    ]
+  },
+  "gotchas": [
+    "Side-effect-only module — imports are for side-effect, no exports. Tree-shaking would break this; ensure the import keeps it.",
+    "Vite ?worker query suffix is required — bare imports of Monaco workers do NOT work; this is Vite-specific syntax.",
+    "self.MonacoEnvironment is set on first import — imported AGAIN with different config later would clobber. Single source of truth.",
+    "If Monaco is loaded before this module, workers won't be configured — order of import matters.",
+    "The 'typescript' label handles both .ts AND .js (Monaco's TS language service handles both); 'css' label handles scss and less; 'html' handles handlebars and razor.",
+    "Webpack/Rollup users would need different worker setup — this file is Vite-only."
+  ],
+  "patterns": [
+    "Vite ?worker import returns a Worker constructor — `new editorWorker()` spawns an instance.",
+    "self.MonacoEnvironment global registration — required hook for Monaco to find its workers."
+  ],
+  "conventions": [
+    "Single side-effect module imported once before Monaco usage.",
+    "Worker labels match Monaco's internal language IDs."
+  ],
+  "relationships": {
+    "depends_on": [
+      "monaco-editor (npm package)"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/CodeEditor.jsx",
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "monaco-editor",
+    "ide-workspace",
+    "vite-bundler"
+  ],
+  "tags": [
+    "monaco",
+    "web-worker",
+    "vite",
+    "ide",
+    "editor-bootstrap"
+  ]
+}

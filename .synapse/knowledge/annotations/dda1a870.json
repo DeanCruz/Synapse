@@ -1,0 +1,52 @@
+{
+  "file": "documentation/dashboard/state-management.md",
+  "content_hash": "85b47001",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Definitive reference for the dashboard's global state via AppContext + useReducer. Lists every reducer action (CLAUDE_*, IDE_*, GIT_*, DEBUG_*, SET_VIEW, etc.), full state shape, persistence rules (localStorage for repos/settings), and how IPC push events map to dispatches.",
+  "exports": [
+    "AppContext",
+    "DispatchContext",
+    "AppProvider",
+    "appReducer"
+  ],
+  "imports_from": [],
+  "gotchas": [
+    "Action types are flat strings — typos produce silent no-ops",
+    "Git repos and IDE workspaces persist to localStorage; live data is never persisted",
+    "Multiple subdomains (CLAUDE_, IDE_, GIT_, DEBUG_) live in same reducer — keep state slices isolated"
+  ],
+  "patterns": [
+    "Single root reducer with namespaced action prefixes",
+    "Two contexts: state (AppContext) and dispatch (DispatchContext) for memoization",
+    "localStorage hydration in provider effect"
+  ],
+  "conventions": [
+    "Action constants UPPER_SNAKE_CASE",
+    "State slices keyed by domain name (gitRepos, ideOpenFiles, claudeSessions, ...)"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/dashboard/overview.md"
+    ],
+    "depended_by": [
+      "documentation/dashboard/components.md",
+      "documentation/dashboard/hooks.md",
+      "documentation/dashboard/layout-modes.md",
+      "documentation/git-manager/overview.md",
+      "documentation/ide/overview.md"
+    ],
+    "related": [
+      "documentation/electron/ipc-reference.md"
+    ]
+  },
+  "domains": [
+    "dashboard-ui"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "state",
+    "reducer"
+  ]
+}

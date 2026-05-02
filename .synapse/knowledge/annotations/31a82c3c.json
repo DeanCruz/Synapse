@@ -1,0 +1,52 @@
+{
+  "file": "_commands/project/scaffold.md",
+  "content_hash": "531e1e08",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !scaffold slash command — generates a CLAUDE.md for a project that lacks one by scanning structure, detecting tech stack, and reading existing docs. Six-step workflow: validate target (refuse if CLAUDE.md exists without --force; --force requires confirmation), detect tech stack from package.json/tsconfig/next.config/firebase.json/requirements.txt/go.mod/Cargo.toml/etc., scan directory structure (top-level + one level into src/app/lib/functions), read existing docs (README.md, CONTRIBUTING.md, docs/, .env.example, _commands/), generate CLAUDE.md with Tech Stack/Architecture/File Structure/Conventions/Commands/Environment sections, write file and report. DESCRIPTIVE not prescriptive — documents what IS, not what SHOULD BE. Marks unknowns as TODO rather than guessing.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Differentiation from !create_claude is critical: !scaffold DOCUMENTS what IS; !create_claude PRESCRIBES what SHOULD BE.",
+    "NEVER overwrite existing CLAUDE.md without --force — existing files represent manual user work.",
+    "--force still requires confirmation prompt before overwrite.",
+    "Mark unknowns as TODO — never guess at architecture/conventions that can't be inferred from filesystem. TODO > wrong assumption.",
+    "Read ONLY structure and config files — never deep-read source code. Scaffold reads: configs, READMEs, directory listings, command files.",
+    "Generated files are STARTING POINTS — output must explicitly tell the user to review and expand TODO sections."
+  ],
+  "patterns": [
+    "Detect-then-document: configs/structure → infer → generate template.",
+    "Conservative inference: prefer TODO markers over guessed values.",
+    "Single --force flag (vs !create_claude which has --update + --force)."
+  ],
+  "conventions": [
+    "Serial execution.",
+    "Modifies filesystem (writes new CLAUDE.md only when none exists, or with --force).",
+    "Section structure: Tech Stack / Architecture / File Structure / Conventions / Commands / Environment."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{project_root}/package.json",
+      "{project_root}/README.md"
+    ],
+    "depended_by": [
+      "_commands/project/initialize.md"
+    ],
+    "related": [
+      "_commands/project/create_claude.md",
+      "_commands/project/initialize.md"
+    ]
+  },
+  "domains": [
+    "project-setup",
+    "claude-md-generation"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "scaffolding",
+    "writes-files",
+    "descriptive"
+  ]
+}

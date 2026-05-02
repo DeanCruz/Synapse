@@ -1,0 +1,84 @@
+{
+  "file": "electron/services/ConversationService.js",
+  "content_hash": "04482b6b",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Persists chat conversations as JSON files in `{ROOT}/conversations/`. Used by the in-app Claude/Codex chat UIs (ClaudeView, ChatInstanceView) to save full message histories, list/load/rename/delete past sessions, and filter by dashboardId + surface ('chat' vs 'code'). Each conversation is a single JSON document {id, name, created, updated, dashboardId, surface, messages[]}.",
+  "exports": [
+    {
+      "name": "listConversations",
+      "kind": "function",
+      "signature": "(dashboardId?, surface?) => summary[]"
+    },
+    {
+      "name": "loadConversation",
+      "kind": "function",
+      "signature": "(id) => conversation|null"
+    },
+    {
+      "name": "saveConversation",
+      "kind": "function",
+      "signature": "(data) => savedData|null"
+    },
+    {
+      "name": "createConversation",
+      "kind": "function",
+      "signature": "(name?) => conversation"
+    },
+    {
+      "name": "deleteConversation",
+      "kind": "function",
+      "signature": "(id) => result"
+    },
+    {
+      "name": "renameConversation",
+      "kind": "function",
+      "signature": "(id, name) => updated|{error}"
+    }
+  ],
+  "imports_from": {
+    "src/server/utils/constants": [
+      "CONVERSATIONS_DIR"
+    ]
+  },
+  "gotchas": [
+    "Surface filtering is asymmetric for legacy entries: conversations missing the `surface` field default to 'code' for filtering. Passing surface='chat' EXCLUDES legacy entries even though they may have originated from the chat UI before the field was added.",
+    "saveConversation does NOT auto-default `surface` — callers must pass it explicitly. Forgetting to pass it on a new conversation will mean it filters as legacy/'code' on the next list.",
+    "ID convention is `conv_<Date.now()>` — two simultaneous createConversation() calls within the same ms would collide silently (last-write-wins).",
+    "All errors are swallowed and returned as `null` from listConversations / loadConversation — callers cannot distinguish 'file not found' from 'malformed JSON'."
+  ],
+  "patterns": [
+    "One JSON file per conversation in CONVERSATIONS_DIR (no index file). listConversations re-reads every file on every call.",
+    "Sort newest-first by `updated` (ISO string compared via Date.parse).",
+    "Optional dashboardId+surface filtering happens server-side rather than client-side."
+  ],
+  "conventions": [
+    "Always touches `updated` to new Date().toISOString() on save.",
+    "Functions return either a data object or `{error: message}` — never throw.",
+    "Synchronous fs API throughout."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/utils/constants"
+    ],
+    "depended_by": [
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "src/ui/components/ClaudeView.jsx",
+      "src/ui/components/chat/ChatInstanceView.jsx"
+    ]
+  },
+  "domains": [
+    "chat-persistence",
+    "conversation-management"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "conversations",
+    "chat",
+    "json-storage"
+  ]
+}

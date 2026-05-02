@@ -1,0 +1,38 @@
+{
+  "file": "src/ui/styles/ide-sidebar.css",
+  "content_hash": "2a6a2d4a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Stylesheet for the dashboard left-side tab bar (.sidebar-tab-bar) used by the main app sidebar — Code Explorer / Dashboards toggle. Defines stacked tab rows (.sidebar-tab-row), individual tab buttons (.sidebar-tab) with active/hover/focus states, the add button (.sidebar-add-btn) and toggle button (.sidebar-toggle-btn) that pin to the right side via margin-left:auto.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Class names .sidebar-tab / .sidebar-tab-bar are quite generic — be careful not to introduce a different .sidebar-tab in another stylesheet.",
+    "Loaded both globally (main.jsx) and via Sidebar.jsx — duplicate-import safe but noisy in the dependency graph."
+  ],
+  "patterns": [
+    "Pinned-right buttons via margin-left:auto inside flex row.",
+    "Active state applied via .sidebar-tab.active conditional class."
+  ],
+  "conventions": [
+    "Class prefix: .sidebar-* (kebab case)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for --border, --text-tertiary, --sans"
+    ],
+    "depended_by": [
+      "src/ui/components/Sidebar.jsx",
+      "src/ui/main.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "ide-styles"
+  ],
+  "tags": [
+    "css",
+    "sidebar",
+    "tabs"
+  ]
+}

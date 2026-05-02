@@ -1,0 +1,59 @@
+{
+  "file": "src/ui/hooks/useResize.js",
+  "content_hash": "c4d31b36",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Custom resize hook for the bottom-right-anchored Claude floating panel. Uses pointer events (NOT mouse events), pointer capture, and requestAnimationFrame to drive 60fps resize via direct element.style mutations — never re-renders. Listens for pointerdown on elements with data-resize-edge attribute inside a panel ref, then tracks pointermove/pointerup on document. Supports three edges: 'left' (width), 'top' (height), 'top-left' (both). Honors minWidth/minHeight/maxHeight options.",
+  "exports": [
+    {
+      "name": "useResize",
+      "kind": "hook",
+      "signature": "useResize(panelRef, viewMode, options?: { minWidth, minHeight, maxHeight })"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useEffect",
+      "useRef",
+      "useCallback"
+    ]
+  },
+  "gotchas": [
+    "Only active when viewMode === 'expanded' — minimized/collapsed/maximized modes get cleanupDrag() called and the hook returns early without attaching listeners.",
+    "Direct DOM mutation (panel.style.width = ...) — React is bypassed entirely. Re-rendering the panel will reset style unless caller restores via onResizeStop or persistence.",
+    "Pointer capture (e.target.setPointerCapture) keeps events flowing even when the cursor leaves the browser window — important for fullscreen drags.",
+    "ClaudeFloatingPanel in App.jsx ALSO has its own legacy mousedown drag handler — useResize coexists with it; both must be kept in sync if you change resize behavior.",
+    "rAF cancellation: only the latest pointermove rAF is kept (cancelAnimationFrame on each new event) — drag stays smooth at high pointer rates.",
+    "Body cursor and userSelect are temporarily overridden during drag — cleanupDrag MUST run on pointerup OR effect teardown OR the page is left with broken cursor/selection state.",
+    "minWidth (360) / minHeight (300) / maxHeight (800) defaults are hardcoded — changing here doesn't affect the legacy in-component drag."
+  ],
+  "patterns": [
+    "Direct style.* mutation inside rAF for drag/resize — avoids React re-render thrashing and keeps drags at native frame rate.",
+    "Pointer events + setPointerCapture is more robust than mouse events for window-leaving drags — use this pattern for any custom drag UI.",
+    "data-resize-edge attribute selector for delegated handle detection — handles are siblings inside the panel; click on any handle reads its edge from dataset."
+  ],
+  "conventions": [
+    "Hook stores mutable drag state in useRef (never useState) — drag state is not part of render.",
+    "useCallback for cleanupDrag so it can be referenced from both pointerup and effect teardown without creating closures with stale refs."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/App.jsx (ClaudeFloatingPanel)"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-dashboard",
+    "drag-resize",
+    "pointer-events"
+  ],
+  "tags": [
+    "react",
+    "hook",
+    "resize",
+    "pointer-events",
+    "raf",
+    "floating-panel"
+  ]
+}

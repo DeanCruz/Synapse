@@ -1,0 +1,91 @@
+{
+  "file": "src/server/SSEManager.js",
+  "content_hash": "7d0939d0",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Manages the live set of Server-Sent Events client connections in a `Map<http.ServerResponse, {dashboardFilter}>` and exposes `broadcast`, `addClient`, `removeClient`, `startHeartbeat`, `stopHeartbeat`, and `closeAll` as the single public surface for fan-out. `broadcast(eventName, data)` builds the SSE wire format (`event: <name>\\ndata: <json>\\n\\n`) once and writes it to every live client; clients with `dashboardFilter` set only receive events whose `data.dashboardId` matches (events without a `dashboardId`, like `dashboards_list` or `queue_changed`, are treated as global and delivered to everyone). On every iteration it lazily reaps clients whose `res.destroyed` or `res.writableEnded` is true and clients whose `res.write` throws — preventing zombie references. The heartbeat (started via `startHeartbeat`, default 15s from `HEARTBEAT_MS`) writes `: ping\\n\\n` (an SSE comment) to all clients to keep proxies/load balancers from killing idle connections, with the same reap-on-error logic. `closeAll` calls `res.end()` on every client and clears the map — used by graceful shutdown.",
+  "exports": [
+    {
+      "name": "sseClients",
+      "kind": "constant",
+      "signature": "Map<http.ServerResponse, {dashboardFilter:string|null}>"
+    },
+    {
+      "name": "broadcast",
+      "kind": "function",
+      "signature": "(eventName: string, data: object) => void"
+    },
+    {
+      "name": "addClient",
+      "kind": "function",
+      "signature": "(res, options?: {dashboardFilter?:string|null}) => void"
+    },
+    {
+      "name": "removeClient",
+      "kind": "function",
+      "signature": "(res) => void"
+    },
+    {
+      "name": "startHeartbeat",
+      "kind": "function",
+      "signature": "() => void"
+    },
+    {
+      "name": "stopHeartbeat",
+      "kind": "function",
+      "signature": "() => void"
+    },
+    {
+      "name": "closeAll",
+      "kind": "function",
+      "signature": "() => void"
+    }
+  ],
+  "imports_from": {
+    "./utils/constants": [
+      "HEARTBEAT_MS"
+    ]
+  },
+  "gotchas": [
+    "SSE clients MUST be removed on disconnect or the `sseClients` Map leaks references to dead `http.ServerResponse` objects. The lazy reap inside `broadcast` and the heartbeat is a safety net, but the canonical removal is `req.on('close', () => removeClient(res))` in index.js.",
+    "Filtering logic only filters when BOTH `meta.dashboardFilter` AND `eventDashboardId` are truthy — events without a `dashboardId` field bypass the filter entirely (intentional for global events but easy to forget when adding new event types).",
+    "`res.write` can throw if the socket is half-closed between the `destroyed` check and the write call — wrapped in try/catch that deletes the client. Don't remove this catch.",
+    "`startHeartbeat` does not guard against being called twice — calling it a second time without `stopHeartbeat` would orphan the previous timer.",
+    "Heartbeat writes `: ping\\n\\n` (a comment line) NOT `event: ping`. Browser EventSource silently ignores comments — adding `event:` here would create a phantom `ping` event on the client."
+  ],
+  "patterns": [
+    "SSE heartbeat every 15s (HEARTBEAT_MS) to detect disconnects and prevent proxy timeouts.",
+    "Per-client metadata (dashboardFilter) stored in the Map value, not the response object — keeps response untouched and enables future per-client options without prototype pollution.",
+    "Lazy disconnect reaping on every broadcast iteration — no separate sweep timer.",
+    "Global events (no `dashboardId` in payload) bypass filter — `dashboards_list` and `queue_changed` reach all clients regardless of subscription."
+  ],
+  "conventions": [
+    "Public function JSDoc comments describe both behavior and parameter shape.",
+    "Module-level `let heartbeatTimer = null` is used for the singleton timer reference.",
+    "All exports are named — no default export."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/server/utils/constants.js"
+    ],
+    "depended_by": [
+      "src/server/index.js",
+      "src/server/services/WatcherService.js (via broadcast injection)"
+    ],
+    "related": [
+      "electron/ipc-handlers.js (IPC bridge mirrors SSE for Electron renderer)"
+    ]
+  },
+  "domains": [
+    "sse-broadcast",
+    "dashboard-broadcast",
+    "client-lifecycle"
+  ],
+  "tags": [
+    "sse",
+    "broadcast",
+    "heartbeat",
+    "filtering",
+    "javascript"
+  ]
+}

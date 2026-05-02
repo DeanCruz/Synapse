@@ -1,0 +1,70 @@
+{
+  "file": "src/ui/utils/dependencyLines.js",
+  "content_hash": "0c2b1187",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "BFS-based dependency-line and sibling-communication-line drawing for WavePipeline / ChainPipeline SVG overlays. Builds a 'pathway grid' of horizontal corridors (between cards) and vertical corridors (between wave columns), runs BFS to find shortest paths through this grid (so lines never cross cards), then renders SVG polylines with status-aware styling (completed=green, in_progress=purple, pending=gray-dashed). Sibling lines (drawn AFTER dep lines) reuse the same cached grid; they draw between agents whose progress files contain non-empty sibling_reads arrays. Also registers card hover handlers that highlight needs/blocks/sibling relationships and dim unrelated lines.",
+  "exports": [
+    {
+      "name": "drawDependencyLines",
+      "kind": "function",
+      "signature": "(svg, agents, agentMap, cardElements, container) => void"
+    },
+    {
+      "name": "drawSiblingLines",
+      "kind": "function",
+      "signature": "(svg, agents, agentMap, cardElements, container, progressData) => void"
+    },
+    {
+      "name": "setupCardHoverEffects",
+      "kind": "function",
+      "signature": "(container, svg) => void"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "_bfsCache is a module-scoped cache shared by drawDependencyLines AND drawSiblingLines — drawSiblingLines silently does nothing if the cache is empty (i.e. you must call drawDependencyLines first or there's no grid to reuse).",
+    "Cache key is built from card bounding rects (left,top,width,height) — any layout change invalidates the cache and forces a full grid rebuild.",
+    "Wave-mode uses .wave-column DOM elements; chain-mode falls back to inferring columns by clustering card centerX (threshold 100px) — adding a new pipeline mode requires updating buildPathwayGrid.",
+    "Pathway corridors are computed in CONTAINER-RELATIVE coordinates (with scrollLeft/Top added to viewport rects) — the SVG must overlay the container, not the viewport.",
+    "PATHWAY_STEP=15px node spacing controls grid density — larger values give fewer routes but lower routing quality.",
+    "Card hover handlers stored on container._depMouseEnter / _depMouseLeave (private DOM properties) — calling setupCardHoverEffects multiple times correctly removes prior listeners before adding new ones.",
+    "Mouseenter/mouseleave use capture phase (true) — required for delegation to work on .agent-card targets.",
+    "drawDependencyLines clears the SVG (while svg.firstChild) before redrawing — calling this in a fast loop will thrash the DOM.",
+    "Sibling line routing direction: same-wave or no-wave-info falls back to exit-from-reader-to-entry-of-sibling — bidirectional reads draw two lines (once per agent that lists the other).",
+    "_bfsCache.paths cache is per-key 'exitKey->entryKey' — it persists across drawDependencyLines and drawSiblingLines invocations within the same layout."
+  ],
+  "patterns": [
+    "BFS over a sparse pathway grid for non-overlapping line routing — avoids the visual mess of straight-through lines on dense pipelines.",
+    "SVG with separate visible polyline + transparent hit-area polyline for hover detection — wide hit zone, thin visible line.",
+    "Module-scoped cache for expensive computation (grid + paths) — invalidated by layout-rect change-key.",
+    "Event delegation via capture phase — single listener on container handles all card hover events."
+  ],
+  "conventions": [
+    "Uses ES5 'var' throughout (no let/const) — leftover from extraction from legacy dashboard.js per file header.",
+    "Status-color hex codes hardcoded (#34d399, #9b7cf0, #6E6E73) — these duplicate STATUS_COLORS in constants.js and are NOT theme-synced."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/components/WavePipeline.jsx",
+      "src/ui/components/ChainPipeline.jsx"
+    ],
+    "related": [
+      "src/ui/utils/constants.js"
+    ]
+  },
+  "domains": [
+    "dependency-graph-render",
+    "svg-routing",
+    "react-dashboard"
+  ],
+  "tags": [
+    "svg",
+    "bfs",
+    "pathfinding",
+    "dependency-lines",
+    "sibling-lines",
+    "hover-highlight"
+  ]
+}

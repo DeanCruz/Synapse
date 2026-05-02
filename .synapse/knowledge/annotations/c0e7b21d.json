@@ -1,0 +1,37 @@
+{
+  "file": ".claude/plan.md",
+  "content_hash": "fc40953c",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Historical planning artifact for the 'Convert XML Task Files to JSON' migration (predates current dashboards/{id}/plan.json convention). Documents the JSON schema that replaced the legacy XML master task file format (tasks/{date}/parallel_{name}.xml -> .json), enumerates ~47 files to edit grouped by priority (Core, Agent Protocol, Commands, Documentation, Other), terminology mapping ('master XML' -> 'master task file'), and execution strategy in batches. Stale: tasks/{date}/parallel_*.json is itself now deprecated in favor of dashboards/{id}/plan.json + initialization.json.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Plan is HISTORICAL — describes the XML->JSON conversion that already happened. The post-conversion JSON schema (tasks/{date}/parallel_{name}.json) is itself now legacy/deprecated.",
+    "Current canonical plan format is dashboards/{id}/plan.json (different schema) — see .claude/skills/p-track/SKILL.md or agent/master/initialization_blueprint.md",
+    "Listed file paths reference repos at /Users/dean/Desktop/Working/Repos/Synapse — not the current /Users/dean/Desktop/Synapse layout"
+  ],
+  "patterns": [
+    "Migration plan pattern: schema-first, then file groupings, then terminology mapping"
+  ],
+  "conventions": [],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      ".claude/MIGRATION.md",
+      "agent/master/initialization_blueprint.md"
+    ]
+  },
+  "domains": [
+    "historical-plan",
+    "migration-documentation"
+  ],
+  "tags": [
+    "markdown",
+    "plan",
+    "historical",
+    "xml-to-json",
+    "migration"
+  ]
+}

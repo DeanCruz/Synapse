@@ -1,0 +1,49 @@
+{
+  "file": "documentation/configuration/server-config.md",
+  "content_hash": "9176ef6b",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for the SSE server's configuration centralized in src/server/utils/constants.js. Documents the PORT (default 3456, only env-var overridable), all directory paths (DASHBOARDS_DIR, QUEUE_DIR, ARCHIVE_DIR, HISTORY_DIR, CONVERSATIONS_DIR), timing constants for file watching/reconciliation/SSE (INIT_POLL_MS, PROGRESS_READ_DELAY_MS, PROGRESS_RETRY_MS, RECONCILE_DEBOUNCE_MS, RECONCILE_INTERVAL_MS, DEPENDENCY_CHECK_DELAY_MS, HEARTBEAT_MS), MIME types, default data shapes, and the timing pipeline flow.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Server is zero-dependency -- no .env loader, no runtime config API",
+    "INIT_POLL_MS uses fs.watchFile (polling) -- fs.watch is unreliable for external writes",
+    "Two-stage defense for progress files: PROGRESS_READ_DELAY_MS (30ms) + PROGRESS_RETRY_MS (80ms)",
+    "RECONCILE_INTERVAL_MS (5s) is a safety net for missed fs.watch events",
+    "Files without MIME mapping served without Content-Type header"
+  ],
+  "patterns": [
+    "Module-load-time constant resolution",
+    "Path derivation from ROOT (3 levels up from constants.js)",
+    "Polling for external-process writes, fs.watch for own-process writes"
+  ],
+  "conventions": [
+    "All paths absolute, computed once at startup",
+    "Hardcoded timing constants -- intentionally simple",
+    "DEFAULT_INITIALIZATION/DEFAULT_LOGS for empty dashboard state"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/configuration/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/configuration/electron-config.md",
+      "src/server/utils/constants.js",
+      "src/server/index.js",
+      "src/server/services/WatcherService.js"
+    ]
+  },
+  "domains": [
+    "configuration-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "server",
+    "configuration",
+    "constants",
+    "timing"
+  ]
+}

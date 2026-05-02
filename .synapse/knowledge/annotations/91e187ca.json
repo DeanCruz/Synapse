@@ -1,0 +1,130 @@
+{
+  "file": "electron/services/DebugService.js",
+  "content_hash": "d9859152",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "In-process Node.js debugger via the Chrome DevTools Protocol (CDP). Spawns a child Node process with `--inspect-brk=0` (random port, break on first line), parses the `Debugger listening on ws://...` URL from stderr, opens a WebSocket using Node 22+ built-in global WebSocket, enables Debugger + Runtime domains, calls `Runtime.runIfWaitingForDebugger`, and exposes a high-level API to the renderer (setBreakpoint, removeBreakpoint, resume, pause, stepOver/Into/Out, evaluate, getVariables). Translates CDP events (Debugger.paused, Runtime.consoleAPICalled, Runtime.exceptionThrown) into renderer push events (debug-paused, debug-output, debug-resumed, debug-stopped). Single-session: only one debug process can run at a time.",
+  "exports": [
+    {
+      "name": "init",
+      "kind": "function",
+      "signature": "(broadcast) => void"
+    },
+    {
+      "name": "launch",
+      "kind": "function",
+      "signature": "(opts) => Promise<{success, pid?, error?}>"
+    },
+    {
+      "name": "stop",
+      "kind": "function",
+      "signature": "() => {success, error?}"
+    },
+    {
+      "name": "setBreakpoint",
+      "kind": "function",
+      "signature": "(filePath, lineNumber, condition?) => Promise<{success, breakpointId?, actualLine?}>"
+    },
+    {
+      "name": "removeBreakpoint",
+      "kind": "function",
+      "signature": "(breakpointId) => Promise"
+    },
+    {
+      "name": "resume",
+      "kind": "function",
+      "signature": "() => Promise"
+    },
+    {
+      "name": "pause",
+      "kind": "function",
+      "signature": "() => Promise"
+    },
+    {
+      "name": "stepOver",
+      "kind": "function",
+      "signature": "() => Promise"
+    },
+    {
+      "name": "stepInto",
+      "kind": "function",
+      "signature": "() => Promise"
+    },
+    {
+      "name": "stepOut",
+      "kind": "function",
+      "signature": "() => Promise"
+    },
+    {
+      "name": "evaluate",
+      "kind": "function",
+      "signature": "(expression, callFrameId?) => Promise<{success, result, exceptionDetails?}>"
+    },
+    {
+      "name": "getVariables",
+      "kind": "function",
+      "signature": "(objectId) => Promise<{success, variables[]}>"
+    },
+    {
+      "name": "getScopes",
+      "kind": "function",
+      "signature": "(callFrameId?) => Promise"
+    },
+    {
+      "name": "getSessionInfo",
+      "kind": "function",
+      "signature": "() => {active, scriptPath?, pid?, breakpoints?}"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Requires Node.js 22+ for the global WebSocket API. Older Electron versions bundling Node <22 will fail at `new WebSocket(url)`.",
+    "ELECTRON_RUN_AS_NODE is deleted before spawn — without this the child runs as Electron and `--inspect-brk` is ignored, leaving the debugger waiting forever.",
+    "Breakpoint URLs use `file://` + `fs.realpathSync(filePath)` to match V8's internal URL form (e.g., /tmp -> /private/tmp on macOS). Skipping realpath causes 'breakpoint not bound' silently.",
+    "CDP line/column numbers are 0-based; this service converts to 1-based at every boundary. Mixing the two will misplace UI breakpoint markers.",
+    "Single-session enforced via the module-level `activeSession` — calling launch() while a session exists returns an error rather than queueing.",
+    "cleanupSession sends SIGTERM then SIGKILL after 2s, but if the WebSocket is already dropped (debuggee crashed) the close handler also fires cleanupSession — guards via `activeSession.ws === ws` check prevent double-cleanup.",
+    "sendCDPCommand uses `++activeSession.nextId` for correlation; if a response arrives AFTER its handler is removed (timeout fires first) the response is silently dropped. Long-running CDP calls (>10s default) will fail.",
+    "`scriptSources` map is populated only via Debugger.scriptParsed events — frames from before the WS was attached have no scriptId mapping (rare since we break on first line)."
+  ],
+  "patterns": [
+    "Stderr-scrape pattern: parse `Debugger listening on (ws://...)` regex from cumulative stderr buffer to find the CDP endpoint.",
+    "Promise-bridged CDP commands: every sendCDPCommand attaches a one-shot `message` listener that filters by `id`, with timeout cleanup.",
+    "Renderer push events use 4 channels: `debug-paused`, `debug-resumed`, `debug-output`, `debug-stopped`. The paused payload includes callStack, scopes, pausedFile, pausedLine, hitBreakpoints — enough for a full IDE pause UI in one frame.",
+    "Two evaluate paths: Debugger.evaluateOnCallFrame (paused state, with frame context) vs Runtime.evaluate (global runtime); same return shape via an inline RemoteObject -> simplified-shape mapper."
+  ],
+  "conventions": [
+    "All async functions return `{success, ...}` or `{success: false, error}` — consistent with other services.",
+    "Console-log every lifecycle transition with `[DebugService]` prefix.",
+    "1-based lines/columns are the contract on the public API; 0-based only inside CDP boundaries."
+  ],
+  "relationships": {
+    "depends_on": [
+      "child_process.spawn",
+      "global.WebSocket (Node 22+)"
+    ],
+    "depended_by": [
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "src/ui/components/ide/DebugPanels.jsx",
+      "src/ui/components/ide/DebugConsolePanel.jsx",
+      "src/ui/components/ide/DebugToolbar.jsx"
+    ]
+  },
+  "domains": [
+    "node-debugger",
+    "cdp-integration",
+    "ide-debugging"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "debugger",
+    "chrome-devtools-protocol",
+    "websocket",
+    "cdp",
+    "node-inspect"
+  ]
+}

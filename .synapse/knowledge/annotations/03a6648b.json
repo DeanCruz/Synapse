@@ -1,0 +1,70 @@
+{
+  "file": "agent/master/ui_map.md",
+  "content_hash": "6eaf08c7",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The exhaustive panel-to-field mapping between dashboard UI elements and the source fields in initialization.json, logs.json, and worker progress files that drive them. Documents header bar, progress bar, stats bar (6 cards), Waves vs Chains layouts, agent cards (3-row anatomy), dependency lines, log panel, permission popup, and empty state. The visual rendering specification — read when constructing initialization.json or logs.json entries to ensure correct rendering.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "ALL stats are derived by the dashboard from progress files — master does not maintain counters. completed/in_progress/failed/pending counts come from progress file status fields, not from initialization.json.",
+    "Elapsed timer derives from earliest worker started_at to latest worker completed_at across progress files — master does NOT set these values, workers do via 'date -u +\"%Y-%m-%dT%H:%M:%SZ\"'.",
+    "Header center is hidden when task===null in initialization.json — appears only after a valid task object is written.",
+    "agents[].wave that doesn't match any waves[].id -> agent cards do NOT appear (cards silently dropped).",
+    "Empty state ('No active agents / Waiting for dispatch...') appears when task===null OR initialization.json doesn't exist OR JSON has a syntax error — if user sees this after you started writing, the file probably has a JSON error.",
+    "Permission popup MANDATORY GATE: write 'permission' log entry to logs.json BEFORE calling AskUserQuestion / printing question / pausing. Skipping step 1 means user never sees the popup.",
+    "Use 'deviation' log level (yellow) for plan divergences — not 'warn'. Otherwise filtering breaks and deviations get hidden.",
+    "Chains mode requires chains[] AND waves[] (waves still required for column structure / vertical alignment) AND agents[].depends_on for SVG dependency lines.",
+    "In Chains mode, lines light up GREEN when the dependency task completes — driven by worker progress files, no master action needed.",
+    "Deviation badge is driven entirely by progress file deviations[] array — master does not need to set anything.",
+    "Repair task creation must check if failed task ID ends in 'r' — creating a repair for a failed repair causes infinite repair loop.",
+    "Title field is truncated at one line / ~40 chars — over that and it ellipses on the card."
+  ],
+  "patterns": [
+    "Two layout types: 'Waves' (vertical columns, horizontal scroll, BFS-pathfinding dependency lines) for broad shallow work; 'Chains' (horizontal rows flowing left-to-right with SVG lines that turn green on completion) for narrow deep pipelines.",
+    "Agent card 3-row anatomy: top row (id badge + status dot + title), meta row (layer badge + directory badge + assigned_agent), bottom row varies by status (pending: 'Waiting...'; in_progress: stage badge + elapsed + milestone; completed: summary + duration; failed: red summary).",
+    "Status -> left border color: completed=green #34d399, in_progress=purple #9b7cf0 (animated pulse), failed=red #ef4444, pending=gray, claimed=lime.",
+    "Log panel hover/filter: filter buttons for All/Info/Warn/Error/Deviation, auto-scroll unless user manually scrolled up.",
+    "Card hover highlights: incoming dependencies blue, outgoing (blocks) red, unrelated lines dim."
+  ],
+  "conventions": [
+    "Stats bar 6 cards: Total (white from task.total_tasks), Completed (green), In Progress (purple), Failed (red when >0), Pending (dim gray, derived), Elapsed (purple while running).",
+    "Wave column title format: 'Wave {id}: {name}' — UI auto-prepends 'Wave {id}: ', so name should be descriptive ('Foundation', 'Auth Layer'), not 'Wave 1'.",
+    "Layer badge values: 'frontend', 'backend', 'documentation', 'migration', 'types', 'tests', 'config'.",
+    "Permission log entry: timestamp, task_id='0.0', agent='Orchestrator', level='permission', message (verbatim popup text), task_name.",
+    "Summary quality: one line, action-oriented, key result metadata. Good: 'Created auth middleware — added rate limiting to 4 endpoints, wrote tests'. Bad: 'Done'."
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/master/dashboard_writes.md",
+      "agent/master/initialization_blueprint.md"
+    ],
+    "depended_by": [
+      ".claude/skills/master-protocol",
+      ".claude/skills/p-track",
+      ".claude/skills/dashboard-ops",
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/status.md"
+    ],
+    "related": [
+      "agent/core/dashboard_features.md",
+      "src/ui/components/AgentCard.jsx",
+      "src/ui/components/WavePipeline.jsx",
+      "src/ui/components/ChainPipeline.jsx",
+      "src/ui/components/LogPanel.jsx"
+    ]
+  },
+  "domains": [
+    "dashboard-protocol",
+    "ui-mapping",
+    "master-orchestration"
+  ],
+  "tags": [
+    "markdown",
+    "master-agent",
+    "ui-reference",
+    "visual-spec",
+    "panels",
+    "permission-popup"
+  ]
+}

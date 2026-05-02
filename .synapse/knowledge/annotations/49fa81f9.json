@@ -1,0 +1,70 @@
+{
+  "file": "agent/master/initialization_blueprint.md",
+  "content_hash": "4d17630e",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The authoritative schema and worked examples for initialization.json. Mandatory pre-read before any write — the validate-initialization-schema.sh hook enforces every rule and blocks malformed writes. Provides minimum-viable, full-Waves, and full-Chains examples plus a 13-item pre-write checklist and failure-modes-to-symptoms mapping. Exists to eliminate the class of bugs where wave headers render with no task cards.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "plan.json MUST exist FIRST — validate-plan-required.sh hook blocks writes to initialization.json unless plan.json is present in the same dashboard directory with non-empty context.prompt and tasks[] where every task has id, title, description, approach, files.",
+    "agents.length MUST equal plan.tasks.length — schema hook blocks if not.",
+    "Never invent or scan for a dashboard ID — use only the assigned id from DASHBOARD ID directive or SYNAPSE_DASHBOARD_ID env var. If unassigned, stop and ask the user.",
+    "task.total_tasks MUST equal agents.length and task.total_waves MUST equal waves.length — mismatch blocks the write and produces wrong stat-bar counts.",
+    "sum(waves[].total) MUST equal agents.length — every agent must belong to a counted wave.",
+    "Every agents[i].id must match regex ^\\d+\\.\\d+r?$ (e.g., '1.1', '2.3', '2.1r') AND be unique AND its wave must match a waves[j].id.",
+    "Every agents[i].depends_on[k] MUST reference an existing agents[].id — dangling references make dispatch readiness unstable.",
+    "In Chains mode: chains.length>=1, every agent appears in exactly one chain's tasks[], no duplicates across chains. Even Chains mode requires waves[] (at least 1).",
+    "Empty agents[] with populated waves[] -> dashboard renders wave headers with ZERO task cards (the canonical 'invisible swarm' bug).",
+    "Wrong dashboard directory write -> swarm runs but user's open dashboard panel stays empty — they see no progress despite workers executing.",
+    "SYNAPSE_SKIP_SCHEMA=1 escape hatch bypasses ALL schema validation — use sparingly, only for scratch/non-standard writes outside a real swarm."
+  ],
+  "patterns": [
+    "13-item pre-write checklist: kebab-case name -> 'Waves'|'Chains' type -> ISO 8601 created -> total_tasks==agents.length -> total_waves==waves.length -> agents.length>=1 AND waves.length>=1 -> id regex match -> id uniqueness -> agent.wave references waves[j].id -> depends_on references existing IDs -> sum(waves.total)==agents.length -> Chains rules -> correct dashboard path.",
+    "Atomic full-file write: read -> parse -> modify -> stringify (2-space indent) -> write. Partial writes silently freeze dashboard.",
+    "Repair task IDs use 'r' suffix and don't break the regex: '2.1r' is valid.",
+    "Dashboard merges initialization.json (static plan) with progress files (dynamic lifecycle) — malformed init means UI cannot render running workers."
+  ],
+  "conventions": [
+    "task.name: kebab-case slug only (lowercase letters/digits/hyphens, starts alphanum).",
+    "task.type: exact string match 'Waves' or 'Chains'.",
+    "agents[].title: short verb phrase, ~40 chars max.",
+    "agents[].layer: optional category badge — 'frontend', 'backend', 'tests', 'documentation', 'migration', 'types', 'config'.",
+    "waves[].name: descriptive (UI prepends 'Wave {id}: ' automatically) — not just 'Wave 1'.",
+    "chains[].tasks: ordered array of agent IDs left-to-right tracing the dependency path.",
+    "history[]: empty array at creation — populated by archive-move, not at write time."
+  ],
+  "relationships": {
+    "depends_on": [
+      ".claude/hooks/validate-plan-required.sh",
+      ".claude/hooks/validate-initialization-schema.sh",
+      "agent/_commands/p_track_planning.md"
+    ],
+    "depended_by": [
+      "agent/master/dashboard_writes.md",
+      ".claude/skills/master-protocol",
+      ".claude/skills/p-track",
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/p.md",
+      "_commands/Synapse/add_task.md"
+    ],
+    "related": [
+      "agent/master/ui_map.md",
+      "agent/instructions/dashboard_resolution.md",
+      "agent/master/dashboard_protocol.md"
+    ]
+  },
+  "domains": [
+    "dashboard-protocol",
+    "schema-validation",
+    "master-orchestration"
+  ],
+  "tags": [
+    "markdown",
+    "master-agent",
+    "schema",
+    "blueprint",
+    "hook-enforced",
+    "checklist"
+  ]
+}

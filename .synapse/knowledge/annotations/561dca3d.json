@@ -1,0 +1,49 @@
+{
+  "file": ".claude/hooks/mark-annotation-stale.sh",
+  "content_hash": "2540e3ba",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PostToolUse hook on Write. When a worker writes to a project file that has an entry in the PKI manifest ({project_root}/.synapse/knowledge/manifest.json), atomically marks that entry's `stale=true` and recomputes `stats.stale` count via jq + write-then-rename. This is the staleness signal that drives `!learn_update` — the PKI knows which annotations need refreshing because workers' writes flag them automatically. Skips Synapse internal progress files (dashboards/*/progress/*) and anything under .synapse/knowledge/ (prevents infinite loops where annotation writes mark themselves stale).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Skip guards for .synapse/knowledge/ are essential — without them, writing the manifest would mark itself stale recursively",
+    "Only updates if entry exists AND is not already stale — idempotent",
+    "Atomic update via .tmp.$$ + mv — partial writes never visible",
+    "Silent on all errors (exit 0) — never blocks the agent's work; PKI staleness is a best-effort signal"
+  ],
+  "patterns": [
+    "PostToolUse atomic JSON manifest update with write-then-rename idiom",
+    "PKI integration: feeds .synapse/knowledge/ manifest from worker tool calls"
+  ],
+  "conventions": [
+    "TMP_MANIFEST=${MANIFEST}.tmp.$$ uses PID for collision safety"
+  ],
+  "relationships": {
+    "depends_on": [
+      "jq",
+      ".synapse/project.json",
+      "{project_root}/.synapse/knowledge/manifest.json"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      "_commands/project/learn.md",
+      "_commands/project/learn_update.md",
+      "documentation/project-integration/pki-overview.md"
+    ]
+  },
+  "domains": [
+    "pki-integration",
+    "annotation-staleness"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PostToolUse",
+    "Write-matcher",
+    "pki",
+    "annotation"
+  ]
+}

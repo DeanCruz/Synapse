@@ -1,0 +1,66 @@
+{
+  "file": "src/ui/components/ide/EditorTabs.jsx",
+  "content_hash": "bdf44c72",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Horizontal tab bar for the IDE editor area. Reads ideOpenFiles[workspaceId] and ideActiveFileId[workspaceId] from AppContext. Each tab shows file.name, an optional dirty dot (file.isDirty), and a close button. Click on tab body dispatches IDE_SWITCH_FILE; click on close (with stopPropagation) dispatches IDE_CLOSE_FILE — confirms via window.confirm() if file.isDirty. Active tab uses scrollIntoView ref callback to keep itself visible when files are switched programmatically (e.g., from search/debug navigation).",
+  "exports": [
+    {
+      "name": "EditorTabs",
+      "kind": "component",
+      "signature": "{ workspaceId }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useRef",
+      "useCallback"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/styles/ide-editor.css": [
+      "default-side-effect"
+    ]
+  },
+  "gotchas": [
+    "Dirty-close confirmation uses window.confirm() — synchronous and blocks the UI; not testable via async flows.",
+    "The close button is a <span role='button'> nested INSIDE a <button> — invalid HTML (button-in-button) but works in practice; click handler calls e.stopPropagation() to prevent bubbling to the parent tab's switch handler.",
+    "scrollIntoView ref callback runs on every render of the active tab — could fire repeatedly if parent re-renders frequently; behavior 'smooth' adds noticeable animation.",
+    "openFiles is keyed by workspaceId — passing the wrong workspaceId silently shows 'No open files'."
+  ],
+  "patterns": [
+    "Per-workspace open-files state lives in AppContext (not local) — switching workspaces preserves each one's tabs.",
+    "Active-tab ref callback for auto-scroll-into-view (only set on isActive tab).",
+    "Dirty indicator is a CSS-only dot via 'editor-tab-dirty' class with bullet character (visual only, not text)."
+  ],
+  "conventions": [
+    "CSS class 'editor-tab' base + ' active' modifier when active.",
+    "Close 'x' is a ×."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx"
+    ],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": [
+      "src/ui/components/ide/CodeEditor.jsx",
+      "src/ui/components/ide/FileExplorer.jsx"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "editor-tabs",
+    "workspace"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "editor-tabs",
+    "workspace-state"
+  ]
+}

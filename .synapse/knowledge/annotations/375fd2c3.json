@@ -1,0 +1,57 @@
+{
+  "file": "_commands/Synapse/p_track_plan.md",
+  "content_hash": "91714ea4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!p_track_plan [--dashboard {id}] {plan_path}` command — a plan-document-driven variant of !p_track. The master reads a pre-written .md plan (typically from !plan output), translates it FAITHFULLY (no redesign) into waves/tasks/dependencies, populates dashboard files, executes the NON-NEGOTIABLE approval gate, then runs the same Phase 2 (execution) and Phase 3 (completion+report) as !p_track. Plan source path is stored in task.plan_source. Same dashboard tracking thresholds apply (3+ agents or >1 wave = mandatory).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Plan document is the SOURCE OF TRUTH — translate faithfully, never redesign during translation",
+    "Plan ambiguities/gaps must be SURFACED at the approval gate, not silently filled in",
+    "Plan document is READ-ONLY — the master never modifies the source plan",
+    "Approval gate is NON-NEGOTIABLE — write `permission` log entry FIRST, then ask in terminal, then HALT (no master_state.json, no Task tool calls until approved)",
+    "validate-plan-required.sh hook blocks initialization.json writes when plan.json is missing/invalid",
+    "validate-approval-gate.sh hook blocks worker dispatch until the user approves via a `permission` → `info \"Approval granted\"` log entry pair",
+    "Every task must trace back to a specific section of the source plan document — traceability requirement",
+    "task.plan_source MUST be added to initialization.json with the absolute path to the source plan"
+  ],
+  "patterns": [
+    "Three phases: Phase 0 Plan Ingestion (Steps 0A-0D parse+read+analyze+validate) → Phase 1 Translation (Steps 1-11 mirroring p_track planning) → Phase 2/3 Execution+Completion (delegated to p_track docs)",
+    "Translation rules: plan phases→waves, plan bullet points→tasks, phase ordering→dependencies, preserve plan structure, store plan source",
+    "Approval gate sequence: write permission log → present mapping → HALT → on approval log 'Approval granted — activating eager dispatch' at info level → proceed",
+    "Natural workflow: !plan {task} → review/refine → !p_track_plan {plan_path}"
+  ],
+  "conventions": [
+    "Top-of-file NON-NEGOTIABLE RULES blockquote (5 numbered rules) — same pattern as p_track.md",
+    "Plan-driven Additional Rules section",
+    "Phases are short — most detail delegated to agent/_commands/p_track_planning.md, p_track_execution.md, p_track_completion.md (and to p_track.md itself for shared rules)"
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/instructions/dashboard_resolution.md",
+      "agent/_commands/p_track_planning.md",
+      "agent/_commands/p_track_execution.md",
+      "agent/_commands/p_track_completion.md",
+      "_commands/Synapse/p_track.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/plan.md",
+      "_commands/Synapse/p_track.md"
+    ]
+  },
+  "domains": [
+    "swarm-command",
+    "plan-driven",
+    "approval-gate"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "plan-translation",
+    "non-negotiable"
+  ]
+}

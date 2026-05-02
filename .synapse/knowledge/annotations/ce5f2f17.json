@@ -1,0 +1,66 @@
+{
+  "file": "agent/master/eager_dispatch.md",
+  "content_hash": "55796922",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The master agent's highest-priority runtime obligation: scan ALL remaining tasks across ALL waves on every worker completion and dispatch every task whose dependencies are satisfied. Defines the 5-step dispatch mechanism, server-side automatic dependency tracking via tasks_unblocked SSE events, the /api/dashboards/:id/dispatchable endpoint, and the four core parallelization principles. Loaded continuously throughout swarm execution.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Waves are PURELY VISUAL — they have ZERO bearing on dispatch logic. Never wait for a wave to finish before dispatching next-wave tasks. If you removed the 'wave' field, dispatch logic should not change at all.",
+    "On every worker completion, scan the ENTIRE agents[] array — not just the next wave. A completed task may unblock tasks in waves 3, 5, AND 7 simultaneously; all must dispatch in the same pass.",
+    "Failed tasks NEVER enter the completed set — they do NOT satisfy dependencies. Only status==='completed' counts. Treating a failed task as completed cascades broken output downstream.",
+    "Always populate UPSTREAM RESULTS with KEY DETAILS (function signatures, export names, file locations) — without it the downstream worker re-reads files redundantly or makes wrong assumptions.",
+    "Don't forget to rewire depends_on arrays when creating a repair task — every reference to the failed task ID must be replaced with the repair task ID, otherwise downstream tasks point at a never-completing ID.",
+    "Server-side tasks_unblocked SSE alerts (with 100ms DEPENDENCY_CHECK_DELAY_MS) are a complement, NOT a replacement — manual eager dispatch (Steps 1-5) remains the authoritative mechanism.",
+    "The Task tool caps simultaneous tool calls at ~8-10 per message — for larger waves, batch into back-to-back dispatch rounds but NEVER wait for the first batch to complete before sending the second."
+  ],
+  "patterns": [
+    "5-step dispatch: build completed set from progress files (status==='completed') -> build in_progress set -> iterate agents[] checking (id not completed) AND (id not in_progress) AND (every depends_on entry IS in completed set) -> dispatch ALL passing tasks in parallel -> log each dispatch.",
+    "Server's automatic dependency tracking: fs.watch detects completion -> 100ms settle delay -> DependencyService.computeNewlyUnblocked() -> broadcasts tasks_unblocked SSE event with {dashboardId, completedTaskId, unblocked[]}.",
+    "GET /api/dashboards/:id/dispatchable returns all tasks with every dependency completed and no progress file (still pending).",
+    "Repair task dispatch flow: log failure -> create repair agent in initialization.json -> rewire depends_on -> dispatch repair worker with failed_task.md protocol -> run eager dispatch scan as normal."
+  ],
+  "conventions": [
+    "Principle 1 — Always parallelize independent work. Sequential execution of independent tasks is a failure mode.",
+    "Principle 2 — Dependency-driven dispatch, not wave-driven. Waves are visual, dependencies are constraint.",
+    "Principle 3 — Pipeline must flow continuously. Record completion -> immediate scan -> dispatch every unblocked task in same cycle.",
+    "Principle 4 — No artificial concurrency cap. Send as many agents as there are ready tasks. Bottleneck should be dependencies, not arbitrary limits.",
+    "Repair task ID convention: '{failed_wave}.{next_index}r' (e.g., 2.4r for repair of failed task in wave 2 with 3 existing tasks)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "agent/master/role.md",
+      "agent/master/failure_recovery.md",
+      "agent/master/worker_prompts.md"
+    ],
+    "depended_by": [
+      ".claude/skills/master-protocol",
+      ".claude/skills/p-track",
+      ".claude/skills/eager-dispatch",
+      ".claude/skills/p-track-resume",
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/eager_dispatch.md",
+      "_commands/Synapse/dispatch.md"
+    ],
+    "related": [
+      "agent/master/dashboard_writes.md",
+      "agent/instructions/failed_task.md",
+      "src/server/services/DependencyService.js",
+      "src/server/services/WatcherService.js"
+    ]
+  },
+  "domains": [
+    "eager-dispatch",
+    "master-orchestration",
+    "parallelization"
+  ],
+  "tags": [
+    "markdown",
+    "master-agent",
+    "protocol",
+    "non-negotiable",
+    "dependency-graph",
+    "sse"
+  ]
+}

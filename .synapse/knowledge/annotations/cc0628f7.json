@@ -1,0 +1,46 @@
+{
+  "file": ".claude/hooks/validate-master-state.sh",
+  "content_hash": "e1aeb9c1",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "PostToolUse hook on Write. Validates dashboards/{id}/master_state.json for required fields and correct types: last_updated (string ISO 8601), completed (array), in_progress (array), failed (array), upstream_results (object), next_agent_number (number > 0). A malformed master_state.json makes compaction recovery impossible — but this is a warn-only PostToolUse hook (cannot block), so it surfaces the issue to the master agent for self-correction.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "PostToolUse cannot block — issues warnings only",
+    "Validates presence + type but not deep semantics (e.g., completed entries having {id, summary} keys)",
+    "next_agent_number must be > 0 — checks via jq comparison, not just type",
+    "Reads from disk (post-write) not from tool_input — sees actual landed state"
+  ],
+  "patterns": [
+    "Field-presence map via `has(...)` jq expression",
+    "Type assertions per field via `field | type`",
+    "Trailing-comma trim on accumulator MISSING_FIELDS string"
+  ],
+  "conventions": [],
+  "relationships": {
+    "depends_on": [
+      "jq"
+    ],
+    "depended_by": [
+      ".claude/settings.json"
+    ],
+    "related": [
+      "agent/master/compaction_recovery.md",
+      ".claude/hooks/validate-log-entry.sh",
+      ".claude/skills/master-protocol/SKILL.md"
+    ]
+  },
+  "domains": [
+    "master-state-validation",
+    "agent-validation-hook"
+  ],
+  "tags": [
+    "bash",
+    "hook",
+    "PostToolUse",
+    "Write-matcher",
+    "master-state",
+    "warn-only"
+  ]
+}

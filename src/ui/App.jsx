@@ -318,7 +318,7 @@ export default function App() {
       case 'make':
         return <ChatMakePage />;
       case 'chat-instance':
-        return <ChatInstanceView tab="chat" />;
+        return <ChatInstanceView tab="chat" surface="chat" />;
       case 'dashboard':
       default:
         return <ChatDashboardView />;
@@ -363,45 +363,44 @@ export default function App() {
     <>
       <Header />
       <div className="dashboard-layout">
-        {appMode === 'chat' ? (
-          <>
-            <ChatSidebar />
-            <div className="dashboard-content">
-              {renderChatContent()}
-            </div>
-          </>
-        ) : (
-          <>
-            <Sidebar />
-            <div className="dashboard-content">
-              {renderMainContent()}
-            </div>
-            {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
-            <ClaudeFloatingPanel
-              isVisible={activeView !== 'git' && activeView !== 'preview'}
-              dashboardId={claudeDashboardId}
-              viewMode={ideChatActive ? claudeViewMode : (showClaudeFloat ? claudeViewMode : 'minimized')}
-              onOpen={() => {
+        {/* Chat shell — always mounted; hidden via CSS when not in chat mode */}
+        <div className={`app-shell-chat${appMode !== 'chat' ? ' hidden' : ''}`}>
+          <ChatSidebar />
+          <div className="dashboard-content">
+            {renderChatContent()}
+          </div>
+        </div>
+        {/* Code shell — always mounted; hidden via CSS when in chat mode */}
+        <div className={`app-shell-code${appMode === 'chat' ? ' hidden' : ''}`}>
+          <Sidebar />
+          <div className="dashboard-content">
+            {renderMainContent()}
+          </div>
+          {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
+          <ClaudeFloatingPanel
+            isVisible={activeView !== 'git' && activeView !== 'preview'}
+            dashboardId={claudeDashboardId}
+            viewMode={ideChatActive ? claudeViewMode : (showClaudeFloat ? claudeViewMode : 'minimized')}
+            onOpen={() => {
+              if (activeView === 'ide') {
+                dispatch({ type: 'IDE_OPEN_CHAT' });
+              } else {
+                dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode: 'expanded' });
+                dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId: claudeDashboardId || currentDashboardId });
+              }
+            }}
+            onSetMode={(mode) => {
+              dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode });
+              if (mode === 'minimized') {
                 if (activeView === 'ide') {
-                  dispatch({ type: 'IDE_OPEN_CHAT' });
+                  dispatch({ type: 'IDE_CLOSE_CHAT' });
                 } else {
-                  dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode: 'expanded' });
-                  dispatch({ type: 'SET_VIEW', view: 'claude', dashboardId: claudeDashboardId || currentDashboardId });
+                  dispatch({ type: 'SET_VIEW', view: 'dashboard' });
                 }
-              }}
-              onSetMode={(mode) => {
-                dispatch({ type: 'CLAUDE_SET_VIEW_MODE', mode });
-                if (mode === 'minimized') {
-                  if (activeView === 'ide') {
-                    dispatch({ type: 'IDE_CLOSE_CHAT' });
-                  } else {
-                    dispatch({ type: 'SET_VIEW', view: 'dashboard' });
-                  }
-                }
-              }}
-            />
-          </>
-        )}
+              }
+            }}
+          />
+        </div>
       </div>
 
       {activeModal === 'commands' && (
@@ -528,7 +527,7 @@ function ClaudeFloatingPanel({ isVisible, dashboardId, viewMode, onOpen, onSetMo
             onSetMode={onSetMode}
           />
         )}
-        <ClaudeView hideHeader viewMode={viewMode} tab="code" />
+        <ClaudeView hideHeader viewMode={viewMode} tab="code" surface="code" />
       </div>
     </div>
   );

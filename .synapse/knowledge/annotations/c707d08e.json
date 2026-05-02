@@ -1,0 +1,46 @@
+{
+  "file": "_commands/profiles/product.md",
+  "content_hash": "705a006a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Encodes the Senior Product Manager role: product strategy, user research synthesis, feature prioritization, requirements documentation. Biases the worker toward problem-first thinking (no solutions without articulated problems), actionable specs (no hand-waving), prioritization rigor via RICE/ICE/impact-effort frameworks, stakeholder alignment language, and scope discipline (smallest validating ship). A master assigns this profile for PRDs, user stories, prioritization docs, roadmap proposals, scope/out-of-scope statements, and acceptance criteria definition. Forces engineers to be able to implement without clarifying questions — so specs are typically more verbose than usual.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Won't produce specs without testable acceptance criteria — every story must have unambiguous success conditions.",
+    "Forbids conflating multiple features into one spec — large requests get split into multiple documents.",
+    "Describes behavior, not architecture — masters relying on PM profile for technical implementation choices will be redirected to architect profile.",
+    "Vague directives like 'improve UX' get rejected — be specific about what changes."
+  ],
+  "patterns": [
+    "Standard profile spine.",
+    "PRD skeleton: Problem Statement → Context/Research → Proposed Solution → User Stories → Acceptance Criteria → Out of Scope → Open Questions → Success Metrics.",
+    "User stories in 'As a [user], I want [goal], so that [benefit]' format."
+  ],
+  "conventions": [
+    "Tone 'clear, precise, collaborative' — bridges technical and business language."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "agent/core/profile_system.md",
+      "_commands/profiles/architect.md",
+      "_commands/profiles/qa.md",
+      "_commands/profiles/customer-success.md"
+    ]
+  },
+  "domains": [
+    "agent-profiles",
+    "product-manager-role",
+    "specifications-and-prds"
+  ],
+  "tags": [
+    "markdown",
+    "profile",
+    "role",
+    "product",
+    "prd",
+    "user-stories"
+  ]
+}

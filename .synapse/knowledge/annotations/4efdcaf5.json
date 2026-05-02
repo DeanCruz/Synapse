@@ -1,0 +1,74 @@
+{
+  "file": "src/ui/components/git/HistoryPanel.jsx",
+  "content_hash": "fd45e810",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Full commit-history view rendered in the Git Manager content area's History tab. Loads commits via api.gitLog(repoPath, BATCH_SIZE=50, extraArgs) with `--parents --decorate=short` and optional filter args (--author, --grep for subject search, --after/--before for date range, branch ref, --skip for pagination). Computes a custom SVG branch graph (computeGraphLayout / GraphCell) — assigns each commit a lane, draws vertical pass-through rails plus cubic-bezier merge curves, with up to MAX_DISPLAY_LANES=8 columns. Each row is expandable: clicking shows CommitDetails (full message body, metadata, files changed via gitLog with --name-status, and an on-demand diff via gitLog with -p). Supports infinite scroll (loads next batch when within 100px of bottom), debounced subject/author filters (400ms), branch dropdown filter, date-range filter, and a manual refresh button.",
+  "exports": [
+    {
+      "name": "HistoryPanel",
+      "kind": "component",
+      "signature": "{ repoPath: string }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useEffect",
+      "useCallback",
+      "useRef",
+      "useMemo"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/styles/git-manager.css": []
+  },
+  "gotchas": [
+    "When --parents is added to gitLog, the backend is expected to put parent hashes inside the same `hash` field separated by spaces — the panel splits hashParts and uses hashParts[0] as the actual hash and hashParts.slice(1) as parents. If backend emits parents in a separate field, the parsing breaks silently.",
+    "Date filters use --after/--before — git accepts ISO-8601 dates only when set strictly; arbitrary user input may not parse.",
+    "loadingRef.current is a non-state ref used to guard concurrent loads — together with the loading state. Both must be reset in finally.",
+    "Loading more on infinite scroll passes commits.length as offset — but commits are deduped against existing hashes, so duplicates from concurrent reloads (filter change + scroll) won't visually appear but waste a fetch.",
+    "When branchFilter or any filter changes, the entire commits array is replaced via loadCommits(0, true) — expandedHash is also cleared. Don't forget to also dispatch GIT_SET_LOG so other panels see the new log.",
+    "Files-changed parsing relies on a `--name-status` regex `/^([MADRCTU])\\d*\\t(.+)$/` — git's R/C statuses include similarity scores (e.g. R100), the \\d* handles that. Combined diffs (merges) emit different formats — these are not parsed.",
+    "Lane colors are read from getComputedStyle at module load — switching themes at runtime won't update the palette unless the file is re-imported."
+  ],
+  "patterns": [
+    "Aggressive lane consolidation: computeGraphLayout finds ALL lanes that expect a hash and folds duplicates into the lowest lane — keeps the graph compact when branches converge.",
+    "Three connection types: 'pass' (vertical pass-through), 'parent' (down to first parent), 'merge' (curved bezier from secondary parent). Plus 'convergingLines' for freed duplicate lanes at convergence points.",
+    "Debounced search/author filters use ref-tracked setTimeout to avoid firing per keystroke.",
+    "Expandable rows render a CommitDetails sub-component below the row with metadata, files-changed, and optional on-demand diff."
+  ],
+  "conventions": [
+    "Relative date helper (relativeDate) covers s/m/h/d/w/mo/y units — used in commit row dates.",
+    "FILE_STATUS_COLORS map keys to var(--color-completed)|var(--color-failed)|etc. for the file-status letters in expanded rows.",
+    "All git API calls go through window.electronAPI.gitLog — including the on-demand `-p` diff fetch which uses the same endpoint."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx",
+      "electron/preload.js (gitLog)"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx"
+    ],
+    "related": [
+      "src/ui/components/git/BranchPanel.jsx (also has a graph but uses a different layout algorithm)"
+    ]
+  },
+  "domains": [
+    "git-manager",
+    "git-diff"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "history",
+    "graph",
+    "svg",
+    "infinite-scroll",
+    "filters"
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "file": "_commands/Synapse/start.md",
+  "content_hash": "8908e4af",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!start` command for starting the Synapse dashboard. Two modes: Option A Electron app (recommended — embeds the SSE server, started via `cd {tracker_root} && npm start`) and Option B standalone server (browser-only, started via `node {tracker_root}/src/server/index.js &` if Electron is unavailable). Includes port-conflict detection on port 3456.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Do NOT start the standalone server when using Electron mode — Electron embeds the server internally; running both causes a port conflict on 3456",
+    "Default port is 3456 (hardcoded in both modes)",
+    "Option B verification uses curl against /api/dashboards — the standalone server must be running this endpoint",
+    "lsof check: if PID returned for port 3456, server is already running"
+  ],
+  "patterns": [
+    "Option A 3-step: locate tracker → npm start → report",
+    "Option B 3-step: lsof check → start with & + 1s wait + curl verify → report",
+    "Port-availability gate via lsof before starting"
+  ],
+  "conventions": [
+    "Two parallel options labeled A and B with recommendation prefix",
+    "Bash code blocks with explicit lsof/curl commands"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "_commands/Synapse/stop.md",
+      "src/server/index.js",
+      "electron/main.js"
+    ]
+  },
+  "domains": [
+    "server-control",
+    "lifecycle"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "electron",
+    "sse-server"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "file": "src/ui/components/modals/ErrorModal.jsx",
+  "content_hash": "e6406b01",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Generic error dialog with red-tinted 'Error' title (rendered as a colored span using --color-failed CSS var). Single Close button. Used to surface caught exceptions or API failures with a consistent themed look rather than alert().",
+  "exports": [
+    {
+      "name": "ErrorModal",
+      "kind": "component",
+      "signature": "{ message, onClose }"
+    }
+  ],
+  "imports_from": {
+    "react": [],
+    "src/ui/components/modals/Modal.jsx": [
+      "default"
+    ]
+  },
+  "gotchas": [
+    "Title prop is JSX (a colored span) — Modal passes it to aria-label, which may not be screen-reader-friendly when the value is a React node rather than a plain string.",
+    "Only displays a single message string — for multi-line errors, callers must pre-format with newlines and the CSS class .modal-message-error must preserve whitespace (white-space: pre-line)."
+  ],
+  "patterns": [
+    "Same minimal wrapping pattern as ConfirmModal — Modal + message paragraph + .modal-actions row.",
+    "Uses --color-failed CSS variable rather than a hardcoded red — themable across all 6 theme presets."
+  ],
+  "conventions": [
+    "Reuses .modal-message and .modal-btn classes shared with ConfirmModal."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/modals/Modal.jsx"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/components/modals/ConfirmModal.jsx"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "error-display"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "error",
+    "dialog"
+  ]
+}

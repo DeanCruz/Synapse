@@ -1,0 +1,54 @@
+{
+  "file": "documentation/configuration/electron-config.md",
+  "content_hash": "450da9a2",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Comprehensive reference for Electron app configuration via electron/settings.js. Documents the JSON-backed settings store (get/set/getAll/reset/init API), default settings (window geometry, behavior, performance polling, theme, project management), settings file location (OS-specific {userData}/synapse-settings.json), window state persistence with 500ms debounce, BrowserWindow configuration, custom app:// protocol with three-step path resolution, dev vs production loading modes, and Electron build/packaging configuration in package.json.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Settings file location is OS-specific via app.getPath('userData')",
+    "Unknown keys are accepted with console warning -- store is not strictly schema-locked",
+    "Window state persistence is debounced 500ms; skipped when maximized",
+    "Build target is macOS DMG only",
+    "node_modules excluded from package -- bundled by build process",
+    "unset ELECTRON_RUN_AS_NODE in npm start ensures GUI mode",
+    "dangerouslySkipPermissions setting bypasses ALL safety confirmations -- use with caution"
+  ],
+  "patterns": [
+    "Cache-first read with DEFAULTS fallback for get()",
+    "Atomic write of full cache on every set()",
+    "Custom protocol resolution: direct path -> dist/ -> public/",
+    "Window restore: load geometry from settings, undefined for null x/y"
+  ],
+  "conventions": [
+    "All settings have defined defaults in DEFAULTS object",
+    "backgroundColor #0a0a0c matches CSS --bg to prevent white flash",
+    "contextIsolation true + nodeIntegration false for renderer security",
+    "preload.js exposes safe APIs via contextBridge"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/configuration/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/configuration/server-config.md",
+      "documentation/configuration/theming.md",
+      "electron/settings.js",
+      "electron/main.js",
+      "electron/preload.js"
+    ]
+  },
+  "domains": [
+    "configuration-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "electron",
+    "settings",
+    "configuration",
+    "ipc"
+  ]
+}

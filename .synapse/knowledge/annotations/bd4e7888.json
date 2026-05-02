@@ -1,0 +1,90 @@
+{
+  "file": "electron/services/TerminalService.js",
+  "content_hash": "280e6771",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Manages PTY-backed terminal sessions for the in-app Terminal tab and worker terminals. Spawns a real shell (zsh/bash) via node-pty with the given cwd/cols/rows/shell, streams output to the renderer over the `terminal-output` channel, accepts user input via writeTerminal(id, data), supports resize and kill. Each session is keyed by a generated `term_<timestamp>` ID and tracked in activeTerminals.",
+  "exports": [
+    {
+      "name": "init",
+      "kind": "function",
+      "signature": "(broadcast) => void"
+    },
+    {
+      "name": "spawnTerminal",
+      "kind": "function",
+      "signature": "(opts) => {id, pid, shell, cwd, cols, rows}"
+    },
+    {
+      "name": "writeTerminal",
+      "kind": "function",
+      "signature": "(id, data) => boolean"
+    },
+    {
+      "name": "resizeTerminal",
+      "kind": "function",
+      "signature": "(id, cols, rows) => boolean"
+    },
+    {
+      "name": "killTerminal",
+      "kind": "function",
+      "signature": "(id) => boolean"
+    },
+    {
+      "name": "killAllTerminals",
+      "kind": "function",
+      "signature": "() => count"
+    },
+    {
+      "name": "getActiveTerminals",
+      "kind": "function",
+      "signature": "() => Terminal[]"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "ELECTRON_RUN_AS_NODE is deleted from the env — without this the spawned shell would inherit Electron-as-Node mode and the user's interactive shell config (.zshrc) might misbehave.",
+    "Default shell is `process.env.SHELL || '/bin/zsh'` — on Linux servers without zsh installed the default fallback fails to spawn. Pass opts.shell explicitly in that case.",
+    "Two terminals spawned in the same millisecond would have id collision (both 'term_<sameMs>'). Practical risk is near-zero but theoretically possible during rapid programmatic spawn.",
+    "`SYNAPSE_DASHBOARD_ID` is injected into env when opts.dashboardId is supplied — same as ClaudeCodeService — so PreToolUse hooks can enforce dashboard isolation if the user runs `claude` inside the terminal.",
+    "node-pty is a NATIVE module — it must be rebuilt for each Electron version (electron-rebuild). A version mismatch crashes at require('node-pty').",
+    "There is no scrollback buffer — every onData chunk is broadcast immediately. Renderer-side xterm.js is the source of truth for history; if the renderer disconnects (window reload), the terminal output between disconnect and reconnect is LOST."
+  ],
+  "patterns": [
+    "PTY-based terminal sessions with streaming via the `terminal-output` push channel.",
+    "Two-channel push protocol: `terminal-output` (per-chunk data) and `terminal-exit` (one-shot at process exit).",
+    "ID-keyed activeTerminals map with cleanup-on-exit — onExit handler deletes the entry before broadcasting.",
+    "killTerminal calls proc.kill() with no signal arg — node-pty defaults to SIGHUP which closes the PTY cleanly."
+  ],
+  "conventions": [
+    "Default cols=80, rows=24 — standard terminal geometry.",
+    "All public fns log lifecycle transitions with `[TerminalService]` prefix.",
+    "spawnTerminal returns minimal info, full state lives in activeTerminals (fetched via getActiveTerminals)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "node-pty"
+    ],
+    "depended_by": [
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "src/ui/components/TerminalView.jsx",
+      "src/ui/components/modals/WorkerTerminal.jsx"
+    ]
+  },
+  "domains": [
+    "terminal-sessions",
+    "pty-management"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "terminal",
+    "node-pty",
+    "pty",
+    "shell",
+    "ipc-broadcast"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "file": "documentation/project-integration/overview.md",
+  "content_hash": "fa68ebc5",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Conceptual overview of how Synapse integrates with any target project. Explains the standalone, project-agnostic architecture with two-path system ({tracker_root} vs {project_root}), what lives where, integration steps (point Synapse at project, read context, execute in project), three-tier project root resolution priority, what Synapse creates in the project (.synapse/ directory only), multi-project support across 5 dashboards, and portability guarantees (zero npm deps, no hardcoded paths, offline-capable).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Synapse contains ZERO hardcoded paths -- everything uses placeholders",
+    "Workers receive BOTH paths in dispatch prompts; code goes to {project_root}, progress to {tracker_root}",
+    "Each dashboard can target a different project via task.project_root in initialization.json",
+    "Synapse warns (does not block) if directory lacks .git/ or recognizable project markers"
+  ],
+  "patterns": [
+    "Two-path separation: orchestration data at {tracker_root}, code work at {project_root}",
+    "Resolution priority chain: --project flag > stored config > CWD",
+    "Per-swarm project tracking via initialization.json task.project_root"
+  ],
+  "conventions": [
+    "Both paths always absolute",
+    "Only .synapse/ written to project; everything else stays at tracker_root",
+    ".synapse/ should be gitignored"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/project-integration/conventions.md",
+      "documentation/project-integration/project-setup.md",
+      "documentation/project-integration/toc-system.md",
+      "documentation/project-integration/pki-overview.md"
+    ],
+    "related": [
+      "agent/core/path_convention.md",
+      "_commands/Synapse/project.md",
+      "_commands/project/initialize.md"
+    ]
+  },
+  "domains": [
+    "project-integration-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "project-integration",
+    "overview",
+    "paths",
+    "portability"
+  ]
+}

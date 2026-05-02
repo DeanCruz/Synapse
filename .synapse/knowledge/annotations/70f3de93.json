@@ -1,0 +1,66 @@
+{
+  "file": "electron/preload.js",
+  "content_hash": "b459963d",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Context isolation bridge — runs in the renderer process before any web content loads and uses contextBridge.exposeInMainWorld to expose window.electronAPI with a strict surface area: a PUSH_CHANNELS whitelist (26 channels) that gates 'on'/'off' subscriptions for main->renderer events, plus ~140 'pull' methods that wrap ipcRenderer.invoke() for renderer->main RPC. The push-channel whitelist prevents the renderer from listening to unrelated/sensitive IPC traffic. Each pull method returns the invoke promise directly so the renderer can await results. The 'on' wrapper returns an unsubscribe function (so React useEffect cleanup is one-liner: const off = electronAPI.on(...); return off;). The methods are organized by domain — Dashboards, Overview, Archives, History, Queue, Settings, Project, Task Editor, Commands, Chat, Attachments, Workers, Terminals, Orchestration, Conversations, IDE filesystem, IDE search, Debug, Git, Preview — and each method maps 1:1 to an ipcMain.handle channel registered in ipc-handlers.js.",
+  "exports": [
+    {
+      "name": "electronAPI",
+      "kind": "constant",
+      "signature": "exposed via contextBridge.exposeInMainWorld('electronAPI', { ... })"
+    }
+  ],
+  "imports_from": {
+    "electron": [
+      "contextBridge",
+      "ipcRenderer"
+    ]
+  },
+  "gotchas": [
+    "PUSH_CHANNELS is a whitelist — channels NOT in this list cause electronAPI.on(channel) to silently return a no-op unsubscribe and the renderer never receives events. Adding a new push event in ipc-handlers.js requires adding the name here too",
+    "Channel name strings here MUST exactly match the names used in ipcMain.handle and webContents.send in ipc-handlers.js — there is no shared constant, so typos cause silent failures",
+    "contextIsolation: true (set in main.js) means the renderer cannot access ipcRenderer/Node directly — all IPC must go through this bridge. Adding new methods requires updating BOTH this file and the handler",
+    "The 'on' wrapper strips the IpcRendererEvent first arg (calls callback(data) not callback(event, data)) — handlers expecting the event object will misbehave",
+    "off(channel, listener) only works if the renderer kept the SAME function reference returned by 'on' — but 'on' wraps the user callback in an internal listener and only returns the unsubscribe function, so calling off() with the original callback will not match. Use the returned unsubscribe function instead",
+    "Methods that take optional args (e.g. getCommand(name, commandsDir)) pass undefined through — the handler must tolerate undefined or the renderer must omit",
+    "Adding heavy synchronous work in renderer-side wrappers will block the renderer thread; all wrappers should be thin pass-throughs to ipcRenderer.invoke",
+    "PUSH_CHANNELS includes 'reload' for full-page renderer reloads, 'heartbeat' for IPC keepalive, 'init_state' for swarm orchestrator reset/init events — these are app-level signals, not per-dashboard data"
+  ],
+  "patterns": [
+    "Whitelist-gated subscription: contextBridge exposes 'on' but channel names are validated against PUSH_CHANNELS before registering the listener",
+    "Unsubscribe-by-return: every successful 'on' returns an unsubscribe function — idiomatic for React useEffect cleanup",
+    "1:1 method-to-channel mapping organized by domain banner comments",
+    "Optional-args forwarded as-is to the handler so backend can apply defaults",
+    "Event payload normalization: 'on' callback receives only the data argument (event stripped) — keeps renderer code free of Electron internals"
+  ],
+  "conventions": [
+    "Method naming uses camelCase even though channel strings are kebab-case (e.g. getDashboards -> 'get-dashboards', spawnWorker -> 'spawn-worker')",
+    "IDE methods are namespaced with 'ide' prefix; git methods with 'git' prefix; debug methods with 'debug' prefix; preview methods with 'preview' prefix",
+    "Push channel names use snake_case (initialization, agent_progress, dashboards_changed); pull channels use kebab-case (get-dashboards, save-conversation)"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "electron/main.js (referenced via webPreferences.preload)",
+      "src/ui/hooks/useElectronAPI.js",
+      "src/ui/main.jsx",
+      "src/ui/components/* (all renderer components consuming window.electronAPI)"
+    ],
+    "related": [
+      "electron/ipc-handlers.js"
+    ]
+  },
+  "domains": [
+    "ipc-bridge",
+    "context-isolation",
+    "renderer-api-surface"
+  ],
+  "tags": [
+    "electron",
+    "preload",
+    "contextbridge",
+    "ipc",
+    "whitelist"
+  ]
+}

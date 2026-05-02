@@ -1,0 +1,62 @@
+{
+  "file": "src/ui/components/ide/DebugToolbar.jsx",
+  "content_hash": "c8b7f05a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Pure presentational debug control bar — receives debugStatus + 8 callback props (onContinue, onPause, onStepOver, onStepInto, onStepOut, onRestart, onStop, onLaunch) from IDEView and renders standard debugger buttons with state-driven enable/disable. Includes a script-path + args input row that gates the Launch button (Run). Per-spec button availability matrix: idle→only Launch enabled; running→only Pause + Stop; paused→Continue, StepOver, StepInto, StepOut, Restart, Stop; stopped→only Launch. Status dot color comes from CSS vars (var(--text-tertiary), var(--color-in-progress), var(--color-warning, #f59e0b)). Enter in either input field triggers handleLaunch.",
+  "exports": [
+    {
+      "name": "DebugToolbar",
+      "kind": "component",
+      "signature": "{ debugStatus, onContinue, onPause, onStepOver, onStepInto, onStepOut, onRestart, onStop, onLaunch }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useCallback"
+    ],
+    "src/ui/styles/ide-debug.css": [
+      "default-side-effect"
+    ]
+  },
+  "gotchas": [
+    "All callbacks are optional — Run/Continue/etc. silently no-op if not provided. Caller MUST wire them or buttons appear active but do nothing.",
+    "scriptPath state is LOCAL to this component — it is NOT lifted to AppContext. After a Stop, the field retains its value but if the component unmounts (debug session ends, IDEView hides toolbar via debugSession.status !== 'idle' check), the value is lost. IDEView keeps a separate debugLaunchConfigRef for restart purposes.",
+    "Restart in IDEView calls debugStop().then(setTimeout(debugLaunch, 300)) — the 300ms delay is empirical; without it, V8 inspector may not have torn down before relaunch attempts to attach.",
+    "canLaunch requires (idle || stopped) AND non-empty trimmed scriptPath — running/paused never expose Launch."
+  ],
+  "patterns": [
+    "Pure-prop component — no AppContext, no IPC. Reusable in isolation/storybook.",
+    "Status-driven boolean flags (isIdle/isRunning/isPaused/isStopped) computed at top of render, then per-button can* booleans derived.",
+    "Inline SVG icons for every action (Play, Pause, StepOver, StepInto, StepOut, Restart, Stop, Launch) — no external icon library."
+  ],
+  "conventions": [
+    "Button CSS classes 'debug-toolbar-btn' base + '--restart' / '--stop' modifiers for color theming.",
+    "Input fields share 'debug-toolbar-input' class with --script / --args modifiers."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/components/ide/IDEView.jsx"
+    ],
+    "related": [
+      "src/ui/components/ide/DebugPanels.jsx",
+      "src/ui/components/ide/DebugConsolePanel.jsx",
+      "electron/services/DebugService.js"
+    ]
+  },
+  "domains": [
+    "code-explorer",
+    "node-debugger",
+    "debug-toolbar"
+  ],
+  "tags": [
+    "react",
+    "ide",
+    "component",
+    "debug",
+    "presentational",
+    "node-debugger"
+  ]
+}

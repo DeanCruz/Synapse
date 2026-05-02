@@ -1,0 +1,131 @@
+{
+  "file": "electron/services/CommandsService.js",
+  "content_hash": "29cfe5d3",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Filesystem CRUD layer over `_commands/` markdown files. Lists, parses, saves, deletes, and AI-generates command .md files (e.g., !p_track, !status). Parses each file for the H1 title, **Purpose:**, **Syntax:** lines and exposes structured summaries grouped by subfolder (Synapse/, project/, profiles/, user/). Mirrors all operations into a project-scoped `_commands/` and an isolated `_commands/user/` namespace. Includes generateCommand/generateUserCommand which spawns a non-streaming Claude CLI process to author new commands using the existing CLAUDE.md + 3 example commands as context, then writes the cleaned output to disk.",
+  "exports": [
+    {
+      "name": "listCommands",
+      "kind": "function",
+      "signature": "(commandsDir?) => [{folder, commands[]}]"
+    },
+    {
+      "name": "getCommand",
+      "kind": "function",
+      "signature": "(name, commandsDir?) => parsedCommand|null"
+    },
+    {
+      "name": "saveCommand",
+      "kind": "function",
+      "signature": "(name, content, commandsDir?) => result"
+    },
+    {
+      "name": "saveCommandInFolder",
+      "kind": "function",
+      "signature": "(name, content, folderName) => result"
+    },
+    {
+      "name": "deleteCommand",
+      "kind": "function",
+      "signature": "(name, commandsDir?) => result"
+    },
+    {
+      "name": "createCommandFolder",
+      "kind": "function",
+      "signature": "(folderName) => result"
+    },
+    {
+      "name": "generateCommand",
+      "kind": "function",
+      "signature": "(description, folderName, commandName, opts?) => Promise<result>"
+    },
+    {
+      "name": "generateUserCommand",
+      "kind": "function",
+      "signature": "(description, folderName, commandName, opts?) => Promise<result>"
+    },
+    {
+      "name": "loadProjectClaudeMd",
+      "kind": "function",
+      "signature": "(projectDir) => {content, filePath}|null"
+    },
+    {
+      "name": "listProjectCommands",
+      "kind": "function",
+      "signature": "(projectDir) => groups[]"
+    },
+    {
+      "name": "parseCommandFile",
+      "kind": "function",
+      "signature": "(filePath) => parsedCommand"
+    },
+    {
+      "name": "listUserCommands",
+      "kind": "function",
+      "signature": "() => groups[]"
+    },
+    {
+      "name": "getUserCommand",
+      "kind": "function",
+      "signature": "(name, folderName?) => parsedCommand|null"
+    },
+    {
+      "name": "saveUserCommand",
+      "kind": "function",
+      "signature": "(name, content, folderName?) => result"
+    },
+    {
+      "name": "deleteUserCommand",
+      "kind": "function",
+      "signature": "(name, folderName?) => result"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "When listing the default COMMANDS_DIR, the `user/` subfolder is intentionally skipped — user commands have their own listUserCommands() endpoint. Listing them twice would duplicate entries in the modal.",
+    "saveCommand searches recursively for an existing file before writing, so a command named `status` could overwrite either `_commands/Synapse/status.md` or `_commands/project/status.md` depending on which is found first. Use saveCommandInFolder if you need deterministic placement.",
+    "Generate functions strip leading ```markdown / ```md fences but only the first/last — the model sometimes emits inner fenced code blocks which are kept (correct).",
+    "generateCommand/generateUserCommand pass `ELECTRON_RUN_AS_NODE: undefined` via Object.assign — `undefined` does NOT delete the key, the var is still present. The reason this works is that the Claude binary tolerates an undefined-stringified env var, but a strict shell would reject it. Use `delete env.ELECTRON_RUN_AS_NODE` if you ever change this.",
+    "The non-streaming generation path concatenates `result` events from stream-json output AND raw text fallback — if Claude emits both an `assistant` message and a `result`, they are concatenated rather than deduplicated. The current schema makes this rare.",
+    "safeName regex `[^a-zA-Z0-9_-]/g` strips spaces and dots — a command named `My Cool Command` becomes `My_Cool_Command` silently."
+  ],
+  "patterns": [
+    "Two-tier directory model: built-in `_commands/<folder>/*.md` (listCommands) vs user-authored `_commands/user/<folder>/*.md` (listUserCommands).",
+    "All file-writing goes through `safeName` sanitization to prevent path traversal in commandName.",
+    "Markdown introspection by simple regex on H1 + **Purpose:** + **Syntax:** lines — no full markdown parser dependency.",
+    "AI generation reads up to 3 example command files from the same target folder (truncated to 2000 chars each) for style transfer."
+  ],
+  "conventions": [
+    "All public functions return either a structured result object `{success, name, filePath, error?}` or a parsedCommand `{name, title, purpose, syntax, content, filePath, lastModified}`.",
+    "Synchronous fs APIs throughout — these run on the Electron main process at IPC time, not in render frames.",
+    "`SYNAPSE_ROOT = path.resolve(__dirname, '../..')` is the canonical tracker_root reference inside electron/services/."
+  ],
+  "relationships": {
+    "depends_on": [
+      "child_process.spawn",
+      "node:fs",
+      "node:path"
+    ],
+    "depended_by": [
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "src/ui/components/modals/CommandsModal.jsx"
+    ]
+  },
+  "domains": [
+    "command-management",
+    "markdown-parsing",
+    "ai-content-generation"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "commands",
+    "markdown",
+    "claude-cli",
+    "user-commands"
+  ]
+}

@@ -1,0 +1,142 @@
+{
+  "file": "src/server/utils/constants.js",
+  "content_hash": "722ae9b4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines all server-side named constants — directory paths resolved from the tracker root, polling/timing intervals tuned for fs.watch reliability, and shared default object shapes. `ROOT` is the Synapse repo root, computed as `path.resolve(__dirname, '..', '..', '..')`. Subdirectories `DASHBOARDS_DIR`, `QUEUE_DIR`, `ARCHIVE_DIR`, `HISTORY_DIR`, `CONVERSATIONS_DIR` are all under ROOT. Timing constants control: `INIT_POLL_MS=100` (fs.watchFile poll for init/logs), `PROGRESS_RETRY_MS=80` (re-read after mid-write), `PROGRESS_READ_DELAY_MS=30` (initial debounce on progress change), `RECONCILE_DEBOUNCE_MS=300` (dashboards-dir change debounce), `RECONCILE_INTERVAL_MS=5000` (periodic full scan), `HEARTBEAT_MS=15000` (SSE keepalive), `DEPENDENCY_CHECK_DELAY_MS=100` (delay before dispatch readiness check after status change). `DEFAULT_INITIALIZATION` is the empty-dashboard shape `{task: null, agents: [], waves: [], chains: [], history: []}`; `DEFAULT_LOGS = {entries: []}`. PORT defaults to 3456 with env override.",
+  "exports": [
+    {
+      "name": "PORT",
+      "kind": "constant",
+      "signature": "number (default 3456)"
+    },
+    {
+      "name": "ROOT",
+      "kind": "constant",
+      "signature": "string (absolute path to tracker_root)"
+    },
+    {
+      "name": "DASHBOARDS_DIR",
+      "kind": "constant",
+      "signature": "string"
+    },
+    {
+      "name": "QUEUE_DIR",
+      "kind": "constant",
+      "signature": "string"
+    },
+    {
+      "name": "ARCHIVE_DIR",
+      "kind": "constant",
+      "signature": "string"
+    },
+    {
+      "name": "HISTORY_DIR",
+      "kind": "constant",
+      "signature": "string"
+    },
+    {
+      "name": "CONVERSATIONS_DIR",
+      "kind": "constant",
+      "signature": "string"
+    },
+    {
+      "name": "INIT_POLL_MS",
+      "kind": "constant",
+      "signature": "100"
+    },
+    {
+      "name": "PROGRESS_RETRY_MS",
+      "kind": "constant",
+      "signature": "80"
+    },
+    {
+      "name": "PROGRESS_READ_DELAY_MS",
+      "kind": "constant",
+      "signature": "30"
+    },
+    {
+      "name": "RECONCILE_DEBOUNCE_MS",
+      "kind": "constant",
+      "signature": "300"
+    },
+    {
+      "name": "RECONCILE_INTERVAL_MS",
+      "kind": "constant",
+      "signature": "5000"
+    },
+    {
+      "name": "HEARTBEAT_MS",
+      "kind": "constant",
+      "signature": "15000"
+    },
+    {
+      "name": "DEPENDENCY_CHECK_DELAY_MS",
+      "kind": "constant",
+      "signature": "100"
+    },
+    {
+      "name": "MIME_TYPES",
+      "kind": "constant",
+      "signature": "{[ext]: string}"
+    },
+    {
+      "name": "DEFAULT_INITIALIZATION",
+      "kind": "constant",
+      "signature": "{task, agents, waves, chains, history}"
+    },
+    {
+      "name": "DEFAULT_LOGS",
+      "kind": "constant",
+      "signature": "{entries: []}"
+    }
+  ],
+  "imports_from": {
+    "path": [
+      "path"
+    ]
+  },
+  "gotchas": [
+    "`ROOT` is computed via three-level `..` from `src/server/utils/` — moving this file to a different depth WILL break every directory constant silently.",
+    "`DEFAULT_INITIALIZATION` and `DEFAULT_LOGS` are SHARED object references — consumers MUST spread them (`{...DEFAULT_INITIALIZATION}`) before mutating, or they pollute the singleton (apiRoutes.js does this correctly).",
+    "Polling intervals are TUNED — `INIT_POLL_MS=100` is aggressive; raising it can cause UI lag, lowering risks fs.watchFile starvation.",
+    "`PORT=3456` is hard-coded as the dev default; any client (Electron preload, browser) connecting to `127.0.0.1:3456` will break if env override is used.",
+    "`MIME_TYPES` is exported but no longer referenced inside src/server/ — appears to be a vestige; check before removing."
+  ],
+  "patterns": [
+    "All paths resolved at module load via `path.resolve` / `path.join` — never relative.",
+    "Timing constants suffixed with `_MS` (milliseconds), `_MS` for poll/debounce/retry distinguishes from raw counts.",
+    "Default-shape constants (`DEFAULT_*`) are minimal valid documents that pass schema validation in utils/json.js.",
+    "Env override pattern: `process.env.PORT || 3456`."
+  ],
+  "conventions": [
+    "Snake-shaped name prefixes: `DEFAULT_`, `_DIR`, `_MS`.",
+    "All directory exports are absolute paths (never relative).",
+    "Single source of truth — no other file should redeclare these values."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/server/index.js",
+      "src/server/SSEManager.js",
+      "src/server/routes/apiRoutes.js",
+      "src/server/utils/json.js",
+      "src/server/services/* (all)"
+    ],
+    "related": [
+      "electron/services/* (have their own paths derived from app.getAppPath())"
+    ]
+  },
+  "domains": [
+    "server-config",
+    "path-resolution",
+    "timing-constants"
+  ],
+  "tags": [
+    "constants",
+    "config",
+    "paths",
+    "timing",
+    "javascript"
+  ]
+}

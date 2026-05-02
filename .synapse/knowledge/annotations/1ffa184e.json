@@ -1,0 +1,48 @@
+{
+  "file": "documentation/configuration/overview.md",
+  "content_hash": "c97c1733",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "High-level overview of Synapse's layered configuration system across three runtime contexts: Node.js SSE server, Electron desktop shell, and Vite-built React frontend. Documents the five configuration layers (server constants, Electron settings, build config, CSS design tokens, project config), how configuration loads at server/Electron/frontend startup, configuration precedence rules for port/settings/project path, key files at-a-glance table, and minimal environment variable usage (PORT, ELECTRON_RUN_AS_NODE).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Server timing constants are hardcoded -- only PORT is overridable via env var",
+    "No .env file is used -- server runs with zero configuration",
+    "Electron settings store accepts unknown keys for extensibility (not schema-locked)",
+    "Project path priority: --project flag > .synapse/project.json > CWD"
+  ],
+  "patterns": [
+    "Layer separation: server / electron / build / CSS / project config",
+    "Defaults-first with override layer (env var, persisted JSON, runtime arg)"
+  ],
+  "conventions": [
+    "Persisted-value-overlaid-on-defaults precedence",
+    "Single-file constants for server-side config",
+    "JSON-backed settings store for Electron"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/configuration/electron-config.md",
+      "documentation/configuration/server-config.md",
+      "documentation/configuration/theming.md"
+    ],
+    "related": [
+      "src/server/utils/constants.js",
+      "electron/settings.js",
+      "vite.config.js",
+      "package.json"
+    ]
+  },
+  "domains": [
+    "configuration-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "configuration",
+    "overview",
+    "layers"
+  ]
+}

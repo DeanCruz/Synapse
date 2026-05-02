@@ -1,0 +1,44 @@
+{
+  "file": "documentation/server/overview.md",
+  "content_hash": "974b307e",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Top-level overview of the Synapse SSE server: zero-dependency Node http server, modular structure (index/SSEManager/routes/services/utils), startup/shutdown sequence, CORS handling, request logging, and the file-watcher → SSE → browser real-time data pipeline. Explains key design decisions (zero deps, SSE over WebSockets, file-based state, hybrid watching).",
+  "exports": [],
+  "imports_from": [],
+  "gotchas": [
+    "Zero npm dependencies by design — only built-in modules",
+    "SIGINT/SIGTERM handlers must run cleanly to release watchers",
+    "Hybrid watching strategy needed because fs.watch alone misses events on some platforms"
+  ],
+  "patterns": [
+    "Pure-function service modules (no class instances)",
+    "Push-driven SSE updates",
+    "Atomic JSON writes for resilience"
+  ],
+  "conventions": [
+    "src/server/{index.js, SSEManager.js, routes/, services/, utils/}",
+    "PORT env var only external configuration"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/server/api-reference.md",
+      "documentation/server/configuration.md",
+      "documentation/server/services.md",
+      "documentation/server/sse-events.md"
+    ],
+    "related": [
+      "documentation/electron/overview.md"
+    ]
+  },
+  "domains": [
+    "server"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "overview",
+    "sse"
+  ]
+}

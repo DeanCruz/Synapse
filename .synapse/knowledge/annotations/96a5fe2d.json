@@ -1,0 +1,95 @@
+{
+  "file": "electron/services/PreviewTextWriter.js",
+  "content_hash": "941489aa",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "The write side of Live Preview: when the user double-clicks and edits text in the Preview tab, this service finds the source file containing the matching `data-synapse-label` UUID and surgically replaces ONLY the text content while preserving JSX expressions, child elements, and whitespace structure. Also detects running dev servers (Vite, Next, CRA, Nuxt, Svelte, Angular) by checking for framework config files / package.json scripts and probing common ports (3000, 3001, 5173, 5174, 8080) — used to suggest a default Preview URL.",
+  "exports": [
+    {
+      "name": "updateText",
+      "kind": "function",
+      "signature": "(projectPath, label, newText, routePath?) => Promise<{success, file?, line?, oldText?, newText?, error?}>"
+    },
+    {
+      "name": "detectDevServer",
+      "kind": "function",
+      "signature": "(projectPath) => Promise<{detected, url, framework}>"
+    },
+    {
+      "name": "_findFileByLabel",
+      "kind": "function",
+      "signature": "internal (test export)"
+    },
+    {
+      "name": "_findLabeledElement",
+      "kind": "function",
+      "signature": "internal (test export)"
+    },
+    {
+      "name": "_replaceInnerText",
+      "kind": "function",
+      "signature": "internal (test export)"
+    },
+    {
+      "name": "_checkPort",
+      "kind": "function",
+      "signature": "internal (test export)"
+    },
+    {
+      "name": "_extractPureText",
+      "kind": "function",
+      "signature": "internal (test export)"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "findFileByLabel uses a 5-form indexOf() probe per file (data-synapse-label=\"...\" / '...' / {\"...\"} / {'...'} / {`...`}) — for projects with thousands of files each updateText() does a full scan. Acceptable for small projects, slow for monorepos.",
+    "replaceInnerText replaces ONLY the FIRST non-whitespace text segment in mixed content. If a labeled tag has multiple text runs interleaved with child components, only the first will change.",
+    "When inner content has child tags or JSX expressions, the replacement preserves leading/trailing whitespace of the matched text segment but NOT the original text — meaning multi-line text reflow may collapse.",
+    "DEV_SERVER_PORTS is a hardcoded list — projects on non-standard ports (4321 Astro, 8000 Django) require manual URL entry.",
+    "checkPort opens a TCP socket without authentication — false positives on machines running unrelated services on those ports.",
+    "If walking the project encounters permission errors, the search silently skips that subtree — a label inside a chmod-700 directory will appear missing rather than 403.",
+    "Label-attribute regex is built from the user-supplied label via a manual escape function — a label containing un-escaped backticks would still leak past the escape (the regex escape only covers metachars, but backticks are not in the regex metachar class so they pass through fine; this is correct but worth noting).",
+    "SKIP_DIRS / DEFAULT_EXTENSIONS are duplicated from InstrumentService and PreviewService — three sources of truth must stay in sync."
+  ],
+  "patterns": [
+    "UUID-based unambiguous lookup — labels are crypto.randomUUID() so a single matching file is sufficient (no collision handling needed).",
+    "Three-tier framework detection: (1) config file presence, (2) package.json scripts substring match, (3) framework-prioritized port probe order.",
+    "Surgical text replacement: distinguish 'pure-text' content (replace whole inner) from 'mixed' content (segment-walk via non-text regex /<[^>]*>|\\{[^}]*\\}/ then replace first text segment).",
+    "TCP probe via net.Socket with timeout=500ms; first success wins."
+  ],
+  "conventions": [
+    "Async fs APIs (fs.promises) for the write path — updateText is async.",
+    "Returns either `{success: true, file, line, oldText, newText}` or `{success: false, error}`.",
+    "Test-only internals exposed under `_` prefix in module.exports."
+  ],
+  "relationships": {
+    "depends_on": [
+      "node:fs",
+      "node:path",
+      "node:net"
+    ],
+    "depended_by": [
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "electron/services/InstrumentService.js",
+      "electron/services/PreviewService.js",
+      "src/ui/components/preview/PreviewView.jsx"
+    ]
+  },
+  "domains": [
+    "live-preview-system",
+    "source-rewriting",
+    "dev-server-detection"
+  ],
+  "tags": [
+    "electron",
+    "service",
+    "javascript",
+    "live-preview",
+    "text-replacement",
+    "framework-detection",
+    "tcp-probe"
+  ]
+}

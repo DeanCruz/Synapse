@@ -1,0 +1,61 @@
+{
+  "file": "src/ui/components/modals/HistoryModal.jsx",
+  "content_hash": "9fddb11a",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Lists past completed swarm runs sourced from {tracker_root}/history/*.json (via api.getHistory()) plus an optional analytics section computed by the !history --analytics command. Each entry shows status dot color (computed from overall_status / failed_tasks), task name, type badge, project badge, completion stats (e.g. '4/5 (1 failed)'), duration badge, and date prefix. AnalyticsSection renders aggregate metrics (total swarms, avg tasks, avg duration, failure rate, failure trend with color-coded label). Clicking an entry calls onItemClick(item) — typically restores the snapshot to a dashboard slot.",
+  "exports": [
+    {
+      "name": "HistoryModal",
+      "kind": "component",
+      "signature": "{ onClose, onItemClick }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useState",
+      "useEffect"
+    ],
+    "src/ui/components/modals/Modal.jsx": [
+      "default"
+    ]
+  },
+  "gotchas": [
+    "Analytics is loaded via direct fetch('/api/history/analytics'), not the api.* IPC bridge — only works when the standalone HTTP server is reachable. In Electron-only mode this URL must be served by the embedded server or analytics will silently be null.",
+    "AnalyticsSection has THREE possible response shapes it tries to handle: bare object with total_swarms, wrapped { analytics: ... }, or null wrapper { analytics: null }. The branching logic is fragile if the API response shape changes.",
+    "When analytics is null, an instructional banner suggests running '!history --analytics' — but no UI button to trigger that command is provided.",
+    "Date string is item.cleared_at.slice(0, 10) — assumes ISO timestamp string format; non-ISO timestamps would render mojibake.",
+    "getDotColor: 'completed_with_errors' uses --color-blocked (yellow-ish) NOT --color-failed (red) — the warning vs error distinction is intentional but easy to miss."
+  ],
+  "patterns": [
+    "Header comment 'Mirrors HistoryModal.js' — JSX-converted from older vanilla.",
+    "Three sub-components: AnalyticsSection (top), HistoryEntry (per row) — keeps render concerns separated.",
+    "Promise.all loads history + analytics in parallel."
+  ],
+  "conventions": [
+    "Color tokens via CSS variables (--color-completed, --color-failed, --color-blocked, --color-accent, --color-type, --color-duration) rather than constants.js — chosen because all values flow through the theme system."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/components/modals/Modal.jsx"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/components/modals/ArchiveModal.jsx",
+      "src/server/services/HistoryService.js"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "swarm-history",
+    "analytics"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "history",
+    "analytics",
+    "ipc",
+    "fetch"
+  ]
+}

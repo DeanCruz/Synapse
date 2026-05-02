@@ -1,0 +1,45 @@
+{
+  "file": "stop.sh",
+  "content_hash": "b1287000",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Companion to start.sh. Discovers the SSE server PID via `lsof -ti :3456` and the Electron app PID via `pgrep -f 'Synapse.*electron'`, exits cleanly if neither is running, otherwise sends SIGTERM (`kill`) to whichever PIDs were found and reports each shutdown to stdout. Independent kills mean a partial shutdown (Electron up, server down or vice versa) still gets cleaned up.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Uses plain `kill` (SIGTERM) — does NOT escalate to SIGKILL if the process refuses to exit. Stuck processes survive this script.",
+    "`pgrep -f 'Synapse.*electron'` matches against the full command line — false positives are possible if any other process has 'Synapse' AND 'electron' in its argv (e.g., a developer running `grep electron Synapse.md`).",
+    "Same port-3456 hardcoding as start.sh — must stay in sync with the SSE server's actual listening port.",
+    "Errors from `kill` are suppressed with `2>/dev/null` — if the user lacks permission, the script silently succeeds.",
+    "No support for stopping a single dashboard or individual workers — this is a process-level stop, not a swarm-level cancel."
+  ],
+  "patterns": [
+    "Two-phase shutdown pattern: discover all candidate PIDs first, then act — minimizes race windows where a child respawns mid-script.",
+    "Idempotent shutdown: running stop.sh twice is harmless (second call exits with 'Synapse is not running')."
+  ],
+  "conventions": [
+    "Shebang `#!/bin/bash`.",
+    "Each kill prints a confirmation with the PID for traceability.",
+    "Exit 0 in all paths."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "start.sh",
+      "Stop Synapse.command",
+      "launch_synapse.command"
+    ]
+  },
+  "domains": [
+    "launcher-script",
+    "developer-tooling"
+  ],
+  "tags": [
+    "shell",
+    "bash",
+    "shutdown",
+    "process-management",
+    "macos"
+  ]
+}

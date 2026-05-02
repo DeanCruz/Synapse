@@ -1,0 +1,59 @@
+{
+  "file": "_commands/project/initialize.md",
+  "content_hash": "1bc00b1f",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the !initialize slash command — one-time setup of Synapse for a target project. Eight-step workflow: (1) verify Synapse install + project root exist, (2) detect tech stack from package.json/tsconfig/next.config/firebase.json/requirements.txt/go.mod/Cargo.toml/etc. AND detect monorepo type (npm-workspaces/pnpm/lerna/nx/turbo/cargo/go) by reading workspace fields and resolving glob patterns to package directories, (3) create {project_root}/.synapse/ with toc.md placeholder, config.json (containing project_name, tech_stack, tracker_root, pki_path, monorepo packages list), and knowledge/{annotations,queries}/ subdirs, (4) audit/scaffold CLAUDE.md (only if absent), (5) generate TOC via !toc_generate (parallel swarm — most time-consuming step, supports monorepo package grouping), (6) ensure {tracker_root}/dashboards|Archive|history|queue|tasks|conversations/ directories exist, (7) start the dashboard server via !start, (8) print final report with Next Steps. Supports --skip-toc and --skip-claude flags.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Idempotent where possible — running !initialize twice should detect existing state and skip already-completed steps, never break.",
+    "NEVER overwrite existing CLAUDE.md — scaffolding only creates new files for projects that have none.",
+    "NEVER overwrite existing .synapse/toc.md if it has content — skip TOC generation unless user explicitly asks.",
+    "Dashboards are created DYNAMICALLY on demand with 6-character hex IDs (e.g., a3f7k2) by nextDashboardId() — there are NO fixed slots. Only the dashboards/ directory itself is created here.",
+    "The reserved 'ide' dashboard is auto-created by Electron for IDE chat views — it cannot be deleted and is never used by swarm agents.",
+    "Monorepo detection drives TOC organization: when monorepo detected, .synapse/config.json's monorepo field is populated and !toc_generate organizes by package (## @myorg/api/, ## @myorg/web/) rather than flat directory listing.",
+    "If project is NOT a monorepo, monorepo field in config.json must be explicitly null — not omitted.",
+    "Step 5 (TOC generation) is the only non-serial step — it delegates to !toc_generate's parallel swarm.",
+    "Only abort for prerequisite failures (Steps 1a-1b); other failures (TOC generation, server start) are warnings — initialization continues."
+  ],
+  "patterns": [
+    "Sequential phase pipeline: verify → detect → create → scaffold → generate → infrastructure → start → report.",
+    "Monorepo detection: read workspace field → resolve globs → enumerate packages → store in config.",
+    "Idempotent setup with explicit warnings on re-run.",
+    "Tracker_root vs project_root separation throughout."
+  ],
+  "conventions": [
+    "Modifies filesystem — every modification is reported to the user.",
+    "Two skip flags: --skip-toc, --skip-claude.",
+    "Serial mode except Step 5.",
+    "OK / Warning / X status icons in output tables."
+  ],
+  "relationships": {
+    "depends_on": [
+      "{tracker_root}/CLAUDE.md",
+      "{project_root}/package.json"
+    ],
+    "depended_by": [],
+    "related": [
+      "_commands/project/scaffold.md",
+      "_commands/project/toc_generate.md",
+      "_commands/project/learn.md",
+      "_commands/Synapse/start.md",
+      "_commands/Synapse/project.md"
+    ]
+  },
+  "domains": [
+    "project-setup",
+    "initialization"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "project-workflow",
+    "setup",
+    "monorepo",
+    "writes-files",
+    "filesystem-modify"
+  ]
+}

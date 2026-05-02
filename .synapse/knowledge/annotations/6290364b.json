@@ -1,0 +1,38 @@
+{
+  "file": "documentation/multi-dashboard/archive-history.md",
+  "content_hash": "26432091",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Documents Synapse's two complementary preservation systems for swarm data: archives (full directory snapshots in Archive/{YYYY-MM-DD}_{task_name}/) and history (lightweight JSON summaries in history/{YYYY-MM-DD}_{task_name}.json). Specifies the non-negotiable archive-before-clear rule that runs whenever a dashboard is reset, and the !reset command flow including --all variant.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Archive-before-clear is non-negotiable -- previous swarm data is NEVER discarded, only archived",
+    "Archive date is the clear date, not the swarm start date",
+    "If task.name is missing the archive falls back to 'unnamed' as the slug",
+    "!reset extends history with a lessons_learned object (deviations, failure_causes, warnings, patterns)"
+  ],
+  "patterns": [
+    "Snapshot + summary dual preservation (full data + quick browsing)",
+    "Pre-clear archive ensures zero data loss across dashboard reuse"
+  ],
+  "conventions": [
+    "Archive naming: {YYYY-MM-DD}_{task_name}/ directory; history: same name with .json suffix",
+    "ArchiveService and HistoryService are the canonical writers"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "multi-dashboard",
+    "preservation"
+  ],
+  "tags": [
+    "archive",
+    "history",
+    "reset",
+    "preservation"
+  ]
+}

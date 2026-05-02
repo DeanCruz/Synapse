@@ -1,0 +1,48 @@
+{
+  "file": "_commands/Synapse/project.md",
+  "content_hash": "29d07a67",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Defines the `!project` command for managing the target project path. Three modes: `!project` (display current project, resolution method, CLAUDE.md presence, .synapse/ presence, tech stack indicators), `!project set /path/to/repo` (validate path, write {tracker_root}/.synapse/project.json with current_project + set_at, create {project_root}/.synapse/), `!project clear` (remove current_project from project.json, revert to CWD detection). Establishes the canonical resolution order: explicit --project flag > stored config in .synapse/project.json > CWD.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "{project_root} is ALWAYS an absolute path — relative paths to !project set must be resolved",
+    "Resolution order is strict: --project flag > stored config > CWD (third tier is the agent's CWD, not the user's shell)",
+    "Validation only WARNS (doesn't block) when: no .git/ directory, no project markers (package.json/CLAUDE.md/src/), empty/home directory",
+    "task.project_root is stored in initialization.json when a swarm starts — different dashboards can serve different projects",
+    "Projects should add .synapse/ to their .gitignore — this is a setup recommendation"
+  ],
+  "patterns": [
+    "Three sub-commands documented separately under one parent command",
+    "Stored config schema: { current_project: string, set_at: ISO8601 }",
+    "Display output enumerates: resolved path, resolution method, CLAUDE.md status, .synapse/ status, tech stack indicators (package.json/tsconfig.json/Cargo.toml/go.mod/requirements.txt)"
+  ],
+  "conventions": [
+    "Different layout from other Synapse commands — no Steps section; uses 'How It Works' subsections per mode",
+    "Trailing Notes section for cross-cutting concerns"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/p.md",
+      "_commands/Synapse/master_plan_track.md"
+    ],
+    "related": [
+      "_commands/project/initialize.md",
+      ".claude/skills/project-workflow/"
+    ]
+  },
+  "domains": [
+    "project-configuration",
+    "path-resolution"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "config",
+    "tracker-vs-project"
+  ]
+}

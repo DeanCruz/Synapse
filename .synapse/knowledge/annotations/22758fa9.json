@@ -1,0 +1,67 @@
+{
+  "file": "src/ui/components/git/DiffViewer.jsx",
+  "content_hash": "c552c3d4",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Pure-JS unified diff renderer for the currently selected file. Reads gitDiff and gitSelectedFile from AppContext (or accepts diff/filePath/fileStatus props for embedded use). Internally parses raw `git diff` output via parseDiff() — extracts hunks, classifies each line as added/removed/context/info ('\\ No newline at end of file'), and tracks old/new line numbers from the @@ -X,Y +A,B @@ hunk headers. Detects binary diffs by sniffing the first 300 chars for 'Binary files', 'GIT binary patch', or 'Binary file ' tokens. Renders a sticky file header with status badge, additions/deletions counts, then each hunk with its header line and per-line numbers + content. Empty/null diff and binary diff render empty-state placeholders.",
+  "exports": [
+    {
+      "name": "DiffViewer",
+      "kind": "component",
+      "signature": "{ diff?: string, filePath?: string, fileStatus?: string }"
+    },
+    {
+      "name": "parseDiff",
+      "kind": "function",
+      "signature": "(raw: string) => { hunks: [], additions: number, deletions: number }"
+    }
+  ],
+  "imports_from": {
+    "react": [
+      "useMemo"
+    ],
+    "src/ui/context/AppContext.jsx": [
+      "useAppState"
+    ],
+    "src/ui/styles/git-manager.css": []
+  },
+  "gotchas": [
+    "parseDiff skips header lines aggressively (diff --git, index, ---/+++, new/deleted file, mode changes, similarity, rename/copy) — if the backend emits any non-standard header it will be silently dropped.",
+    "Binary detection sniffs the first 300 chars only — large binary diffs with leading text headers may not be detected.",
+    "Lines starting with '\\\\' are treated as informational ('\\\\ No newline at end of file') and rendered italic+dim — do not treat them as content.",
+    "Line numbering relies on the hunk header regex: `/^@@\\s+-(\\d+)(?:,\\d+)?\\s+\\+(\\d+)(?:,\\d+)?\\s+@@(.*)?$/` — non-standard hunk headers (e.g. combined-diff '@@@') are not handled.",
+    "The component supports two invocation modes: prop-driven (diff/filePath/fileStatus) AND context-driven (gitDiff/gitSelectedFile). Props take precedence; missing props fall through to context — be explicit when embedding to avoid surprise.",
+    "parseDiff is also exported as a named export for reuse — any change to its return shape is a breaking change for external consumers."
+  ],
+  "patterns": [
+    "Two-column line numbers (oldNum / newNum) + content with prefix + / − / space — classic GitHub-style unified diff.",
+    "useMemo for both binary detection and parsing — diff text can be large, recomputing on every render is wasteful.",
+    "STATUS_CLASS map (M/A/D/R/U/?/T/C) reused independently of ChangesPanel's STATUS_MAP — kept here so DiffViewer is decoupled."
+  ],
+  "conventions": [
+    "Empty states use git-manager-empty class; line classes are git-manager-diff-line + added|removed|context.",
+    "additions/deletions counters render only when > 0 to keep the header compact."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext.jsx (gitDiff, gitSelectedFile)"
+    ],
+    "depended_by": [
+      "src/ui/components/git/GitManagerView.jsx"
+    ],
+    "related": [
+      "src/ui/components/git/ChangesPanel.jsx"
+    ]
+  },
+  "domains": [
+    "git-manager",
+    "git-diff"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "diff",
+    "parser"
+  ]
+}

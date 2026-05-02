@@ -1,0 +1,49 @@
+{
+  "file": "documentation/reports/claude_restructure_report.md",
+  "content_hash": "4f67ed24",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Comprehensive gap analysis report (2026-03-23) comparing the new modular CLAUDE.md documentation system against the original monolithic structure. Documents the new hub-and-spoke architecture (5 hubs, 23 modules, 5 preserved instruction files = 7,726 lines total), reports CLAUDE.md size reduction (989 -> 343 lines, 65.3%), validates all 70+ cross-references resolve, lists 7 gaps (3 moderate severity for cross-module inconsistencies G-1 metrics.json, G-2 deviations severity, G-3 dashboard_protocol.md missing), confirms zero behavioral regressions across 5 rule categories, and recommends remediation.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "G-1 (Moderate): metrics.json missing from role.md allowed files table -- contradicts CLAUDE.md and compaction_recovery.md",
+    "G-2 (Moderate): severity field missing from data_architecture.md deviations schema -- contradicts deviations.md",
+    "G-3 (Moderate): dashboard_protocol.md not listed in tracker_master_instructions.md Module Index",
+    "Zero behavioral regressions across master constraints, execution rules, worker constraints, planning rules, dashboard protocol, failure handling",
+    "Restructure increases total lines (~7,726) but reduces per-agent context load via hub-and-spoke + Document Reference Map triggers"
+  ],
+  "patterns": [
+    "Hub-and-spoke: hubs reference modules via 'Full details:' / 'Read:' pointers",
+    "Document Reference Map in CLAUDE.md (NON-NEGOTIABLE) maps scenarios to required reads",
+    "Coverage Matrix maps original sections to new module locations",
+    "Trigger-based reading: agents only read modules when triggered by specific scenarios"
+  ],
+  "conventions": [
+    "Module organization: agent/master/, agent/worker/, agent/core/, agent/_commands/",
+    "Severity grades: Moderate, Low, Very Low (no High found)",
+    "Pass/Fail verdict per behavioral rule category"
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "CLAUDE.md",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/master/",
+      "agent/worker/",
+      "agent/core/"
+    ]
+  },
+  "domains": [
+    "release-notes"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "gap-analysis",
+    "restructure",
+    "audit-report"
+  ]
+}

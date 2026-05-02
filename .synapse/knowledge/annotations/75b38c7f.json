@@ -1,0 +1,57 @@
+{
+  "file": "documentation/project-integration/pki-overview.md",
+  "content_hash": "4f98d1d1",
+  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Reference for the Project Knowledge Index (PKI) -- a persistent, auto-accumulating knowledge layer at {project_root}/.synapse/knowledge/. Covers getting-started bootstrap, lifecycle architecture (BOOTSTRAP/ACCUMULATE/REFRESH/CONSUME), directory structure (manifest.json, annotations/, insights/, domains.json, patterns.json, queries/), five population mechanisms (!learn, worker annotations, staleness hook, !learn_update, post-swarm extraction), retrieval and consumption (worker retrieval + PromptBuilder injection), and master pre-planning integration.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "PKI is auto-maintained -- workers mark stale via PostToolUse hook on file writes",
+    "Hash key for annotations = first 8 chars of SHA-256 of relative path",
+    "PromptBuilder.readPKIKnowledge() auto-injects into worker prompts during GUI swarms",
+    "Stale annotations remain usable but flagged with caveats",
+    "When >50 files need re-annotation, !learn_update suggests full !learn rebuild",
+    "Post-swarm knowledge extraction runs at Step 17G of completion protocol",
+    "PKI gets smarter every swarm -- feedback loop"
+  ],
+  "patterns": [
+    "Two-tier knowledge: per-file annotations + swarm-level insights",
+    "Domain/tag/concept indexes route queries to relevant annotations",
+    "Stale-flag-driven incremental refresh",
+    "Master pre-planning injection: gotchas > patterns > relationships > conventions priority on trim",
+    "PKI Quick-Route: !context queries PKI before falling back to grep/glob"
+  ],
+  "conventions": [
+    "Annotations include: purpose, exports, imports, gotchas, patterns, conventions, relationships, domain, tags, complexity",
+    "Insights labeled by date and slug: {date}_{slug}.json",
+    "PKI items prefixed [PKI] in worker prompts",
+    "queries/ subdirectory is gitignored (regenerated)"
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/project-integration/overview.md"
+    ],
+    "depended_by": [],
+    "related": [
+      "documentation/project-integration/toc-system.md",
+      "documentation/data-architecture/pki-schemas.md",
+      "_commands/project/learn.md",
+      "_commands/project/learn_update.md",
+      "agent/master/pki_integration.md",
+      "electron/services/PromptBuilder.js"
+    ]
+  },
+  "domains": [
+    "pki-docs",
+    "project-integration-docs"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "pki",
+    "knowledge",
+    "annotations",
+    "insights"
+  ]
+}
