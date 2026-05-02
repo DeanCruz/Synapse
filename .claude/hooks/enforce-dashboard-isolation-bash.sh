@@ -74,9 +74,10 @@ case "$COMMAND" in
   *) allow ;;
 esac
 
-# Extract all dashboard IDs referenced in the command
-# Pattern: dashboards/{id}/ or dashboards/{id}
-REFERENCED_DASHES=$(echo "$COMMAND" | grep -oE 'dashboards/[a-zA-Z0-9_]+' | sed 's|dashboards/||' | sort -u)
+# Extract all dashboard IDs referenced in the command. Only accept IDs that
+# match a real dashboard-ID shape (6-char hex, 'ide', or legacy dashboardN) so
+# that source paths like 'subpages/dashboards/<dirname>' are not matched.
+REFERENCED_DASHES=$(echo "$COMMAND" | grep -oE 'dashboards/[a-zA-Z0-9_]+' | sed 's|dashboards/||' | grep -E '^(ide|[a-f0-9]{6}|dashboard[0-9]+)$' | sort -u)
 
 if [ -z "$REFERENCED_DASHES" ]; then
   allow

@@ -1,9 +1,10 @@
 // FileExplorer — Recursive tree view with lazy-loaded directories
-// Renders from ideFileTrees[workspaceId] in AppContext state.
+// Renders from ideFileTrees[currentDashboardId] in AppContext state.
 // Clicking a file dispatches IDE_OPEN_FILE; clicking a folder loads its children on demand.
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import { getDashboardProject } from '@/utils/dashboardProjects.js';
 import '@/pages/code/subpages/code-explorer/styles/ide-explorer.css';
 
 // ── SVG Icon Components ──────────────────────────────────────
@@ -236,15 +237,22 @@ function TreeNode({ node, depth, expandedPaths, toggleExpand, onFileClick, activ
 
 // ── FileExplorer — main component ────────────────────────────
 
-export default function FileExplorer() {
+export default function FileExplorer({ dashboardId: dashboardIdProp } = {}) {
   const state = useAppState();
   const dispatch = useDispatch();
 
-  const workspaceId = state.ideActiveWorkspaceId;
-  const workspace = state.ideWorkspaces.find(w => w.id === workspaceId);
-  const tree = workspaceId ? state.ideFileTrees[workspaceId] : null;
-  const openFiles = workspaceId ? (state.ideOpenFiles[workspaceId] || []) : [];
-  const activeFileId = workspaceId ? state.ideActiveFileId[workspaceId] : null;
+  // Prefer prop (CodeExplorerPage may pass it explicitly), otherwise fall back
+  // to the active dashboard in AppContext. Both forms produce the same key.
+  const dashboardId = dashboardIdProp || state.currentDashboardId;
+  const projectPath = dashboardId ? getDashboardProject(dashboardId) : null;
+  const dashboardName = dashboardId ? state.dashboardNames[dashboardId] : null;
+  // Header label: dashboard name first, then folder basename of project path
+  const headerLabel = dashboardName
+    || (projectPath ? (projectPath.split('/').pop() || projectPath) : '');
+
+  const tree = dashboardId ? state.ideFileTrees[dashboardId] : null;
+  const openFiles = dashboardId ? (state.ideOpenFiles[dashboardId] || []) : [];
+  const activeFileId = dashboardId ? state.ideActiveFileId[dashboardId] : null;
 
   // Derive active file path for highlighting
   const activeFile = openFiles.find(f => f.id === activeFileId);
@@ -254,9 +262,9 @@ export default function FileExplorer() {
   const [loadingPaths, setLoadingPaths] = useState(new Set());
   const [initialLoading, setInitialLoading] = useState(false);
 
-  // Load root level on mount and when workspace changes (always fetch fresh data)
+  // Load root level on mount and when active dashboard changes (always fetch fresh data)
   useEffect(() => {
-    if (!workspaceId || !workspace) return;
+    if (!dashboardId || !projectPath) return;
 
     let cancelled = false;
     async function loadRoot() {
@@ -266,22 +274,22 @@ export default function FileExplorer() {
         const api = window.electronAPI;
         if (!api || !api.ideListDir) return;
 
-        const result = await api.ideListDir(workspace.path);
+        const result = await api.ideListDir(projectPath);
         if (cancelled) return;
 
         if (result && result.success) {
-          const rootName = workspace.path.split('/').pop() || workspace.name;
+          const rootName = projectPath.split('/').pop() || dashboardName || projectPath;
           // Merge instead of replace so that any already-loaded subtrees
-          // survive workspace re-renders.
+          // survive dashboard re-renders.
           dispatch({
             type: 'IDE_MERGE_ROOT_ENTRIES',
-            workspaceId,
+            dashboardId,
             rootName,
-            rootPath: workspace.path,
+            rootPath: projectPath,
             entries: result.entries,
           });
           // Only set initial expanded paths when there's no existing tree
-          setExpandedPaths(prev => prev.size === 0 ? new Set([workspace.path]) : prev);
+          setExpandedPaths(prev => prev.size === 0 ? new Set([projectPath]) : prev);
         }
       } catch (err) {
         console.error('FileExplorer: failed to load root', err);
@@ -292,28 +300,28 @@ export default function FileExplorer() {
 
     loadRoot();
     return () => { cancelled = true; };
-  }, [workspaceId, workspace, dispatch]); // removed `tree` dep — always refresh on mount
+  }, [dashboardId, projectPath, dashboardName, dispatch]); // removed `tree` dep — always refresh on mount
 
   // Poll root directory for changes every 10 seconds.
   // Uses IDE_MERGE_ROOT_ENTRIES so that user-expanded subdirectories keep
   // their lazy-loaded children — otherwise the tree would visually collapse
   // every time the poll fires.
   useEffect(() => {
-    if (!workspaceId || !workspace) return;
+    if (!dashboardId || !projectPath) return;
 
     const interval = setInterval(async () => {
       const api = window.electronAPI;
       if (!api || !api.ideListDir) return;
 
       try {
-        const result = await api.ideListDir(workspace.path);
+        const result = await api.ideListDir(projectPath);
         if (result && result.success) {
-          const rootName = workspace.path.split('/').pop() || workspace.name;
+          const rootName = projectPath.split('/').pop() || dashboardName || projectPath;
           dispatch({
             type: 'IDE_MERGE_ROOT_ENTRIES',
-            workspaceId,
+            dashboardId,
             rootName,
-            rootPath: workspace.path,
+            rootPath: projectPath,
             entries: result.entries,
           });
         }
@@ -321,7 +329,7 @@ export default function FileExplorer() {
     }, 10000);
 
     return () => clearInterval(interval);
-  }, [workspaceId, workspace, dispatch]);
+  }, [dashboardId, projectPath, dashboardName, dispatch]);
 
   // Lazy-load a directory's children
   const loadChildren = useCallback(async (dirPath) => {
@@ -334,7 +342,7 @@ export default function FileExplorer() {
       if (result && result.success) {
         dispatch({
           type: 'IDE_UPDATE_FILE_TREE_NODE',
-          workspaceId,
+          dashboardId,
           nodePath: dirPath,
           children: result.entries,
         });
@@ -348,7 +356,7 @@ export default function FileExplorer() {
         return next;
       });
     }
-  }, [workspaceId, dispatch]);
+  }, [dashboardId, dispatch]);
 
   // Toggle expand/collapse — triggers lazy load when children are null
   const toggleExpand = useCallback((nodePath, children) => {
@@ -368,50 +376,50 @@ export default function FileExplorer() {
 
   // Handle file click — dispatch IDE_OPEN_FILE
   const onFileClick = useCallback((node) => {
-    if (!workspaceId) return;
+    if (!dashboardId) return;
     dispatch({
       type: 'IDE_OPEN_FILE',
-      workspaceId,
+      dashboardId,
       file: { path: node.path, name: node.name }
     });
-  }, [workspaceId, dispatch]);
+  }, [dashboardId, dispatch]);
 
   // Refresh tree — clear and reload root level
   const handleRefresh = useCallback(async () => {
-    if (!workspace) return;
+    if (!dashboardId || !projectPath) return;
     setInitialLoading(true);
     setExpandedPaths(new Set());
     try {
       const api = window.electronAPI;
       if (!api || !api.ideListDir) return;
 
-      const result = await api.ideListDir(workspace.path);
+      const result = await api.ideListDir(projectPath);
       if (result && result.success) {
-        const rootName = workspace.path.split('/').pop() || workspace.name;
+        const rootName = projectPath.split('/').pop() || dashboardName || projectPath;
         dispatch({
           type: 'IDE_SET_FILE_TREE',
-          workspaceId,
+          dashboardId,
           tree: {
             name: rootName,
-            path: workspace.path,
+            path: projectPath,
             type: 'directory',
             children: result.entries,
           },
         });
-        setExpandedPaths(new Set([workspace.path]));
+        setExpandedPaths(new Set([projectPath]));
       }
     } catch (err) {
       console.error('FileExplorer: failed to refresh directory tree', err);
     } finally {
       setInitialLoading(false);
     }
-  }, [workspace, workspaceId, dispatch]);
+  }, [dashboardId, projectPath, dashboardName, dispatch]);
 
-  // No workspace — shouldn't render, but handle gracefully
-  if (!workspaceId || !workspace) {
+  // No dashboard / no project path — shouldn't render, but handle gracefully
+  if (!dashboardId || !projectPath) {
     return (
       <div className="ide-explorer">
-        <div className="ide-explorer-empty">No workspace selected</div>
+        <div className="ide-explorer-empty">No project selected</div>
       </div>
     );
   }
@@ -419,8 +427,8 @@ export default function FileExplorer() {
   return (
     <div className="ide-explorer">
       <div className="ide-explorer-header">
-        <span className="ide-explorer-title" title={workspace.path}>
-          {workspace.name}
+        <span className="ide-explorer-title" title={projectPath}>
+          {headerLabel}
         </span>
         <div className="ide-explorer-actions">
           <button

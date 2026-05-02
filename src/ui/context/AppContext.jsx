@@ -12,8 +12,6 @@ const CLAUDE_WELCOME_MSG = { id: 'welcome', type: 'system', text: 'Agent chat is
 const DEFAULT_TAB = { id: 'default', name: 'Chat 1' };
 const MAX_CHAT_MESSAGES = 200; // Hard cap on in-memory message count per tab
 
-const IDE_WORKSPACES_KEY = 'synapse-ide-workspaces';
-const GIT_REPOS_KEY = 'synapse-git-repos';
 const CHAT_TABS_KEY = 'synapse-chat-tabs';
 const CHAT_TAB_MESSAGES_KEY_PREFIX = 'synapse-chat-tab-messages-';
 const CHAT_TAB_ACTIVE_KEY = 'synapse-chat-active-tab';
@@ -92,36 +90,6 @@ function loadSavedMessages(dashboardId, tabId) {
     if (Array.isArray(parsed) && parsed.length > 0) return parsed;
   } catch (e) { /* corrupt or unavailable */ }
   return null;
-}
-
-function loadSavedWorkspaces() {
-  try {
-    const raw = localStorage.getItem(IDE_WORKSPACES_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) { /* corrupt or unavailable */ }
-  return [];
-}
-
-function saveWorkspaces(workspaces) {
-  try { localStorage.setItem(IDE_WORKSPACES_KEY, JSON.stringify(workspaces)); } catch (e) { /* */ }
-}
-
-function loadSavedGitRepos() {
-  try {
-    const raw = localStorage.getItem(GIT_REPOS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch (e) { /* corrupt or unavailable */ }
-  return [];
-}
-
-function saveGitRepos(repos) {
-  try { localStorage.setItem(GIT_REPOS_KEY, JSON.stringify(repos)); } catch (e) { /* */ }
 }
 
 function loadSavedChatTabs() {
@@ -223,8 +191,6 @@ function loadSavedActiveChatTabId() {
   } catch (e) { return null; }
 }
 
-const savedWorkspaces = loadSavedWorkspaces();
-const savedGitRepos = loadSavedGitRepos();
 const savedChatTabs = loadSavedChatTabs();
 const savedChatActiveTabId = loadSavedActiveChatTabId();
 const savedChatActiveTabIsValid = !!savedChatTabs.find(t => t.id === savedChatActiveTabId);
@@ -267,7 +233,7 @@ const initialState = {
   activeStatFilter: null,
   seenPermissionCount: 0,
   pendingPermission: null, // { pid, toolName, toolInput, requestId, toolUseId, timestamp } — active permission request from a worker
-  activeView: 'dashboard', // 'dashboard' | 'home' | 'swarmBuilder' | 'claude' | 'ide' | 'git' | 'preview'
+  activeView: 'dashboard', // 'dashboard' | 'swarmBuilder' | 'claude' | 'ide' | 'git' | 'preview'
   appMode: 'chat', // 'code' | 'chat' — top-level mode selector
   chatActiveView: savedChatActiveTabIsValid ? 'chat-instance' : 'dashboard', // 'dashboard' | 'make' | 'chat-instance' — active view within Chat mode
   // Chat-mode user-created chat tabs (no dedicated dashboard)
@@ -315,12 +281,10 @@ const initialState = {
   // Per-dashboard caches for sidebar state derivation
   allDashboardProgress: {},
   allDashboardLogs: {},
-  // IDE state — workspaces, open files, file trees, sidebar view
-  ideWorkspaces: savedWorkspaces, // [{ id, path, name }]
-  ideActiveWorkspaceId: savedWorkspaces.length > 0 ? savedWorkspaces[0].id : null,
-  ideOpenFiles: {}, // { [workspaceId]: [{ id, path, name, isDirty }] }
-  ideActiveFileId: {}, // { [workspaceId]: string }
-  ideFileTrees: {}, // { [workspaceId]: treeData }
+  // IDE state — open files, file trees, sidebar view (keyed by currentDashboardId)
+  ideOpenFiles: {}, // { [dashboardId]: [{ id, path, name, isDirty }] }
+  ideActiveFileId: {}, // { [dashboardId]: string }
+  ideFileTrees: {}, // { [dashboardId]: treeData }
   ideSidebarView: 'explorer', // which sidebar panel is shown in IDE
   ideChatOpen: false, // whether IDE inline chat is open
   // Search state
@@ -341,9 +305,7 @@ const initialState = {
   debugWatchExpressions: [], // [{ id, expression, value, error }]
   // Diagnostics state — per-file syntax errors, warnings, info
   diagnostics: {}, // { [filePath]: [{ line, column, endLine, endColumn, message, severity, source }] }
-  // Git Manager state — open repos, active repo, git data, loading states
-  gitRepos: savedGitRepos, // [{ id, path, name }]
-  gitActiveRepoId: savedGitRepos.length > 0 ? savedGitRepos[0].id : null,
+  // Git Manager state — git data per active dashboard, loading states
   gitStatus: null, // { staged: [], unstaged: [], untracked: [] }
   gitBranches: [], // [{ name, current, tracking, ahead, behind }]
   gitCurrentBranch: null, // string — name of current branch
@@ -986,6 +948,13 @@ function appReducerCore(state, action) {
       delete newDashNames[rid];
       const newUnread = { ...state.unreadChatCounts };
       delete newUnread[rid];
+      // Clean up IDE per-dashboard state (open files, active file, file tree)
+      const newIdeOpenFiles = { ...state.ideOpenFiles };
+      delete newIdeOpenFiles[rid];
+      const newIdeActiveFileId = { ...state.ideActiveFileId };
+      delete newIdeActiveFileId[rid];
+      const newIdeFileTrees = { ...state.ideFileTrees };
+      delete newIdeFileTrees[rid];
       // Remove from dashboardList and auto-switch if this was the active dashboard
       const newDashList = state.dashboardList.filter(id => id !== rid);
       let switchState = {};
@@ -1035,6 +1004,9 @@ function appReducerCore(state, action) {
         claudeActiveTabMap: newActiveTabMap,
         claudeProcessingStash: newProcStash2,
         unreadChatCounts: newUnread,
+        ideOpenFiles: newIdeOpenFiles,
+        ideActiveFileId: newIdeActiveFileId,
+        ideFileTrees: newIdeFileTrees,
         ...switchState,
       };
     }
@@ -1085,81 +1057,28 @@ function appReducerCore(state, action) {
       return { ...state, unblockedTasks: action.tasks || [] };
     case 'CLEAR_UNBLOCKED_TASKS':
       return { ...state, unblockedTasks: [] };
-    // --- IDE state management ---
-    case 'IDE_OPEN_WORKSPACE': {
-      const wsId = action.id || String(Date.now());
-      const newWorkspace = { id: wsId, path: action.path, name: action.name };
-      // Check if this path is already open
-      const existing = state.ideWorkspaces.find(w => w.path === action.path);
-      if (existing) {
-        // Just switch to the existing workspace
-        return { ...state, ideActiveWorkspaceId: existing.id };
-      }
-      const updatedWorkspaces = [...state.ideWorkspaces, newWorkspace];
-      saveWorkspaces(updatedWorkspaces);
-      return {
-        ...state,
-        ideWorkspaces: updatedWorkspaces,
-        ideActiveWorkspaceId: wsId,
-      };
-    }
-    case 'IDE_CLOSE_WORKSPACE': {
-      const closingWsId = action.workspaceId;
-      const updatedWorkspaces = state.ideWorkspaces.filter(w => w.id !== closingWsId);
-      // Clean up open files, active file, and file tree for this workspace
-      const newOpenFiles = { ...state.ideOpenFiles };
-      delete newOpenFiles[closingWsId];
-      const newActiveFileId = { ...state.ideActiveFileId };
-      delete newActiveFileId[closingWsId];
-      const newFileTrees = { ...state.ideFileTrees };
-      delete newFileTrees[closingWsId];
-      // Switch to adjacent workspace if the closed one was active
-      let newActiveWsId = state.ideActiveWorkspaceId;
-      if (newActiveWsId === closingWsId) {
-        if (updatedWorkspaces.length > 0) {
-          const closedIdx = state.ideWorkspaces.findIndex(w => w.id === closingWsId);
-          const newIdx = Math.min(closedIdx, updatedWorkspaces.length - 1);
-          newActiveWsId = updatedWorkspaces[newIdx].id;
-        } else {
-          newActiveWsId = null;
-        }
-      }
-      saveWorkspaces(updatedWorkspaces);
-      return {
-        ...state,
-        ideWorkspaces: updatedWorkspaces,
-        ideActiveWorkspaceId: newActiveWsId,
-        ideOpenFiles: newOpenFiles,
-        ideActiveFileId: newActiveFileId,
-        ideFileTrees: newFileTrees,
-        ideChatOpen: state.ideActiveWorkspaceId === closingWsId ? false : state.ideChatOpen,
-      };
-    }
-    case 'IDE_SWITCH_WORKSPACE': {
-      return { ...state, ideActiveWorkspaceId: action.workspaceId };
-    }
-    case 'IDE_LINK_WORKSPACE_DASHBOARD': {
-      const updatedWorkspaces = state.ideWorkspaces.map(w =>
-        w.id === action.workspaceId ? { ...w, dashboardId: action.dashboardId } : w
-      );
-      saveWorkspaces(updatedWorkspaces);
-      return { ...state, ideWorkspaces: updatedWorkspaces };
-    }
+    // --- IDE state management (keyed by currentDashboardId) ---
     case 'IDE_SET_FILE_TREE': {
-      const newFileTrees = { ...state.ideFileTrees, [action.workspaceId]: action.tree };
+      const did = action.dashboardId || state.currentDashboardId;
+      if (!did) return state;
+      const newFileTrees = { ...state.ideFileTrees, [did]: action.tree };
       return { ...state, ideFileTrees: newFileTrees };
     }
     case 'IDE_UPDATE_FILE_TREE_NODE': {
-      const currentTree = state.ideFileTrees[action.workspaceId];
+      const did = action.dashboardId || state.currentDashboardId;
+      if (!did) return state;
+      const currentTree = state.ideFileTrees[did];
       if (!currentTree) return state;
       const updatedTree = updateTreeNode(currentTree, action.nodePath, action.children);
-      return { ...state, ideFileTrees: { ...state.ideFileTrees, [action.workspaceId]: updatedTree } };
+      return { ...state, ideFileTrees: { ...state.ideFileTrees, [did]: updatedTree } };
     }
     case 'IDE_MERGE_ROOT_ENTRIES': {
       // Refresh root-level entries while preserving lazy-loaded children of
       // existing directories. Used by the polling interval so user-expanded
       // subtrees don't collapse on every refresh.
-      const currentTree = state.ideFileTrees[action.workspaceId];
+      const did = action.dashboardId || state.currentDashboardId;
+      if (!did) return state;
+      const currentTree = state.ideFileTrees[did];
       const existingChildren = (currentTree && Array.isArray(currentTree.children)) ? currentTree.children : [];
       const existingByPath = new Map();
       for (const child of existingChildren) existingByPath.set(child.path, child);
@@ -1176,32 +1095,34 @@ function appReducerCore(state, action) {
         type: 'directory',
         children: mergedChildren,
       };
-      return { ...state, ideFileTrees: { ...state.ideFileTrees, [action.workspaceId]: newTree } };
+      return { ...state, ideFileTrees: { ...state.ideFileTrees, [did]: newTree } };
     }
     case 'IDE_OPEN_FILE': {
-      const wsId = action.workspaceId;
-      const currentFiles = state.ideOpenFiles[wsId] || [];
+      const did = action.dashboardId || state.currentDashboardId;
+      if (!did) return state;
+      const currentFiles = state.ideOpenFiles[did] || [];
       // Check if the file is already open (by path)
       const existingFile = currentFiles.find(f => f.path === action.file.path);
       if (existingFile) {
         // Just switch to the existing file
-        const newActiveFileId = { ...state.ideActiveFileId, [wsId]: existingFile.id };
+        const newActiveFileId = { ...state.ideActiveFileId, [did]: existingFile.id };
         return { ...state, ideActiveFileId: newActiveFileId };
       }
       const fileId = String(Date.now()) + '-' + Math.random().toString(36).slice(2, 7);
       const newFile = { id: fileId, path: action.file.path, name: action.file.name, isDirty: false };
       const updatedFiles = [...currentFiles, newFile];
-      const newOpenFiles = { ...state.ideOpenFiles, [wsId]: updatedFiles };
-      const newActiveFileId = { ...state.ideActiveFileId, [wsId]: fileId };
+      const newOpenFiles = { ...state.ideOpenFiles, [did]: updatedFiles };
+      const newActiveFileId = { ...state.ideActiveFileId, [did]: fileId };
       return { ...state, ideOpenFiles: newOpenFiles, ideActiveFileId: newActiveFileId };
     }
     case 'IDE_CLOSE_FILE': {
-      const wsId = action.workspaceId;
-      const currentFiles = state.ideOpenFiles[wsId] || [];
+      const did = action.dashboardId || state.currentDashboardId;
+      if (!did) return state;
+      const currentFiles = state.ideOpenFiles[did] || [];
       const updatedFiles = currentFiles.filter(f => f.id !== action.fileId);
-      const newOpenFiles = { ...state.ideOpenFiles, [wsId]: updatedFiles };
+      const newOpenFiles = { ...state.ideOpenFiles, [did]: updatedFiles };
       // Switch to adjacent file if the closed one was active
-      let newActiveId = state.ideActiveFileId[wsId];
+      let newActiveId = state.ideActiveFileId[did];
       if (newActiveId === action.fileId) {
         if (updatedFiles.length > 0) {
           const closedIdx = currentFiles.findIndex(f => f.id === action.fileId);
@@ -1211,29 +1132,33 @@ function appReducerCore(state, action) {
           newActiveId = null;
         }
       }
-      const newActiveFileId = { ...state.ideActiveFileId, [wsId]: newActiveId };
+      const newActiveFileId = { ...state.ideActiveFileId, [did]: newActiveId };
       return { ...state, ideOpenFiles: newOpenFiles, ideActiveFileId: newActiveFileId };
     }
     case 'IDE_SWITCH_FILE': {
-      const newActiveFileId = { ...state.ideActiveFileId, [action.workspaceId]: action.fileId };
+      const did = action.dashboardId || state.currentDashboardId;
+      if (!did) return state;
+      const newActiveFileId = { ...state.ideActiveFileId, [did]: action.fileId };
       return { ...state, ideActiveFileId: newActiveFileId };
     }
     case 'IDE_MARK_FILE_DIRTY': {
-      const wsId = action.workspaceId;
-      const currentFiles = state.ideOpenFiles[wsId] || [];
+      const did = action.dashboardId || state.currentDashboardId;
+      if (!did) return state;
+      const currentFiles = state.ideOpenFiles[did] || [];
       const updatedFiles = currentFiles.map(f =>
         f.id === action.fileId ? { ...f, isDirty: true } : f
       );
-      const newOpenFiles = { ...state.ideOpenFiles, [wsId]: updatedFiles };
+      const newOpenFiles = { ...state.ideOpenFiles, [did]: updatedFiles };
       return { ...state, ideOpenFiles: newOpenFiles };
     }
     case 'IDE_MARK_FILE_CLEAN': {
-      const wsId = action.workspaceId;
-      const currentFiles = state.ideOpenFiles[wsId] || [];
+      const did = action.dashboardId || state.currentDashboardId;
+      if (!did) return state;
+      const currentFiles = state.ideOpenFiles[did] || [];
       const updatedFiles = currentFiles.map(f =>
         f.id === action.fileId ? { ...f, isDirty: false } : f
       );
-      const newOpenFiles = { ...state.ideOpenFiles, [wsId]: updatedFiles };
+      const newOpenFiles = { ...state.ideOpenFiles, [did]: updatedFiles };
       return { ...state, ideOpenFiles: newOpenFiles };
     }
     case 'IDE_OPEN_CHAT':
@@ -1269,73 +1194,6 @@ function appReducerCore(state, action) {
     case 'IDE_SET_SEARCH_REPLACE_TEXT':
       return { ...state, ideSearchReplaceText: action.text };
     // --- Git Manager state management ---
-    case 'GIT_OPEN_REPO': {
-      const repoId = action.id || String(Date.now());
-      const newRepo = { id: repoId, path: action.path, name: action.name };
-      // Check if this path is already open
-      const existingRepo = state.gitRepos.find(r => r.path === action.path);
-      if (existingRepo) {
-        return { ...state, gitActiveRepoId: existingRepo.id };
-      }
-      const updatedGitRepos = [...state.gitRepos, newRepo];
-      saveGitRepos(updatedGitRepos);
-      return {
-        ...state,
-        gitRepos: updatedGitRepos,
-        gitActiveRepoId: repoId,
-        gitStatus: null,
-        gitBranches: [],
-        gitCurrentBranch: null,
-        gitLog: [],
-        gitDiff: null,
-        gitRemotes: [],
-        gitError: null,
-        gitSelectedFile: null,
-      };
-    }
-    case 'GIT_CLOSE_REPO': {
-      const closingRepoId = action.repoId;
-      const updatedGitRepos = state.gitRepos.filter(r => r.id !== closingRepoId);
-      let newActiveRepoId = state.gitActiveRepoId;
-      if (newActiveRepoId === closingRepoId) {
-        if (updatedGitRepos.length > 0) {
-          const closedIdx = state.gitRepos.findIndex(r => r.id === closingRepoId);
-          const newIdx = Math.min(closedIdx, updatedGitRepos.length - 1);
-          newActiveRepoId = updatedGitRepos[newIdx].id;
-        } else {
-          newActiveRepoId = null;
-        }
-      }
-      saveGitRepos(updatedGitRepos);
-      return {
-        ...state,
-        gitRepos: updatedGitRepos,
-        gitActiveRepoId: newActiveRepoId,
-        gitStatus: newActiveRepoId !== state.gitActiveRepoId ? null : state.gitStatus,
-        gitBranches: newActiveRepoId !== state.gitActiveRepoId ? [] : state.gitBranches,
-        gitCurrentBranch: newActiveRepoId !== state.gitActiveRepoId ? null : state.gitCurrentBranch,
-        gitLog: newActiveRepoId !== state.gitActiveRepoId ? [] : state.gitLog,
-        gitDiff: newActiveRepoId !== state.gitActiveRepoId ? null : state.gitDiff,
-        gitRemotes: newActiveRepoId !== state.gitActiveRepoId ? [] : state.gitRemotes,
-        gitError: null,
-        gitSelectedFile: newActiveRepoId !== state.gitActiveRepoId ? null : state.gitSelectedFile,
-      };
-    }
-    case 'GIT_SWITCH_REPO': {
-      if (action.repoId === state.gitActiveRepoId) return state;
-      return {
-        ...state,
-        gitActiveRepoId: action.repoId,
-        gitStatus: null,
-        gitBranches: [],
-        gitCurrentBranch: null,
-        gitLog: [],
-        gitDiff: null,
-        gitRemotes: [],
-        gitError: null,
-        gitSelectedFile: null,
-      };
-    }
     case 'GIT_SET_STATUS':
       return { ...state, gitStatus: action.status };
     case 'GIT_SET_BRANCHES':
@@ -1355,42 +1213,14 @@ function appReducerCore(state, action) {
     case 'GIT_SET_SELECTED_FILE':
       return { ...state, gitSelectedFile: action.filePath };
     case 'GIT_NAVIGATE_TO_FILE': {
-      // Opens (or selects) the repo at action.projectRoot, switches to git view,
-      // and highlights action.filePath in the Changes panel.
-      const navPath = action.projectRoot;
-      const navFile = action.filePath;
-      if (!navPath) return { ...state, activeView: 'git' };
-
-      // Check if this repo is already open
-      const existingNavRepo = state.gitRepos.find(r => r.path === navPath);
-      if (existingNavRepo) {
-        return {
-          ...state,
-          activeView: 'git',
-          gitActiveRepoId: existingNavRepo.id,
-          gitSelectedFile: navFile || null,
-        };
-      }
-
-      // Open the repo as a new tab
-      const navRepoId = String(Date.now());
-      const navRepoName = navPath.replace(/\/+$/, '').split('/').pop();
-      const newNavRepo = { id: navRepoId, path: navPath, name: navRepoName };
-      const updatedNavRepos = [...state.gitRepos, newNavRepo];
-      saveGitRepos(updatedNavRepos);
+      // Switches to git view and highlights action.filePath in the Changes
+      // panel. Repo identity is now derived from the currently-active dashboard
+      // (via getDashboardProject(currentDashboardId)) — we no longer maintain a
+      // parallel repo tab list.
       return {
         ...state,
         activeView: 'git',
-        gitRepos: updatedNavRepos,
-        gitActiveRepoId: navRepoId,
-        gitStatus: null,
-        gitBranches: [],
-        gitCurrentBranch: null,
-        gitLog: [],
-        gitDiff: null,
-        gitRemotes: [],
-        gitError: null,
-        gitSelectedFile: navFile || null,
+        gitSelectedFile: action.filePath || null,
       };
     }
     // --- Debug state management ---

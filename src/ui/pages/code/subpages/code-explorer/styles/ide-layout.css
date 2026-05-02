@@ -1,5 +1,5 @@
 /* ============================================================
-   IDE Layout — IDEView + WorkspaceTabs
+   IDE Layout — IDEView
    ============================================================ */
 
 /* ----- IDE Container — fills parent completely ----- */
@@ -10,136 +10,6 @@
   height: 100%;
   background: var(--bg);
   overflow: hidden;
-}
-
-/* ----- Workspace Tabs Bar ----- */
-.workspace-tabs {
-  display: flex;
-  align-items: center;
-  height: 36px;
-  min-height: 36px;
-  padding: 0 4px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.workspace-tabs-scroll {
-  display: flex;
-  align-items: center;
-  gap: 1px;
-  flex: 1;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none; /* Firefox */
-}
-
-.workspace-tabs-scroll::-webkit-scrollbar {
-  display: none;
-}
-
-/* Individual workspace tab */
-.workspace-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-tertiary);
-  font-family: var(--sans);
-  font-size: 0.72rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-  white-space: nowrap;
-  line-height: 1;
-  flex-shrink: 0;
-  height: 28px;
-  user-select: none;
-}
-
-.workspace-tab:hover {
-  color: var(--text-secondary);
-  background: var(--surface-hover);
-}
-
-.workspace-tab.active {
-  color: var(--text);
-  background: var(--surface);
-}
-
-.workspace-tab.active:hover {
-  background: var(--surface-hover);
-}
-
-/* Folder icon in workspace tab */
-.workspace-tab-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  opacity: 0.7;
-}
-
-.workspace-tab.active .workspace-tab-icon {
-  opacity: 1;
-}
-
-/* Close button on workspace tab */
-.workspace-tab-close {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border: none;
-  border-radius: 3px;
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  padding: 0;
-  opacity: 0;
-  transition: opacity 0.15s, background 0.15s, color 0.15s;
-  flex-shrink: 0;
-}
-
-.workspace-tab:hover .workspace-tab-close,
-.workspace-tab.active .workspace-tab-close {
-  opacity: 1;
-}
-
-.workspace-tab-close:hover {
-  background: var(--border);
-  color: var(--text);
-}
-
-/* "+" button to add workspace */
-.workspace-tab-add {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 5px;
-  background: transparent;
-  color: var(--text-tertiary);
-  cursor: pointer;
-  padding: 0;
-  transition: color 0.15s, background 0.15s;
-  flex-shrink: 0;
-  margin-left: 2px;
-}
-
-.workspace-tab-add:hover {
-  color: var(--text-secondary);
-  background: var(--surface-hover);
 }
 
 /* ----- IDE Main Layout — split panel ----- */
@@ -222,6 +92,66 @@
 .ide-editor-empty-text {
   font-size: 0.85rem;
   font-weight: 400;
+}
+
+/* Empty state shown when no dashboard is selected or no project is bound */
+.ide-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  gap: 12px;
+  padding: 32px;
+  text-align: center;
+  user-select: none;
+}
+
+.ide-empty-state-icon {
+  width: 56px;
+  height: 56px;
+  opacity: 0.3;
+  color: var(--text-tertiary);
+}
+
+.ide-empty-state-title {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.ide-empty-state-text {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  max-width: 360px;
+  line-height: 1.5;
+}
+
+.ide-empty-state-button {
+  margin-top: 8px;
+  padding: 6px 14px;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-elevated, #2a2a2e);
+  border: 1px solid var(--border, #444);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.ide-empty-state-button:hover {
+  background: var(--bg-hover, #34343a);
+  border-color: var(--border-strong, #666);
+}
+
+.ide-empty-state-button:active {
+  transform: translateY(1px);
 }
 
 /* ----- Editor Content Area (Monaco host) ----- */
