@@ -1155,6 +1155,29 @@ function appReducerCore(state, action) {
       const updatedTree = updateTreeNode(currentTree, action.nodePath, action.children);
       return { ...state, ideFileTrees: { ...state.ideFileTrees, [action.workspaceId]: updatedTree } };
     }
+    case 'IDE_MERGE_ROOT_ENTRIES': {
+      // Refresh root-level entries while preserving lazy-loaded children of
+      // existing directories. Used by the polling interval so user-expanded
+      // subtrees don't collapse on every refresh.
+      const currentTree = state.ideFileTrees[action.workspaceId];
+      const existingChildren = (currentTree && Array.isArray(currentTree.children)) ? currentTree.children : [];
+      const existingByPath = new Map();
+      for (const child of existingChildren) existingByPath.set(child.path, child);
+      const mergedChildren = action.entries.map(entry => {
+        const existing = existingByPath.get(entry.path);
+        if (existing && existing.type === 'directory' && entry.type === 'directory' && Array.isArray(existing.children)) {
+          return { ...entry, children: existing.children };
+        }
+        return entry;
+      });
+      const newTree = {
+        name: action.rootName,
+        path: action.rootPath,
+        type: 'directory',
+        children: mergedChildren,
+      };
+      return { ...state, ideFileTrees: { ...state.ideFileTrees, [action.workspaceId]: newTree } };
+    }
     case 'IDE_OPEN_FILE': {
       const wsId = action.workspaceId;
       const currentFiles = state.ideOpenFiles[wsId] || [];

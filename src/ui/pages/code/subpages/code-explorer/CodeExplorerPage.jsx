@@ -32,7 +32,6 @@ export default function CodeExplorerPage() {
     ideActiveWorkspaceId,
     ideOpenFiles,
     ideActiveFileId,
-    ideFileTrees,
     currentDashboardId,
     dashboardList,
     currentLogs,
@@ -50,30 +49,12 @@ export default function CodeExplorerPage() {
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startWidth: 0 });
 
-  // Load file tree when active workspace changes or when a new workspace is opened
-  useEffect(() => {
-    if (!ideActiveWorkspaceId) return;
-    const ws = ideWorkspaces.find(w => w.id === ideActiveWorkspaceId);
-    if (!ws) return;
-    // Only load if we don't already have the tree cached
-    if (ideFileTrees[ideActiveWorkspaceId]) return;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        if (window.electronAPI && window.electronAPI.ideReadDir) {
-          const tree = await window.electronAPI.ideReadDir(ws.path);
-          if (!cancelled) {
-            dispatch({ type: 'IDE_SET_FILE_TREE', workspaceId: ideActiveWorkspaceId, tree });
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load file tree for workspace:', ws.path, err);
-      }
-    })();
-
-    return () => { cancelled = true; };
-  }, [ideActiveWorkspaceId, ideWorkspaces, ideFileTrees, dispatch]);
+  // NOTE: File tree loading is handled exclusively by FileExplorer.jsx, which
+  // uses the lazy-load pattern (ideListDir per directory). A previous recursive
+  // ideReadDir effect lived here, but its response wrapper ({success, tree})
+  // was being stored directly into ideFileTrees — when the recursive call
+  // completed (often several seconds later), it overwrote the populated tree
+  // with a malformed object, visually collapsing the explorer.
 
   // NOTE: Workspace-dashboard creation is handled exclusively by WorkspaceTabs.jsx.
   // handleAddWorkspace() creates dashboards for new workspaces, and a mount-time

@@ -271,15 +271,14 @@ export default function FileExplorer() {
 
         if (result && result.success) {
           const rootName = workspace.path.split('/').pop() || workspace.name;
+          // Merge instead of replace so that any already-loaded subtrees
+          // survive workspace re-renders.
           dispatch({
-            type: 'IDE_SET_FILE_TREE',
+            type: 'IDE_MERGE_ROOT_ENTRIES',
             workspaceId,
-            tree: {
-              name: rootName,
-              path: workspace.path,
-              type: 'directory',
-              children: result.entries,
-            },
+            rootName,
+            rootPath: workspace.path,
+            entries: result.entries,
           });
           // Only set initial expanded paths when there's no existing tree
           setExpandedPaths(prev => prev.size === 0 ? new Set([workspace.path]) : prev);
@@ -295,7 +294,10 @@ export default function FileExplorer() {
     return () => { cancelled = true; };
   }, [workspaceId, workspace, dispatch]); // removed `tree` dep — always refresh on mount
 
-  // Poll root directory for changes every 10 seconds
+  // Poll root directory for changes every 10 seconds.
+  // Uses IDE_MERGE_ROOT_ENTRIES so that user-expanded subdirectories keep
+  // their lazy-loaded children — otherwise the tree would visually collapse
+  // every time the poll fires.
   useEffect(() => {
     if (!workspaceId || !workspace) return;
 
@@ -308,14 +310,11 @@ export default function FileExplorer() {
         if (result && result.success) {
           const rootName = workspace.path.split('/').pop() || workspace.name;
           dispatch({
-            type: 'IDE_SET_FILE_TREE',
+            type: 'IDE_MERGE_ROOT_ENTRIES',
             workspaceId,
-            tree: {
-              name: rootName,
-              path: workspace.path,
-              type: 'directory',
-              children: result.entries,
-            },
+            rootName,
+            rootPath: workspace.path,
+            entries: result.entries,
           });
         }
       } catch (_) {}
