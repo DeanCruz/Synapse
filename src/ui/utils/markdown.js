@@ -254,3 +254,82 @@ export function renderMarkdown(text) {
 
   return html;
 }
+
+/**
+ * File-path detector regex.
+ *
+ * Matches:
+ *   - Absolute Unix paths: /Users/dean/foo.js
+ *   - Relative paths: src/foo.js, ./src/foo.js, ../utils/x.ts
+ *   - Optional trailing line number: src/foo.js:42 or :42:10
+ *
+ * Avoids matching:
+ *   - URLs (the leading slash of `://` is excluded by the boundary lookbehind)
+ *   - Bare filenames without a slash (e.g. `package.json` alone is not matched —
+ *     too aggressive otherwise)
+ *
+ * The lookbehind `(?<=^|[\s(\[`"',>])` requires the path to start at a word
+ * boundary that's not part of another token like a URL scheme.
+ */
+const FILE_PATH_RE = /(?:^|(?<=[\s(\[`"',>]))((?:\.{1,2}\/)?\/?(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.-]+\.[A-Za-z0-9]{1,10})(?::(\d+)(?::\d+)?)?/g;
+
+/**
+ * Walk a DOM root and wrap detected file-path tokens in clickable spans.
+ * Skips any text inside <pre> blocks (multi-line code) but operates on
+ * inline <code>, plain text, and other inline elements. Idempotent: skips
+ * text nodes that are already inside a `.claude-file-link` span.
+ *
+ * Wrapped span shape:
+ *   <span class="claude-file-link" data-file-path="src/foo.js" data-line="42" title="...">…</span>
+ *
+ * The caller is expected to use event delegation (a single click handler on
+ * an ancestor) to read `data-file-path` and respond.
+ *
+ * @param {HTMLElement} root - Root element whose descendants will be scanned.
+ */
+export function linkifyFilePaths(root) {
+  if (!root || typeof document === 'undefined') return;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      // Skip text nodes inside <pre> blocks (code fences)
+      let p = node.parentNode;
+      while (p && p !== root) {
+        if (p.nodeName === 'PRE') return NodeFilter.FILTER_REJECT;
+        if (p.classList && p.classList.contains('claude-file-link')) return NodeFilter.FILTER_REJECT;
+        p = p.parentNode;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
+  const targets = [];
+  let n;
+  while ((n = walker.nextNode())) {
+    if (FILE_PATH_RE.test(n.nodeValue)) targets.push(n);
+    FILE_PATH_RE.lastIndex = 0;
+  }
+  for (const textNode of targets) {
+    const text = textNode.nodeValue;
+    const frag = document.createDocumentFragment();
+    let lastIdx = 0;
+    FILE_PATH_RE.lastIndex = 0;
+    let m;
+    while ((m = FILE_PATH_RE.exec(text)) !== null) {
+      const start = m.index;
+      const path = m[1];
+      const line = m[2] || null;
+      const fullMatch = line ? `${path}:${m[0].slice(path.length + 1)}` : path;
+      const matchEnd = start + (line ? m[0].length : path.length);
+      if (start > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, start)));
+      const span = document.createElement('span');
+      span.className = 'claude-file-link';
+      span.setAttribute('data-file-path', path);
+      if (line) span.setAttribute('data-line', line);
+      span.setAttribute('title', `${path}${line ? ':' + line : ''} — click to open in Code Explorer`);
+      span.textContent = line ? fullMatch : path;
+      frag.appendChild(span);
+      lastIdx = matchEnd;
+    }
+    if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+    textNode.parentNode.replaceChild(frag, textNode);
+  }
+}

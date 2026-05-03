@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(/Users/dean/Desktop/Synapse/.claude/hooks/**)",
+      "Write(/Users/dean/Desktop/Synapse/.claude/hooks/**)",
+      "Edit(/Users/dean/Desktop/Synapse/.claude/settings.json)",
+      "Write(/Users/dean/Desktop/Synapse/.claude/settings.json)",
+      "Edit(/Users/dean/Desktop/Synapse/.claude/settings.local.json)",
+      "Write(/Users/dean/Desktop/Synapse/.claude/settings.local.json)",
+      "Edit(/Users/dean/Desktop/Synapse/.claude/agents/**)",
+      "Write(/Users/dean/Desktop/Synapse/.claude/agents/**)",
+      "Edit(/Users/dean/Desktop/Synapse/.claude/skills/**)",
+      "Write(/Users/dean/Desktop/Synapse/.claude/skills/**)"
+    ]
+  }
+}

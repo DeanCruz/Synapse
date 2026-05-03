@@ -32,4 +32,4 @@ dashboards/*
 queue/*
 history/*
 Archive/*
-tasks/*
+tasks/*.claude/settings.local.json

@@ -39,7 +39,7 @@ function getDisplayName(id, dashboardNames) {
 export default function CodeSidebar() {
   const state = useAppState();
   const dispatch = useDispatch();
-  const { currentDashboardId, dashboardStates, dashboardList, dashboardNames, queueItems, activeView, chatPreviews, unreadChatCounts, claudeIsProcessing, claudeProcessingStash } = state;
+  const { currentDashboardId, dashboardStates, dashboardList, dashboardNames, queueItems, activeView, chatPreviews, unreadChatCounts, claudeIsProcessing, claudeProcessingStash, archivedDashboard } = state;
 
   const [collapsed, setCollapsed] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, taskName } or null
@@ -68,6 +68,9 @@ export default function CodeSidebar() {
   const dashboards = [...allDashboards];
 
   function handleSwitch(id) {
+    if (archivedDashboard) {
+      dispatch({ type: 'CLEAR_ARCHIVED_DASHBOARD' });
+    }
     if (id !== currentDashboardId) {
       dispatch({ type: 'SWITCH_DASHBOARD', id });
     }
@@ -494,6 +497,46 @@ export default function CodeSidebar() {
               </div>
             ))}
           </>
+        )}
+
+        {/* Archived dashboard tab (temporary) */}
+        {archivedDashboard && (
+          <div
+            className="dashboard-item archived-item active"
+            onClick={() => dispatch({ type: 'SET_VIEW', view: 'dashboard' })}
+            role="button"
+            tabIndex={0}
+          >
+            <div className="dashboard-item-dot-wrap">
+              <span className="dashboard-item-status completed" />
+            </div>
+            <div className="dashboard-item-content">
+              <div className="dashboard-item-header">
+                <span className="dashboard-item-name archived-name">
+                  Archived — {archivedDashboard.taskName}
+                </span>
+              </div>
+              {!collapsed && (
+                <div className="dashboard-item-meta">
+                  <span className="dashboard-item-preview dashboard-item-status-label">archived</span>
+                  <div className="dashboard-item-actions">
+                    <button
+                      className="dashboard-item-action-btn dashboard-delete-btn"
+                      title="Close archived view"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        dispatch({ type: 'CLEAR_ARCHIVED_DASHBOARD' });
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+                        <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </div>
 

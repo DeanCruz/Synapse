@@ -200,6 +200,7 @@ function TreeNode({ node, depth, expandedPaths, toggleExpand, onFileClick, activ
       <div
         className={`ide-explorer-item ${isDir ? 'folder' : 'file'}${isActive ? ' active' : ''}`}
         data-depth={Math.min(depth, 10)}
+        data-path={node.path}
         onClick={handleClick}
         role="treeitem"
         aria-expanded={isDir ? isExpanded : undefined}
@@ -383,6 +384,87 @@ export default function FileExplorer({ dashboardId: dashboardIdProp } = {}) {
       file: { path: node.path, name: node.name }
     });
   }, [dashboardId, dispatch]);
+
+  // ── Reveal-in-tree effect ────────────────────────────────────
+  // Listens for state.ideRevealRequest dispatched from chat (or anywhere else).
+  // Walks the path's ancestors, lazy-loads any unloaded directories, expands
+  // each one, opens the file in a tab, and scrolls the row into view.
+  const treeRef = useRef(tree);
+  useEffect(() => { treeRef.current = tree; }, [tree]);
+  const revealRequest = state.ideRevealRequest;
+  useEffect(() => {
+    if (!revealRequest || !projectPath || !dashboardId) return;
+    if (revealRequest.dashboardId && revealRequest.dashboardId !== dashboardId) return;
+    const targetPath = revealRequest.path;
+    if (!targetPath || !targetPath.startsWith(projectPath)) return;
+
+    let cancelled = false;
+
+    function findNodeByPath(node, path) {
+      if (!node) return null;
+      if (node.path === path) return node;
+      if (!Array.isArray(node.children)) return null;
+      for (const child of node.children) {
+        const hit = findNodeByPath(child, path);
+        if (hit) return hit;
+      }
+      return null;
+    }
+
+    async function reveal() {
+      const rel = targetPath.slice(projectPath.length).replace(/^\/+/, '');
+      if (!rel) return;
+      const parts = rel.split('/').filter(Boolean);
+      const ancestors = []; // dirs from project root down to file's parent
+      for (let i = 0; i < parts.length - 1; i++) {
+        ancestors.push(projectPath + '/' + parts.slice(0, i + 1).join('/'));
+      }
+
+      // Sequentially ensure each ancestor has children loaded.
+      // (Sequential — a child node only exists in the tree once its parent has loaded.)
+      for (const dir of ancestors) {
+        if (cancelled) return;
+        const node = findNodeByPath(treeRef.current, dir);
+        if (!node || node.children === null) {
+          await loadChildren(dir);
+        }
+      }
+      if (cancelled) return;
+
+      // Expand all ancestors at once
+      setExpandedPaths(prev => {
+        const next = new Set(prev);
+        ancestors.forEach(d => next.add(d));
+        // Also expand the project root so the user sees the path from the top
+        next.add(projectPath);
+        return next;
+      });
+
+      // Open the file in a tab
+      const fileName = parts[parts.length - 1] || targetPath;
+      dispatch({
+        type: 'IDE_OPEN_FILE',
+        dashboardId,
+        file: { path: targetPath, name: fileName },
+      });
+
+      // Scroll the row into view once it's rendered
+      setTimeout(() => {
+        if (cancelled) return;
+        const root = document.querySelector('.ide-explorer-tree');
+        if (!root) return;
+        const sel = `[data-path="${(window.CSS && CSS.escape) ? CSS.escape(targetPath) : targetPath.replace(/"/g, '\\"')}"]`;
+        const el = root.querySelector(sel);
+        if (el && typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      }, 80);
+    }
+
+    reveal();
+    return () => { cancelled = true; };
+    // revealRequest is a fresh object on every dispatch (seq increments), so this fires per-click
+  }, [revealRequest, projectPath, dashboardId, dispatch, loadChildren]);
 
   // Refresh tree — clear and reload root level
   const handleRefresh = useCallback(async () => {
