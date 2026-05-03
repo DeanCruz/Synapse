@@ -95,6 +95,25 @@
             "command": ".claude/hooks/nudge-progress-update.sh"
           }
         ]
+      },
+      {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/worker-status-on-dispatch.sh"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/worker-status-on-notify.sh"
+          }
+        ]
       }
     ],
     "Stop": [

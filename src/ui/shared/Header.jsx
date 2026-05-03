@@ -48,7 +48,7 @@ export default function Header() {
 
   function handleViewArchive() {
     setArchiveOpen(false);
-    dispatch({ type: 'SET_VIEW', view: 'dashboard' });
+    dispatch({ type: 'OPEN_MODAL', modal: 'archive' });
   }
 
   function handleHistory() {

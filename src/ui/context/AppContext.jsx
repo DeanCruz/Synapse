@@ -225,6 +225,7 @@ const initialState = {
   chatPreviews: {},
   homeViewActive: false,
   archiveViewActive: false,
+  archivedDashboard: null, // { name, taskName, init, progress, logs, status }
   queueViewActive: false,
   queueItems: [],
   unblockedTasks: [],
@@ -285,6 +286,7 @@ const initialState = {
   ideOpenFiles: {}, // { [dashboardId]: [{ id, path, name, isDirty }] }
   ideActiveFileId: {}, // { [dashboardId]: string }
   ideFileTrees: {}, // { [dashboardId]: treeData }
+  ideRevealRequest: null, // { dashboardId, path, seq } — last "reveal in tree" request from chat or elsewhere
   ideSidebarView: 'explorer', // which sidebar panel is shown in IDE
   ideChatOpen: false, // whether IDE inline chat is open
   // Search state
@@ -338,6 +340,10 @@ function appReducerCore(state, action) {
       return { ...state, currentLogs: action.data };
     case 'SET_STATUS':
       return { ...state, currentStatus: action.data };
+    case 'SET_ARCHIVED_DASHBOARD':
+      return { ...state, archivedDashboard: action.data };
+    case 'CLEAR_ARCHIVED_DASHBOARD':
+      return { ...state, archivedDashboard: null };
     case 'SET_DASHBOARD_STATE': {
       const newStates = { ...state.dashboardStates, [action.id]: action.status };
       return { ...state, dashboardStates: newStates };
@@ -402,6 +408,7 @@ function appReducerCore(state, action) {
         seenPermissionCount: 0,
         activeView: targetActiveView,
         archiveViewActive: false,
+        archivedDashboard: null,
         queueViewActive: false,
         // Tab state
         claudeTabStash: newTabStash,
@@ -427,9 +434,13 @@ function appReducerCore(state, action) {
       const clearedUnread = action.view === 'claude'
         ? (({ [targetClaudeDash]: _, ...rest }) => rest)(state.unreadChatCounts)
         : state.unreadChatCounts;
+      // Clear archived dashboard when navigating away from dashboard view
+      const clearArchive = action.view !== 'dashboard' && state.archivedDashboard
+        ? null : state.archivedDashboard;
       return {
         ...state,
         activeView: action.view,
+        archivedDashboard: clearArchive,
         claudeDashboardId: targetClaudeDash,
         claudeEverOpened: state.claudeEverOpened || action.view === 'claude',
         unreadChatCounts: clearedUnread,
@@ -1160,6 +1171,12 @@ function appReducerCore(state, action) {
       );
       const newOpenFiles = { ...state.ideOpenFiles, [did]: updatedFiles };
       return { ...state, ideOpenFiles: newOpenFiles };
+    }
+    case 'IDE_REVEAL_FILE': {
+      const did = action.dashboardId || state.currentDashboardId;
+      if (!did || !action.path) return state;
+      const seq = (state.ideRevealRequest?.seq || 0) + 1;
+      return { ...state, ideRevealRequest: { dashboardId: did, path: action.path, seq } };
     }
     case 'IDE_OPEN_CHAT':
       return { ...state, ideChatOpen: true, claudeViewMode: 'expanded', claudeEverOpened: true };

@@ -1,8 +1,10 @@
 // ArchiveModal — Lists archived snapshots with name, type, agent count, delete button
-// Mirrors ArchiveModal.js with React hooks and JSX.
+// Clicking an archive opens it as a temporary tab in the sidebar.
 
 import React, { useState, useEffect } from 'react';
 import Modal from './Modal.jsx';
+import { useDispatch } from '@/context/AppContext.jsx';
+import { mergeState } from '@/hooks/useDashboardData.js';
 
 function ArchiveEntry({ archive, onClick, onDelete }) {
   const taskName = archive.task ? archive.task.name : archive.name;
@@ -14,7 +16,7 @@ function ArchiveEntry({ archive, onClick, onDelete }) {
   }
 
   return (
-    <div className="history-entry" onClick={() => onClick && onClick(archive.name)}>
+    <div className="history-entry" onClick={() => onClick && onClick(archive)}>
       <span className="history-entry-dot" style={{ backgroundColor: 'var(--color-completed)' }} />
       <div className="history-entry-content">
         <div className="history-entry-name">{taskName}</div>
@@ -47,22 +49,45 @@ function ArchiveEntry({ archive, onClick, onDelete }) {
   );
 }
 
-export default function ArchiveModal({ onClose, onItemClick, onDelete }) {
+export default function ArchiveModal({ onClose, onDelete }) {
   const api = window.electronAPI || null;
+  const dispatch = useDispatch();
   const [archives, setArchives] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!api) { setLoading(false); return; }
-    api.getArchives().then(items => {
-      setArchives(items || []);
+    api.getArchives().then(result => {
+      const items = result?.archives || result || [];
+      setArchives(Array.isArray(items) ? items : []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [api]);
 
-  function handleClick(archiveName) {
+  async function handleClick(archive) {
+    if (!api) return;
+    const taskName = archive.task ? archive.task.name : archive.name;
     onClose();
-    if (onItemClick) onItemClick(archiveName);
+    try {
+      const data = await api.getArchive(archive.name);
+      if (data && !data.error) {
+        const status = mergeState(data.initialization, data.progress || {}, data.logs);
+        dispatch({
+          type: 'SET_ARCHIVED_DASHBOARD',
+          data: {
+            name: archive.name,
+            taskName,
+            init: data.initialization,
+            progress: data.progress || {},
+            logs: data.logs,
+            status,
+          },
+        });
+        dispatch({ type: 'SET_VIEW', view: 'dashboard' });
+      }
+    } catch (err) {
+      console.error('Failed to load archive:', err);
+    }
   }
 
   function handleDelete(archive) {
@@ -72,20 +97,15 @@ export default function ArchiveModal({ onClose, onItemClick, onDelete }) {
     }
 
     if (onDelete) {
-      // Let parent handle the delete API call
       onDelete(archive.name, () => {
         setArchives(prev => prev.filter(a => a.name !== archive.name));
       });
     } else if (api) {
-      // Fallback: call API directly
-      fetch('/api/archives/' + encodeURIComponent(archive.name), { method: 'DELETE' })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setArchives(prev => prev.filter(a => a.name !== archive.name));
-          }
-        })
-        .catch(() => {});
+      api.deleteArchive(archive.name).then(result => {
+        if (result && result.success) {
+          setArchives(prev => prev.filter(a => a.name !== archive.name));
+        }
+      }).catch(() => {});
     }
   }
 

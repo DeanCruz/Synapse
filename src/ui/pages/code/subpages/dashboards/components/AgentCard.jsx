@@ -141,7 +141,7 @@ export default function AgentCard({ agent, onClick }) {
     >
       {/* Top row: ID badge + status dot + title */}
       <div className="agent-card-top">
-        <span className="agent-id">{id}</span>
+        <span className="agent-id" title={id}>{id}</span>
         <span
           className="status-dot"
           style={{ backgroundColor: dotColor }}

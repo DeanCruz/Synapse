@@ -5,9 +5,9 @@
 // Logs chat events to the active dashboard.
 // Allows sending follow-up messages while an agent is still running.
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useAppState, useDispatch, getClaudeSlice } from '@/context/AppContext.jsx';
-import { renderMarkdown } from '@/utils/markdown.js';
+import { renderMarkdown, linkifyFilePaths } from '@/utils/markdown.js';
 import { getDashboardProject, getDashboardAdditionalContext } from '@/utils/dashboardProjects.js';
 import PermissionModal from '@/shared/modals/PermissionModal.jsx';
 
@@ -30,13 +30,11 @@ const MODEL_OPTIONS = {
     { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' },
   ],
   codex: [
+    { value: 'gpt-5.5', label: 'GPT-5.5' },
     { value: 'gpt-5.4', label: 'GPT-5.4' },
     { value: 'gpt-5.4-mini', label: 'GPT-5.4-Mini' },
     { value: 'gpt-5.3-codex', label: 'GPT-5.3-Codex' },
-    { value: 'gpt-5.2-codex', label: 'GPT-5.2-Codex' },
     { value: 'gpt-5.2', label: 'GPT-5.2' },
-    { value: 'gpt-5.1-codex-max', label: 'GPT-5.1-Codex-Max' },
-    { value: 'gpt-5.1-codex-mini', label: 'GPT-5.1-Codex-Mini' },
   ],
 };
 
@@ -50,6 +48,16 @@ function resolveModel(provider, savedModel) {
     return savedModel;
   }
   return options[0].value;
+}
+
+function inferSessionProvider(messages) {
+  if (!Array.isArray(messages)) return null;
+  for (const msg of messages) {
+    const text = msg?.text || '';
+    if (/\bthread\.started\b|\bthread_id\b|gpt-5|codex/i.test(text)) return 'codex';
+    if (/\bsession_id\b|claude-|opus|sonnet|haiku/i.test(text)) return 'claude';
+  }
+  return null;
 }
 
 // Parse tool result content into a display string
@@ -687,6 +695,146 @@ function CompactionMessage({ msg }) {
   );
 }
 
+// Try to parse a string as a JSON object/array. Returns the parsed value
+// or null if the string isn't a single JSON document at top level.
+// We require the whole trimmed text to parse — partial matches would
+// false-positive on plain prose containing braces.
+function tryParseJson(text) {
+  if (!text || typeof text !== 'string') return null;
+  const t = text.trim();
+  if (!t) return null;
+  if (!(t.startsWith('{') || t.startsWith('['))) return null;
+  // Cheap length sanity check — pretty-printing a 500KB JSON blob would lock
+  // up the UI. Bail out for huge payloads and let the markdown path render
+  // them as plain text (the user can still see it, just not pretty).
+  if (t.length > 200_000) return null;
+  try {
+    const parsed = JSON.parse(t);
+    if (parsed && typeof parsed === 'object') return parsed;
+  } catch (_) {}
+  return null;
+}
+
+// Recursively render a parsed JSON value as syntax-highlighted text inside
+// a <pre>. Multi-line strings keep their real line breaks, indented to
+// align with the opening quote so log/result text stays readable.
+function JsonValue({ value, indent }) {
+  const pad = '  '.repeat(indent + 1);
+  const closePad = '  '.repeat(indent);
+  if (value === null) return <span className="json-null">null</span>;
+  if (typeof value === 'boolean') return <span className="json-boolean">{String(value)}</span>;
+  if (typeof value === 'number') return <span className="json-number">{value}</span>;
+  if (typeof value === 'string') {
+    if (!value.includes('\n')) return <span className="json-string">"{value}"</span>;
+    const lines = value.split('\n');
+    return (
+      <span className="json-string">
+        "{lines.map((line, i) => (
+          <React.Fragment key={i}>
+            {i > 0 ? '\n' + pad : ''}
+            {line}
+          </React.Fragment>
+        ))}"
+      </span>
+    );
+  }
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <span className="json-bracket">[]</span>;
+    return (
+      <>
+        <span className="json-bracket">[</span>
+        {value.map((v, i) => (
+          <React.Fragment key={i}>
+            {'\n' + pad}
+            <JsonValue value={v} indent={indent + 1} />
+            {i < value.length - 1 ? <span className="json-punct">,</span> : null}
+          </React.Fragment>
+        ))}
+        {'\n' + closePad}
+        <span className="json-bracket">]</span>
+      </>
+    );
+  }
+  if (typeof value === 'object') {
+    const keys = Object.keys(value);
+    if (keys.length === 0) return <span className="json-bracket">{'{}'}</span>;
+    return (
+      <>
+        <span className="json-bracket">{'{'}</span>
+        {keys.map((k, i) => (
+          <React.Fragment key={k}>
+            {'\n' + pad}
+            <span className="json-key">"{k}"</span>
+            <span className="json-punct">: </span>
+            <JsonValue value={value[k]} indent={indent + 1} />
+            {i < keys.length - 1 ? <span className="json-punct">,</span> : null}
+          </React.Fragment>
+        ))}
+        {'\n' + closePad}
+        <span className="json-bracket">{'}'}</span>
+      </>
+    );
+  }
+  return <span>{String(value)}</span>;
+}
+
+// Pretty-printed JSON block for chat messages whose text is a JSON document.
+// Includes a copy-to-clipboard control on the original (compact) form.
+function JsonBlock({ data, raw }) {
+  const handleCopy = useCallback(() => {
+    try {
+      const text = raw || JSON.stringify(data, null, 2);
+      navigator.clipboard?.writeText(text);
+    } catch (_) {}
+  }, [data, raw]);
+  return (
+    <div className="claude-json-block-wrap">
+      <button
+        type="button"
+        className="claude-json-block-copy"
+        onClick={handleCopy}
+        title="Copy raw JSON"
+      >Copy</button>
+      <pre className="claude-json-block"><code><JsonValue value={data} indent={0} /></code></pre>
+    </div>
+  );
+}
+
+// Markdown content with file-path linkification + click delegation.
+// Renders the markdown HTML once per text change, then walks text nodes
+// to wrap detected file paths in clickable spans. A single delegated
+// click handler on the container fires onOpenFile for any [data-file-path].
+// If the entire text is a JSON document, renders a pretty-printed JsonBlock
+// instead of running it through the markdown pipeline.
+function MarkdownContent({ text, onOpenFile, className }) {
+  const parsedJson = tryParseJson(text);
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    if (parsedJson !== null) return; // JSON branch handles its own DOM
+    if (!ref.current) return;
+    ref.current.innerHTML = renderMarkdown(text || '');
+    if (onOpenFile) linkifyFilePaths(ref.current);
+  }, [text, onOpenFile, parsedJson]);
+  const handleClick = useCallback((e) => {
+    if (!onOpenFile) return;
+    const link = e.target.closest && e.target.closest('[data-file-path]');
+    if (link) {
+      e.stopPropagation();
+      const path = link.getAttribute('data-file-path');
+      const line = link.getAttribute('data-line');
+      onOpenFile(line ? `${path}:${line}` : path);
+    }
+  }, [onOpenFile]);
+  if (parsedJson !== null) {
+    return (
+      <div className={className}>
+        <JsonBlock data={parsedJson} raw={text} />
+      </div>
+    );
+  }
+  return <div ref={ref} className={className} onClick={handleClick} />;
+}
+
 // A single conversation message
 function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }) {
   if (msg.type === 'thinking') {
@@ -711,9 +859,10 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }
     return (
       <div className="claude-message claude-assistant">
         <CopyBubbleButton text={msg.text} />
-        <div
+        <MarkdownContent
           className="claude-message-text"
-          dangerouslySetInnerHTML={{ __html: renderMarkdown(msg.text) }}
+          text={msg.text}
+          onOpenFile={onOpenFile}
         />
       </div>
     );
@@ -738,6 +887,17 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }
     if (msg.isCompaction) {
       return <CompactionMessage msg={msg} />;
     }
+    // If the system message body is itself a JSON document (a stray `result`
+    // event, error payload, etc.), render it pretty-printed instead of as a
+    // run-on string.
+    const sysJson = tryParseJson(msg.text);
+    if (sysJson !== null) {
+      return (
+        <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '')}>
+          <JsonBlock data={sysJson} raw={msg.text} />
+        </div>
+      );
+    }
     return (
       <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '')}>
         {msg.text}
@@ -748,10 +908,16 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }
     return <ActivityBlock lines={msg.lines || [msg.text]} />;
   }
   if (msg.type === 'tool_result_standalone') {
+    const resultText = toolResultText(msg.content);
+    const trJson = tryParseJson(resultText);
     return (
       <div style={{ background: 'var(--surface)', border: '1px solid var(--color-completed)', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', maxWidth: '90%', fontSize: '0.75rem', overflowWrap: 'break-word', wordBreak: 'break-word', minWidth: 0 }}>
         <span style={{ color: 'var(--color-completed)' }}>[TOOL_RESULT_STANDALONE]</span>{' '}
-        <span style={{ color: 'var(--text-secondary)' }}>{String(toolResultText(msg.content)).substring(0, 100)}</span>
+        {trJson !== null ? (
+          <JsonBlock data={trJson} raw={resultText} />
+        ) : (
+          <span style={{ color: 'var(--text-secondary)' }}>{String(resultText).substring(0, 100)}</span>
+        )}
       </div>
     );
   }
@@ -819,11 +985,12 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
   const fileInputRef = useRef(null);
 
   // Session / conversation persistence (per-dashboard:tab)
-  const sessionIdRef = useRef(null);    // CLI session_id for --resume
+  const sessionIdRef = useRef(null);    // CLI-native session/thread id for resume
+  const sessionProviderRef = useRef(null); // Provider that owns sessionIdRef
   const convIdRef = useRef(null);       // saved conversation id
   const convCreatedRef = useRef(null);  // ISO string of conversation creation
   const messagesRef = useRef(messages); // mirror of messages for async saves
-  const sessionMapRef = useRef({});     // { [dashboardId:tabId]: { sessionId, convId, convCreated } }
+  const sessionMapRef = useRef({});     // { [dashboardId:tabId]: { sessionId, sessionProvider, convId, convCreated } }
   const prevDashboardRef = useRef(dashboardId);
   const prevTabRef = useRef(activeTabId);
   const activeTabRef = useRef(activeTabId);
@@ -899,6 +1066,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         name,
         created: convCreatedRef.current || now,
         sessionId: sessionIdRef.current,
+        sessionProvider: sessionProviderRef.current,
         dashboardId,
         surface,
         messages: currentMsgs,
@@ -942,6 +1110,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     // Stash current session info (refs still hold old tab's values)
     sessionMapRef.current[prevDid + ':' + prevTab] = {
       sessionId: sessionIdRef.current,
+      sessionProvider: sessionProviderRef.current,
       convId: convIdRef.current,
       convCreated: convCreatedRef.current,
     };
@@ -969,6 +1138,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     // Restore target session info
     const restored = sessionMapRef.current[dashboardId + ':' + activeTabId] || {};
     sessionIdRef.current = restored.sessionId || null;
+    sessionProviderRef.current = restored.sessionProvider || null;
     convIdRef.current = restored.convId || null;
     convCreatedRef.current = restored.convCreated || null;
 
@@ -1194,8 +1364,20 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
             if (evt.session_id) {
               const targetKey = prevDashboardRef.current + ':' + targetTab;
               const storedSession = sessionMapRef.current[targetKey] || {};
-              sessionMapRef.current[targetKey] = { ...storedSession, sessionId: evt.session_id };
+              sessionMapRef.current[targetKey] = {
+                ...storedSession,
+                sessionId: evt.session_id,
+                sessionProvider: data.provider || 'claude',
+              };
             }
+          } else if (evt.type === 'thread.started' && evt.thread_id) {
+            const targetKey = prevDashboardRef.current + ':' + targetTab;
+            const storedSession = sessionMapRef.current[targetKey] || {};
+            sessionMapRef.current[targetKey] = {
+              ...storedSession,
+              sessionId: evt.thread_id,
+              sessionProvider: data.provider || 'codex',
+            };
           }
         } catch (e) { /* non-JSON — skip */ }
       }
@@ -1311,8 +1493,21 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
                 const targetTab = taskTabMapRef.current[data.taskId] || 'default';
                 const targetKey = targetDash + ':' + targetTab;
                 const storedSession = sessionMapRef.current[targetKey] || {};
-                sessionMapRef.current[targetKey] = { ...storedSession, sessionId: evt.session_id };
+                sessionMapRef.current[targetKey] = {
+                  ...storedSession,
+                  sessionId: evt.session_id,
+                  sessionProvider: data.provider || 'claude',
+                };
               }
+            } else if (evt.type === 'thread.started' && evt.thread_id) {
+              const targetTab = taskTabMapRef.current[data.taskId] || 'default';
+              const targetKey = targetDash + ':' + targetTab;
+              const storedSession = sessionMapRef.current[targetKey] || {};
+              sessionMapRef.current[targetKey] = {
+                ...storedSession,
+                sessionId: evt.thread_id,
+                sessionProvider: data.provider || 'codex',
+              };
             }
           } catch (e) {
             // Non-JSON output for stashed dashboard — skip (progress bars, etc.)
@@ -1960,13 +2155,19 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         sawStreamingRef.current = false;
         isResumedSessionRef.current = false;
         pendingToolCountRef.current = 0;
-        if (evt.session_id) sessionIdRef.current = evt.session_id;
+        if (evt.session_id) {
+          sessionIdRef.current = evt.session_id;
+          sessionProviderRef.current = data.provider || 'claude';
+        }
         dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Ready' });
         break;
       }
 
       case 'thread.started': {
-        if (evt.thread_id) sessionIdRef.current = evt.thread_id;
+        if (evt.thread_id) {
+          sessionIdRef.current = evt.thread_id;
+          sessionProviderRef.current = data.provider || 'codex';
+        }
         break;
       }
 
@@ -2090,6 +2291,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         name,
         created: convCreatedRef.current || now,
         sessionId: sessionIdRef.current,
+        sessionProvider: sessionProviderRef.current,
         dashboardId: taskDashId,
         surface,
         messages: currentMsgs,
@@ -2241,18 +2443,33 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     }
   }
 
-  // Open a file in the IDE code explorer by path
+  // Open a file in the IDE code explorer by path — also reveals it in the file tree.
+  // IDE state is keyed by currentDashboardId (a code-mode dashboard), not chat-agent ids,
+  // so we always target that. Relative paths from chat output are resolved against
+  // the IDE dashboard's project root.
   const handleOpenFile = useCallback((filePath) => {
     if (!filePath) return;
-    const wsId = state.ideActiveWorkspaceId;
-    if (!wsId) return;
-    const name = filePath.split('/').filter(Boolean).pop() || filePath;
-    dispatch({ type: 'IDE_OPEN_FILE', workspaceId: wsId, file: { path: filePath, name } });
-    // Switch to IDE view if not already there
+    const did = state.currentDashboardId || dashboardId;
+    if (!did) return;
+    let cleanPath = String(filePath).replace(/:\d+(?::\d+)?$/, ''); // strip :line[:col]
+    if (!cleanPath.startsWith('/')) {
+      const root = getDashboardProject(did);
+      if (root) {
+        const rel = cleanPath.replace(/^\.\//, '');
+        cleanPath = root.replace(/\/+$/, '') + '/' + rel;
+      }
+    }
+    const name = cleanPath.split('/').filter(Boolean).pop() || cleanPath;
+    dispatch({ type: 'IDE_OPEN_FILE', dashboardId: did, file: { path: cleanPath, name } });
+    dispatch({ type: 'IDE_REVEAL_FILE', dashboardId: did, path: cleanPath });
+    // When clicked from chat mode, switch to code mode so the IDE shell is visible.
+    if (state.appMode === 'chat') {
+      dispatch({ type: 'SET_APP_MODE', mode: 'code' });
+    }
     if (state.activeView !== 'ide') {
       dispatch({ type: 'SET_VIEW', view: 'ide' });
     }
-  }, [state.ideActiveWorkspaceId, state.activeView, dispatch]);
+  }, [state.currentDashboardId, dashboardId, state.activeView, state.appMode, dispatch]);
 
   async function sendText(text, attachments = []) {
     if (!text || !api) return;
@@ -2270,7 +2487,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     dispatch({ type: 'CLAUDE_SET_STATUS', surface, value: 'Thinking...' });
     currentTextIndexRef.current = null;
     sawStreamingRef.current = false;
-    isResumedSessionRef.current = !!sessionIdRef.current;
+    isResumedSessionRef.current = false;
 
     const taskId = '_claude_' + Date.now();
     activeTaskIdsRef.current.add(taskId);
@@ -2296,9 +2513,11 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       const cliPath = provider === 'codex'
         ? (settings.codexCliPath || null)
         : (settings.claudeCliPath || null);
+      const resumeSessionId = sessionProviderRef.current === provider ? sessionIdRef.current : null;
+      isResumedSessionRef.current = !!resumeSessionId;
 
       // Only inject system prompt on fresh sessions — resumed sessions already have context
-      const systemPrompt = sessionIdRef.current ? null : await api.getChatSystemPrompt(projectDir, dashboardId, additionalContextDirs);
+      const systemPrompt = resumeSessionId ? null : await api.getChatSystemPrompt(projectDir, dashboardId, additionalContextDirs);
 
       // Build conversation history context.
       // For resumed sessions, the CLI already has full history — injecting it again
@@ -2306,7 +2525,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       // with prior messages (e.g. loaded from history).
       let finalPrompt = text;
       const historyContext = buildConversationContext(currentMsgs);
-      if (historyContext && !sessionIdRef.current) {
+      if (historyContext && !resumeSessionId) {
         finalPrompt =
           '<conversation_history>\n' +
           historyContext +
@@ -2338,7 +2557,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         agentHex: chatAgentHex,
         prompt: finalPrompt,
         systemPrompt: systemPrompt || undefined,
-        resumeSessionId: sessionIdRef.current || undefined,
+        resumeSessionId: resumeSessionId || undefined,
         model: selectedModel || undefined,
         cliPath,
         dangerouslySkipPermissions: settings.dangerouslySkipPermissions || false,
@@ -2546,6 +2765,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     if (!isProcessing) {
       dispatch({ type: 'CLAUDE_CLEAR_MESSAGES', surface });
       sessionIdRef.current = null;
+      sessionProviderRef.current = null;
       convIdRef.current = null;
       convCreatedRef.current = null;
       // Clear stashed session for this dashboard:tab too
@@ -2566,11 +2786,13 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     const cId = (tabId === activeTabId ? convIdRef.current : sessionInfo.convId) || 'conv_' + Date.now() + '_' + tabId;
     const cCreated = (tabId === activeTabId ? convCreatedRef.current : sessionInfo.convCreated) || now;
     const sId = (tabId === activeTabId ? sessionIdRef.current : sessionInfo.sessionId) || null;
+    const sProvider = (tabId === activeTabId ? sessionProviderRef.current : sessionInfo.sessionProvider) || null;
     api.saveConversation({
       id: cId,
       name,
       created: cCreated,
       sessionId: sId,
+      sessionProvider: sProvider,
       dashboardId,
       surface,
       messages: msgs,
@@ -2610,6 +2832,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
 
     // Reset session refs
     sessionIdRef.current = null;
+    sessionProviderRef.current = null;
     convIdRef.current = null;
     convCreatedRef.current = null;
     delete sessionMapRef.current[dashboardId + ':' + activeTabId];
@@ -2762,6 +2985,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       if (!full) return;
       dispatch({ type: 'CLAUDE_SET_MESSAGES', surface, messages: full.messages || [] });
       sessionIdRef.current = full.sessionId || null;
+      sessionProviderRef.current = full.sessionProvider || full.provider || inferSessionProvider(full.messages) || null;
       convIdRef.current = full.id;
       convCreatedRef.current = full.created;
       // Scroll to bottom of loaded conversation

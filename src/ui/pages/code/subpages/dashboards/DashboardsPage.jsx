@@ -86,7 +86,12 @@ function ReplanningBanner({ visible }) {
 export default function DashboardsPage() {
   const state = useAppState();
   const dispatch = useDispatch();
-  const { currentStatus, currentLogs, activeLogFilter, activeStatFilter, currentProgress } = state;
+  const { activeLogFilter, activeStatFilter, archivedDashboard } = state;
+
+  // When viewing an archived dashboard, use its data instead of live data
+  const currentStatus = archivedDashboard ? archivedDashboard.status : state.currentStatus;
+  const currentLogs = archivedDashboard ? archivedDashboard.logs : state.currentLogs;
+  const currentProgress = archivedDashboard ? archivedDashboard.progress : state.currentProgress;
 
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState(null);
@@ -121,29 +126,41 @@ export default function DashboardsPage() {
 
   return (
     <>
-      <div className="dashboard-action-bar">
-        <button
-          className={`dashboard-action-bar-btn${projectPath ? ' has-project' : ''}`}
-          title={projectPath ? `Project: ${projectPath}` : 'Set project directory'}
-          onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'project', dashboardId })}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M2 4l4-2 4 2 4-2v10l-4 2-4-2-4 2V4z" stroke="currentColor" strokeWidth="1.3"/>
-            <path d="M6 2v12M10 4v12" stroke="currentColor" strokeWidth="1.3"/>
-          </svg>
-          <span>{projectName || 'Project'}</span>
-        </button>
-        <button
-          className="dashboard-action-bar-btn"
-          title="View dashboard logs"
-          onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'logs', dashboardId })}
-        >
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-            <path d="M2 3h12M2 6.5h12M2 10h8M2 13.5h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
-          </svg>
-          <span>Logs</span>
-        </button>
-      </div>
+      {archivedDashboard ? (
+        <div className="dashboard-action-bar archive-banner">
+          <span className="archive-banner-label">Archived — {archivedDashboard.taskName}</span>
+          <button
+            className="dashboard-action-bar-btn"
+            onClick={() => dispatch({ type: 'CLEAR_ARCHIVED_DASHBOARD' })}
+          >
+            Close
+          </button>
+        </div>
+      ) : (
+        <div className="dashboard-action-bar">
+          <button
+            className={`dashboard-action-bar-btn${projectPath ? ' has-project' : ''}`}
+            title={projectPath ? `Project: ${projectPath}` : 'Set project directory'}
+            onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'project', dashboardId })}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M2 4l4-2 4 2 4-2v10l-4 2-4-2-4 2V4z" stroke="currentColor" strokeWidth="1.3"/>
+              <path d="M6 2v12M10 4v12" stroke="currentColor" strokeWidth="1.3"/>
+            </svg>
+            <span>{projectName || 'Project'}</span>
+          </button>
+          <button
+            className="dashboard-action-bar-btn"
+            title="View dashboard logs"
+            onClick={() => dispatch({ type: 'OPEN_MODAL', modal: 'logs', dashboardId })}
+          >
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M2 3h12M2 6.5h12M2 10h8M2 13.5h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+            </svg>
+            <span>Logs</span>
+          </button>
+        </div>
+      )}
 
       <ProgressSection onOpenTimeline={() => setTimelineOpen(true)} />
       <ReplanningBanner visible={task?.overall_status === 'replanning'} />
@@ -156,7 +173,7 @@ export default function DashboardsPage() {
               ? <ChainPipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} />
               : <WavePipeline status={currentStatus} activeStatFilter={activeStatFilter} onAgentClick={setSelectedAgent} progressData={currentProgress} />
             }
-            <ClearDashboardSection visible={showClear} onClear={handleClear} taskName={task?.name} />
+            {!archivedDashboard && <ClearDashboardSection visible={showClear} onClear={handleClear} taskName={task?.name} />}
           </>
         ) : (
           <EmptyState />
