@@ -84,6 +84,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/validate-master-state.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/validate-chat-dashboard.sh"
           }
         ]
       },

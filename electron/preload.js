@@ -140,6 +140,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   logChatEvent: (dashboardId, entry) => ipcRenderer.invoke('log-chat-event', dashboardId, entry),
   getChatDashboardData: () => ipcRenderer.invoke('get-chat-dashboard-data'),
   createChatAgent: (opts) => ipcRenderer.invoke('create-chat-agent', opts || {}),
+  deleteChatAgent: (agentHex) => ipcRenderer.invoke('delete-chat-agent', agentHex),
 
   // Attachments
   saveTempImages: (attachments) => ipcRenderer.invoke('save-temp-images', attachments),

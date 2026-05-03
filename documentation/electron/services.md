@@ -752,7 +752,9 @@ Uses Kahn's algorithm (BFS topological sort) to detect cycles. Also checks that 
 
 **File:** `electron/services/ConversationService.js` (143 lines)
 
-Manages chat conversation persistence. Conversations are stored as individual JSON files in `{ROOT}/conversations/`.
+Manages chat conversation persistence. Conversations are stored as individual JSON files in `{ROOT}/conversations/`. This service powers the dedicated Chat page (`src/ui/pages/chat/`) and provides the backend for conversation CRUD operations.
+
+> **See also:** [Chat Conversation Persistence](../chat/conversation-persistence.md) for the full lifecycle and schema, and [Chat System Overview](../chat/overview.md) for how this integrates with the Chat page UI.
 
 ### Conversation Schema
 

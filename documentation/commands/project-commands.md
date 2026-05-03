@@ -452,6 +452,65 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 
 ---
 
+## Wiki Commands
+
+### `!wiki`
+
+**Purpose:** Build and maintain a living personal knowledge base -- an LLM-curated wiki that compiles understanding instead of re-deriving it from raw sources every time. Integrates with PKI, hooks, and post-swarm extraction.
+
+**Syntax:**
+```
+!wiki init [--upgrade]                 -- Bootstrap or upgrade wiki tier
+!wiki status                           -- Stats, health, recent activity
+!wiki ingest <source>                  -- Ingest one source
+!wiki ingest_batch <dir|glob>          -- Parallel ingest swarm
+!wiki query <question>                 -- Hybrid search and answer
+!wiki lint                             -- Structural quality sweep
+!wiki audit                            -- Epistemic contradiction sweep
+!wiki crystallize [dashboard_id]       -- Distill a completed swarm
+!wiki consolidate                      -- Promote working to procedural memory
+!wiki decay                            -- Apply Ebbinghaus retention decay
+!wiki graph <entity>                   -- Walk the knowledge graph
+!wiki schema_propose                   -- Generate schema patch from drift
+!wiki schema_accept <ver>              -- Promote proposed schema to current
+!wiki schema_rollback <ver>            -- Roll back to prior schema version
+!wiki calibrate [--from <date>]        -- Learn ranking weights from history
+!wiki export <format> [filter]         -- Export subset (md/json/csv/slides)
+```
+
+**Cost Classes:**
+- `free` -- Local I/O only (init, status, consolidate, decay, graph, schema_accept, schema_rollback, export)
+- `cheap` -- One LLM call (ingest, query, schema_propose, calibrate)
+- `swarm` -- Parallel LLM workers (ingest_batch, lint, audit, crystallize)
+
+**Key Behavior:**
+- Distinct from PKI: PKI is operational knowledge about THIS codebase (gotchas, conventions). The wiki is durable knowledge across sessions/projects/topics (claims, entities, decisions, lessons, knowledge graph)
+- Storage at `{project_root}/.synapse/wiki/` (project-scoped) or a custom `WIKI_ROOT` for user-scoped wiki across projects
+- Pages have frontmatter + body with wikilinks; append-only `.history.jsonl` edit logs per page
+- Knowledge graph with typed entities (people, projects, libraries, concepts) and typed edges (uses, depends_on, contradicts, supersedes)
+- Hybrid search index combining BM25 postings + embeddings + entity references
+- Memory consolidation tiers: working -> episodic -> semantic -> procedural
+- Audit findings with stable hash IDs and cross-run history (same primitive as `!p_synthesize` `_open_issues.md`)
+- Versioned schema system with propose/accept/rollback lifecycle
+
+**Key Subcommands:**
+
+| Subcommand | Description |
+|------------|-------------|
+| `init` | Bootstrap the wiki directory structure, create initial schema, set up indexes |
+| `ingest` | Process a single source into wiki pages with entity extraction and graph updates |
+| `ingest_batch` | Parallel swarm ingestion of multiple sources (full dashboard tracking) |
+| `query` | Hybrid search (BM25 + embedding + graph traversal) to answer a question from wiki knowledge |
+| `lint` | Structural quality sweep: broken links, orphan pages, stale embeddings, schema compliance |
+| `audit` | Epistemic sweep: contradictions between pages, outdated claims, confidence drift |
+| `crystallize` | Distill a completed swarm's output into wiki pages (post-swarm knowledge extraction) |
+| `consolidate` | Promote knowledge up the memory tiers based on access patterns and age |
+| `decay` | Apply Ebbinghaus-style retention decay to reduce noise from unused knowledge |
+| `graph` | Walk the knowledge graph from an entity, showing relationships and connected pages |
+| `export` | Export a subset of the wiki in various formats for external use |
+
+---
+
 ## Discovery Commands
 
 ### `!commands`

@@ -308,6 +308,21 @@ These actions update chat state for non-active dashboards (e.g., when a worker s
 
 ---
 
+## Chat Page State
+
+The dedicated Chat page (`src/ui/pages/chat/`) introduces a page-level architecture with its own component hierarchy:
+
+- **ChatPage** -- Root page component with sidebar and content area layout
+- **ChatSidebar** -- Displays conversation list, dashboard-linked chats, and navigation controls
+- **ChatDashboardView** -- Shows per-dashboard chat context with task-aware messaging
+- **ChatInstanceView** -- Manages individual chat instances with full ClaudeView integration
+
+The Chat page reuses the shared `ClaudeView` component (`src/ui/shared/claude/ClaudeView.jsx`) and existing Claude state actions (`CLAUDE_*` action types in AppContext). Chat-specific routing is handled by the `activeView` state field (value `'chat'`) and the Chat page manages its own internal navigation between dashboard views and standalone instances.
+
+> **See also:** [Chat System Documentation](../chat/overview.md) for the full Chat page architecture and [Chat IPC Handlers](../chat/ipc-handlers.md) for the IPC channels used.
+
+---
+
 ## Persistence
 
 ### Claude Chat Messages
@@ -352,6 +367,10 @@ Saved to `localStorage.getItem('synapse-custom-colors')` as JSON.
 ### Dashboard Projects
 
 Saved to `localStorage.getItem('synapse-dashboard-projects')` as a JSON map of `{ [dashboardId]: projectPath }`.
+
+### Chat Conversations (Server-Side)
+
+In addition to localStorage-based chat persistence (per-tab messages), the Chat page uses server-side persistence via `ConversationService`. Conversations are stored as JSON files in `{tracker_root}/conversations/` and managed through IPC calls (`conversation-list`, `conversation-load`, `conversation-save`, `conversation-create`, `conversation-delete`, `conversation-rename`). See [Chat Conversation Persistence](../chat/conversation-persistence.md) for the full schema and lifecycle.
 
 ---
 

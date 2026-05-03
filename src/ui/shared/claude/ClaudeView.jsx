@@ -3018,11 +3018,6 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     <div className={`claude-view${hideHeader ? ' claude-view--no-header' : ''}`}>
       {!hideHeader && (
         <div className="claude-view-header">
-          <span className="claude-view-title">Agent Chat</span>
-          {projectDisplayName && <span className="claude-view-project">{projectDisplayName}</span>}
-          <span className="claude-view-project">{activeModelLabel}</span>
-          <span className={'claude-view-status' + (isProcessing ? ' active' : '')}>{status}</span>
-          <span className="claude-view-dashboard-id">{dashboardId}</span>
           <button
             className="claude-clear-btn"
             onClick={() => setShowHistory(h => !h)}
@@ -3030,6 +3025,11 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
           >
             History
           </button>
+          <span className="claude-view-title">Agent Chat</span>
+          {projectDisplayName && <span className="claude-view-project">{projectDisplayName}</span>}
+          <span className="claude-view-project">{activeModelLabel}</span>
+          <span className={'claude-view-status' + (isProcessing ? ' active' : '')}>{status}</span>
+          <span className="claude-view-dashboard-id">{dashboardId}</span>
           <button
             className="claude-clear-btn"
             onClick={newTab}

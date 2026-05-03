@@ -8938,6 +8938,89 @@ a:hover {
 }
 
 /* ── Chat Instance View — full-screen chat for a sidebar chat tab ─────── */
+/* ── Internal tab bar (subtabs within a project) ────────────────────── */
+.chat-internal-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  background: var(--bg-secondary, #1a1a2e);
+  border-bottom: 1px solid var(--border-color, #2a2a4a);
+  min-height: 32px;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+.chat-internal-tab-bar::-webkit-scrollbar {
+  height: 2px;
+}
+.chat-internal-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+  user-select: none;
+}
+.chat-internal-tab:hover {
+  background: var(--bg-hover, rgba(255,255,255,0.05));
+  color: var(--text-primary, #e0e0e0);
+}
+.chat-internal-tab.active {
+  background: var(--bg-active, rgba(139,92,246,0.15));
+  color: var(--text-primary, #e0e0e0);
+}
+.chat-internal-tab-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-internal-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary, #666);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+.chat-internal-tab:hover .chat-internal-tab-close {
+  opacity: 1;
+}
+.chat-internal-tab-close:hover {
+  background: var(--bg-hover, rgba(255,255,255,0.1));
+  color: var(--text-primary, #e0e0e0);
+}
+.chat-internal-tab-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  transition: background 0.15s, color 0.15s;
+}
+.chat-internal-tab-add:hover {
+  background: var(--bg-hover, rgba(255,255,255,0.08));
+  color: var(--text-primary, #e0e0e0);
+}
+
 .chat-instance-view {
   display: flex;
   flex-direction: column;

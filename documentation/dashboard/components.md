@@ -24,8 +24,10 @@ The root application component. Wires IPC data subscriptions, fetches initial da
 - `ProgressSection` -- Wraps `ProgressBar` + `StatsBar`, reads task completion counts from `currentStatus`
 - `ReplanningBanner` -- Shows a pulsing notification when `task.overall_status === 'replanning'` (circuit breaker triggered)
 - `DashboardContent` -- The main dashboard area with pipeline visualization, action bar, progress section, and bottom panel
-- `ClaudeFloatingPanel` -- Floating wrapper around `ClaudeView` with drag-to-resize via `useResize` hook. Supports four view modes: minimized (pill button), collapsed, expanded (resizable), and maximized. Always mounted so IPC listeners stay alive.
+- `ClaudeFloatingPanel` -- Floating wrapper around `ClaudeView` (located at `src/ui/shared/claude/ClaudeFloatingPanel.jsx`) with drag-to-resize via `useResize` hook. Supports four view modes: minimized (pill button), collapsed, expanded (resizable), and maximized. Always mounted so IPC listeners stay alive.
 - `ClaudeFloatingHeader` -- Title bar showing "Agent Chat" title, project name, processing status, and window controls (minimize, maximize/restore)
+
+> **Note:** The dedicated Chat page (`src/ui/pages/chat/ChatPage.jsx`) provides a full-page chat experience with its own sidebar, dashboard views, and multi-instance management. See [Chat System Documentation](../chat/overview.md).
 
 ### AppProvider (`src/ui/context/AppContext.jsx`)
 
@@ -344,9 +346,11 @@ Visual swarm plan editor for creating and editing task plans.
 - Launch button that produces a complete `initialization.json` structure
 - Empty state when no tasks are added
 
-### ClaudeView (`src/ui/components/ClaudeView.jsx`)
+### ClaudeView (`src/ui/shared/claude/ClaudeView.jsx`)
 
-Full in-app agent chat interface. Now rendered inside a `ClaudeFloatingPanel` wrapper (defined in `App.jsx`) that provides floating panel behavior with four view modes: minimized, collapsed, expanded, and maximized. The `ClaudeFloatingPanel` uses the `useResize` hook for drag-to-resize from the left edge, top edge, and top-left corner when in expanded mode.
+Full in-app agent chat interface. Moved to the shared directory (`src/ui/shared/claude/`) as it is used across multiple pages: the floating panel on the Code page, the inline chat in the IDE, and the dedicated Chat page (`src/ui/pages/chat/`). Rendered inside a `ClaudeFloatingPanel` wrapper (defined in `src/ui/shared/claude/ClaudeFloatingPanel.jsx`) that provides floating panel behavior with four view modes: minimized, collapsed, expanded, and maximized. The `ClaudeFloatingPanel` uses the `useResize` hook for drag-to-resize from the left edge, top edge, and top-left corner when in expanded mode.
+
+> **See also:** [Chat System Documentation](../chat/overview.md) for the full Chat page architecture, sidebar, dashboard views, and instance management.
 
 **Key features:**
 - Multi-provider support (Claude, Codex) with model selection
