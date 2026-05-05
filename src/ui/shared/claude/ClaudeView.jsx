@@ -980,7 +980,9 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
   const [conversations, setConversations] = useState([]);
   const [showQuickAccessEditor, setShowQuickAccessEditor] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState({});
+  const [modelMenuOpen, setModelMenuOpen] = useState(false);
   const quickAccessEditorRef = useRef(null);
+  const modelMenuRef = useRef(null);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
 
@@ -2732,6 +2734,27 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showQuickAccessEditor]);
 
+  // Use an app-rendered model menu so Windows/Electron does not show a native light select popup.
+  useEffect(() => {
+    if (!modelMenuOpen) return;
+    function handleClickOutside(e) {
+      if (modelMenuRef.current && !modelMenuRef.current.contains(e.target)) {
+        setModelMenuOpen(false);
+      }
+    }
+    function handleEscape(e) {
+      if (e.key === 'Escape') {
+        setModelMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [modelMenuOpen]);
+
   function handleSuggestion(s) {
     if (s.autoSend) {
       sendText(s.command);
@@ -2756,6 +2779,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
 
   function handleModelSelect(nextModel) {
     setModel(nextModel);
+    setModelMenuOpen(false);
     if (api) {
       api.setSetting('defaultModel', nextModel).catch(() => {});
     }
@@ -3010,7 +3034,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     return d.toLocaleDateString();
   }
 
-  const activeModelLabel = getModelOptions(provider).find((option) => option.value === model)?.label || model;
+  const modelOptions = getModelOptions(provider);
+  const activeModelLabel = modelOptions.find((option) => option.value === model)?.label || model;
   const projectPath = getDashboardProject(dashboardId);
   const projectDisplayName = projectPath ? projectPath.replace(/\/+$/, '').split('/').pop() : null;
 
@@ -3250,17 +3275,38 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         />
         <div className="claude-prompt-controls">
           <div className="claude-prompt-controls-left">
-            <select
-              className="claude-model-select"
-              value={model}
-              onChange={e => handleModelSelect(e.target.value)}
-            >
-              {getModelOptions(provider).map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <div className="claude-model-picker" ref={modelMenuRef}>
+              <button
+                type="button"
+                className="claude-model-select"
+                onClick={() => setModelMenuOpen(open => !open)}
+                aria-haspopup="listbox"
+                aria-expanded={modelMenuOpen}
+                title="Select model"
+              >
+                <span>{activeModelLabel}</span>
+                <span className="claude-model-select-caret">▾</span>
+              </button>
+              {modelMenuOpen && (
+                <div className="claude-model-menu" role="listbox" aria-label="Select model">
+                  {modelOptions.map((option) => {
+                    const active = option.value === model;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="option"
+                        aria-selected={active}
+                        className={'claude-model-menu-item' + (active ? ' active' : '')}
+                        onClick={() => handleModelSelect(option.value)}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
             <button
               className="claude-attach-btn"
               onClick={openFilePicker}

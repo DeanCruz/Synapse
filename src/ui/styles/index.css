@@ -7589,8 +7589,17 @@ a:hover {
 .claude-stop-btn { background: #ef4444; }
 .claude-stop-btn:hover { background: #dc2626; opacity: 1; }
 
+.claude-model-picker {
+  position: relative;
+}
+
 .claude-model-select {
-  padding: 8px 32px 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 140px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -7598,6 +7607,53 @@ a:hover {
   font-size: 0.78rem;
   cursor: pointer;
   outline: none;
+  font-family: inherit;
+}
+
+.claude-model-select:hover,
+.claude-model-select[aria-expanded="true"] {
+  border-color: var(--border-hover);
+  background: var(--surface-hover);
+}
+
+.claude-model-select-caret {
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.claude-model-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  z-index: 1200;
+  min-width: 100%;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+.claude-model-menu-item {
+  display: block;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.78rem;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.claude-model-menu-item:hover,
+.claude-model-menu-item.active {
+  background: var(--surface-hover);
+  color: var(--text);
 }
 
 /* =====================================================================
