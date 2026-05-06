@@ -93,7 +93,20 @@ function spawnWorker(opts) {
   });
 
   proc.stderr.on('data', function (chunk) {
-    worker.errorOutput += chunk.toString();
+    var errText = chunk.toString();
+    worker.errorOutput += errText;
+
+    // Forward stderr live so Codex worker failures are observable before exit.
+    if (broadcastFn) {
+      broadcastFn('worker-output', {
+        pid: proc.pid,
+        provider: 'codex',
+        taskId: opts.taskId,
+        dashboardId: opts.dashboardId,
+        chunk: errText,
+        isStderr: true,
+      });
+    }
   });
 
   proc.on('close', function (code) {
@@ -192,6 +205,29 @@ function buildArgs(opts) {
     args.push('-C', opts.projectDir);
   }
   args.push('--skip-git-repo-check');
+
+  // Codex workers need writable access to the tracker root because they read
+  // worker instructions there and write progress files there, while still doing
+  // code work in the target project.
+  var synapseRoot = path.resolve(__dirname, '../..');
+  var resolvedProjectDir = opts.projectDir ? path.resolve(opts.projectDir) : null;
+  var seen = {};
+  function addWritableDir(dir) {
+    if (!dir) return;
+    var resolved = path.resolve(dir);
+    if (resolvedProjectDir && resolved === resolvedProjectDir) return;
+    if (seen[resolved]) return;
+    seen[resolved] = true;
+    args.push('--add-dir', dir);
+  }
+
+  addWritableDir(synapseRoot);
+
+  var additionalDirs = opts.additionalContextDirs || [];
+  for (var i = 0; i < additionalDirs.length; i++) {
+    addWritableDir(additionalDirs[i]);
+  }
+
   if (opts.resumeSessionId) {
     args.push(opts.resumeSessionId);
   }

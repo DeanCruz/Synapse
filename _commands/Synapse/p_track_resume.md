@@ -377,6 +377,8 @@ FIRST: Read the worker instructions file:
 Follow those instructions EXACTLY. They contain the full progress file schema,
 required reporting points, log format, and examples.
 
+If you cannot read the instruction file at the path above, use the inline PROGRESS FILE SCHEMA provided in this prompt instead. Log the failure as a deviation in your progress file.
+
 {If LITE:}
 FIRST: Read the lite worker instructions file:
   {tracker_root}/agent/instructions/tracker_worker_instructions_lite.md
@@ -384,7 +386,31 @@ FIRST: Read the lite worker instructions file:
 Follow those instructions EXACTLY. They contain the streamlined progress file schema
 and required reporting points for simple tasks.
 
+If you cannot read the instruction file at the path above, use the inline PROGRESS FILE SCHEMA provided in this prompt instead. Log the failure as a deviation in your progress file.
+
+PROGRESS FILE SCHEMA (fallback — use this if you cannot read the instruction file above):
+{
+  "task_id": "{id}",
+  "dashboard_id": "{dashboardId}",
+  "template_version": "p_track_v2",
+  "status": "in_progress | completed | failed",
+  "started_at": "ISO-8601",
+  "completed_at": "ISO-8601 | null",
+  "summary": "one-line result on completion",
+  "assigned_agent": "Agent {N}",
+  "stage": "reading_context | planning | implementing | testing | finalizing | completed | failed",
+  "message": "what you are doing right now",
+  "files_changed": [{ "path": "relative/path", "action": "created|modified|deleted" }],
+  "milestones": [{ "at": "ISO-8601", "msg": "significant accomplishment" }],
+  "deviations": [{ "at": "ISO-8601", "description": "plan divergence" }],
+  "logs": [{ "at": "ISO-8601", "level": "info|warn|error|deviation", "msg": "event" }],
+  "shared_context": null,
+  "annotations": null
+}
+Write the FULL file on every update. Mandatory writes: (1) before starting work, (2) on every stage transition, (3) on any deviation, (4) on completion/failure. Timestamps: always `date -u +"%Y-%m-%dT%H:%M:%SZ"`.
+
 YOUR PROGRESS FILE: {tracker_root}/dashboards/{dashboardId}/progress/{id}.json
+MANDATORY: Write your first progress file IMMEDIATELY with status: "in_progress", stage: "reading_context" BEFORE doing any work. This is NON-NEGOTIABLE.
 YOUR TASK ID: {id}
 YOUR AGENT LABEL: Agent {N}
 

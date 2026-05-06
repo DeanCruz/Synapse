@@ -260,15 +260,53 @@ LIVE PROGRESS REPORTING — NON-NEGOTIABLE
 
 You MUST report your progress throughout execution. This is how the dashboard shows real-time updates.
 
+INSTRUCTION MODE: {FULL | LITE}
+
+{If FULL:}
 FIRST: Read the worker instructions file:
   {tracker_root}/agent/instructions/tracker_worker_instructions.md
 
 Follow those instructions EXACTLY. They contain the full progress file schema,
 required reporting points, log format, and examples.
 
+If you cannot read the instruction file at the path above, use the inline PROGRESS FILE SCHEMA provided in this prompt instead. Log the failure as a deviation in your progress file.
+
+{If LITE:}
+FIRST: Read the lite worker instructions file:
+  {tracker_root}/agent/instructions/tracker_worker_instructions_lite.md
+
+Follow those instructions EXACTLY. They contain the streamlined progress file schema
+and required reporting points for simple tasks.
+
+If you cannot read the instruction file at the path above, use the inline PROGRESS FILE SCHEMA provided in this prompt instead. Log the failure as a deviation in your progress file.
+
+PROGRESS FILE SCHEMA (fallback — use this if you cannot read the instruction file above):
+{
+  "task_id": "{id}",
+  "dashboard_id": "{dashboardId}",
+  "template_version": "p_track_v2",
+  "status": "in_progress | completed | failed",
+  "started_at": "ISO-8601",
+  "completed_at": "ISO-8601 | null",
+  "summary": "one-line result on completion",
+  "assigned_agent": "Agent {N}",
+  "stage": "reading_context | planning | implementing | testing | finalizing | completed | failed",
+  "message": "what you are doing right now",
+  "files_changed": [{ "path": "relative/path", "action": "created|modified|deleted" }],
+  "milestones": [{ "at": "ISO-8601", "msg": "significant accomplishment" }],
+  "deviations": [{ "at": "ISO-8601", "description": "plan divergence" }],
+  "logs": [{ "at": "ISO-8601", "level": "info|warn|error|deviation", "msg": "event" }],
+  "shared_context": null,
+  "annotations": null
+}
+Write the FULL file on every update. Mandatory writes: (1) before starting work, (2) on every stage transition, (3) on any deviation, (4) on completion/failure. Timestamps: always `date -u +"%Y-%m-%dT%H:%M:%SZ"`.
+
 YOUR PROGRESS FILE: {tracker_root}/dashboards/{dashboardId}/progress/{id}.json
+MANDATORY: Write your first progress file IMMEDIATELY with status: "in_progress", stage: "reading_context" BEFORE doing any work. This is NON-NEGOTIABLE.
 YOUR TASK ID: {id}
 YOUR AGENT LABEL: Agent {N}
+
+Include the TEMPLATE_VERSION value from the top of this prompt as `template_version` in your progress file on every write.
 
 You own this file exclusively. Write the FULL file on every update.
 The dashboard watches it and displays your progress in real-time.
@@ -280,6 +318,9 @@ DEVIATION REPORTING — MANDATORY
 If you deviate from the original plan in ANY way, you MUST report it immediately.
 See `{tracker_root}/agent/instructions/tracker_worker_instructions.md` for the full deviation
 reporting protocol, including the progress file format and required fields.
+
+Deviations must also be included in your final return to the master agent (DIVERGENT ACTIONS section).
+Failing to report a deviation is a failure of this task.
 
 ═══════════════════════════════════
 EXECUTION RULES
@@ -305,7 +346,9 @@ STATUS: completed | failed
 SUMMARY: {one-sentence description of what was done}
 FILES CHANGED:
   - {path} ({created | modified | deleted})
-DIVERGENT ACTIONS: (omit entirely if none)
+EXPORTS: (omit entirely if no new exports were introduced)
+  - {type: function|type|interface|endpoint|constant|file} {name} — {brief description}
+DIVERGENT ACTIONS: (omit entirely if none — include if ANY deviation from the plan occurred)
   - {what was different from the plan and why}
 WARNINGS: (omit entirely if none)
   - {description of unexpected finding or issue}
