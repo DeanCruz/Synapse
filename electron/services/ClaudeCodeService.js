@@ -91,6 +91,14 @@ function spawnWorker(opts) {
     env.SYNAPSE_DASHBOARD_ID = opts.dashboardId;
   }
 
+  // Instance type: 'chat' for chat-page agents, 'code' for code-page agents.
+  // Hooks read this to enforce that chat agents only touch chat-agent-* dashboards
+  // and code agents only touch non-chat dashboards.
+  var instanceType = opts.instanceType
+    || (opts.chatMode ? 'chat'
+      : (opts.dashboardId && String(opts.dashboardId).indexOf('chat-agent-') === 0 ? 'chat' : 'code'));
+  env.SYNAPSE_INSTANCE_TYPE = instanceType;
+
   console.log('[ClaudeCodeService] Spawning cliPath:', cliPath);
   console.log('[ClaudeCodeService] Full args:', JSON.stringify(args));
   console.log('[ClaudeCodeService] CWD:', opts.projectDir || process.cwd());

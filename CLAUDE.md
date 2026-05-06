@@ -11,6 +11,37 @@ npm start                              # Launch the Electron app (server starts 
 !p_track {your prompt here}            # Run a parallel swarm
 
 
+## Command System — Non-Negotiable
+
+Any user input prefixed with `!` (e.g., `!p_track`, `!context`, `!q_product_research`) is a **command directive**. Commands map to instruction files in the `_commands/` directory hierarchy. When a `!command` is invoked, the agent **MUST**:
+
+1. **Resolve** — Search for the command file using the resolution order below
+2. **Read** — Read the entire command file from start to finish
+3. **Execute** — Follow every step exactly as written, in order, with no improvisation, no skipping, and no partial execution
+
+This is **non-negotiable**. Command files are complete specifications — they define exactly what the agent must do. The agent does not interpret, summarize, or selectively execute commands. A `!command` overrides normal agent behavior for the duration of its execution.
+
+### Resolution Order
+
+```
+1. {tracker_root}/_commands/Synapse/{command}.md   <- Swarm commands (highest priority)
+2. {tracker_root}/_commands/project/{command}.md   <- Project commands
+3. {tracker_root}/_commands/user/{command}.md       <- User commands (local, git-ignored)
+4. {project_root}/_commands/{command}.md           <- Project-specific commands
+```
+
+### Rules
+
+- **Read first, execute second.** Always read the full command file before taking any action.
+- **No deviation.** Every instruction in the command file must be followed in the order written.
+- **No improvisation.** Do not add steps, skip steps, or substitute alternative approaches unless the command file explicitly allows it.
+- **Arguments pass through.** If the user provides arguments after the command (e.g., `!p_track build the auth system`), pass them as context to the command's execution flow.
+- **Not found.** If the command file doesn't exist in any location, inform the user and list available commands via `!commands`.
+
+### Enforcement
+
+A PostToolUse hook (`enforce-command-compliance.sh`) fires whenever the agent reads a `_commands/` file, injecting a reminder that the command must be followed exactly. This is a backstop — the agent should already treat `!commands` as non-negotiable directives.
+
 ## Path Convention
 
 | Placeholder | Meaning |

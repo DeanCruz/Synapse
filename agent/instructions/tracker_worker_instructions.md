@@ -33,6 +33,7 @@ Follow these steps in order for every task:
 7. **Report deviations IMMEDIATELY** — add to both `deviations[]` (with severity) and `logs[]` (at `level: "deviation"`) the moment any divergence occurs. --> Read `agent/worker/deviations.md`
 8. **Populate `shared_context`** if you create exports, interfaces, or patterns that same-wave siblings could use. --> Read `agent/worker/sibling_comms.md`
 9. **Annotate files you read deeply** (optional but encouraged): When you gain non-obvious understanding of a file during `reading_context` or `implementing`, add an `annotations` field to your progress file. This feeds the PKI (Project Knowledge Index) and helps future sessions. --> See PKI Annotations section below.
+9b. **Record PKI usage telemetry** (optional): If your dispatch prompt included a `## PKI Knowledge` block and you actually consumed any of its gotchas, populate the optional `pki_used` and/or `pki_noise` fields on your progress file. Each is an array of strings of the form `"[<file path>] <gotcha-text>"` copied verbatim from the PKI block. The post-swarm extractor uses these to score which gotchas are genuinely useful vs. noise. --> See PKI Usage Telemetry section below.
 10. **On completion:** Set `status: "completed"`, `stage: "completed"`, `completed_at`, and a descriptive `summary`. Ensure `files_changed` is complete and matches your FILES CHANGED return. For partial completion (80%+ done), use `"completed"` with summary stating what remains blocked. Reserve `"failed"` for zero useful output.
 11. **Return structured summary** to the master. --> Read `agent/worker/return_format.md`
 
@@ -74,6 +75,7 @@ Detailed instructions are organized into focused modules. Read the ones relevant
 | Something deviates from the plan | `agent/worker/deviations.md` |
 | Same-wave sibling awareness needed | `agent/worker/sibling_comms.md` |
 | Gained deep understanding of a file | See PKI Annotations section below |
+| Consumed gotchas from your prompt's PKI block | See PKI Usage Telemetry section below |
 | Task finishing — preparing return | `agent/worker/return_format.md` |
 
 ---
@@ -250,6 +252,44 @@ All three sub-fields are optional. Include only the ones where you have somethin
 - **Lightweight** — don't spend significant time on annotations. Capture knowledge you already gained during normal task execution.
 - **Honest** — only annotate what you actually observed. Don't speculate about files you didn't read deeply.
 - **Append-friendly** — the master merges these into the full PKI after the swarm completes. Your annotations are a lightweight subset of the full annotation schema.
+
+---
+
+## PKI Usage Telemetry — `pki_used` and `pki_noise` (Optional)
+
+**Optional but encouraged.** Two additional fields on your progress file let the post-swarm extractor measure which PKI gotchas actually helped you and which were noise. The post-swarm enrichment pass (PASS-B in `extractSwarmKnowledge`) sums these across the swarm and adjusts a `usefulness_score` field on each affected annotation (`+1` for `pki_used`, `-0.5` for `pki_noise`, clamped to `[-3, +5]`).
+
+### When to populate
+
+When you receive a PKI knowledge block in your dispatch prompt (under `## PKI Knowledge` with `### GOTCHAS` / `### PATTERNS` / `### CONVENTIONS` / `### RULES` sections), and you actually consume that knowledge:
+
+- **`pki_used`** — record gotchas that genuinely shaped your implementation (you avoided a foot-gun, followed a pattern, respected a convention).
+- **`pki_noise`** — record gotchas that were surfaced but turned out to be irrelevant or misleading for your task (false positive retrieval).
+
+If you didn't receive PKI knowledge, or didn't consume it, leave both fields out. They are optional — absence is a clean no-op for the telemetry pass.
+
+### Format
+
+Each field is an array of strings of the form `"[<file path>] <gotcha-text>"` — copy the gotcha text verbatim from the PKI block in your dispatch prompt, prefixed with the file path it belongs to (in square brackets). The file path must match the manifest entry exactly so PASS-B can resolve it back to an annotation.
+
+```json
+{
+  "pki_used": [
+    "[src/server/services/WatcherService.js] Reconciliation interval is 5s — file writes may not appear on dashboard immediately if OS watcher misses an event",
+    "[electron/services/SwarmOrchestrator.js] extractSwarmKnowledge returns undefined — callers must verify side effects on disk, not return value"
+  ],
+  "pki_noise": [
+    "[src/ui/hooks/useDashboardData.js] SSE reconnection has no backoff — rapid reconnects possible if server is down"
+  ]
+}
+```
+
+### Rules
+
+- **Verbatim copy** — the gotcha text must match the PKI block exactly. Don't paraphrase. PASS-B identifies the annotation by file path; the gotcha text is informational but should be faithful for human review.
+- **Bracket-prefix the file path** — the parser uses the leading `[...]` to extract the file. No brackets = the entry is silently skipped.
+- **Honest classification** — only mark something as `pki_used` if it actually changed your implementation. Inflating usage corrupts the telemetry signal that drives future retrieval improvements.
+- **Both fields optional** — omit either or both if not applicable. There's no penalty for leaving them empty.
 
 ---
 

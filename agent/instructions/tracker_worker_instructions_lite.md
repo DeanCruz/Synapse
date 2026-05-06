@@ -15,6 +15,7 @@ Write to: `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — 
 ```json
 {
   "task_id": "1.1",
+  "dashboard_id": "{dashboardId}",
   "status": "completed",
   "started_at": "2026-02-25T14:05:00Z",
   "completed_at": "2026-02-25T14:08:30Z",
@@ -30,6 +31,10 @@ Write to: `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — 
   "logs": [
     { "at": "2026-02-25T14:05:00Z", "level": "info", "msg": "Starting task" },
     { "at": "2026-02-25T14:08:30Z", "level": "info", "msg": "Task complete" }
+  ],
+  "files_changed": [
+    { "path": "src/middleware/auth.ts", "action": "created" },
+    { "path": "src/routes/index.ts", "action": "modified" }
   ]
 }
 ```
@@ -37,6 +42,7 @@ Write to: `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — 
 | Field | Type | Description |
 |---|---|---|
 | `task_id` | string | Your task ID from the dispatch prompt |
+| `dashboard_id` | string | Dashboard ID — must match the dashboard directory name. Provided in dispatch context as `dashboardId`. The server rejects progress files where this doesn't match. |
 | `status` | string | `"in_progress"`, `"completed"`, or `"failed"` |
 | `started_at` / `completed_at` | ISO 8601 \| null | Start on first write; end on completion/failure |
 | `summary` | string \| null | One-line result, set on completion |
@@ -46,7 +52,10 @@ Write to: `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — 
 | `milestones` | array | `{ "at": "ISO", "msg": "..." }` — significant accomplishments |
 | `deviations` | array | `{ "at": "ISO", "severity": "MODERATE", "description": "..." }` — plan divergences. Severity: `CRITICAL` (affects downstream), `MODERATE` (different approach, same outcome), `MINOR` (cosmetic) |
 | `logs` | array | `{ "at": "ISO", "level": "info\|warn\|error\|deviation", "msg": "..." }` |
+| `files_changed` | array | **Required from `implementing` stage onward.** Each: `{ "path": "relative/path", "action": "created\|modified\|deleted" }`. Track every file you create, modify, or delete. |
 | `annotations` | object \| null | Optional. Per-file knowledge for the PKI (see below) |
+| `pki_used` | string[] \| null | Optional. PKI gotchas you actually consumed. Each entry: `"[<file path>] <gotcha-text>"` copied verbatim from your prompt's `## PKI Knowledge` block (see below) |
+| `pki_noise` | string[] \| null | Optional. PKI gotchas surfaced in your prompt that turned out to be irrelevant or misleading for this task. Same format as `pki_used` (see below) |
 
 ## Fixed Stages
 
@@ -62,7 +71,7 @@ Write to: `{tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json` — 
 
 ## Mandatory Writes
 
-1. **Before starting work** — NON-NEGOTIABLE. Set `status: "in_progress"`, `started_at`, `assigned_agent`, `stage: "reading_context"`, initial log entry.
+1. **Before starting work** — NON-NEGOTIABLE. Set `dashboard_id`, `status: "in_progress"`, `started_at`, `assigned_agent`, `stage: "reading_context"`, initial log entry.
 2. **On every stage transition** — Update `stage`, `message`, add a log entry.
 3. **On any deviation** — Add to `deviations[]` and a log entry at `level: "deviation"` immediately.
 4. **On completion** — Set `status: "completed"`, `stage: "completed"`, `completed_at`, `summary`, final log entry.
@@ -87,6 +96,21 @@ When you gain deep understanding of a file during your task, you can capture tha
 ```
 
 All sub-fields (`gotchas`, `patterns`, `conventions`) are optional arrays of strings. Only annotate files you actually read deeply — don't speculate.
+
+## PKI Usage Telemetry (Optional)
+
+If your dispatch prompt included a `## PKI Knowledge` block and you actually consumed any of its gotchas, record which ones helped (`pki_used`) and which were irrelevant (`pki_noise`). The post-swarm extractor sums these to score annotations (`+1` for used, `-0.5` for noise, clamped to `[-3, +5]`). Each entry must be of the form `"[<file path>] <gotcha-text>"` — copy the gotcha verbatim from your prompt and prefix it with the file path in square brackets. Both fields are optional; absence is a clean no-op.
+
+```json
+{
+  "pki_used": [
+    "[src/server/services/WatcherService.js] Reconciliation interval is 5s — file writes may not appear on dashboard immediately if OS watcher misses an event"
+  ],
+  "pki_noise": [
+    "[src/ui/hooks/useDashboardData.js] SSE reconnection has no backoff — rapid reconnects possible if server is down"
+  ]
+}
+```
 
 ## Return Format
 

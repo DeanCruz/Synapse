@@ -52,7 +52,7 @@ Present the plan to the user and wait for approval.
 
 For each wave:
 
-1. Update wave card to `in_progress`.
+1. **Mark wave card `in_progress` (NON-NEGOTIABLE — ENFORCED BY HOOK).** Write `progress/wave-{N}.json` with `status: "in_progress"` and `started_at` BEFORE any worker dispatch. The `validate-wave-lifecycle.sh` PreToolUse hook will **BLOCK** Agent tool calls if no wave is marked `in_progress`.
 2. Dispatch ALL workers in parallel using the Agent tool.
    - Worker prompts identical to `!p_product_plan` EXCEPT: remove progress file instructions, add return-only instruction.
    - **Wave 1 (Plan Generation):** One worker per lens. Each writes `candidates/{lens-slug}-{topic}.md` on disk. Returns plan summary with key metrics.
@@ -62,7 +62,7 @@ For each wave:
    - **Wave 5 (Matrix):** Single worker. Writes `_comparison_matrix.md`. Returns matrix summary.
    - **Wave 6 (Final Synthesis):** Single worker. Writes `final_ratings.md` AND `final_plans.md`. Returns recommendation summary.
 3. As workers return, update wave card. For Wave 2, track the score matrix incrementally.
-4. On wave completion, extract upstream context for next wave.
+4. **Mark wave card `completed` (NON-NEGOTIABLE — ENFORCED BY HOOK).** When all workers have returned, **immediately** set `status: "completed"` and `completed_at` in the wave's progress file. The hook will **BLOCK** the next wave's dispatch if this wave isn't marked `completed` first. Extract upstream context for next wave.
 
 ### Master Upstream Context Extraction
 

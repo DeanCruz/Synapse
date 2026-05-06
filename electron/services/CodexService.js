@@ -27,6 +27,15 @@ function spawnWorker(opts) {
   delete env.ELECTRON_RUN_AS_NODE;
   delete env.CLAUDECODE;
 
+  if (opts.dashboardId) {
+    env.SYNAPSE_DASHBOARD_ID = opts.dashboardId;
+  }
+
+  var instanceType = opts.instanceType
+    || (opts.chatMode ? 'chat'
+      : (opts.dashboardId && String(opts.dashboardId).indexOf('chat-agent-') === 0 ? 'chat' : 'code'));
+  env.SYNAPSE_INSTANCE_TYPE = instanceType;
+
   console.log('[CodexService] Spawning cliPath:', cliPath);
   console.log('[CodexService] Full args:', JSON.stringify(args));
   console.log('[CodexService] CWD:', opts.projectDir || process.cwd());

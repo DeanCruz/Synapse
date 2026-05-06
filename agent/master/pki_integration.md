@@ -32,6 +32,9 @@ User prompt arrives
 6. Inject knowledge into worker prompts (CONVENTIONS section)
        |
        v
+7. Consult planning-time insights (readRelevantInsightsForPlanning)
+       |   — surface warnings, suggested_dependencies, suggested_wave_split
+       v
 Proceed to normal task decomposition and dispatch
 ```
 
@@ -270,6 +273,126 @@ The master now decomposes into:
 4. Task 4: Update dashboard hook to handle 429 responses gracefully (depends on 2, 3)
 
 Each worker prompt includes the relevant gotchas and patterns from the PKI annotations.
+
+---
+
+## Step 7 — Planning-Time Insight Consultation
+
+The previous six steps inject PKI knowledge into worker prompts. This step does something different: it lets the master use **swarm-level insights** (lessons learned from completed swarms) to **adjust the plan itself** — added dependencies, added wave warnings, or flagged warnings in the plan presentation — before the user is asked to approve.
+
+Insights live at `{project_root}/.synapse/knowledge/insights/{date}_{slug}.json` and are referenced by `manifest.insights_index`. They are produced automatically after every swarm completes (see `agent/_commands/p_track_completion.md` Step 17G and `electron/services/SwarmOrchestrator.js::extractSwarmKnowledge`). Until this step existed, those files were **written but never consumed at planning time**.
+
+### When to Run
+
+Run this step **during decomposition** — after the convention map is built (Step 5A) and **before** the cost-benefit check that finalizes the task list (Step 6). The output influences:
+- Whether to split a wave (high-confidence complexity_surprises).
+- Whether to add an explicit dependency between two tasks (high-confidence failure_patterns or dependency_insights that name two affected files).
+- What warnings to surface in the user-facing plan presentation under a new "Past Insights" block.
+
+### The Function
+
+`PromptBuilder.readRelevantInsightsForPlanning(projectPath, prompt)` is the master-side consumer. It is the complement to the worker-side `readRelevantInsights` (which appends a `### INSIGHTS` block to a worker's prompt at dispatch time).
+
+**Signature:**
+
+```js
+const { readRelevantInsightsForPlanning } = require('electron/services/PromptBuilder');
+const suggestion = readRelevantInsightsForPlanning(projectPath, userPrompt);
+```
+
+**Output shape (always returned — fail-open):**
+
+```js
+{
+  warnings: [
+    {
+      category: 'failure_patterns',          // or dependency_insights | complexity_surprises | architecture_notes | effective_patterns
+      description: '...',                    // verbatim from the insight file
+      swarm: 'previous-swarm-slug',          // for "Past insights from swarm X suggest..." attribution
+      affected_files: ['...', '...'],
+      confidence: 'high' | 'medium'          // see classification below
+    }
+  ],
+  suggested_dependencies: [
+    {
+      from_task_pattern: 'modifies <file>',  // soft pattern — master matches this against its draft tasks
+      to_task_pattern: 'modifies <file>',
+      reason: 'Past <category> from swarm "<name>": ...'
+    }
+  ],
+  suggested_wave_split: false,               // true only when a HIGH complexity_surprise matches
+  total_insights_consulted: 0,
+  high_confidence_count: 0
+}
+```
+
+### Confidence Model
+
+For each insight item, the function computes up to 2 relevance signals:
+
+| Signal | What fires it |
+|---|---|
+| **Token overlap** | At least one non-stopword token (length ≥ 4) appears in BOTH the insight description AND the user prompt. |
+| **File overlap** | The user prompt mentions any of the insight's `affected_files` (full path or basename, length ≥ 4). |
+
+| Confidence | Definition | Master action |
+|---|---|---|
+| **HIGH** | Both signal types fire | Surface as warning + may trigger `suggested_wave_split` or a `suggested_dependency` (per category — see rules below) |
+| **MEDIUM** | Exactly one signal fires | Surface as warning only — never triggers plan-edit suggestions |
+| **LOW** | Neither signal fires | Discarded — does not appear in the output at all |
+
+**Threshold rationale:** false positives erode trust. A single weak signal (e.g., the prompt mentions "auth" and one of 50 past insights also mentions "auth") must not trigger a wave split. Requiring two independent signal types keeps the bar high. MEDIUM is still surfaced as a warning so the user can read the past lesson and decide for themselves.
+
+### Per-Category Surfacing Rules (HIGH only)
+
+| Category | Effect |
+|---|---|
+| `failure_patterns` | warning + `suggested_dependency` (if 2+ affected_files form a chain) |
+| `dependency_insights` | warning + `suggested_dependency` (if 2+ affected_files form a chain) |
+| `complexity_surprises` | warning + `suggested_wave_split = true` |
+| `architecture_notes` | warning only (info severity) |
+| `effective_patterns` | warning only |
+
+### How to Surface the Output
+
+1. **Inject into `plan.json`** (always):
+   - Place the warnings array under `context.past_insights` (a new optional field). If you prefer to keep the schema slim, append a one-line summary into `context.edge_cases` instead.
+
+2. **Surface in the user-facing plan presentation** (when warranted):
+   - **Always** if `suggested_wave_split === true` OR `high_confidence_count >= 2`.
+   - **Recommended** if any warnings are present (even one) — past lessons cost nothing to display.
+   - Format the warnings under a new `## Past Insights` block **above** the wave tables. Use existing PKI block heading style. Each warning becomes a bullet:
+     ```
+     - [HIGH | failure_patterns] Past insights from swarm "previous-rate-limit-swarm" suggest: <description> (affected files: <list>)
+     ```
+
+3. **Evaluate `suggested_dependencies`** during decomposition:
+   - For each suggestion, check whether the draft task list contains tasks that match `from_task_pattern` and `to_task_pattern`. If so, consider adding the dependency.
+   - **Do NOT auto-apply.** Mark the suggestion in the plan presentation so the user can confirm during the approval gate.
+
+4. **Honor `suggested_wave_split`** by reviewing the affected wave one more time during the cost-benefit check (Step 6). If a wave already has 5+ tasks AND the suggestion fires, consider splitting on the natural seam the insight points at.
+
+### Phrasing in the Plan Presentation
+
+Past insights must be clearly attributed — they are derived from previous swarms, not the master's own conclusions. Prefer:
+
+> "Past insights from swarm `previous-rate-limit-swarm` suggest..."
+
+Avoid:
+
+> "I recommend..." or "We should..."
+
+This keeps provenance transparent and lets the user weigh the suggestion against the current request.
+
+### Fail-Open Guarantees
+
+- No manifest → empty suggestion shape, planning proceeds normally.
+- No `insights_index` (or empty) → empty shape.
+- Unreadable insight files → silently skipped.
+- Unparseable JSON → silently skipped.
+- Empty prompt → empty shape.
+
+The function is a strict no-op when nothing is available. Master planning never blocks on it.
 
 ---
 

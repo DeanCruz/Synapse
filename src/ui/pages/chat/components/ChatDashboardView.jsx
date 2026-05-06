@@ -11,8 +11,9 @@ import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import AgentCard, { StatusBadge } from '@/pages/code/subpages/dashboards/components/AgentCard.jsx';
 import AgentDetails from '@/shared/modals/AgentDetails.jsx';
 import { drawDependencyLines, setupCardHoverEffects } from '@/utils/dependencyLines.js';
+import { getDashboardProject } from '@/utils/dashboardProjects.js';
 
-function shapeAgent(name, tasks) {
+function shapeAgent(name, dashId, tasks) {
   const safeTasks = (tasks || []).map((t) => ({
     ...t,
     depends_on: t.depends_on || [],
@@ -27,7 +28,7 @@ function shapeAgent(name, tasks) {
   else if (hasFailed) status = 'failed';
   else if (hasInProgress) status = 'in_progress';
 
-  return { name, tasks: safeTasks, status };
+  return { name, dashId, tasks: safeTasks, status };
 }
 
 function taskToAgent(task) {
@@ -41,7 +42,9 @@ function taskToAgent(task) {
     stage: task.stage,
     message: task.message,
     files_changed: task.files_changed,
+    milestones: task.milestones,
     deviations: task.deviations,
+    logs: task.logs,
     depends_on: task.depends_on || [],
     layer: task.layer,
     directory: task.directory,
@@ -124,7 +127,7 @@ export default function ChatDashboardView() {
       const result = await api.getChatDashboardData();
       const rawAgents = result?.agents || [];
       const lanes = rawAgents
-        .map((a) => shapeAgent(a.name, a.tasks))
+        .map((a) => shapeAgent(a.name, a.dashId, a.tasks))
         .sort((a, b) => a.name.localeCompare(b.name));
       setAgentLanes(lanes);
     } catch (err) {
@@ -141,9 +144,29 @@ export default function ChatDashboardView() {
   useEffect(() => {
     const api = window.electronAPI;
     if (!api?.on) return;
-    const off = api.on('chat_dashboard_changed', () => loadData());
+
+    let debounceTimer = null;
+    const debouncedLoad = () => {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => loadData(), 150);
+    };
+
+    const offs = [
+      api.on('chat_dashboard_changed', debouncedLoad),
+      api.on('agent_progress', (data) => {
+        if (data?.dashboardId?.startsWith('chat-agent-')) debouncedLoad();
+      }),
+      api.on('initialization', (data) => {
+        if (data?.dashboardId?.startsWith('chat-agent-')) debouncedLoad();
+      }),
+      api.on('all_progress', (data) => {
+        if (data?.dashboardId?.startsWith('chat-agent-')) debouncedLoad();
+      }),
+    ];
+
     return () => {
-      if (typeof off === 'function') off();
+      clearTimeout(debounceTimer);
+      offs.forEach((off) => { if (typeof off === 'function') off(); });
     };
   }, [loadData]);
 
@@ -198,7 +221,7 @@ export default function ChatDashboardView() {
       {selectedAgent && (
         <AgentDetails
           agent={selectedAgent}
-          progressData={null}
+          progressData={taskById}
           findAgentFn={findAgent}
           onClose={() => setSelectedAgent(null)}
           projectRoot={null}
@@ -217,11 +240,14 @@ export default function ChatDashboardView() {
 // ---------------------------------------------------------------------------
 
 function AgentRow({ lane, onAgentClick }) {
-  const { name, tasks, status } = lane;
+  const { name, dashId, tasks, status } = lane;
   const waves = computeWavesForAgent(tasks);
   const completed = tasks.filter((t) => t.status === 'completed').length;
   const total = tasks.length;
   const hasMultipleWaves = waves.length > 1;
+
+  const projectPath = dashId ? getDashboardProject(dashId) : null;
+  const projectName = projectPath ? projectPath.split('/').filter(Boolean).pop() : null;
 
   const tasksRef = useRef(null);
   const svgRef = useRef(null);
@@ -232,8 +258,6 @@ function AgentRow({ lane, onAgentClick }) {
     const svg = svgRef.current;
     if (!container || !svg) return;
 
-    // Shape tasks into the agent objects expected by drawDependencyLines.
-    // Restrict depends_on to within-agent ids so the BFS only links siblings.
     const idSet = new Set(tasks.map((t) => t.task_id));
     const agents = tasks.map((t) => ({
       id: t.task_id,
@@ -265,10 +289,22 @@ function AgentRow({ lane, onAgentClick }) {
     return () => ro.disconnect();
   }, [tasks, hasMultipleWaves]);
 
+  const borderClass =
+    status === 'completed' ? 'chat-agent-border-complete' :
+    status === 'in_progress' ? 'chat-agent-border-active' :
+    'chat-agent-border-idle';
+
   return (
-    <div className={`chat-agent-row chat-agent-status-${status}`}>
+    <div className={`chat-agent-row ${borderClass}`}>
       <div className="chat-agent-row-header">
         <span className="chat-agent-row-title">{name}</span>
+        {dashId && (
+          <span className="chat-agent-row-id">{dashId}</span>
+        )}
+        {projectName && (
+          <span className="chat-agent-row-project">{projectName}</span>
+        )}
+        <span style={{ flex: 1 }} />
         {total > 0 && (
           <span className="chat-agent-row-count">
             {completed}/{total}

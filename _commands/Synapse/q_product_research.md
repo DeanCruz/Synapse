@@ -147,6 +147,12 @@ All three `stage{N}_*.json` files point to the SAME dashboard ID with stage-pref
 8. **Master updates wave cards incrementally.** As each worker returns, the master updates the wave card with the worker's summary and aggregated metrics.
 9. **Master upstreams context between waves.** Between waves and stages, the master extracts the key findings that downstream work needs and injects them into the next dispatch prompts.
 
+### Wave Lifecycle Enforcement (ENFORCED BY HOOK)
+
+10. **Mark `in_progress` BEFORE dispatch.** For every wave, the master MUST write the wave's progress file with `status: "in_progress"` BEFORE dispatching any Agent for that wave. The `validate-wave-lifecycle.sh` PreToolUse hook will **BLOCK** Agent tool calls if no wave is currently `in_progress`.
+11. **Mark `completed` AFTER all workers return.** When all workers for a wave have returned, the master MUST **immediately** update the wave's progress file to `status: "completed"` before proceeding. The hook will **BLOCK** the next wave's dispatch if the current wave isn't `completed`.
+12. **This applies across all stages.** Stage 2 and Stage 3 wave cards (prefixed `s2-`, `s3-`) follow the same lifecycle. The hook validates all wave-level agent IDs regardless of stage prefix.
+
 ### Inheritance
 
 10. **Each `!q_` sub-command's protocol is followed verbatim** during its stage. The pipeline does NOT further relax any rule.

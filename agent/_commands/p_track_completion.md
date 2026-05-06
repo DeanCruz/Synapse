@@ -298,145 +298,44 @@ After delivering the final report, save a history summary to `{tracker_root}/his
 
 ### 17G. Post-swarm knowledge extraction — AUTOMATIC
 
-> **This step runs automatically after every swarm. It enriches the Project Knowledge Index (PKI) so future swarms on this project benefit from what was learned during this one. The master does NOT skip this step — it is the mechanism by which the system gets smarter over time.**
+> **This step runs automatically after every swarm via a single IPC call. It enriches the Project Knowledge Index (PKI) so future swarms on this project benefit from what was learned during this one. The master does NOT skip this step — it is one explicit function call, not a multi-step procedure.**
 
-**Prerequisite:** A target project must be set (`{project_root}` must be resolvable). If no project is configured, skip this step and log: "No project root — skipping knowledge extraction."
+**Prerequisite:** A target project must be resolvable (`{project_root}`). If no project is configured, skip this step and log: "No project root — skipping knowledge extraction."
 
-**Procedure:**
+**Directive:**
 
-#### 17G-1. Harvest worker annotations
-
-Read every progress file in `{tracker_root}/dashboards/{dashboardId}/progress/`. For each file that contains an `annotations` field, collect all file-level annotations (gotchas, patterns, conventions).
+After Step 17F (history save), the master MUST invoke the IPC-backed extractor exactly once:
 
 ```
-Collected annotations:
-  src/server/index.js:
-    gotchas: ["SSE connections not authenticated"]
-    patterns: ["event-driven-architecture"]
-  src/ui/hooks/useDashboardData.js:
-    gotchas: ["SSE reconnection has no backoff"]
+await window.electronAPI.extractSwarmKnowledge('{dashboardId}', '{project_root}');
 ```
 
-#### 17G-2. Extract swarm-level insights
+The handler proxies to `SwarmOrchestrator.extractSwarmKnowledge(dashboardId, projectPath)`, which performs all five sub-operations as one atomic unit:
 
-Analyze the swarm's execution data (deviations, failures, warnings, logs, files changed) and distill high-level lessons that transcend individual files. These are operational insights — things a future master should know when planning similar work.
+1. Harvest worker annotations from every progress file in `dashboards/{dashboardId}/progress/`.
+2. Extract swarm-level insights from deviations, failures, and high-centrality files (categories: `dependency_insights`, `complexity_surprises`, `failure_patterns`, `effective_patterns`, `architecture_notes`).
+3. Write `{project_root}/.synapse/knowledge/insights/{YYYY-MM-DD}_{task-slug}.json`.
+4. Merge worker annotations into existing per-file annotation files at `{project_root}/.synapse/knowledge/annotations/{hash}.json` (dedupe by exact string match; update `last_annotated`).
+5. Append a new entry to `manifest.insights_index` (cap at 50 entries, FIFO) and update `manifest.last_updated`.
 
-**Sources to mine:**
-- All worker `deviations[]` (especially CRITICAL and MODERATE)
-- All worker `logs[]` entries at level `warn` or `error`
-- Failure patterns (what went wrong and why)
-- Files that multiple workers touched or referenced (high-centrality files)
-- Patterns in task durations (which tasks took unexpectedly long — may indicate hidden complexity)
+**Verification (required):**
 
-**Insight categories:**
+After the IPC call returns, the master MUST verify that `{project_root}/.synapse/knowledge/insights/` contains a file matching `{YYYY-MM-DD}_{task-slug}.json`. If the file is missing:
 
-| Category | What to capture | Example |
-|---|---|---|
-| `dependency_insights` | Discovered dependencies not in the original plan | "Modifying routes.js always requires updating the route index — add explicit dependency" |
-| `complexity_surprises` | Files/areas that were harder than expected | "The auth middleware has hidden coupling to session store — plan extra time" |
-| `failure_patterns` | Recurring failure modes | "Workers modifying shared config files without coordination causes merge conflicts" |
-| `effective_patterns` | Approaches that worked well | "Separating type definitions into their own task prevented downstream blockers" |
-| `architecture_notes` | Discovered architectural constraints | "The event system is synchronous — async handlers cause silent drops" |
+- Append a `warn`-level log entry to `dashboards/{dashboardId}/logs.json`: `"Knowledge extraction returned without producing insights file — investigate"`.
+- Continue the swarm completion flow. **Do NOT fail the swarm on extraction errors.**
 
-#### 17G-3. Write the swarm insights file
+**Fallback for non-Electron contexts:**
 
-Write a JSON file to `{project_root}/.synapse/knowledge/insights/`:
+If `window.electronAPI` is not available (e.g., headless CLI), the master MAY invoke the extractor via Node directly:
 
-**Filename:** `{YYYY-MM-DD}_{task-slug}.json`
-
-```json
-{
-  "swarm_name": "{task-slug}",
-  "completed_at": "{ISO 8601}",
-  "dashboard_id": "{dashboardId}",
-  "total_tasks": 8,
-  "completed_tasks": 7,
-  "failed_tasks": 1,
-  "files_changed": ["src/a.js", "src/b.js"],
-  "insights": {
-    "dependency_insights": [
-      {
-        "description": "Modifying routes.js requires updating the route index",
-        "discovered_by": "2.1",
-        "severity": "MODERATE",
-        "affected_files": ["src/routes.js", "src/routeIndex.js"]
-      }
-    ],
-    "complexity_surprises": [],
-    "failure_patterns": [],
-    "effective_patterns": [
-      {
-        "description": "Separating type definitions into their own task prevented downstream type errors",
-        "tasks_involved": ["1.1", "1.2"]
-      }
-    ],
-    "architecture_notes": []
-  },
-  "worker_annotations_harvested": 5
-}
+```
+node -e "require('./electron/services/SwarmOrchestrator').extractSwarmKnowledge('{dashboardId}', '{project_root}')"
 ```
 
-Ensure the `{project_root}/.synapse/knowledge/insights/` directory exists before writing.
+> **Budget:** This step should take under 5 seconds. The handler reads progress files already on disk and writes a handful of JSON files.
 
-#### 17G-4. Merge worker annotations into PKI
-
-If `{project_root}/.synapse/knowledge/manifest.json` exists:
-
-1. For each annotated file from 17G-1:
-   - Look up the file in the manifest's `files` object
-   - If the file has an existing annotation (`annotations/{hash}.json`):
-     - Read the annotation file
-     - **Merge** new gotchas, patterns, and conventions — append items that don't already exist (deduplicate by exact string match)
-     - Update `annotated_at` to current timestamp
-     - Write back the annotation file
-   - If the file is NOT in the manifest:
-     - Compute the path hash: `echo -n "{relative_path}" | shasum -a 256 | cut -c1-8`
-     - Create a lightweight annotation file at `annotations/{hash}.json` with just the worker-discovered fields
-     - Add the file to the manifest's `files` object with the hash, domains (infer from path), tags, and a summary
-2. Update `manifest.json`:
-   - Increment `stats.annotated_files` for any newly added files
-   - Update `updated_at` timestamp
-   - Rebuild `domain_index` and `tag_index` if new files were added
-
-If the manifest does NOT exist, skip the merge and log: "No PKI manifest — worker annotations captured in insights file only. Run `!learn` to bootstrap the full PKI."
-
-#### 17G-5. Update the insights index in the manifest
-
-If the manifest exists, add or update an `insights_index` field:
-
-```json
-{
-  "insights_index": [
-    {
-      "file": "insights/2026-04-19_add-rate-limiting.json",
-      "swarm_name": "add-rate-limiting",
-      "date": "2026-04-19",
-      "insight_count": 3,
-      "files_changed_count": 5
-    }
-  ]
-}
-```
-
-Append to the existing array — do not overwrite previous entries. Cap at 50 entries (FIFO — drop oldest).
-
-#### 17G-6. Log the extraction
-
-Append to `{tracker_root}/dashboards/{dashboardId}/logs.json`:
-```json
-{
-  "timestamp": "{ISO 8601}",
-  "task_id": "0.0",
-  "agent": "Orchestrator",
-  "level": "info",
-  "message": "Knowledge extracted: {N} worker annotations harvested, {M} insights captured, PKI updated at {project_root}/.synapse/knowledge/",
-  "task_name": "{task-slug}"
-}
-```
-
-> **Budget:** This step should take under 60 seconds. It reads data already loaded during 17E (progress files, logs) and writes a handful of JSON files. Do not re-read files unnecessarily — reuse data from the final report compilation.
-
-> **Failure tolerance:** If any knowledge extraction sub-step fails (directory creation, file write, manifest parse), log the error and continue. Knowledge extraction is best-effort — it must NEVER block swarm completion or cause the final report to be skipped.
+> **Failure tolerance:** If the IPC call throws or returns an error, log the error at `warn` level and continue. Knowledge extraction is best-effort — it must NEVER block swarm completion or cause the final report to be skipped.
 
 ---
 

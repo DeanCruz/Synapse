@@ -3018,28 +3018,34 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
     <div className={`claude-view${hideHeader ? ' claude-view--no-header' : ''}`}>
       {!hideHeader && (
         <div className="claude-view-header">
-          <button
-            className="claude-clear-btn"
-            onClick={() => setShowHistory(h => !h)}
-            title="Browse conversation history"
-          >
-            History
-          </button>
-          <span className="claude-view-title">Agent Chat</span>
-          {projectDisplayName && <span className="claude-view-project">{projectDisplayName}</span>}
-          <span className="claude-view-project">{activeModelLabel}</span>
-          <span className={'claude-view-status' + (isProcessing ? ' active' : '')}>{status}</span>
-          <span className="claude-view-dashboard-id">{dashboardId}</span>
-          <button
-            className="claude-clear-btn"
-            onClick={newTab}
-            title="Start a new conversation tab"
-          >
-            New
-          </button>
-          {onClose && (
-            <button className="claude-view-close" onClick={onClose}>✕</button>
-          )}
+          <div className="claude-header-left">
+            <button
+              className="claude-clear-btn"
+              onClick={() => setShowHistory(h => !h)}
+              title="Browse conversation history"
+            >
+              History
+            </button>
+          </div>
+          <div className="claude-header-center">
+            <span className="claude-view-title">Agent Chat</span>
+            {projectDisplayName && <span className="claude-view-project">{projectDisplayName}</span>}
+            <span className="claude-view-project">{activeModelLabel}</span>
+            <span className={'claude-view-status' + (isProcessing ? ' active' : '')}>{status}</span>
+            <span className="claude-view-dashboard-id">{dashboardId}</span>
+          </div>
+          <div className="claude-header-right">
+            <button
+              className="claude-clear-btn"
+              onClick={newTab}
+              title="Start a new conversation tab"
+            >
+              New
+            </button>
+            {onClose && (
+              <button className="claude-view-close" onClick={onClose}>✕</button>
+            )}
+          </div>
         </div>
       )}
       {hideHeader && (

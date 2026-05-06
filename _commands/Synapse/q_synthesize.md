@@ -52,7 +52,7 @@ Present the plan to the user and wait for approval.
 
 For each wave, follow the same loop as `!q_research`:
 
-1. Update wave card to `in_progress`.
+1. **Mark wave card `in_progress` (NON-NEGOTIABLE — ENFORCED BY HOOK).** Write `progress/wave-{N}.json` with `status: "in_progress"` and `started_at` BEFORE any worker dispatch. The `validate-wave-lifecycle.sh` PreToolUse hook will **BLOCK** Agent tool calls if no wave is marked `in_progress`.
 2. Dispatch ALL workers for this wave in parallel using the Agent tool.
    - Worker prompts are identical to `!p_synthesize` per-wave worker prompts EXCEPT: remove all progress file instructions, add return-only instruction.
    - **Wave 1 (Dedup):** One worker per cluster. Returns dedup report (same schema as `!p_synthesize`).
@@ -62,7 +62,7 @@ For each wave, follow the same loop as `!q_research`:
    - **Wave 5 (Assembly):** Single worker. Writes `_master_synthesis.md`, `_claims.json`, `_graph.json`, `_index.md`, `_coverage.md`. Returns assembly summary.
    - **Wave 6 (Verification):** Single fresh worker. Writes `_verification_report.md`. Returns verification status.
 3. As workers return, update wave card with summaries and aggregated metrics.
-4. On wave completion, extract upstream context for next wave. Mark wave card complete.
+4. **Mark wave card `completed` (NON-NEGOTIABLE — ENFORCED BY HOOK).** When all workers have returned, **immediately** set `status: "completed"` and `completed_at` in `progress/wave-{N}.json`. The hook will **BLOCK** the next wave's dispatch if this wave isn't marked `completed` first. Extract upstream context for next wave.
 5. Dispatch next wave.
 
 ### Master Upstream Context Extraction

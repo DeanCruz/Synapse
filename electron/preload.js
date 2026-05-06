@@ -167,6 +167,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cancelSwarm: (dashboardId) => ipcRenderer.invoke('cancel-swarm', dashboardId),
   retryTask: (dashboardId, taskId) => ipcRenderer.invoke('retry-task', dashboardId, taskId),
   getSwarmStates: () => ipcRenderer.invoke('get-swarm-states'),
+  extractSwarmKnowledge: (dashboardId, projectPath) => ipcRenderer.invoke('extract-swarm-knowledge', dashboardId, projectPath),
 
   // Conversation management
   listConversations: (dashboardId, surface) => ipcRenderer.invoke('list-conversations', dashboardId, surface),

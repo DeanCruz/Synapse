@@ -15,6 +15,7 @@
 3. **Workers do NOT read `tracker_worker_instructions.md` and do NOT write progress files.** This is the core difference. Workers return structured reports to the master; the master updates the dashboard.
 4. **One task card per wave.** `initialization.json` has one agent entry per wave, not per worker.
 5. **Same output quality.** The research artifacts under `documentation/research/{topic-slug}/` are identical to `!p_research` output. Only the tracking overhead is reduced.
+6. **Wave lifecycle is enforced by hook.** The `validate-wave-lifecycle.sh` PreToolUse hook on Agent **BLOCKS** dispatch if the current wave isn't marked `in_progress`, or if prior waves aren't marked `completed`. You MUST write the wave progress file before dispatching and update it to completed after all workers return.
 
 ---
 
@@ -102,13 +103,13 @@ The master updates this file incrementally as each worker returns. When all work
 
 For each wave:
 
-1. **Update wave card** to `in_progress` in `progress/wave-{N}.json`.
+1. **Mark wave card `in_progress` (NON-NEGOTIABLE — ENFORCED BY HOOK).** Write `progress/wave-{N}.json` with `status: "in_progress"` and `started_at` BEFORE any worker dispatch. The `validate-wave-lifecycle.sh` PreToolUse hook will **BLOCK** Agent tool calls if no wave is marked `in_progress`. You must write this file first.
 2. **Dispatch ALL workers for this wave in parallel** using the Agent tool. Worker prompts are identical to `!p_research` worker prompts EXCEPT:
    - **Remove** all progress file instructions (no `tracker_worker_instructions.md` reference, no progress file path, no mandatory write points).
    - **Add** this return instruction: "When done, return a structured JSON summary of your findings. Do NOT write any progress or tracking files. Your ONLY file outputs are your raw findings file under `raw/` and any source body files under `sources/`."
    - Worker prompts still include: identity, topic context, output target (raw file path), source-fetch protocol, redaction sweep, upstream results (Wave ≥ 2), sibling awareness.
 3. **As each worker returns**, parse the structured return, append a summary to `wave-{N}.json` `worker_summaries`, update the aggregated counts, and update `message` with current progress.
-4. **On wave completion** (all workers returned), set wave card `status: "completed"` with full aggregation. Extract key upstream context:
+4. **Mark wave card `completed` (NON-NEGOTIABLE — ENFORCED BY HOOK).** When all workers have returned, **immediately** set `status: "completed"` and `completed_at` in `progress/wave-{N}.json` with full aggregation. The hook will **BLOCK** the next wave's dispatch if this wave isn't marked `completed` first. Extract key upstream context:
    - High-value sources discovered
    - Contradictions to chase
    - Inaccessible sources worth retrying

@@ -834,6 +834,7 @@ function registerIPCHandlers(getMainWindow) {
       'PROJECT ROOT (target project): ' + (projectDir || synapseRoot) + '\n' +
       '===DASHBOARD_BINDING_START===\n' +
       'DASHBOARD ID: ' + dashboardId + '\n' +
+      'INSTANCE TYPE: ' + (String(dashboardId).indexOf('chat-agent-') === 0 ? 'chat' : 'code') + '\n' +
       '===DASHBOARD_BINDING_END===\n';
 
     // Include additional context directories in the reference block
@@ -1127,6 +1128,10 @@ function registerIPCHandlers(getMainWindow) {
 
   ipcMain.handle('get-swarm-states', async () => {
     return SwarmOrchestrator.getSwarmStates();
+  });
+
+  ipcMain.handle('extract-swarm-knowledge', async (_event, dashboardId, projectPath) => {
+    return SwarmOrchestrator.extractSwarmKnowledge(dashboardId, projectPath);
   });
 
   // --- Conversation Handlers ---
@@ -2953,8 +2958,10 @@ function registerIPCHandlers(getMainWindow) {
           summary: prog.summary || null,
           stage: prog.stage || null,
           message: prog.message || null,
-          files_changed: prog.files_modified || prog.files_changed || [],
+          files_changed: prog.files_changed || [],
+          milestones: prog.milestones || [],
           deviations: prog.deviations || [],
+          logs: prog.logs || [],
           depends_on: agent.depends_on || [],
           layer: agent.layer || null,
           directory: agent.directory || null,
@@ -2962,7 +2969,7 @@ function registerIPCHandlers(getMainWindow) {
         };
       });
 
-      lanes.push({ name: displayName, tasks });
+      lanes.push({ name: displayName, dashId, tasks });
     }
 
     lanes.sort((a, b) => a.name.localeCompare(b.name));

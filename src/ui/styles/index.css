@@ -5959,10 +5959,29 @@ a:hover {
 .claude-view-header {
   display: flex;
   align-items: center;
-  gap: 10px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--bg, #0a0a0c);
+}
+
+.claude-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.claude-header-center {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  justify-content: center;
+}
+
+.claude-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .claude-view-title {
@@ -7288,6 +7307,12 @@ a:hover {
 .claude-ask-option.selected {
   border-color: #f59e0b;
   background: rgba(245, 158, 11, 0.08);
+}
+
+.claude-ask-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .claude-ask-option-label {
@@ -9289,6 +9314,30 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  border-radius: 10px;
+  padding: 12px;
+  border: 2px solid transparent;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.chat-agent-border-idle {
+  border-color: var(--border-color, rgba(255,255,255,0.12));
+}
+
+.chat-agent-border-active {
+  border-color: #a855f7;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.25);
+  animation: chat-border-pulse 2s ease-in-out infinite;
+}
+
+.chat-agent-border-complete {
+  border-color: var(--color-completed, #34d399);
+  box-shadow: 0 0 6px rgba(52, 211, 153, 0.2);
+}
+
+@keyframes chat-border-pulse {
+  0%, 100% { border-color: #a855f7; box-shadow: 0 0 8px rgba(168, 85, 247, 0.25); }
+  50%      { border-color: #c084fc; box-shadow: 0 0 14px rgba(168, 85, 247, 0.4); }
 }
 
 .chat-agent-row-header {
@@ -9302,6 +9351,23 @@ a:hover {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary, #e0e0e0);
+}
+
+.chat-agent-row-id {
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary, #888);
+  opacity: 0.7;
+}
+
+.chat-agent-row-project {
+  font-size: 11px;
+  color: #9b7cf0;
+  background: rgba(155, 124, 240, 0.15);
+  border: 1px solid rgba(155, 124, 240, 0.35);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-weight: 500;
 }
 
 .chat-agent-row-count {

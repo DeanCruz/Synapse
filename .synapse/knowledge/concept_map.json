@@ -1,0 +1,89 @@
+{
+  "_metadata": {
+    "version": 1,
+    "moved_from": "manifest.json",
+    "moved_from_field": "concept_map",
+    "moved_at": "2026-05-06T03:34:27Z",
+    "entry_count": 10
+  },
+  "archive-then-clear-then-verify": {
+    "pattern": "Archive-then-clear-then-verify when reusing a pre-assigned dashboard with prior data: copy to Archive/{date}_{task_name}/, rm -f progress/*.json, reset logs.json, verify ls is empty before writing initialization.json.",
+    "files": [
+      "agent/_commands/p_track_planning.md",
+      "agent/instructions/dashboard_resolution.md"
+    ]
+  },
+  "convention-map-categories-naming-file": {
+    "pattern": "convention_map categories: naming, file_structure, imports, frontend_styling, backend_api, error_handling, testing, types \u2014 held in working memory, used to filter per-worker.",
+    "files": [
+      "agent/_commands/p_track_planning.md",
+      "agent/master/worker_prompts.md"
+    ]
+  },
+  "dashboard-merges-initialization-json-static": {
+    "pattern": "Dashboard merges initialization.json (static) with progress/{task_id}.json files (dynamic) client-side \u2014 all stat counts derive from progress files.",
+    "files": [
+      "agent/master/dashboard_writes.md",
+      "agent/master/initialization_blueprint.md"
+    ]
+  },
+  "repair-task-ids-r-suffix": {
+    "pattern": "Repair task IDs use 'r' suffix and don't break the regex: '2.1r' is valid.",
+    "files": [
+      "agent/core/parallel_principles.md",
+      "agent/master/initialization_blueprint.md"
+    ]
+  },
+  "standard-profile-spine": {
+    "pattern": "Standard profile spine.",
+    "files": [
+      "_commands/profiles/copywriter.md",
+      "_commands/profiles/customer-success.md",
+      "_commands/profiles/devops.md",
+      "_commands/profiles/growth.md",
+      "_commands/profiles/legal.md",
+      "_commands/profiles/pricing.md",
+      "_commands/profiles/product.md",
+      "_commands/profiles/qa.md",
+      "_commands/profiles/sales.md",
+      "_commands/profiles/security.md",
+      "_commands/profiles/technical-writer.md"
+    ]
+  },
+  "6-step-procedure-parse-read": {
+    "pattern": "6-step procedure: parse \u2192 read logs.json \u2192 apply filters in sequence \u2192 render table \u2192 handle empty \u2192 summary line",
+    "files": [
+      "_commands/Synapse/logs.md",
+      "_commands/Synapse/status.md",
+      "_commands/Synapse/update_dashboard.md"
+    ]
+  },
+  "dispatch-sequence-launch-agent-first": {
+    "pattern": "Dispatch sequence: launch agent FIRST \u2192 log AFTER dispatch \u2192 write master_state checkpoint after batch",
+    "files": [
+      "_commands/Synapse/p_track_resume.md",
+      "_commands/Synapse/track_resume.md"
+    ]
+  },
+  "sole-writer-per-file-ownership": {
+    "pattern": "Sole-writer-per-file ownership eliminating write conflicts",
+    "files": [
+      "documentation/data-architecture/overview.md",
+      "documentation/worker-protocol/overview.md"
+    ]
+  },
+  "append-only-arrays-milestones-deviations": {
+    "pattern": "Append-only arrays for milestones/deviations/logs",
+    "files": [
+      "documentation/data-architecture/progress-files.md",
+      "documentation/worker-protocol/progress-reporting.md"
+    ]
+  },
+  "standardized-success-data-error-responses": {
+    "pattern": "Standardized { success, data, error } responses",
+    "files": [
+      "documentation/git-manager/ipc-handlers.md",
+      "documentation/ide/ipc-handlers.md"
+    ]
+  }
+}
