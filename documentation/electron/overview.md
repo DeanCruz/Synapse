@@ -27,7 +27,7 @@ Synapse ships as an Electron desktop application. The Electron layer wraps the R
 | Process | Role | Entry Point |
 |---|---|---|
 | **Main Process** | App lifecycle, IPC handlers, file watchers, CLI process management, swarm orchestration | `electron/main.js` |
-| **Renderer Process** | React UI (dashboard, chat, task editor, settings) | `dist/index.html` (Vite build output) |
+| **Renderer Process** | React UI (Code page with dashboards/IDE/git/preview, Chat page with conversations, task editor, settings) | `dist/index.html` (Vite build output) |
 | **Worker Processes** | Claude Code or Codex CLI instances spawned per task | `claude --print` or `codex exec` |
 
 ---
@@ -129,7 +129,7 @@ The main process delegates all business logic to service modules under `electron
 | **ProjectService** | `ProjectService.js` | Project detection, CLAUDE.md discovery, CLI binary detection |
 | **CommandsService** | `CommandsService.js` | `_commands/` directory management, command CRUD, AI generation |
 | **TaskEditorService** | `TaskEditorService.js` | Swarm/task/wave CRUD on `initialization.json` |
-| **ConversationService** | `ConversationService.js` | Chat conversation persistence (JSON files) |
+| **ConversationService** | `ConversationService.js` | Chat conversation persistence (JSON files). Powers the Chat page's server-side conversation storage. See [Chat System docs](../chat/overview.md). |
 | **DebugService** | `DebugService.js` | Node.js debugger via Chrome DevTools Protocol (breakpoints, stepping, evaluation) |
 | **TerminalService** | `TerminalService.js` | PTY terminal session management via `node-pty` |
 | **InstrumentService** | `InstrumentService.js` | Project file instrumentation (`data-synapse-label` attributes) |
@@ -189,6 +189,19 @@ When the window first loads, `sendInitialData()` pushes:
 4. Queue summaries via `queue_changed`
 
 This mirrors the SSE initial data burst from the web server, ensuring the renderer has a complete snapshot before any incremental updates arrive.
+
+### Chat System Integration
+
+The Chat page (`src/ui/pages/chat/`) leverages the Electron IPC layer for conversation management via `ConversationService`. Pull requests (renderer -> main) include:
+
+- `conversation-list` -- List conversations (optionally filtered by dashboard)
+- `conversation-load` -- Load a full conversation by ID
+- `conversation-save` -- Save/update a conversation
+- `conversation-create` -- Create a new conversation
+- `conversation-delete` -- Delete a conversation
+- `conversation-rename` -- Rename a conversation
+
+For detailed Chat IPC handler documentation, see [Chat IPC Handlers](../chat/ipc-handlers.md).
 
 ---
 

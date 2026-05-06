@@ -17,6 +17,7 @@ New to Synapse? Start here:
 - [Swarm Lifecycle Overview](swarm-lifecycle/overview.md) -- Learn the end-to-end flow of a parallel swarm
 - [Server Configuration](configuration/server-config.md) -- Configure and start the dashboard server
 - [Commands Overview](commands/overview.md) -- Browse all available commands
+- [Chat Overview](chat/overview.md) -- Understand the integrated chat system
 
 ---
 
@@ -54,9 +55,10 @@ For someone new to Synapse, the following order provides a logical progression f
    - [Commands Overview](commands/overview.md)
    - [Configuration Overview](configuration/overview.md)
 
-7. **Advanced Topics** -- Multi-dashboard orchestration, Electron desktop app, IDE, git manager, project integration.
+7. **Advanced Topics** -- Multi-dashboard orchestration, Electron desktop app, Chat, IDE, git manager, project integration.
    - [Multi-Dashboard Overview](multi-dashboard/overview.md)
    - [Electron Overview](electron/overview.md)
+   - [Chat Overview](chat/overview.md)
    - [IDE Overview](ide/overview.md)
    - [Git Manager Overview](git-manager/overview.md)
    - [Project Integration Overview](project-integration/overview.md)
@@ -75,6 +77,17 @@ How Synapse is structured, how data flows through the system, and what lives whe
 | [Data Flow](architecture/data-flow.md) | How data moves between master agent, workers, server, and dashboard |
 | [Directory Structure](architecture/directory-structure.md) | Complete directory layout of both the Synapse repository and target projects |
 
+### Chat
+
+The integrated chat system for conversing with AI agents directly within the Synapse Electron app, with persistent conversation history and multi-model support.
+
+| Document | Description |
+|---|---|
+| [Overview](chat/overview.md) | Chat system architecture, design principles, and integration with the Electron app |
+| [Components](chat/components.md) | React components powering the chat UI: ChatPage, ChatSidebar, ChatDashboardView, ChatInstanceView, and ClaudeView |
+| [IPC Handlers](chat/ipc-handlers.md) | All chat-related IPC channels between main and renderer processes |
+| [Conversation Persistence](chat/conversation-persistence.md) | How conversations are stored, loaded, and managed on disk |
+
 ### Commands
 
 The `!command` system that drives all Synapse operations, from swarm dispatch to project analysis.
@@ -88,7 +101,7 @@ The `!command` system that drives all Synapse operations, from swarm dispatch to
 
 ### Configuration
 
-Server, Electron, and theming configuration options that control Synapse's behavior and appearance.
+Server, Electron, theming, hooks, skills, and settings configuration options that control Synapse's behavior and appearance.
 
 | Document | Description |
 |---|---|
@@ -96,6 +109,9 @@ Server, Electron, and theming configuration options that control Synapse's behav
 | [Server Config](configuration/server-config.md) | PORT, timing constants, MIME types, and server default shapes |
 | [Electron Config](configuration/electron-config.md) | Settings API, window persistence, build/packaging, and custom protocol handler |
 | [Theming](configuration/theming.md) | CSS design tokens, fonts, glassmorphism patterns, JS color sync, and customization guide |
+| [Hooks](configuration/hooks.md) | Pre/post tool-use validation hooks, hook definitions, and the `.claude/hooks/` directory |
+| [Skills](configuration/skills.md) | Skill definitions, loading mechanics, and the `.claude/skills/` directory |
+| [Settings](configuration/settings.md) | Claude Code agent settings (`settings.json`), permissions, and environment configuration |
 
 ### Dashboard
 
@@ -233,6 +249,15 @@ How worker agents report progress, handle deviations, and consume upstream resul
 | [Deviations](worker-protocol/deviations.md) | Severity levels (CRITICAL/MODERATE/MINOR), entry format, 11 detailed sections covering common scenarios, ambiguity handling, and master replanning triggers |
 | [Upstream Results](worker-protocol/upstream-results.md) | Four-step protocol for reading, extracting, adapting to, and logging upstream dependency results; 11 sections covering failure handling, critical deviations, and adaptation strategies |
 
+### Troubleshooting
+
+Common issues, solutions, and frequently asked questions about running Synapse.
+
+| Document | Description |
+|---|---|
+| [Common Issues](troubleshooting/common-issues.md) | Solutions to frequently encountered problems with swarm execution, server connections, and agent coordination |
+| [FAQ](troubleshooting/faq.md) | Frequently asked questions about Synapse usage, configuration, and best practices |
+
 ---
 
 ## Section Summaries
@@ -240,8 +265,9 @@ How worker agents report progress, handle deviations, and consume upstream resul
 | Section | Summary |
 |---|---|
 | **Architecture** | System-level overview of how Synapse is structured, how data flows between components, and what the directory layout looks like on disk. |
+| **Chat** | The integrated chat system for AI agent conversations within the Electron app, covering React components, IPC handlers, conversation persistence, and multi-model support. |
 | **Commands** | The `!command` system including 4-tier resolution hierarchy, all swarm lifecycle commands, project analysis commands, and creating custom commands with profiles and structural patterns. |
-| **Configuration** | All configuration surfaces: server constants, Electron settings and packaging, and the CSS/JS theming system. |
+| **Configuration** | All configuration surfaces: server constants, Electron settings and packaging, the CSS/JS theming system, validation hooks, skill definitions, and agent settings. |
 | **Dashboard** | The React dashboard UI covering component architecture (54+ components), state management with reducers, custom hooks, the CSS design system (10 files, 13,778 lines), and 7-view switching layout modes (Waves, Chains, IDE, Git, Preview views). |
 | **Data Architecture** | The five data file categories that drive Synapse: `initialization.json` (static plan), `logs.json` (event log), worker progress files (live lifecycle), task files (authoritative record), and PKI schemas (knowledge index). |
 | **Electron** | The desktop application layer including the main/renderer process model, 33 push channels and ~140 pull request handlers across 17+ handler groups, the 13 service modules (including Live Preview services), and build/packaging configuration. |
@@ -253,4 +279,5 @@ How worker agents report progress, handle deviations, and consume upstream resul
 | **Project Integration** | How Synapse connects to any target project, including the `!project` command, `.synapse/` directory, TOC generation, and CLAUDE.md conventions. |
 | **Server** | The zero-dependency Node.js backend with 7 services plus validation utility, serving static files, exposing REST endpoints, and broadcasting real-time updates via Server-Sent Events. |
 | **Swarm Lifecycle** | The complete journey of a parallel swarm from planning through completion, including eager dispatch, monitoring, circuit breaker automatic replanning, and final reporting. |
+| **Troubleshooting** | Common issues and FAQ covering swarm execution problems, server connections, agent coordination failures, and best practices for running Synapse. |
 | **Worker Protocol** | How worker agents operate: writing progress files, transitioning through stages, reporting deviations with severity levels (11 detailed sections), and consuming upstream task results (11 sections covering adaptation strategies). |

@@ -196,7 +196,8 @@ function ensureDirectories() {
  */
 function getOrderedDashboards() {
   const meta = settings.get('dashboardMeta') || { order: [], names: {} };
-  const existingIds = new Set(listDashboards());
+  // Exclude chat-agent-* dashboards — those are shown on the chat page only
+  const existingIds = new Set([...listDashboards()].filter(id => !id.startsWith('chat-agent-')));
 
   // Filter persisted order to only existing dashboards
   const validOrder = (meta.order || []).filter(id => existingIds.has(id));
@@ -833,6 +834,7 @@ function registerIPCHandlers(getMainWindow) {
       'PROJECT ROOT (target project): ' + (projectDir || synapseRoot) + '\n' +
       '===DASHBOARD_BINDING_START===\n' +
       'DASHBOARD ID: ' + dashboardId + '\n' +
+      'INSTANCE TYPE: ' + (String(dashboardId).indexOf('chat-agent-') === 0 ? 'chat' : 'code') + '\n' +
       '===DASHBOARD_BINDING_END===\n';
 
     // Include additional context directories in the reference block
@@ -904,7 +906,9 @@ function registerIPCHandlers(getMainWindow) {
 
   // Log a chat event to a dashboard's logs.json
   ipcMain.handle('log-chat-event', async (_event, dashboardId, entry) => {
-    const logsFile = path.join(DASHBOARDS_DIR, dashboardId, 'logs.json');
+    const dashDir = path.join(DASHBOARDS_DIR, dashboardId);
+    if (!fs.existsSync(dashDir)) fs.mkdirSync(dashDir, { recursive: true });
+    const logsFile = path.join(dashDir, 'logs.json');
     let logs;
     try {
       logs = JSON.parse(fs.readFileSync(logsFile, 'utf-8'));
@@ -1124,6 +1128,10 @@ function registerIPCHandlers(getMainWindow) {
 
   ipcMain.handle('get-swarm-states', async () => {
     return SwarmOrchestrator.getSwarmStates();
+  });
+
+  ipcMain.handle('extract-swarm-knowledge', async (_event, dashboardId, projectPath) => {
+    return SwarmOrchestrator.extractSwarmKnowledge(dashboardId, projectPath);
   });
 
   // --- Conversation Handlers ---
@@ -2916,35 +2924,52 @@ function registerIPCHandlers(getMainWindow) {
 
   // --- Chat Dashboard handlers ---
 
-  // Read all agent task files from Chat/Dashboard/Agent*/ and return aggregated lanes.
-  // Returns { agents: [{ name, tasks: [...] }] } or { agents: [] } if directory missing.
+  // Read all chat-agent-* dashboards from dashboards/ and return aggregated lanes.
+  // Each chat-agent dashboard becomes one lane with its tasks merged from
+  // initialization.json (plan) + progress/*.json (live status).
   ipcMain.handle('get-chat-dashboard-data', async () => {
-    const synapseRoot = path.resolve(__dirname, '..');
-    const baseDir = path.join(synapseRoot, 'Chat', 'Dashboard');
-    if (!fs.existsSync(baseDir)) return { agents: [] };
+    if (!fs.existsSync(DASHBOARDS_DIR)) return { agents: [] };
 
     const lanes = [];
     let entries;
     try {
-      entries = fs.readdirSync(baseDir, { withFileTypes: true });
+      entries = fs.readdirSync(DASHBOARDS_DIR, { withFileTypes: true });
     } catch {
       return { agents: [] };
     }
 
     for (const entry of entries) {
-      if (!entry.isDirectory() || !entry.name.startsWith('Agent')) continue;
-      const agentDir = path.join(baseDir, entry.name);
-      const tasks = [];
-      try {
-        const files = fs.readdirSync(agentDir).filter(f => f.endsWith('.json'));
-        for (const file of files) {
-          try {
-            const raw = fs.readFileSync(path.join(agentDir, file), 'utf-8');
-            tasks.push(JSON.parse(raw));
-          } catch { /* skip malformed file */ }
-        }
-      } catch { continue; }
-      lanes.push({ name: entry.name, tasks });
+      if (!entry.isDirectory() || !entry.name.startsWith('chat-agent-')) continue;
+      const dashId = entry.name;
+      const init = readDashboardInit(dashId);
+      if (!init || !init.agents || init.agents.length === 0) continue;
+
+      const progress = readDashboardProgress(dashId);
+      const displayName = init.task?.name || dashId;
+
+      const tasks = init.agents.map(agent => {
+        const prog = progress[agent.id] || {};
+        return {
+          task_id: agent.id,
+          title: agent.title,
+          status: prog.status || 'pending',
+          started_at: prog.started_at || null,
+          completed_at: prog.completed_at || null,
+          summary: prog.summary || null,
+          stage: prog.stage || null,
+          message: prog.message || null,
+          files_changed: prog.files_changed || [],
+          milestones: prog.milestones || [],
+          deviations: prog.deviations || [],
+          logs: prog.logs || [],
+          depends_on: agent.depends_on || [],
+          layer: agent.layer || null,
+          directory: agent.directory || null,
+          assigned_agent: prog.assigned_agent || null,
+        };
+      });
+
+      lanes.push({ name: displayName, dashId, tasks });
     }
 
     lanes.sort((a, b) => a.name.localeCompare(b.name));
@@ -2996,12 +3021,56 @@ function registerIPCHandlers(getMainWindow) {
     const agentDir = path.join(chatDir, 'agent' + agentHex);
     fs.mkdirSync(agentDir, { recursive: true });
 
+    // Also create the dashboard directory so logs/progress writes succeed immediately
+    const dashDir = path.join(DASHBOARDS_DIR, 'chat-agent-' + agentHex);
+    fs.mkdirSync(path.join(dashDir, 'progress'), { recursive: true });
+    fs.writeFileSync(path.join(dashDir, 'logs.json'), JSON.stringify({ entries: [] }, null, 2));
+
     if (opts.projectPath) {
       const meta = { projectPath: opts.projectPath, createdAt: new Date().toISOString() };
       fs.writeFileSync(path.join(agentDir, 'project.json'), JSON.stringify(meta, null, 2));
     }
 
-    return { chatNumber, agentHex, agentDir, chatDir };
+    return { chatNumber, agentHex, agentDir, chatDir, dashDir };
+  });
+
+  // Delete a chat agent's on-disk folders (Chat/chat{N}/agent{XXXX}/ AND dashboards/chat-agent-{XXXX}/)
+  ipcMain.handle('delete-chat-agent', async (_event, agentHex) => {
+    if (!agentHex || typeof agentHex !== 'string') return { success: true };
+    const synapseRoot = path.resolve(__dirname, '..');
+    const chatRoot = path.join(synapseRoot, 'Chat');
+
+    // Find and remove the Chat/chat{N}/agent{hex}/ folder
+    try {
+      for (const entry of fs.readdirSync(chatRoot, { withFileTypes: true })) {
+        if (!entry.isDirectory() || !/^chat\d+$/i.test(entry.name)) continue;
+        const chatDir = path.join(chatRoot, entry.name);
+        const agentDir = path.join(chatDir, 'agent' + agentHex);
+        if (fs.existsSync(agentDir)) {
+          fs.rmSync(agentDir, { recursive: true, force: true });
+          // Remove parent chat{N}/ if empty (ignoring .DS_Store)
+          const remaining = fs.readdirSync(chatDir).filter(f => f !== '.DS_Store');
+          if (remaining.length === 0) {
+            fs.rmSync(chatDir, { recursive: true, force: true });
+          }
+          break;
+        }
+      }
+    } catch (e) {
+      console.error('[delete-chat-agent] Chat folder cleanup error:', e.message);
+    }
+
+    // Remove the dashboard directory
+    try {
+      const dashDir = path.join(DASHBOARDS_DIR, 'chat-agent-' + agentHex);
+      if (fs.existsSync(dashDir)) {
+        fs.rmSync(dashDir, { recursive: true, force: true });
+      }
+    } catch (e) {
+      console.error('[delete-chat-agent] Dashboard cleanup error:', e.message);
+    }
+
+    return { success: true };
   });
 
 
@@ -3081,20 +3150,20 @@ function sendInitialData(getMainWindow, dashboards) {
 }
 
 // ---------------------------------------------------------------------------
-// Chat dashboard watcher — pushes change events when Chat/Dashboard/ files change
+// Chat dashboard watcher — watches dashboards/ for chat-agent-* folder changes
 // ---------------------------------------------------------------------------
 
 let chatDashboardWatcher = null;
 let chatDashboardDebounceTimer = null;
 
 function startChatDashboardWatcher(broadcastFn) {
-  const synapseRoot = path.resolve(__dirname, '..');
-  const baseDir = path.join(synapseRoot, 'Chat', 'Dashboard');
-  if (!fs.existsSync(baseDir)) return;
+  if (!fs.existsSync(DASHBOARDS_DIR)) return;
 
   try {
-    chatDashboardWatcher = fs.watch(baseDir, { recursive: true }, (_eventType, filename) => {
+    chatDashboardWatcher = fs.watch(DASHBOARDS_DIR, { recursive: true }, (_eventType, filename) => {
       if (!filename) return;
+      const topDir = filename.split(path.sep)[0];
+      if (!topDir.startsWith('chat-agent-')) return;
       clearTimeout(chatDashboardDebounceTimer);
       chatDashboardDebounceTimer = setTimeout(() => {
         broadcastFn('chat_dashboard_changed', { timestamp: Date.now() });

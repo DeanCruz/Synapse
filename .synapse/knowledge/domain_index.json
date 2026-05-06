@@ -1,0 +1,1521 @@
+{
+  "_metadata": {
+    "version": 1,
+    "moved_from": "manifest.json",
+    "moved_from_field": "domain_index",
+    "moved_at": "2026-05-06T03:34:27Z",
+    "entry_count": 378
+  },
+  "electron-shell": [
+    "electron/main.js"
+  ],
+  "app-lifecycle": [
+    "electron/main.js"
+  ],
+  "asset-protocol": [
+    "electron/main.js"
+  ],
+  "ipc-bridge": [
+    "electron/ipc-handlers.js",
+    "electron/preload.js"
+  ],
+  "service-orchestration": [
+    "electron/ipc-handlers.js"
+  ],
+  "dashboard-coordination": [
+    "electron/ipc-handlers.js"
+  ],
+  "context-isolation": [
+    "electron/preload.js"
+  ],
+  "renderer-api-surface": [
+    "electron/preload.js"
+  ],
+  "persistent-settings": [
+    "electron/settings.js"
+  ],
+  "user-preferences": [
+    "electron/settings.js"
+  ],
+  "sse-server": [
+    "src/server/index.js"
+  ],
+  "dashboard-broadcast": [
+    "src/server/SSEManager.js",
+    "src/server/index.js"
+  ],
+  "server-lifecycle": [
+    "src/server/index.js"
+  ],
+  "sse-broadcast": [
+    "src/server/SSEManager.js"
+  ],
+  "client-lifecycle": [
+    "src/server/SSEManager.js"
+  ],
+  "rest-api": [
+    "src/server/routes/apiRoutes.js"
+  ],
+  "dashboard-routes": [
+    "src/server/routes/apiRoutes.js"
+  ],
+  "path-validation": [
+    "src/server/routes/apiRoutes.js"
+  ],
+  "server-config": [
+    "src/server/utils/constants.js"
+  ],
+  "path-resolution": [
+    "_commands/Synapse/project.md",
+    "agent/core/path_convention.md",
+    "src/server/utils/constants.js"
+  ],
+  "timing-constants": [
+    "src/server/utils/constants.js"
+  ],
+  "json-io": [
+    "src/server/utils/json.js"
+  ],
+  "schema-validation": [
+    "agent/master/initialization_blueprint.md",
+    "src/server/utils/json.js"
+  ],
+  "atomic-write": [
+    "src/server/utils/json.js"
+  ],
+  "dependency-validation": [
+    "_commands/Synapse/deps.md",
+    "src/server/utils/validation.js"
+  ],
+  "graph-algorithms": [
+    "src/server/utils/validation.js"
+  ],
+  "swarm-planning": [
+    "agent/_commands/p_track_planning.md",
+    "src/server/utils/validation.js"
+  ],
+  "archive-management": [
+    "src/server/services/ArchiveService.js",
+    "src/ui/components/modals/ArchiveModal.jsx"
+  ],
+  "dashboard-state": [
+    "src/server/services/ArchiveService.js",
+    "src/server/services/DashboardService.js",
+    "src/server/services/HistoryService.js",
+    "src/server/services/QueueService.js",
+    "src/server/services/WatcherService.js"
+  ],
+  "filesystem-abstraction": [
+    "src/server/services/DashboardService.js"
+  ],
+  "dependency-resolution": [
+    "src/server/services/DependencyService.js",
+    "src/server/services/WatcherService.js"
+  ],
+  "dispatch-readiness": [
+    "src/server/services/DependencyService.js"
+  ],
+  "history-summary": [
+    "src/server/services/HistoryService.js"
+  ],
+  "queue-overflow": [
+    "src/server/services/QueueService.js"
+  ],
+  "file-watcher": [
+    "src/server/services/WatcherService.js"
+  ],
+  "chat-system": [
+    "src/ui/components/chat/ChatDashboardView.jsx",
+    "src/ui/components/chat/ChatInstanceView.jsx",
+    "src/ui/components/chat/ChatMakePage.jsx",
+    "src/ui/components/chat/ChatSidebar.jsx"
+  ],
+  "chat-dashboard": [
+    "src/ui/components/chat/ChatDashboardView.jsx"
+  ],
+  "agent-visualization": [
+    "src/ui/components/chat/ChatDashboardView.jsx"
+  ],
+  "chat-instance": [
+    "src/ui/components/chat/ChatInstanceView.jsx"
+  ],
+  "claude-streaming": [
+    "src/ui/components/chat/ChatInstanceView.jsx"
+  ],
+  "chat-make": [
+    "src/ui/components/chat/ChatMakePage.jsx"
+  ],
+  "placeholder": [
+    "src/ui/components/chat/ChatMakePage.jsx"
+  ],
+  "chat-sidebar": [
+    "src/ui/components/chat/ChatSidebar.jsx"
+  ],
+  "chat-tab-management": [
+    "src/ui/components/chat/ChatSidebar.jsx"
+  ],
+  "worker-protocol": [
+    ".claude/skills/worker-protocol/SKILL.md",
+    "agent/worker/deviations.md",
+    "agent/worker/progress_reporting.md",
+    "agent/worker/return_format.md",
+    "agent/worker/sibling_comms.md",
+    "agent/worker/upstream_deps.md",
+    "documentation/data-architecture/progress-files.md",
+    "documentation/worker-protocol/deviations.md",
+    "documentation/worker-protocol/overview.md",
+    "documentation/worker-protocol/progress-reporting.md",
+    "documentation/worker-protocol/upstream-results.md"
+  ],
+  "deviation-reporting": [
+    "agent/worker/deviations.md"
+  ],
+  "progress-reporting": [
+    ".claude/skills/worker-protocol/SKILL.md",
+    "agent/worker/progress_reporting.md"
+  ],
+  "dashboard-integration": [
+    "agent/worker/progress_reporting.md"
+  ],
+  "return-format": [
+    "agent/worker/return_format.md"
+  ],
+  "sibling-coordination": [
+    "agent/worker/sibling_comms.md"
+  ],
+  "dependency-management": [
+    "agent/worker/upstream_deps.md"
+  ],
+  "core-conventions": [
+    "agent/core/command_resolution.md",
+    "agent/core/dashboard_features.md",
+    "agent/core/data_architecture.md",
+    "agent/core/parallel_principles.md",
+    "agent/core/path_convention.md",
+    "agent/core/profile_system.md",
+    "agent/core/project_discovery.md"
+  ],
+  "command-resolution": [
+    "agent/core/command_resolution.md"
+  ],
+  "dashboard-architecture": [
+    "agent/core/dashboard_features.md"
+  ],
+  "data-architecture": [
+    "agent/core/data_architecture.md",
+    "agent/master/dashboard_writes.md",
+    "documentation/data-architecture/initialization-json.md",
+    "documentation/data-architecture/logs-json.md",
+    "documentation/data-architecture/overview.md",
+    "documentation/data-architecture/pki-schemas.md",
+    "documentation/data-architecture/progress-files.md",
+    "documentation/data-architecture/xml-task-files.md"
+  ],
+  "schemas": [
+    "agent/core/data_architecture.md"
+  ],
+  "orchestration-principles": [
+    "agent/core/parallel_principles.md"
+  ],
+  "circuit-breaker": [
+    ".claude/skills/failure-protocol/SKILL.md",
+    "agent/core/parallel_principles.md",
+    "agent/master/failure_recovery.md"
+  ],
+  "project-integration": [
+    "agent/core/path_convention.md"
+  ],
+  "profile-system": [
+    "_commands/project/profiles.md",
+    "agent/core/profile_system.md"
+  ],
+  "project-discovery": [
+    "agent/core/project_discovery.md"
+  ],
+  "context-efficiency": [
+    "agent/core/project_discovery.md"
+  ],
+  "token-budget": [
+    "agent/utils/token_estimate.js"
+  ],
+  "planning-utility": [
+    "agent/utils/token_estimate.js"
+  ],
+  "compaction-recovery": [
+    "_commands/Synapse/p_track_resume.md",
+    "agent/master/compaction_recovery.md"
+  ],
+  "master-orchestration": [
+    "agent/_commands/p_track_completion.md",
+    "agent/_commands/p_track_execution.md",
+    "agent/_commands/p_track_planning.md",
+    "agent/instructions/common_pitfalls.md",
+    "agent/instructions/dashboard_resolution.md",
+    "agent/instructions/tracker_master_instructions.md",
+    "agent/master/compaction_recovery.md",
+    "agent/master/dashboard_protocol.md",
+    "agent/master/dashboard_writes.md",
+    "agent/master/eager_dispatch.md",
+    "agent/master/failure_recovery.md",
+    "agent/master/initialization_blueprint.md",
+    "agent/master/pki_integration.md",
+    "agent/master/role.md",
+    "agent/master/ui_map.md",
+    "agent/master/worker_prompts.md"
+  ],
+  "dashboard-protocol": [
+    "agent/master/compaction_recovery.md",
+    "agent/master/dashboard_protocol.md",
+    "agent/master/dashboard_writes.md",
+    "agent/master/initialization_blueprint.md",
+    "agent/master/ui_map.md"
+  ],
+  "execution-mode-selection": [
+    "agent/master/dashboard_protocol.md"
+  ],
+  "eager-dispatch": [
+    ".claude/skills/eager-dispatch/SKILL.md",
+    "_commands/Synapse/eager_dispatch.md",
+    "agent/_commands/p_track_execution.md",
+    "agent/master/eager_dispatch.md"
+  ],
+  "parallelization": [
+    "agent/master/eager_dispatch.md"
+  ],
+  "failure-recovery": [
+    ".claude/skills/failure-protocol/SKILL.md",
+    "_commands/Synapse/p_track_resume.md",
+    "_commands/Synapse/retry.md",
+    "_commands/Synapse/track_resume.md",
+    "agent/_commands/p_track_execution.md",
+    "agent/instructions/failed_task.md",
+    "agent/master/failure_recovery.md",
+    "documentation/swarm-lifecycle/circuit-breaker.md"
+  ],
+  "pki-integration": [
+    ".claude/hooks/mark-annotation-stale.sh",
+    "agent/instructions/tracker_worker_instructions.md",
+    "agent/master/pki_integration.md",
+    "agent/master/worker_prompts.md",
+    "electron/services/PromptBuilder.js"
+  ],
+  "planning": [
+    "_commands/project/plan.md",
+    "_commands/project/scope.md",
+    "agent/master/pki_integration.md",
+    "documentation/master-agent/planning.md",
+    "documentation/swarm-lifecycle/planning-phase.md"
+  ],
+  "role-constraints": [
+    "agent/master/role.md"
+  ],
+  "non-negotiable-protocol": [
+    "agent/master/role.md"
+  ],
+  "ui-mapping": [
+    "agent/master/ui_map.md"
+  ],
+  "worker-prompt-construction": [
+    "agent/master/worker_prompts.md"
+  ],
+  "agent-profiles": [
+    "_commands/profiles/analyst.md",
+    "_commands/profiles/architect.md",
+    "_commands/profiles/copywriter.md",
+    "_commands/profiles/customer-success.md",
+    "_commands/profiles/devops.md",
+    "_commands/profiles/founder.md",
+    "_commands/profiles/growth.md",
+    "_commands/profiles/legal.md",
+    "_commands/profiles/marketing.md",
+    "_commands/profiles/pricing.md",
+    "_commands/profiles/product.md",
+    "_commands/profiles/qa.md",
+    "_commands/profiles/sales.md",
+    "_commands/profiles/security.md",
+    "_commands/profiles/technical-writer.md"
+  ],
+  "data-analyst-role": [
+    "_commands/profiles/analyst.md"
+  ],
+  "metrics-and-kpi": [
+    "_commands/profiles/analyst.md"
+  ],
+  "systems-architect-role": [
+    "_commands/profiles/architect.md"
+  ],
+  "technical-design": [
+    "_commands/profiles/architect.md"
+  ],
+  "copywriter-role": [
+    "_commands/profiles/copywriter.md"
+  ],
+  "conversion-copy": [
+    "_commands/profiles/copywriter.md"
+  ],
+  "customer-success-role": [
+    "_commands/profiles/customer-success.md"
+  ],
+  "retention-and-onboarding": [
+    "_commands/profiles/customer-success.md"
+  ],
+  "devops-role": [
+    "_commands/profiles/devops.md"
+  ],
+  "platform-engineering": [
+    "_commands/profiles/devops.md"
+  ],
+  "founder-strategy-role": [
+    "_commands/profiles/founder.md"
+  ],
+  "fundraising-and-gtm": [
+    "_commands/profiles/founder.md"
+  ],
+  "growth-engineer-role": [
+    "_commands/profiles/growth.md"
+  ],
+  "funnel-optimization": [
+    "_commands/profiles/growth.md"
+  ],
+  "legal-compliance-role": [
+    "_commands/profiles/legal.md"
+  ],
+  "privacy-and-regulation": [
+    "_commands/profiles/legal.md"
+  ],
+  "marketing-strategist-role": [
+    "_commands/profiles/marketing.md"
+  ],
+  "positioning-and-messaging": [
+    "_commands/profiles/marketing.md"
+  ],
+  "pricing-strategist-role": [
+    "_commands/profiles/pricing.md"
+  ],
+  "monetization": [
+    "_commands/profiles/pricing.md"
+  ],
+  "product-manager-role": [
+    "_commands/profiles/product.md"
+  ],
+  "specifications-and-prds": [
+    "_commands/profiles/product.md"
+  ],
+  "qa-engineer-role": [
+    "_commands/profiles/qa.md"
+  ],
+  "testing-and-coverage": [
+    "_commands/profiles/qa.md"
+  ],
+  "sales-strategist-role": [
+    "_commands/profiles/sales.md"
+  ],
+  "outreach-and-deal-enablement": [
+    "_commands/profiles/sales.md"
+  ],
+  "security-engineer-role": [
+    "_commands/profiles/security.md"
+  ],
+  "threat-modeling-and-compliance": [
+    "_commands/profiles/security.md"
+  ],
+  "technical-writer-role": [
+    "_commands/profiles/technical-writer.md"
+  ],
+  "developer-documentation": [
+    "_commands/profiles/technical-writer.md"
+  ],
+  "live-preview": [
+    "_commands/project/instrument.md",
+    "src/ui/components/preview/PreviewView.jsx"
+  ],
+  "webview-overlay": [
+    "src/ui/components/preview/PreviewView.jsx"
+  ],
+  "global-theme": [
+    "src/ui/styles/index.css"
+  ],
+  "preview-styles": [
+    "src/ui/styles/preview-view.css"
+  ],
+  "git-manager-styles": [
+    "src/ui/styles/git-manager.css"
+  ],
+  "ide-styles": [
+    "src/ui/styles/ide-debug-console.css",
+    "src/ui/styles/ide-debug-panels.css",
+    "src/ui/styles/ide-debug.css",
+    "src/ui/styles/ide-editor.css",
+    "src/ui/styles/ide-explorer.css",
+    "src/ui/styles/ide-layout.css",
+    "src/ui/styles/ide-problems.css",
+    "src/ui/styles/ide-search.css",
+    "src/ui/styles/ide-sidebar.css"
+  ],
+  "swarm-failure-modes": [
+    "agent/instructions/common_pitfalls.md"
+  ],
+  "agent-protocol": [
+    "agent/instructions/common_pitfalls.md",
+    "agent/instructions/dashboard_resolution.md",
+    "agent/instructions/failed_task.md",
+    "agent/instructions/tracker_master_instructions.md",
+    "agent/instructions/tracker_worker_instructions.md",
+    "agent/instructions/tracker_worker_instructions_lite.md"
+  ],
+  "dashboard-resolution": [
+    "agent/instructions/dashboard_resolution.md"
+  ],
+  "repair-worker-protocol": [
+    "agent/instructions/failed_task.md"
+  ],
+  "dashboard-writes": [
+    "agent/instructions/tracker_master_instructions.md"
+  ],
+  "meta-planner-orchestration": [
+    "agent/instructions/tracker_multi_plan_instructions.md"
+  ],
+  "multi-stream-coordination": [
+    "agent/instructions/tracker_multi_plan_instructions.md"
+  ],
+  "queue-management": [
+    "agent/instructions/tracker_multi_plan_instructions.md"
+  ],
+  "worker-progress-reporting": [
+    "agent/instructions/tracker_worker_instructions.md",
+    "agent/instructions/tracker_worker_instructions_lite.md"
+  ],
+  "swarm-completion": [
+    "agent/_commands/p_track_completion.md"
+  ],
+  "pki-knowledge-extraction": [
+    "agent/_commands/p_track_completion.md",
+    "electron/services/SwarmOrchestrator.js"
+  ],
+  "dashboard-claiming": [
+    "agent/_commands/p_track_planning.md"
+  ],
+  "dashboard-rendering": [
+    "src/ui/components/AgentCard.jsx",
+    "src/ui/components/BottomPanel.jsx",
+    "src/ui/components/ChainPipeline.jsx",
+    "src/ui/components/ClaudeView.jsx",
+    "src/ui/components/ConnectionIndicator.jsx",
+    "src/ui/components/EmptyState.jsx",
+    "src/ui/components/Header.jsx",
+    "src/ui/components/HomeView.jsx",
+    "src/ui/components/LogPanel.jsx",
+    "src/ui/components/MetricsPanel.jsx",
+    "src/ui/components/ProgressBar.jsx",
+    "src/ui/components/QueuePopup.jsx",
+    "src/ui/components/Sidebar.jsx",
+    "src/ui/components/StatsBar.jsx",
+    "src/ui/components/SwarmBuilder.jsx",
+    "src/ui/components/TerminalView.jsx",
+    "src/ui/components/TimelinePanel.jsx",
+    "src/ui/components/WavePipeline.jsx"
+  ],
+  "swarm-pipeline": [
+    "src/ui/components/AgentCard.jsx",
+    "src/ui/components/ChainPipeline.jsx",
+    "src/ui/components/SwarmBuilder.jsx",
+    "src/ui/components/WavePipeline.jsx"
+  ],
+  "terminal": [
+    "src/ui/components/BottomPanel.jsx",
+    "src/ui/components/TerminalView.jsx"
+  ],
+  "log-panel": [
+    "src/ui/components/BottomPanel.jsx",
+    "src/ui/components/LogPanel.jsx"
+  ],
+  "chat-view": [
+    "src/ui/components/ClaudeView.jsx"
+  ],
+  "sidebar-navigation": [
+    "src/ui/components/Header.jsx",
+    "src/ui/components/ModeMenu.jsx",
+    "src/ui/components/Sidebar.jsx"
+  ],
+  "home-screen": [
+    "src/ui/components/HomeView.jsx"
+  ],
+  "metrics-panel": [
+    "src/ui/components/MetricsPanel.jsx"
+  ],
+  "auto-update": [
+    "electron/services/AutoUpdateService.js",
+    "src/ui/components/modals/SettingsModal.jsx"
+  ],
+  "electron-lifecycle": [
+    "electron/services/AutoUpdateService.js"
+  ],
+  "cli-process-management": [
+    "electron/services/ClaudeCodeService.js",
+    "electron/services/CodexService.js"
+  ],
+  "swarm-orchestration": [
+    ".claude/skills/p-track/SKILL.md",
+    "_commands/project/learn.md",
+    "_commands/project/toc_generate.md",
+    "electron/services/ClaudeCodeService.js",
+    "electron/services/CodexService.js",
+    "electron/services/PromptBuilder.js",
+    "electron/services/SwarmOrchestrator.js"
+  ],
+  "claude-cli-integration": [
+    "electron/services/ClaudeCodeService.js"
+  ],
+  "codex-cli-integration": [
+    "electron/services/CodexService.js"
+  ],
+  "command-management": [
+    "electron/services/CommandsService.js",
+    "src/ui/components/modals/CommandsModal.jsx"
+  ],
+  "markdown-parsing": [
+    "electron/services/CommandsService.js"
+  ],
+  "ai-content-generation": [
+    "electron/services/CommandsService.js"
+  ],
+  "chat-persistence": [
+    "electron/services/ConversationService.js"
+  ],
+  "conversation-management": [
+    "electron/services/ConversationService.js"
+  ],
+  "node-debugger": [
+    "electron/services/DebugService.js",
+    "src/ui/components/ide/CodeEditor.jsx",
+    "src/ui/components/ide/DebugConsolePanel.jsx",
+    "src/ui/components/ide/DebugPanels.jsx",
+    "src/ui/components/ide/DebugToolbar.jsx",
+    "src/ui/components/ide/IDEView.jsx"
+  ],
+  "cdp-integration": [
+    "electron/services/DebugService.js"
+  ],
+  "ide-debugging": [
+    "electron/services/DebugService.js"
+  ],
+  "live-preview-system": [
+    "electron/services/InstrumentService.js",
+    "electron/services/PreviewService.js",
+    "electron/services/PreviewTextWriter.js"
+  ],
+  "jsx-instrumentation": [
+    "electron/services/InstrumentService.js"
+  ],
+  "source-mapping": [
+    "electron/services/InstrumentService.js"
+  ],
+  "label-source-mapping": [
+    "electron/services/PreviewService.js"
+  ],
+  "source-rewriting": [
+    "electron/services/PreviewTextWriter.js"
+  ],
+  "dev-server-detection": [
+    "electron/services/PreviewTextWriter.js"
+  ],
+  "project-detection": [
+    "electron/services/ProjectService.js"
+  ],
+  "cli-binary-discovery": [
+    "electron/services/ProjectService.js"
+  ],
+  "context-loading": [
+    "electron/services/ProjectService.js"
+  ],
+  "prompt-construction": [
+    "electron/services/PromptBuilder.js"
+  ],
+  "circuit-breaker-replan": [
+    "electron/services/PromptBuilder.js",
+    "electron/services/SwarmOrchestrator.js"
+  ],
+  "dispatch-engine": [
+    "electron/services/SwarmOrchestrator.js"
+  ],
+  "swarm-builder": [
+    "electron/services/TaskEditorService.js",
+    "src/ui/components/modals/TaskEditorModal.jsx"
+  ],
+  "initialization-crud": [
+    "electron/services/TaskEditorService.js"
+  ],
+  "dependency-graph-validation": [
+    "electron/services/TaskEditorService.js"
+  ],
+  "terminal-sessions": [
+    "electron/services/TerminalService.js"
+  ],
+  "pty-management": [
+    "electron/services/TerminalService.js"
+  ],
+  "react-dashboard": [
+    "src/ui/App.jsx",
+    "src/ui/context/AppContext.jsx",
+    "src/ui/hooks/useDashboardData.js",
+    "src/ui/hooks/useElectronAPI.js",
+    "src/ui/hooks/useResize.js",
+    "src/ui/main.jsx",
+    "src/ui/utils/constants.js",
+    "src/ui/utils/dependencyLines.js",
+    "src/ui/utils/format.js",
+    "src/ui/utils/markdown.js"
+  ],
+  "view-routing": [
+    "src/ui/App.jsx"
+  ],
+  "global-shell": [
+    "src/ui/App.jsx"
+  ],
+  "ipc-bridge-frontend": [
+    "src/ui/hooks/useDashboardData.js",
+    "src/ui/hooks/useElectronAPI.js",
+    "src/ui/main.jsx",
+    "src/ui/utils/dashboardProjects.js",
+    "src/ui/utils/ideWorkspaceManager.js"
+  ],
+  "vite-entry": [
+    "src/ui/main.jsx"
+  ],
+  "global-state": [
+    "src/ui/context/AppContext.jsx",
+    "src/ui/hooks/useDashboardData.js"
+  ],
+  "chat-state": [
+    "src/ui/context/AppContext.jsx"
+  ],
+  "ide-state": [
+    "src/ui/context/AppContext.jsx"
+  ],
+  "git-state": [
+    "src/ui/context/AppContext.jsx"
+  ],
+  "drag-resize": [
+    "src/ui/hooks/useResize.js"
+  ],
+  "pointer-events": [
+    "src/ui/hooks/useResize.js"
+  ],
+  "live-preview-overlay": [
+    "src/ui/preview/inject-overlay.js"
+  ],
+  "webview-injection": [
+    "src/ui/preview/inject-overlay.js"
+  ],
+  "inline-editor": [
+    "src/ui/preview/inject-overlay.js"
+  ],
+  "theme": [
+    "src/ui/utils/constants.js"
+  ],
+  "css-bridge": [
+    "src/ui/utils/constants.js"
+  ],
+  "project-binding": [
+    "src/ui/utils/dashboardProjects.js"
+  ],
+  "localstorage-persistence": [
+    "src/ui/utils/dashboardProjects.js",
+    "src/ui/utils/ideWorkspaceManager.js"
+  ],
+  "dependency-graph-render": [
+    "src/ui/utils/dependencyLines.js"
+  ],
+  "svg-routing": [
+    "src/ui/utils/dependencyLines.js"
+  ],
+  "time-formatting": [
+    "src/ui/utils/format.js"
+  ],
+  "ide-workspace": [
+    "src/ui/utils/ideWorkspaceManager.js",
+    "src/ui/utils/monacoWorkerSetup.js"
+  ],
+  "markdown-rendering": [
+    "src/ui/utils/markdown.js"
+  ],
+  "xss-safety": [
+    "src/ui/utils/markdown.js"
+  ],
+  "monaco-editor": [
+    "src/ui/components/ide/CodeEditor.jsx",
+    "src/ui/utils/monacoWorkerSetup.js"
+  ],
+  "vite-bundler": [
+    "src/ui/utils/monacoWorkerSetup.js"
+  ],
+  "code-explorer": [
+    "src/ui/components/ide/CodeEditor.jsx",
+    "src/ui/components/ide/DebugConsolePanel.jsx",
+    "src/ui/components/ide/DebugPanels.jsx",
+    "src/ui/components/ide/DebugToolbar.jsx",
+    "src/ui/components/ide/EditorTabs.jsx",
+    "src/ui/components/ide/FileExplorer.jsx",
+    "src/ui/components/ide/IDEView.jsx",
+    "src/ui/components/ide/IDEWelcome.jsx",
+    "src/ui/components/ide/ProblemsPanel.jsx",
+    "src/ui/components/ide/SearchPanel.jsx",
+    "src/ui/components/ide/SearchResults.jsx",
+    "src/ui/components/ide/WorkspaceTabs.jsx"
+  ],
+  "diagnostics": [
+    "src/ui/components/ide/CodeEditor.jsx",
+    "src/ui/components/ide/ProblemsPanel.jsx"
+  ],
+  "debug-console": [
+    "src/ui/components/ide/DebugConsolePanel.jsx"
+  ],
+  "repl": [
+    "src/ui/components/ide/DebugConsolePanel.jsx"
+  ],
+  "debug-panels": [
+    "src/ui/components/ide/DebugPanels.jsx"
+  ],
+  "variables": [
+    "src/ui/components/ide/DebugPanels.jsx"
+  ],
+  "call-stack": [
+    "src/ui/components/ide/DebugPanels.jsx"
+  ],
+  "debug-toolbar": [
+    "src/ui/components/ide/DebugToolbar.jsx"
+  ],
+  "editor-tabs": [
+    "src/ui/components/ide/EditorTabs.jsx"
+  ],
+  "workspace": [
+    "src/ui/components/ide/EditorTabs.jsx",
+    "src/ui/components/ide/FileExplorer.jsx",
+    "src/ui/components/ide/IDEWelcome.jsx",
+    "src/ui/components/ide/WorkspaceTabs.jsx"
+  ],
+  "file-tree": [
+    "src/ui/components/ide/FileExplorer.jsx"
+  ],
+  "ide-layout": [
+    "src/ui/components/ide/IDEView.jsx"
+  ],
+  "workspace-tabs": [
+    "src/ui/components/ide/IDEView.jsx",
+    "src/ui/components/ide/WorkspaceTabs.jsx"
+  ],
+  "welcome": [
+    "src/ui/components/ide/IDEWelcome.jsx"
+  ],
+  "problems-panel": [
+    "src/ui/components/ide/ProblemsPanel.jsx"
+  ],
+  "search": [
+    "src/ui/components/ide/SearchPanel.jsx",
+    "src/ui/components/ide/SearchResults.jsx"
+  ],
+  "replace": [
+    "src/ui/components/ide/SearchPanel.jsx"
+  ],
+  "ripgrep": [
+    "src/ui/components/ide/SearchPanel.jsx"
+  ],
+  "search-results": [
+    "src/ui/components/ide/SearchResults.jsx"
+  ],
+  "dashboard-link": [
+    "src/ui/components/ide/WorkspaceTabs.jsx"
+  ],
+  "git-manager": [
+    "documentation/git-manager/components.md",
+    "documentation/git-manager/ipc-handlers.md",
+    "documentation/git-manager/overview.md",
+    "src/ui/components/git/BranchPanel.jsx",
+    "src/ui/components/git/ChangesPanel.jsx",
+    "src/ui/components/git/CommitPanel.jsx",
+    "src/ui/components/git/DiffViewer.jsx",
+    "src/ui/components/git/GitManagerView.jsx",
+    "src/ui/components/git/GitWelcome.jsx",
+    "src/ui/components/git/HistoryPanel.jsx",
+    "src/ui/components/git/InitFlow.jsx",
+    "src/ui/components/git/QuickActions.jsx",
+    "src/ui/components/git/RemotePanel.jsx",
+    "src/ui/components/git/RepoTabs.jsx",
+    "src/ui/components/git/SafetyDialogs.jsx"
+  ],
+  "git-safety": [
+    "src/ui/components/git/BranchPanel.jsx",
+    "src/ui/components/git/ChangesPanel.jsx",
+    "src/ui/components/git/QuickActions.jsx",
+    "src/ui/components/git/RemotePanel.jsx",
+    "src/ui/components/git/SafetyDialogs.jsx"
+  ],
+  "git-diff": [
+    "src/ui/components/git/ChangesPanel.jsx",
+    "src/ui/components/git/DiffViewer.jsx",
+    "src/ui/components/git/HistoryPanel.jsx"
+  ],
+  "git-init": [
+    "src/ui/components/git/GitWelcome.jsx",
+    "src/ui/components/git/InitFlow.jsx"
+  ],
+  "modal-dialogs": [
+    "src/ui/components/modals/AgentDetails.jsx",
+    "src/ui/components/modals/ArchiveModal.jsx",
+    "src/ui/components/modals/CommandsModal.jsx",
+    "src/ui/components/modals/ConfirmModal.jsx",
+    "src/ui/components/modals/ErrorModal.jsx",
+    "src/ui/components/modals/HistoryModal.jsx",
+    "src/ui/components/modals/LogsModal.jsx",
+    "src/ui/components/modals/Modal.jsx",
+    "src/ui/components/modals/PermissionModal.jsx",
+    "src/ui/components/modals/PlanningModal.jsx",
+    "src/ui/components/modals/ProjectModal.jsx",
+    "src/ui/components/modals/SettingsModal.jsx",
+    "src/ui/components/modals/TaskDetails.jsx",
+    "src/ui/components/modals/TaskEditorModal.jsx",
+    "src/ui/components/modals/WorkerTerminal.jsx"
+  ],
+  "accessibility": [
+    "src/ui/components/modals/Modal.jsx"
+  ],
+  "agent-details": [
+    "src/ui/components/modals/AgentDetails.jsx"
+  ],
+  "swarm-monitoring": [
+    "src/ui/components/modals/AgentDetails.jsx",
+    "src/ui/components/modals/LogsModal.jsx",
+    "src/ui/components/modals/TaskDetails.jsx"
+  ],
+  "progress-tracking": [
+    "src/ui/components/modals/AgentDetails.jsx"
+  ],
+  "swarm-history": [
+    "src/ui/components/modals/ArchiveModal.jsx",
+    "src/ui/components/modals/HistoryModal.jsx"
+  ],
+  "ai-generation": [
+    "src/ui/components/modals/CommandsModal.jsx",
+    "src/ui/components/modals/PlanningModal.jsx"
+  ],
+  "markdown-editor": [
+    "src/ui/components/modals/CommandsModal.jsx"
+  ],
+  "confirmation-flow": [
+    "src/ui/components/modals/ConfirmModal.jsx"
+  ],
+  "error-display": [
+    "src/ui/components/modals/ErrorModal.jsx"
+  ],
+  "analytics": [
+    "src/ui/components/modals/HistoryModal.jsx"
+  ],
+  "log-viewer": [
+    "src/ui/components/modals/LogsModal.jsx"
+  ],
+  "permission-flow": [
+    "src/ui/components/modals/PermissionModal.jsx"
+  ],
+  "agent-control": [
+    "src/ui/components/modals/PermissionModal.jsx"
+  ],
+  "planning-ui": [
+    "src/ui/components/modals/PlanningModal.jsx"
+  ],
+  "task-decomposition": [
+    "src/ui/components/modals/PlanningModal.jsx"
+  ],
+  "project-picker": [
+    "src/ui/components/modals/ProjectModal.jsx"
+  ],
+  "settings": [
+    "src/ui/components/modals/ProjectModal.jsx"
+  ],
+  "agent-provider-config": [
+    "src/ui/components/modals/ProjectModal.jsx"
+  ],
+  "theme-system": [
+    "src/ui/components/modals/SettingsModal.jsx"
+  ],
+  "app-settings": [
+    "src/ui/components/modals/SettingsModal.jsx"
+  ],
+  "task-details": [
+    "src/ui/components/modals/TaskDetails.jsx"
+  ],
+  "task-editor": [
+    "src/ui/components/modals/TaskEditorModal.jsx"
+  ],
+  "worker-output": [
+    "src/ui/components/modals/WorkerTerminal.jsx"
+  ],
+  "live-streaming": [
+    "src/ui/components/modals/WorkerTerminal.jsx"
+  ],
+  "tool-use-rendering": [
+    "src/ui/components/modals/WorkerTerminal.jsx"
+  ],
+  "project-docs": [
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.md",
+    "Synapse.md"
+  ],
+  "agent-instructions": [
+    "AGENTS.md",
+    "CLAUDE.md"
+  ],
+  "orchestration-spec": [
+    "CLAUDE.md"
+  ],
+  "user-onboarding": [
+    "README.md"
+  ],
+  "marketing": [
+    "README.md"
+  ],
+  "master-protocol": [
+    ".claude/skills/master-protocol/SKILL.md",
+    "AGENTS.md"
+  ],
+  "architecture-narrative": [
+    "Synapse.md"
+  ],
+  "whitepaper": [
+    "Synapse.md"
+  ],
+  "npm-package": [
+    "package.json"
+  ],
+  "build-config": [
+    "index.html",
+    "package.json",
+    "vite.config.js"
+  ],
+  "electron-app": [
+    "package.json"
+  ],
+  "vite-build": [
+    "vite.config.js"
+  ],
+  "renderer-config": [
+    "vite.config.js"
+  ],
+  "renderer-entry": [
+    "index.html"
+  ],
+  "html-entrypoint": [
+    "index.html"
+  ],
+  "launcher-script": [
+    "Start Synapse.command",
+    "Stop Synapse.command",
+    "launch.sh",
+    "launch_synapse.command",
+    "start.sh",
+    "stop.sh"
+  ],
+  "developer-tooling": [
+    "launch.sh",
+    "start.sh",
+    "stop.sh"
+  ],
+  "macos-launcher": [
+    "Start Synapse.command",
+    "Stop Synapse.command",
+    "launch_synapse.command"
+  ],
+  "git-config": [
+    ".gitignore"
+  ],
+  "project-config": [
+    ".gitignore",
+    ".synapse/project.json"
+  ],
+  "synapse-runtime": [
+    ".synapse/project.json"
+  ],
+  "command-discovery": [
+    "_commands/Synapse/guide.md",
+    "_commands/project/commands.md",
+    "_commands/project/help.md",
+    "_commands/project/profiles.md"
+  ],
+  "project-context": [
+    "_commands/project/commands.md",
+    "_commands/project/context.md",
+    "_commands/project/help.md",
+    "_commands/project/onboard.md",
+    "_commands/project/plan.md",
+    "_commands/project/toc.md",
+    "_commands/project/trace.md"
+  ],
+  "pki-query": [
+    "_commands/project/context.md"
+  ],
+  "auditing": [
+    "_commands/project/contracts.md",
+    "_commands/project/env_check.md",
+    "_commands/project/health.md",
+    "_commands/project/prompt_audit.md",
+    "_commands/project/review.md",
+    "_commands/project/scope.md"
+  ],
+  "code-review": [
+    "_commands/project/contracts.md",
+    "_commands/project/review.md",
+    "_commands/project/trace.md"
+  ],
+  "project-setup": [
+    "_commands/project/create_claude.md",
+    "_commands/project/initialize.md",
+    "_commands/project/scaffold.md"
+  ],
+  "claude-md-generation": [
+    "_commands/project/create_claude.md",
+    "_commands/project/scaffold.md"
+  ],
+  "env-config": [
+    "_commands/project/env_check.md"
+  ],
+  "health-check": [
+    "_commands/project/health.md"
+  ],
+  "initialization": [
+    "_commands/project/initialize.md"
+  ],
+  "instrumentation": [
+    "_commands/project/instrument.md"
+  ],
+  "pki-update": [
+    "_commands/project/learn_update.md"
+  ],
+  "pki-bootstrap": [
+    "_commands/project/learn.md",
+    "_commands/project/learn_update.md"
+  ],
+  "onboarding": [
+    "_commands/project/onboard.md"
+  ],
+  "swarm-analysis": [
+    "_commands/project/prompt_audit.md"
+  ],
+  "toc-management": [
+    "_commands/project/toc.md",
+    "_commands/project/toc_generate.md",
+    "_commands/project/toc_update.md"
+  ],
+  "incremental-update": [
+    "_commands/project/toc_update.md"
+  ],
+  "master-agent-definition": [
+    ".claude/agents/master-orchestrator.md"
+  ],
+  "agent-config": [
+    ".claude/agents/master-orchestrator.md",
+    ".claude/agents/swarm-worker.md"
+  ],
+  "worker-agent-definition": [
+    ".claude/agents/swarm-worker.md"
+  ],
+  "claude-code-settings": [
+    ".claude/settings.json"
+  ],
+  "hook-wiring": [
+    ".claude/settings.json"
+  ],
+  "migration-documentation": [
+    ".claude/MIGRATION.md",
+    ".claude/plan.md"
+  ],
+  "architecture-doc": [
+    ".claude/MIGRATION.md"
+  ],
+  "directory-readme": [
+    ".claude/README.md"
+  ],
+  "documentation": [
+    ".claude/README.md",
+    "documentation/README.md",
+    "documentation/architecture/directory-structure.md"
+  ],
+  "historical-plan": [
+    ".claude/plan.md"
+  ],
+  "dashboard-isolation": [
+    ".claude/hooks/enforce-dashboard-isolation-bash.sh",
+    ".claude/hooks/enforce-dashboard-isolation.sh"
+  ],
+  "agent-validation-hook": [
+    ".claude/hooks/enforce-dashboard-isolation-bash.sh",
+    ".claude/hooks/enforce-dashboard-isolation.sh",
+    ".claude/hooks/enforce-tracker-root-writes-bash.sh",
+    ".claude/hooks/enforce-tracker-root-writes.sh",
+    ".claude/hooks/validate-approval-gate.sh",
+    ".claude/hooks/validate-archive-before-clear.sh",
+    ".claude/hooks/validate-initialization-immutable.sh",
+    ".claude/hooks/validate-initialization-schema.sh",
+    ".claude/hooks/validate-log-entry.sh",
+    ".claude/hooks/validate-master-state.sh",
+    ".claude/hooks/validate-master-write.sh",
+    ".claude/hooks/validate-plan-required.sh",
+    ".claude/hooks/validate-progress-file.sh",
+    ".claude/hooks/validate-worker-prompt.sh",
+    ".claude/hooks/verify-final-report.sh"
+  ],
+  "tracker-root-enforcement": [
+    ".claude/hooks/enforce-tracker-root-writes-bash.sh",
+    ".claude/hooks/enforce-tracker-root-writes.sh"
+  ],
+  "annotation-staleness": [
+    ".claude/hooks/mark-annotation-stale.sh"
+  ],
+  "progress-file-validation": [
+    ".claude/hooks/nudge-progress-update.sh",
+    ".claude/hooks/validate-progress-file.sh",
+    ".claude/hooks/validate-progress-log-detail.sh"
+  ],
+  "worker-coaching": [
+    ".claude/hooks/nudge-progress-update.sh",
+    ".claude/hooks/validate-progress-log-detail.sh"
+  ],
+  "plan-gate": [
+    ".claude/hooks/validate-approval-gate.sh",
+    ".claude/hooks/validate-plan-required.sh"
+  ],
+  "approval-gate": [
+    ".claude/hooks/validate-approval-gate.sh",
+    "_commands/Synapse/p_track_plan.md"
+  ],
+  "archive-enforcement": [
+    ".claude/hooks/validate-archive-before-clear.sh"
+  ],
+  "data-preservation": [
+    ".claude/hooks/validate-archive-before-clear.sh"
+  ],
+  "initialization-write-once": [
+    ".claude/hooks/validate-initialization-immutable.sh"
+  ],
+  "initialization-schema-validation": [
+    ".claude/hooks/validate-initialization-schema.sh"
+  ],
+  "log-validation": [
+    ".claude/hooks/validate-log-entry.sh"
+  ],
+  "master-state-validation": [
+    ".claude/hooks/validate-master-state.sh"
+  ],
+  "master-write-gate": [
+    ".claude/hooks/validate-master-write.sh"
+  ],
+  "log-quality": [
+    ".claude/hooks/validate-progress-log-detail.sh"
+  ],
+  "worker-prompt-validation": [
+    ".claude/hooks/validate-worker-prompt.sh"
+  ],
+  "completion-verification": [
+    ".claude/hooks/verify-final-report.sh"
+  ],
+  "skill-definition": [
+    ".claude/skills/dashboard-ops/SKILL.md",
+    ".claude/skills/eager-dispatch/SKILL.md",
+    ".claude/skills/failure-protocol/SKILL.md",
+    ".claude/skills/master-plan-track/SKILL.md",
+    ".claude/skills/master-protocol/SKILL.md",
+    ".claude/skills/p-track-resume/SKILL.md",
+    ".claude/skills/p-track/SKILL.md",
+    ".claude/skills/p/SKILL.md",
+    ".claude/skills/project-workflow/SKILL.md",
+    ".claude/skills/worker-protocol/SKILL.md"
+  ],
+  "command-router": [
+    ".claude/skills/dashboard-ops/SKILL.md",
+    ".claude/skills/project-workflow/SKILL.md"
+  ],
+  "dashboard-ops": [
+    ".claude/skills/dashboard-ops/SKILL.md"
+  ],
+  "swarm-recovery": [
+    ".claude/skills/eager-dispatch/SKILL.md",
+    ".claude/skills/p-track-resume/SKILL.md"
+  ],
+  "multi-stream-orchestration": [
+    ".claude/skills/master-plan-track/SKILL.md"
+  ],
+  "agent-identity": [
+    ".claude/skills/master-protocol/SKILL.md"
+  ],
+  "swarm-resume": [
+    ".claude/skills/p-track-resume/SKILL.md"
+  ],
+  "primary-swarm-skill": [
+    ".claude/skills/p-track/SKILL.md"
+  ],
+  "lightweight-dispatch": [
+    ".claude/skills/p/SKILL.md",
+    "_commands/Synapse/p.md"
+  ],
+  "project-workflow": [
+    ".claude/skills/project-workflow/SKILL.md"
+  ],
+  "swarm-command": [
+    "_commands/Synapse/add_task.md",
+    "_commands/Synapse/cancel-safe.md",
+    "_commands/Synapse/cancel.md",
+    "_commands/Synapse/dispatch.md",
+    "_commands/Synapse/eager_dispatch.md",
+    "_commands/Synapse/p.md",
+    "_commands/Synapse/p_track.md",
+    "_commands/Synapse/p_track_plan.md",
+    "_commands/Synapse/p_track_resume.md",
+    "_commands/Synapse/retry.md",
+    "_commands/Synapse/track_resume.md"
+  ],
+  "parallel-dispatch": [
+    "_commands/Synapse/add_task.md",
+    "_commands/Synapse/p.md",
+    "_commands/Synapse/p_track.md"
+  ],
+  "dependency-rewiring": [
+    "_commands/Synapse/add_task.md"
+  ],
+  "cancellation": [
+    "_commands/Synapse/cancel-safe.md",
+    "_commands/Synapse/cancel.md"
+  ],
+  "graceful-shutdown": [
+    "_commands/Synapse/cancel-safe.md"
+  ],
+  "force-override": [
+    "_commands/Synapse/cancel.md"
+  ],
+  "dashboard-monitoring": [
+    "_commands/Synapse/deps.md",
+    "_commands/Synapse/export.md",
+    "_commands/Synapse/guide.md",
+    "_commands/Synapse/history.md",
+    "_commands/Synapse/inspect.md",
+    "_commands/Synapse/logs.md",
+    "_commands/Synapse/reset.md",
+    "_commands/Synapse/status.md",
+    "_commands/Synapse/update_dashboard.md"
+  ],
+  "graph-visualization": [
+    "_commands/Synapse/deps.md"
+  ],
+  "manual-dispatch": [
+    "_commands/Synapse/dispatch.md"
+  ],
+  "stall-recovery": [
+    "_commands/Synapse/eager_dispatch.md",
+    "_commands/Synapse/track_resume.md"
+  ],
+  "data-export": [
+    "_commands/Synapse/export.md"
+  ],
+  "post-mortem": [
+    "_commands/Synapse/export.md"
+  ],
+  "user-guidance": [
+    "_commands/Synapse/guide.md"
+  ],
+  "history-analytics": [
+    "_commands/Synapse/history.md"
+  ],
+  "post-swarm": [
+    "_commands/Synapse/history.md"
+  ],
+  "task-introspection": [
+    "_commands/Synapse/inspect.md"
+  ],
+  "log-filtering": [
+    "_commands/Synapse/logs.md"
+  ],
+  "multi-stream": [
+    "_commands/Synapse/master_plan_track.md"
+  ],
+  "meta-planning": [
+    "_commands/Synapse/master_plan_track.md"
+  ],
+  "queue-orchestration": [
+    "_commands/Synapse/master_plan_track.md"
+  ],
+  "plan-driven": [
+    "_commands/Synapse/p_track_plan.md"
+  ],
+  "dashboard-tracking": [
+    "_commands/Synapse/p_track.md"
+  ],
+  "project-configuration": [
+    "_commands/Synapse/project.md"
+  ],
+  "archival": [
+    "_commands/Synapse/reset.md"
+  ],
+  "housekeeping": [
+    "_commands/Synapse/reset.md"
+  ],
+  "chat-resumption": [
+    "_commands/Synapse/resume.md"
+  ],
+  "session-recovery": [
+    "_commands/Synapse/resume.md"
+  ],
+  "single-task-retry": [
+    "_commands/Synapse/retry.md"
+  ],
+  "server-control": [
+    "_commands/Synapse/start.md",
+    "_commands/Synapse/stop.md"
+  ],
+  "lifecycle": [
+    "_commands/Synapse/start.md",
+    "_commands/Synapse/stop.md"
+  ],
+  "swarm-summary": [
+    "_commands/Synapse/status.md"
+  ],
+  "visual-reporting": [
+    "_commands/Synapse/update_dashboard.md"
+  ],
+  "dashboard-ui": [
+    "documentation/dashboard/components.md",
+    "documentation/dashboard/hooks.md",
+    "documentation/dashboard/layout-modes.md",
+    "documentation/dashboard/overview.md",
+    "documentation/dashboard/state-management.md",
+    "documentation/dashboard/styling.md"
+  ],
+  "electron": [
+    "documentation/dashboard/hooks.md",
+    "documentation/electron/configuration.md",
+    "documentation/electron/ipc-reference.md",
+    "documentation/electron/overview.md",
+    "documentation/electron/services.md",
+    "documentation/electron/update-on-master.md",
+    "documentation/git-manager/ipc-handlers.md",
+    "documentation/ide/ipc-handlers.md"
+  ],
+  "ide": [
+    "documentation/ide/components.md",
+    "documentation/ide/ipc-handlers.md",
+    "documentation/ide/overview.md"
+  ],
+  "server": [
+    "documentation/server/api-reference.md",
+    "documentation/server/configuration.md",
+    "documentation/server/overview.md",
+    "documentation/server/services.md",
+    "documentation/server/sse-events.md"
+  ],
+  "command-docs": [
+    "documentation/commands/creating-commands.md",
+    "documentation/commands/overview.md",
+    "documentation/commands/project-commands.md",
+    "documentation/commands/swarm-commands.md"
+  ],
+  "project-integration-docs": [
+    "documentation/commands/project-commands.md",
+    "documentation/project-integration/conventions.md",
+    "documentation/project-integration/overview.md",
+    "documentation/project-integration/pki-overview.md",
+    "documentation/project-integration/project-setup.md",
+    "documentation/project-integration/toc-system.md"
+  ],
+  "configuration-docs": [
+    "documentation/configuration/electron-config.md",
+    "documentation/configuration/overview.md",
+    "documentation/configuration/server-config.md",
+    "documentation/configuration/theming.md"
+  ],
+  "profile-docs": [
+    "documentation/profiles/available-profiles.md",
+    "documentation/profiles/overview.md"
+  ],
+  "pki-docs": [
+    "documentation/project-integration/pki-overview.md"
+  ],
+  "troubleshooting-docs": [
+    "documentation/troubleshooting/common-issues.md",
+    "documentation/troubleshooting/faq.md"
+  ],
+  "release-notes": [
+    "documentation/final_reports/04-18-2026_updates.md",
+    "documentation/reports/claude_restructure_report.md"
+  ],
+  "marketing-posts": [
+    "documentation/posts/linkedin-synapse-introduction.md"
+  ],
+  "navigation": [
+    "documentation/README.md"
+  ],
+  "architecture": [
+    "documentation/architecture/data-flow.md",
+    "documentation/architecture/directory-structure.md",
+    "documentation/architecture/overview.md",
+    "documentation/multi-dashboard/overview.md"
+  ],
+  "data-flow": [
+    "documentation/architecture/data-flow.md"
+  ],
+  "master-agent": [
+    "documentation/master-agent/dispatch-protocol.md",
+    "documentation/master-agent/overview.md",
+    "documentation/master-agent/planning.md",
+    "documentation/master-agent/statusing.md"
+  ],
+  "dispatch": [
+    "documentation/master-agent/dispatch-protocol.md",
+    "documentation/swarm-lifecycle/dispatch-phase.md"
+  ],
+  "monitoring": [
+    "documentation/master-agent/statusing.md",
+    "documentation/swarm-lifecycle/monitoring-phase.md"
+  ],
+  "deviations": [
+    "documentation/worker-protocol/deviations.md"
+  ],
+  "progress": [
+    "documentation/worker-protocol/progress-reporting.md"
+  ],
+  "dependencies": [
+    "documentation/worker-protocol/upstream-results.md"
+  ],
+  "swarm-lifecycle": [
+    "documentation/swarm-lifecycle/circuit-breaker.md",
+    "documentation/swarm-lifecycle/completion-phase.md",
+    "documentation/swarm-lifecycle/dispatch-phase.md",
+    "documentation/swarm-lifecycle/monitoring-phase.md",
+    "documentation/swarm-lifecycle/overview.md",
+    "documentation/swarm-lifecycle/planning-phase.md"
+  ],
+  "completion": [
+    "documentation/swarm-lifecycle/completion-phase.md"
+  ],
+  "schema": [
+    "documentation/data-architecture/initialization-json.md",
+    "documentation/data-architecture/logs-json.md",
+    "documentation/data-architecture/pki-schemas.md",
+    "documentation/data-architecture/progress-files.md",
+    "documentation/data-architecture/xml-task-files.md"
+  ],
+  "pki": [
+    "documentation/data-architecture/pki-schemas.md"
+  ],
+  "multi-dashboard": [
+    "documentation/multi-dashboard/archive-history.md",
+    "documentation/multi-dashboard/dashboard-selection.md",
+    "documentation/multi-dashboard/overview.md",
+    "documentation/multi-dashboard/queue-system.md"
+  ],
+  "preservation": [
+    "documentation/multi-dashboard/archive-history.md"
+  ],
+  "selection": [
+    "documentation/multi-dashboard/dashboard-selection.md"
+  ],
+  "queue": [
+    "documentation/multi-dashboard/queue-system.md"
+  ]
+}

@@ -1,6 +1,8 @@
 # IPC Channels and Handlers Reference
 
-This document provides a complete reference of every IPC channel in Synapse's Electron app. All IPC communication flows through the `window.electronAPI` context bridge defined in `electron/preload.js` (248 lines), with handlers registered in `electron/ipc-handlers.js` (~2925 lines). There are **26 push event channels** and **~140 pull request handlers** organized into 17+ handler groups.
+This document provides a complete reference of every IPC channel in Synapse's Electron app. All IPC communication flows through the `window.electronAPI` context bridge defined in `electron/preload.js` (248 lines), with handlers registered in `electron/ipc-handlers.js` (~2925 lines). There are **27 push event channels** and **~140 pull request handlers** organized into 17+ handler groups.
+
+> **Chat-specific IPC details:** For comprehensive documentation of the Chat system's IPC usage (including message flow, session lifecycle, and permission relay), see [documentation/chat/ipc-handlers.md](../chat/ipc-handlers.md).
 
 ---
 
@@ -19,7 +21,7 @@ Synapse uses two IPC patterns:
 
 Push events are initiated by the main process (typically from file watchers or worker process events) and delivered to the renderer. The preload script whitelists allowed channels.
 
-### Channel Whitelist (26 channels)
+### Channel Whitelist (27 channels)
 
 ```javascript
 const PUSH_CHANNELS = [
@@ -49,6 +51,7 @@ const PUSH_CHANNELS = [
   'preview-edit-request',
   'settings-changed',
   'update-status',
+  'chat_dashboard_changed',
 ];
 ```
 
@@ -365,6 +368,18 @@ Fired whenever the auto-update state changes (checking, downloading, downloaded,
 }
 ```
 
+#### `chat_dashboard_changed`
+
+Fired when any file changes inside a `dashboards/chat-agent-*` directory. A dedicated watcher (`startChatDashboardWatcher()`) monitors the dashboards directory, filters for `chat-agent-` prefixed subdirectories, and debounces at 200ms.
+
+```javascript
+{
+  timestamp: 1711123456789   // Date.now() at broadcast time
+}
+```
+
+Used by `ChatDashboardView` to live-refresh agent task lanes when workers write progress files.
+
 ---
 
 ## Pull Requests (Renderer -> Main)
@@ -550,6 +565,18 @@ Copies the full dashboard directory to `Archive/{YYYY-MM-DD}_{taskName}/`, then 
 | `getChatSystemPrompt(projectDir, dashboardId, additionalContextDirs)` | `get-chat-system-prompt` | Build system prompt with directory refs + Synapse CLAUDE.md + project CLAUDE.md |
 | `logChatEvent(dashboardId, entry)` | `log-chat-event` | Append an event to a dashboard's `logs.json` |
 
+### Chat Agent Handlers
+
+| Renderer API | IPC Channel | Description |
+|---|---|---|
+| `getChatDashboardData()` | `get-chat-dashboard-data` | Read all `chat-agent-*` dashboards and return aggregated agent lanes |
+| `createChatAgent(opts)` | `create-chat-agent` | Create a new chat agent (directory structure + dashboard) |
+| `deleteChatAgent(agentHex)` | `delete-chat-agent` | Remove a chat agent's on-disk directories |
+
+These handlers manage the Chat page's multi-agent system. Each chat agent gets a unique 4-hex identifier and its own `dashboards/chat-agent-{hex}/` directory with progress files, plus a `Chat/chat{N}/agent{hex}/` directory for agent-local state.
+
+For complete documentation of these handlers including parameters, return types, and side effects, see [documentation/chat/ipc-handlers.md](../chat/ipc-handlers.md).
+
 ### Attachment Handlers
 
 | Renderer API | IPC Channel | Description |
@@ -630,12 +657,14 @@ Routes to `ClaudeCodeService.spawnWorker()` or `CodexService.spawnWorker()` base
 
 | Renderer API | IPC Channel | Handler Service | Description |
 |---|---|---|---|
-| `listConversations(dashboardId)` | `list-conversations` | ConversationService | List conversations (optional dashboard filter) |
+| `listConversations(dashboardId, surface)` | `list-conversations` | ConversationService | List conversations (optional dashboard + surface filter) |
 | `loadConversation(filename)` | `load-conversation` | ConversationService | Load full conversation by ID |
 | `saveConversation(conv)` | `save-conversation` | ConversationService | Save conversation to disk |
 | `createConversation(name)` | `create-conversation` | ConversationService | Create a new named conversation |
 | `deleteConversation(filename)` | `delete-conversation` | ConversationService | Delete a conversation file |
 | `renameConversation(filename, newName)` | `rename-conversation` | ConversationService | Rename a conversation |
+
+The `surface` parameter on `listConversations` filters by conversation surface type (`'chat'` or `'code'`). Legacy conversations without a surface field default to `'code'`.
 
 ### Terminal Handlers
 

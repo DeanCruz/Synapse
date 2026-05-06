@@ -140,6 +140,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   logChatEvent: (dashboardId, entry) => ipcRenderer.invoke('log-chat-event', dashboardId, entry),
   getChatDashboardData: () => ipcRenderer.invoke('get-chat-dashboard-data'),
   createChatAgent: (opts) => ipcRenderer.invoke('create-chat-agent', opts || {}),
+  deleteChatAgent: (agentHex) => ipcRenderer.invoke('delete-chat-agent', agentHex),
 
   // Attachments
   saveTempImages: (attachments) => ipcRenderer.invoke('save-temp-images', attachments),
@@ -166,6 +167,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   cancelSwarm: (dashboardId) => ipcRenderer.invoke('cancel-swarm', dashboardId),
   retryTask: (dashboardId, taskId) => ipcRenderer.invoke('retry-task', dashboardId, taskId),
   getSwarmStates: () => ipcRenderer.invoke('get-swarm-states'),
+  extractSwarmKnowledge: (dashboardId, projectPath) => ipcRenderer.invoke('extract-swarm-knowledge', dashboardId, projectPath),
 
   // Conversation management
   listConversations: (dashboardId, surface) => ipcRenderer.invoke('list-conversations', dashboardId, surface),

@@ -1,0 +1,28 @@
+{
+  "id": "337273d9",
+  "concept": "tracker-vs-project-root",
+  "binding": {
+    "globs": [
+      ".claude/hooks/enforce-tracker-root-writes*.sh",
+      ".claude/hooks/validate-master-write.sh",
+      "agent/worker/progress_reporting.md",
+      "agent/instructions/dashboard_resolution.md",
+      "documentation/troubleshooting/common-issues.md"
+    ],
+    "symbols": [
+      "tracker_root",
+      "project_root",
+      "SYNAPSE_PROJECT_ROOT"
+    ]
+  },
+  "gotcha": "tracker_root (Synapse repo) and project_root (target project) are distinct locations. Code work happens in {project_root}; dashboard files (initialization.json, logs.json, master_state.json, metrics.json, progress/*.json) MUST live under {tracker_root}/dashboards/. Workers must use the absolute progress path the master provides — never construct relative dashboards/ paths from CWD. The master agent is blocked from writing to {project_root} during an active swarm; instead it must dispatch a worker task. When tracker_root == project_root (Synapse self-targeting), the gates self-bypass.",
+  "severity": "error",
+  "source_annotations": [
+    "36fb96ac",
+    "c09917b8",
+    "207e2d52",
+    "4b460f21",
+    "8169a6b6"
+  ],
+  "created_at": "2026-05-06T03:36:48Z"
+}

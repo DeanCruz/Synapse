@@ -10,6 +10,10 @@
           },
           {
             "type": "command",
+            "command": ".claude/hooks/enforce-instance-type.sh"
+          },
+          {
+            "type": "command",
             "command": ".claude/hooks/enforce-tracker-root-writes.sh"
           },
           {
@@ -44,6 +48,15 @@
         ]
       },
       {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/validate-wave-lifecycle.sh"
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
@@ -62,6 +75,15 @@
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/enforce-command-compliance.sh"
+          }
+        ]
+      },
       {
         "matcher": "Write",
         "hooks": [
@@ -84,6 +106,10 @@
           {
             "type": "command",
             "command": ".claude/hooks/validate-master-state.sh"
+          },
+          {
+            "type": "command",
+            "command": ".claude/hooks/validate-chat-dashboard.sh"
           }
         ]
       },

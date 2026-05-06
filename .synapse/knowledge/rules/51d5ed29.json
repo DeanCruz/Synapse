@@ -1,0 +1,27 @@
+{
+  "id": "51d5ed29",
+  "concept": "atomic-json-writes",
+  "binding": {
+    "globs": [
+      "src/server/**/*.js",
+      "electron/**/*.js",
+      "dashboards/**/*.json",
+      ".synapse/knowledge/**/*.json"
+    ],
+    "symbols": [
+      "writeAtomic",
+      "writeAtomicAsync",
+      "writeJSON"
+    ]
+  },
+  "gotcha": "All JSON writes that other processes may read must be atomic. Use writeAtomic / writeAtomicAsync (write to <path>.tmp then rename) — never partial appends or read-modify-write cycles. Build the full document in memory and overwrite. Non-atomic writes race against fs.watch consumers and produce mid-write JSON parse errors; cross-filesystem renames fall back to copy+delete and break atomicity, so keep all PKI/dashboard writes inside ROOT.",
+  "severity": "error",
+  "source_annotations": [
+    "cb3ed7b7",
+    "e7242712",
+    "d169fdd8",
+    "27b0bb1a",
+    "8169a6b6"
+  ],
+  "created_at": "2026-05-06T03:36:48Z"
+}

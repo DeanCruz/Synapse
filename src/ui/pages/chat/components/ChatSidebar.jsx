@@ -1,24 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 import ProjectModal from '@/shared/modals/ProjectModal.jsx';
-import { saveDashboardProject, clearDashboardProject, getDashboardProject } from '@/utils/dashboardProjects.js';
-
-function getChatProjectName(agentHex) {
-  if (!agentHex) return null;
-  const projectPath = getDashboardProject('chat-agent-' + agentHex);
-  if (!projectPath) return null;
-  const parts = projectPath.replace(/\/+$/, '').split('/');
-  return parts[parts.length - 1] || null;
-}
+import { saveDashboardProject } from '@/utils/dashboardProjects.js';
 
 export default function ChatSidebar() {
   const {
     chatActiveView,
     chatTabs,
     chatActiveTabId,
-    currentDashboardId,
-    claudeIsProcessing,
-    claudeProcessingStash,
+    chatClaudeDashboardId,
+    chatClaudeIsProcessing,
+    chatClaudeProcessingStash,
     unreadChatCounts,
   } = useAppState();
   const dispatch = useDispatch();
@@ -26,29 +18,14 @@ export default function ChatSidebar() {
   const [editingId, setEditingId] = useState(null);
   const [editingName, setEditingName] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
-  // New-chat flow:
-  //   1. user clicks New chat -> projectPromptOpen=true (Yes/No popup)
-  //   2. Yes -> projectModalOpen=true; project picks accumulate in pickedProjectRef
-  //      No  -> finalize immediately with no project
-  //   3. ProjectModal close -> finalize using whatever was picked (or none)
-  const [projectPromptOpen, setProjectPromptOpen] = useState(false);
   const [projectModalOpen, setProjectModalOpen] = useState(false);
-  // Tab-id of the chat whose settings (project picker) modal is open, or null.
-  // Distinct from projectModalOpen which is reserved for the new-chat flow.
   const [settingsTabId, setSettingsTabId] = useState(null);
-  // Tab-id of the chat whose action dropdown menu is open, or null.
   const [menuOpenTabId, setMenuOpenTabId] = useState(null);
   const menuRef = useRef(null);
-  // Tab being renamed via the popup (distinct from the inline double-click edit).
   const [renameTabId, setRenameTabId] = useState(null);
   const [renamePopupValue, setRenamePopupValue] = useState('');
-  // Pseudo-id used by ProjectModal's localStorage helpers when this chat has no
-  // disk path yet. Resolved before opening the modal so onProjectSelected can
-  // key off it deterministically.
   const pendingChatKeyRef = useRef(null);
   const pickedProjectRef = useRef(null);
-  // Tracks whether the user clicked Save (vs Cancel/X) inside ProjectModal.
-  // Cancel must NOT carry over the most-recently-clicked project; Save must.
   const projectSavedRef = useRef(false);
 
   useEffect(() => {
@@ -72,19 +49,15 @@ export default function ChatSidebar() {
   const isMakeActive = chatActiveView === 'make';
   const isChatInstanceActive = chatActiveView === 'chat-instance';
 
-  // Step 1 — open the Yes/No popup. The actual chat/agent creation happens in
-  // finalizeNewChat once the user has answered (and optionally picked a project).
-  const handleNewChat = useCallback(() => {
+  // --- New Project flow ---
+  const handleNewProject = useCallback(() => {
     pickedProjectRef.current = null;
     projectSavedRef.current = false;
     pendingChatKeyRef.current = 'pending-chat-' + Date.now();
-    setProjectPromptOpen(true);
+    setProjectModalOpen(true);
   }, []);
 
-  // Step 3 — actually create the chat. Calls the IPC to allocate a unique
-  // 4-hex agent and create the on-disk Chat/chat{N}/agent{XXXX}/ folder, then
-  // dispatches CHAT_TAB_CREATE so the sidebar shows the new tab.
-  const finalizeNewChat = useCallback(async (projectPath) => {
+  const finalizeNewProject = useCallback(async (projectPath) => {
     let chatNumber = null;
     let agentHex = null;
     const api = window.electronAPI;
@@ -97,16 +70,8 @@ export default function ChatSidebar() {
         console.error('createChatAgent failed:', err);
       }
     }
-    // Persist the project at the chat-agent's real dashboard key so the chat
-    // header badge and message-spawn lookups resolve to the correct project.
-    // The pending-chat-XXX key the modal wrote to is orphaned by design.
-    if (agentHex) {
-      const realKey = 'chat-agent-' + agentHex;
-      if (projectPath) {
-        saveDashboardProject(realKey, projectPath);
-      } else {
-        clearDashboardProject(realKey);
-      }
+    if (agentHex && projectPath) {
+      saveDashboardProject('chat-agent-' + agentHex, projectPath);
     }
     dispatch({ type: 'CHAT_TAB_CREATE', chatNumber, agentHex, projectPath: projectPath || null });
     pickedProjectRef.current = null;
@@ -114,19 +79,6 @@ export default function ChatSidebar() {
     pendingChatKeyRef.current = null;
   }, [dispatch]);
 
-  const handleProjectPromptYes = useCallback(() => {
-    setProjectPromptOpen(false);
-    setProjectModalOpen(true);
-  }, []);
-
-  const handleProjectPromptNo = useCallback(() => {
-    setProjectPromptOpen(false);
-    finalizeNewChat(null);
-  }, [finalizeNewChat]);
-
-  // The modal calls onSave (Save click) THEN onClose, or onClose alone (Cancel/X).
-  // onSave stages the picked project; onClose performs the actual finalize using
-  // the staged value when saved, or null when cancelled.
   const handleProjectModalSave = useCallback((project) => {
     pickedProjectRef.current = project && project.path ? project.path : null;
     projectSavedRef.current = true;
@@ -135,17 +87,16 @@ export default function ChatSidebar() {
   const handleProjectModalClose = useCallback(() => {
     setProjectModalOpen(false);
     const projectPath = projectSavedRef.current ? pickedProjectRef.current : null;
-    finalizeNewChat(projectPath);
-  }, [finalizeNewChat]);
+    if (projectPath) {
+      finalizeNewProject(projectPath);
+    }
+  }, [finalizeNewProject]);
 
   const handleProjectSelected = useCallback((project) => {
-    if (project && project.path) {
-      pickedProjectRef.current = project.path;
-    } else {
-      pickedProjectRef.current = null;
-    }
+    pickedProjectRef.current = project?.path || null;
   }, []);
 
+  // --- Tab navigation ---
   const handleSwitchTab = useCallback((tabId) => {
     if (tabId !== chatActiveTabId || !isChatInstanceActive) {
       dispatch({ type: 'CHAT_TAB_SWITCH', tabId });
@@ -156,11 +107,24 @@ export default function ChatSidebar() {
     setSettingsTabId(null);
   }, []);
 
-  const performDelete = useCallback((tabId) => {
+  // --- Delete (cleans up ALL subtab agents) ---
+  const performDelete = useCallback(async (tabId) => {
+    const tab = chatTabs.find(t => t.id === tabId);
+    if (tab?.subtabs) {
+      const api = window.electronAPI;
+      if (api && typeof api.deleteChatAgent === 'function') {
+        for (const sub of tab.subtabs) {
+          if (sub.agentHex) {
+            try { await api.deleteChatAgent(sub.agentHex); } catch (e) { /* */ }
+          }
+        }
+      }
+    }
     dispatch({ type: 'CHAT_TAB_DELETE', tabId });
     setDeleteConfirmId(null);
-  }, [dispatch]);
+  }, [chatTabs, dispatch]);
 
+  // --- Rename ---
   const handleRenameStart = useCallback((e, tab) => {
     e.stopPropagation();
     if (collapsed) return;
@@ -199,6 +163,22 @@ export default function ChatSidebar() {
     }
     closeRenamePopup();
   }, [renamingTab, renamePopupValue, dispatch, closeRenamePopup]);
+
+  // --- Aggregate status across subtabs for a project tab ---
+  function getProjectStatus(tab) {
+    let anyProcessing = false;
+    let totalUnread = 0;
+    for (const sub of (tab.subtabs || [])) {
+      const ctxId = sub.agentHex ? 'chat-agent-' + sub.agentHex : null;
+      if (!ctxId) continue;
+      if (ctxId === chatClaudeDashboardId
+        ? chatClaudeIsProcessing
+        : !!chatClaudeProcessingStash?.[ctxId]?.isProcessing
+      ) anyProcessing = true;
+      totalUnread += unreadChatCounts?.[ctxId] || 0;
+    }
+    return { anyProcessing, totalUnread };
+  }
 
   return (
     <aside className={`dashboard-sidebar chat-sidebar${collapsed ? ' collapsed' : ''}`}>
@@ -249,16 +229,16 @@ export default function ChatSidebar() {
         <div className="sidebar-tab-row">
           <button
             className="sidebar-tab chat-new-tab-btn"
-            title="New chat"
-            aria-label="New chat"
-            onClick={handleNewChat}
+            title="New project"
+            aria-label="New project"
+            onClick={handleNewProject}
           >
             <span className="sidebar-tab-icon">
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none">
-                <path d="M2 3h12v8H6l-4 3v-3H2V3z" stroke="currentColor" strokeWidth="1.4"/>
+                <path d="M2 4h5l2-2h5v10H2V4z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
               </svg>
             </span>
-            <span className="sidebar-tab-label">New chat</span>
+            <span className="sidebar-tab-label">New project</span>
             <span className="chat-new-tab-plus" aria-hidden>
               <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
                 <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
@@ -268,26 +248,16 @@ export default function ChatSidebar() {
         </div>
       </div>
 
-      {/* Chat tab list */}
+      {/* Project tab list */}
       <div className="dashboard-list">
         {chatTabs.map(tab => {
           const isActive = isChatInstanceActive && tab.id === chatActiveTabId;
-          const projectName = getChatProjectName(tab.agentHex);
+          const { anyProcessing, totalUnread } = getProjectStatus(tab);
+          const subtabCount = (tab.subtabs || []).length;
 
-          // Compute chat status dot state for this tab.
-          // Grey (idle): not responding and no unread.
-          // Pulsing purple (responding): assistant is currently streaming.
-          // Green (unread): assistant has finished and the chat hasn't been opened yet.
-          const dashId = tab.agentHex ? 'chat-agent-' + tab.agentHex : null;
-          const isChatProcessing = dashId
-            ? (dashId === currentDashboardId
-                ? claudeIsProcessing
-                : !!claudeProcessingStash?.[dashId]?.isProcessing)
-            : false;
-          const unreadCount = dashId ? (unreadChatCounts?.[dashId] || 0) : 0;
           let chatStatusClass = 'chat-idle';
-          if (isChatProcessing) chatStatusClass = 'chat-processing';
-          else if (unreadCount > 0) chatStatusClass = 'chat-unread';
+          if (anyProcessing) chatStatusClass = 'chat-processing';
+          else if (totalUnread > 0) chatStatusClass = 'chat-unread';
 
           return (
             <div
@@ -303,7 +273,7 @@ export default function ChatSidebar() {
                   className={`chat-tab-status-dot ${chatStatusClass}`}
                   aria-hidden
                   title={
-                    chatStatusClass === 'chat-processing' ? 'Responding…'
+                    chatStatusClass === 'chat-processing' ? 'Responding...'
                     : chatStatusClass === 'chat-unread' ? 'New messages'
                     : 'Idle'
                   }
@@ -335,8 +305,8 @@ export default function ChatSidebar() {
                   )}
                   {editingId !== tab.id && (
                     <span
-                      className={`chat-tab-bubble${unreadCount > 0 ? ' chat-unread' : ''}`}
-                      title={unreadCount > 0 ? `${unreadCount} new message${unreadCount !== 1 ? 's' : ''}` : undefined}
+                      className={`chat-tab-bubble${totalUnread > 0 ? ' chat-unread' : ''}`}
+                      title={totalUnread > 0 ? `${totalUnread} new message${totalUnread !== 1 ? 's' : ''}` : undefined}
                       aria-hidden
                     >
                       <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
@@ -345,23 +315,17 @@ export default function ChatSidebar() {
                         <circle cx="8" cy="7" r="0.8" fill="currentColor"/>
                         <circle cx="10.5" cy="7" r="0.8" fill="currentColor"/>
                       </svg>
-                      {unreadCount > 0 && (
-                        <span className="chat-action-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                      {totalUnread > 0 && (
+                        <span className="chat-action-badge">{totalUnread > 99 ? '99+' : totalUnread}</span>
                       )}
                     </span>
                   )}
                 </div>
                 <div className="chat-tab-bottom-row">
                   {editingId !== tab.id && (
-                    projectName ? (
-                      <span className="chat-tab-project-badge" title={projectName}>
-                        {projectName}
-                      </span>
-                    ) : (
-                      <span className="chat-tab-project-badge no-project" title="No project">
-                        No project
-                      </span>
-                    )
+                    <span className="chat-tab-project-badge" title={`${subtabCount} chat${subtabCount !== 1 ? 's' : ''}`}>
+                      {subtabCount} chat{subtabCount !== 1 ? 's' : ''}
+                    </span>
                   )}
                   {editingId !== tab.id && !collapsed && (
                     <div
@@ -370,7 +334,7 @@ export default function ChatSidebar() {
                     >
                       <button
                         className="dashboard-item-action-btn chat-settings-btn"
-                        title="Chat actions"
+                        title="Project actions"
                         onClick={(e) => {
                           e.stopPropagation();
                           setMenuOpenTabId(prev => prev === tab.id ? null : tab.id);
@@ -426,35 +390,7 @@ export default function ChatSidebar() {
         })}
       </div>
 
-      {/* Associate-project popup — shown after clicking New chat */}
-      {projectPromptOpen && (
-        <div className="sidebar-delete-overlay" onClick={handleProjectPromptNo}>
-          <div className="sidebar-delete-popup" onClick={e => e.stopPropagation()}>
-            <div className="sidebar-delete-popup-title">Associate a Project?</div>
-            <p className="sidebar-delete-popup-text">
-              Would you like to associate a project with this new chat? You can change this later.
-            </p>
-            <div className="sidebar-delete-popup-actions">
-              <button
-                className="sidebar-delete-popup-btn archive"
-                onClick={handleProjectPromptYes}
-              >
-                Yes
-              </button>
-              <button
-                className="sidebar-delete-popup-btn cancel"
-                onClick={handleProjectPromptNo}
-              >
-                No
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Project picker — same modal the code tab uses. The chat-tab pseudo-id
-          is supplied so ProjectModal's localStorage helpers don't collide
-          with any existing dashboard's settings. */}
+      {/* Project picker modal — opens when creating a new project tab */}
       {projectModalOpen && (
         <ProjectModal
           onClose={handleProjectModalClose}
@@ -465,12 +401,11 @@ export default function ChatSidebar() {
         />
       )}
 
-      {/* Per-chat settings — opens the project picker for an existing chat
-          using its real chat-agent-XXXX dashboard key so the modal loads
-          and persists the right project. ProjectModal handles save itself. */}
+      {/* Per-project settings — uses the active subtab's dashboard key */}
       {settingsTabId && (() => {
         const tab = chatTabs.find(t => t.id === settingsTabId);
-        const dashId = tab && tab.agentHex ? 'chat-agent-' + tab.agentHex : settingsTabId;
+        const activeSub = tab?.subtabs?.find(s => s.id === tab.activeSubTabId) || tab?.subtabs?.[0];
+        const dashId = activeSub?.agentHex ? 'chat-agent-' + activeSub.agentHex : settingsTabId;
         return (
           <ProjectModal
             onClose={handleSettingsModalClose}
@@ -479,13 +414,13 @@ export default function ChatSidebar() {
         );
       })()}
 
-      {/* Rename popup — renames only the sidebar tab label, nothing else. */}
+      {/* Rename popup */}
       {renamingTab && (
         <div className="sidebar-delete-overlay" onClick={closeRenamePopup}>
           <div className="sidebar-delete-popup" onClick={e => e.stopPropagation()}>
-            <div className="sidebar-delete-popup-title">Rename Chat</div>
+            <div className="sidebar-delete-popup-title">Rename Project</div>
             <p className="sidebar-delete-popup-text">
-              Enter a new name for this chat tab.
+              Enter a new name for this project tab.
             </p>
             <input
               className="sidebar-rename-popup-input"
@@ -519,9 +454,9 @@ export default function ChatSidebar() {
       {deletingTab && (
         <div className="sidebar-delete-overlay" onClick={() => setDeleteConfirmId(null)}>
           <div className="sidebar-delete-popup" onClick={e => e.stopPropagation()}>
-            <div className="sidebar-delete-popup-title">Delete Chat?</div>
+            <div className="sidebar-delete-popup-title">Delete Project?</div>
             <p className="sidebar-delete-popup-text">
-              Delete <strong>{deletingTab.name}</strong>? This cannot be undone.
+              Delete <strong>{deletingTab.name}</strong> and all its chats? This cannot be undone.
             </p>
             <div className="sidebar-delete-popup-actions">
               <button
