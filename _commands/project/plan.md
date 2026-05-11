@@ -23,7 +23,7 @@ Use this when you want to understand the full scope of a change before committin
 
 ### Step 1: Gather Context
 
-1. Read `{project_root}/.synapse/toc.md` to identify relevant directories and files
+1. Query `{project_root}/.synapse/knowledge/` to identify relevant directories, files, domains, and relationships
 2. Read the project's `CLAUDE.md` for architecture and conventions
 3. Use Grep/Glob to find all files related to the task
 4. Read the key files to understand current implementation

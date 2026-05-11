@@ -1,0 +1,51 @@
+{
+  "file": "src/ui/shared/ModeMenu.jsx",
+  "content_hash": "4f233d88",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "ModeMenu React component in the Synapse renderer, responsible for the shared UI portion of the desktop control plane.",
+  "exports": [
+    {
+      "name": "ModeMenu",
+      "kind": "component",
+      "signature": "default function ModeMenu(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext"
+    ],
+    "depended_by": [
+      "src/ui/shared/Header.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-ui"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer"
+  ],
+  "complexity": "simple"
+}

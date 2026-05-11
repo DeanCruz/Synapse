@@ -1,8 +1,8 @@
 {
   "file": "src/server/routes/apiRoutes.js",
   "content_hash": "3c98874a",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.408Z",
+  "annotated_by": "learn-update",
   "purpose": "Single function `handleApiRoute(req, res, url)` containing every REST API endpoint handler for the dashboard server, dispatched as a sequential cascade of `if (url.pathname === ... && req.method === ...)` branches. Returns `true` if a route was matched and a response sent, `false` to let the caller fall through to 404. Endpoints cover: dashboard CRUD (`GET/POST /api/dashboards`, `DELETE /api/dashboards/:id`), per-dashboard data reads (`/initialization`, `/logs`, `/progress`, `/dispatchable`, `/metrics`, `/export`), per-dashboard mutations (`POST /archive`, `POST /save-history`, `POST /clear`), aggregate views (`/api/dashboards/statuses`, `/api/overview`), archive listing/reading/deletion, history list + analytics, and queue list + per-item read. Path parameters are validated through `sanitizePathParam` (max 100 chars, no `..`, no slashes/backslashes, must match `^[a-zA-Z0-9_][a-zA-Z0-9_.\\-]*$`) before any filesystem operation — a path-traversal hard stop. The status-derivation logic is duplicated between `/api/dashboards/statuses` and `/api/overview` (allDone + hasFailed + hasInProgress booleans + `totalTasks > progressValues.length`). Mutating endpoints (archive, clear, save-history) are intentionally synchronous (`fs.writeFileSync`, `copyDirSync`) for atomicity within the request lifecycle.",
   "exports": [
     {
@@ -121,5 +121,6 @@
     "validation",
     "javascript",
     "fs"
-  ]
+  ],
+  "complexity": "complex"
 }

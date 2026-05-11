@@ -1,8 +1,8 @@
 {
   "file": "src/server/services/DashboardService.js",
   "content_hash": "7e9a65ef",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.408Z",
+  "annotated_by": "learn-update",
   "purpose": "The canonical accessor layer for dashboard directory layout and on-disk state. Owns getDashboardDir(id) (path joining), ensureDashboard(id) (idempotent dir + default JSON bootstrap), sync+async readers for initialization.json/logs.json/progress/*.json, clearDashboardProgress(id) (deletes progress files only), listDashboards() (returns sorted dashboards/* dirs that have an initialization.json — the validity gate), nextDashboardId() (3-byte hex via crypto.randomBytes with collision retry against listDashboards), copyDirSync (used by ArchiveService for archive copies), deleteDashboard (recursive rmSync), getDashboardCreationTime (birthtime/ctime fallback), and getFullDashboardState (composite read). All other server services build on top of this module — it is the abstraction boundary between filesystem and consumers.",
   "exports": [
     {
@@ -153,5 +153,6 @@
     "filesystem",
     "json-io",
     "atomic-write"
-  ]
+  ],
+  "complexity": "moderate"
 }

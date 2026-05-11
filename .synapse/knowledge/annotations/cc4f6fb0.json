@@ -1,46 +1,45 @@
 {
   "file": "_commands/profiles/customer-success.md",
   "content_hash": "7b723ade",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Customer Success Lead role: SaaS onboarding, retention, health scoring, churn prevention, and expansion revenue. Biases the worker toward time-to-value acceleration, proactive intervention via health scores, scalable playbooks (vs. one-off heroics), outcome alignment with customer goals, and usage-driven expansion signals. A master assigns this profile for tasks producing onboarding playbooks, health score frameworks, customer-segment-specific email templates, churn prevention strategies, or QBR/check-in scripts. Forces phased onboarding designs (Day 1-7, 8-30, 31-90) with measurable milestones.",
-  "exports": [],
+  "purpose": "Profile definition for `customer-success`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Head of Customer Success specializing in SaaS onboarding, retention, health scoring, churn prevention, and expansion revenue. Thinks in terms of time-to-value, adoption milestones, and customer lifetime value. Every output is designed to make customers successful so they stay and grow. The file is 53 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "customer-success",
+      "kind": "profile",
+      "signature": "!customer-success profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Profile rejects 'logged in' as engagement and 'just checking in' templates — workers will refuse generic CS deliverables.",
-    "Demands segmentation by size/use-case/maturity; do not request a 'one-size-fits-all' onboarding flow.",
-    "Insists churn playbooks be grounded in actual churn data — if none exists, the worker will flag the gap rather than invent reasons."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Standard profile spine.",
-    "Onboarding playbook structure: Segment → Success Milestones → Phase 1 (Day 1-7) → Phase 2 (Day 8-30) → Phase 3 (Day 31-90) → Health Check Cadence → Escalation Triggers.",
-    "Health scores presented as weighted metric tables."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Tone is 'warm, proactive, data-informed' — strategic partner framing.",
-    "Email templates labeled by trigger event."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/sales.md",
-      "_commands/profiles/product.md",
-      "_commands/profiles/analyst.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "customer-success-role",
-    "retention-and-onboarding"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "customer-success",
-    "retention",
-    "onboarding"
-  ]
+    "progress",
+    "sse",
+    "ide"
+  ],
+  "complexity": "simple"
 }

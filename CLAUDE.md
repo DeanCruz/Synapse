@@ -9,7 +9,7 @@ Synapse coordinates autonomous agent swarms for parallel software development. I
 !project set /path/to/your/project    # Point Synapse at your project
 npm start                              # Launch the Electron app (server starts automatically)
 !p_track {your prompt here}            # Run a parallel swarm
-
+```
 
 ## Command System — Non-Negotiable
 
@@ -149,19 +149,19 @@ Synapse/                              <-- {tracker_root}
 |       +-- failure-protocol/         <-- Auto-loaded failure recovery protocol
 |
 |-- _commands/
-|   |-- Synapse/                      <-- 25 swarm orchestration commands
+|   |-- Synapse/                      <-- 35 swarm orchestration commands
 |   |   |-- p_track.md, p_track_plan.md, p.md, master_plan_track.md,
 |   |   |-- add_task.md, dispatch.md, eager_dispatch.md, retry.md,
 |   |   |-- resume.md, p_track_resume.md, track_resume.md,
 |   |   |-- update_dashboard.md, export.md, cancel.md, cancel-safe.md,
 |   |   |-- status.md, logs.md, inspect.md, deps.md, history.md,
 |   |   |-- start.md, stop.md, reset.md, guide.md, project.md
-|   |-- project/                      <-- 22 project analysis commands
+|   |-- project/                      <-- 24 project analysis commands
 |   |   |-- initialize.md, onboard.md, scaffold.md, create_claude.md,
 |   |   |-- context.md, review.md, health.md, scope.md, trace.md,
 |   |   |-- contracts.md, env_check.md, plan.md, prompt_audit.md,
-|   |   |-- learn.md, learn_update.md, instrument.md, toc.md,
-|   |   |-- toc_generate.md, toc_update.md, commands.md, profiles.md, help.md
+|   |   |-- learn.md, learn_update.md, instrument.md,
+|   |   |-- commands.md, profiles.md, help.md
 |   +-- profiles/                     <-- 15 agent role profiles
 |       |-- analyst.md, architect.md, copywriter.md, customer-success.md,
 |       |-- devops.md, founder.md, growth.md, legal.md, marketing.md,
@@ -192,10 +192,10 @@ Synapse/                              <-- {tracker_root}
 |
 |-- electron/                         <-- Electron desktop app
 |   |-- main.js                       <-- App lifecycle, window creation, app:// protocol
-|   |-- preload.js                    <-- IPC bridge (26 push channels, ~140 pull methods)
+|   |-- preload.js                    <-- IPC bridge (27 push channels, ~140 pull methods)
 |   |-- ipc-handlers.js              <-- Central IPC registration (~2925 lines)
 |   |-- settings.js                   <-- Persistent settings store (JSON file)
-|   +-- services/
+|   +-- services/                     <-- 15 Electron services
 |       |-- AutoUpdateService.js      <-- Electron auto-update state machine
 |       |-- ClaudeCodeService.js      <-- Claude CLI process spawning/management
 |       |-- CodexService.js           <-- Codex CLI process spawning/management
@@ -209,7 +209,8 @@ Synapse/                              <-- {tracker_root}
 |       |-- DebugService.js           <-- Node.js debugger (Chrome DevTools Protocol)
 |       |-- InstrumentService.js      <-- data-synapse-label instrumentation
 |       |-- PreviewService.js         <-- Label-to-source file mapper
-|       +-- PreviewTextWriter.js      <-- Text update writer + dev server detection
+|       |-- PreviewTextWriter.js      <-- Text update writer + dev server detection
+|       +-- GuideService.js           <-- documentation/guide markdown loader for GuideModal
 |
 |-- src/server/                       <-- SSE server (no framework, pure http)
 |   |-- index.js                      <-- HTTP server, SSE endpoint, startup/shutdown
@@ -228,7 +229,7 @@ Synapse/                              <-- {tracker_root}
 |       |-- json.js                   <-- JSON I/O, retry logic, schema validators
 |       +-- validation.js             <-- Dependency graph validation (Kahn's algorithm)
 |
-|-- src/ui/                           <-- React 18 dashboard (functional components, useReducer)
+|-- src/ui/                           <-- React 19 dashboard (functional components, useReducer)
 |   |-- main.jsx                      <-- Entry point, IPC fetch shim, CSS imports
 |   |-- App.jsx                       <-- Root PageRouter (mounts ChatPage + CodePage shells)
 |   |-- context/
@@ -243,12 +244,12 @@ Synapse/                              <-- {tracker_root}
 |   |   |-- claude/                   <-- Agent chat components
 |   |   |   |-- ClaudeView.jsx       <-- Full agent chat (streaming, tool calls, history)
 |   |   |   +-- ClaudeFloatingPanel.jsx <-- Floating chat panel in Code mode
-|   |   +-- modals/                   <-- Modal dialogs (16 components)
+|   |   +-- modals/                   <-- Shared modal files (17 files)
 |   |       |-- Modal.jsx, CommandsModal.jsx, ProjectModal.jsx,
 |   |       |-- SettingsModal.jsx, PlanningModal.jsx, TaskEditorModal.jsx,
 |   |       |-- ArchiveModal.jsx, ConfirmModal.jsx, ErrorModal.jsx,
 |   |       |-- HistoryModal.jsx, LogsModal.jsx, PermissionModal.jsx,
-|   |       +-- AgentDetails.jsx, TaskDetails.jsx, WorkerTerminal.jsx
+|   |       +-- AgentDetails.jsx, TaskDetails.jsx, WorkerTerminal.jsx, GuideModal.jsx
 |   |-- pages/
 |   |   |-- chat/                     <-- Chat mode (full-page agent conversations)
 |   |   |   |-- ChatPage.jsx         <-- Chat shell (sidebar + content area + tab bar)
@@ -353,9 +354,9 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | | `!env_check` | Environment variable audit |
 | | `!plan {task}` | Implementation planning |
 | | `!prompt_audit` | Post-swarm prompt quality audit |
-| **TOC** | `!toc {query}` | Search the project TOC |
-| | `!toc_generate` | Generate a full project TOC |
-| | `!toc_update` | Incrementally update the TOC |
+| **Knowledge Graph** | `!learn` | Generate the `.synapse/knowledge/` graph |
+| | `!learn_update` | Incrementally refresh stale or missing knowledge graph annotations |
+| | `!context {query}` | Query the knowledge graph and supplement with grep/glob |
 | **Discovery** | `!profiles` | List available profiles |
 | | `!commands` | List all available commands |
 | | `!help` | Master agent guide |

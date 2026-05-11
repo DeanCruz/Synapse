@@ -1,33 +1,60 @@
 {
   "file": "documentation/data-architecture/logs-json.md",
   "content_hash": "3a1cd622",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Schema reference for logs.json -- the master-owned, append-only event log per dashboard. Defines log entry structure (at, level, msg, optional task_id), log levels (info/warn/error/deviation), and the read-modify-write append pattern the master uses. Drives the dashboard's log panel.",
+  "purpose": "Documentation page for the data-architecture area: logs.json -- Schema Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: `logs.json` is the **timestamped event log** for each dashboard. It records orchestration events: task initialization, dispatches, completions, failures, deviations, and permission requests. Every entry becomes a row in the dashboard's log panel. The file is 294 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Append happens via read-modify-write of the entire file -- not true append-mode I/O",
-    "Workers do NOT write to logs.json; their narrative lives in their progress file's logs[] array"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Read-modify-write with full-file overwrite for append semantics"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Log levels mirror worker progress log levels for consistent UI rendering"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/xml-task-files.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/pki-schemas.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/xml-task-files.md",
+      "documentation/troubleshooting/common-issues.md"
+    ],
+    "related": [
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/xml-task-files.md"
+    ]
   },
   "domains": [
-    "data-architecture",
-    "schema"
+    "documentation",
+    "data-architecture"
   ],
   "tags": [
-    "logs",
-    "event-log",
-    "schema"
-  ]
+    "markdown",
+    "documentation",
+    "data-architecture",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide",
+    "claude"
+  ],
+  "complexity": "moderate"
 }

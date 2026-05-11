@@ -1,47 +1,49 @@
 {
   "file": "_commands/Synapse/guide.md",
-  "content_hash": "7c5a4aea",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "b0d36360",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!guide` command — an interactive command decision tree that helps users pick the right Synapse command for their situation. Displays a flowchart organized by intent (project setup, parallel work, monitoring, actions, resume, history, server, analysis, PKI, instrumentation, TOC, profiles, housekeeping), then a complete command reference table grouped by category, then a 'Quick Tips' section. Read-only static documentation rendered to terminal.",
-  "exports": [],
+  "purpose": "Command specification for `!guide`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Interactive command decision tree that helps users pick the right Synapse command for their situation. Displays a flowchart of decisions plus a complete command reference. The file is 215 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!guide",
+      "kind": "command",
+      "signature": "!guide"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Some category boxes are duplicated in the flowchart (e.g., 'Monitor a running swarm' appears twice) — this is the file as-shipped",
-    "The Project Workflow categories (PKI, Instrumentation, TOC, Profiles & discovery) are listed but each command's actual definition lives in _commands/project/, not Synapse/",
-    "Quick tips emphasize: !p_track is the default, !cancel-safe over !cancel, each chat uses its assigned dashboard",
-    "This is the only command in this directory that has no Steps section — it is purely declarative output"
+    "Guide description may be narrow: `!guide` remains a command-decision aid, but the app also exposes an in-app markdown Guide modal backed by documentation/guide via GuideService and IPC.",
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Three-block output: Decision Tree (intent flowchart) → Command Reference (categorical table) → Quick Tips",
-    "Decision tree uses ASCII tree art with ├── and └── connectors",
-    "Command reference is grouped by domain: Project Management, Swarm Lifecycle, Resume & Recovery, Monitoring, Server Control, Housekeeping, Project Analysis, PKI, TOC, Profiles & Discovery"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Three numbered Steps each containing one large markdown block to display",
-    "Category headers use ### inside the displayed flowchart",
-    "Each command shown with backticked syntax in the reference table"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/p.md",
-      "_commands/project/help.md",
-      "_commands/project/commands.md"
-    ]
+    "related": []
   },
   "domains": [
-    "dashboard-monitoring",
-    "command-discovery",
-    "user-guidance"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "static-output",
-    "decision-tree"
-  ]
+    "guide",
+    "swarm-command",
+    "pki",
+    "dashboard",
+    "progress"
+  ],
+  "complexity": "moderate"
 }

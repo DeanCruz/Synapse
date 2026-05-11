@@ -1,8 +1,8 @@
 {
   "file": "src/server/services/HistoryService.js",
   "content_hash": "ba904815",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.409Z",
+  "annotated_by": "learn-update",
   "purpose": "Builds and persists post-swarm history summaries to the top-level history/ directory. listHistory() reads every history/*.json and sorts newest-first by cleared_at field. buildHistorySummary(id) is the heavy operation: derives total/completed/failed/in_progress/pending counts by walking init.agents and looking up each in progress; computes started_at/completed_at as min/max over per-agent timestamps; computes duration as 'Xm Ys' or 'Ys'; classifies overall_status ('completed', 'completed_with_errors', 'in_progress', 'pending'); produces a flat agentSummaries array with id/title/wave/status/assigned_agent/timing/summary; embeds task metadata (name/type/project/directory/prompt) and log_count. saveHistorySummary(id) wraps build + writes to history/{YYYY-MM-DD}_{taskName}.json (creates HISTORY_DIR if missing).",
   "exports": [
     {
@@ -83,5 +83,6 @@
     "history",
     "metrics",
     "post-swarm"
-  ]
+  ],
+  "complexity": "moderate"
 }

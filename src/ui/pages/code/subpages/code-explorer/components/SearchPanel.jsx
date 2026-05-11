@@ -3,6 +3,7 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useAppState, useDispatch } from '@/context/AppContext.jsx';
+import { getDashboardProject } from '@/utils/dashboardProjects.js';
 import SearchResults from './SearchResults.jsx';
 import '@/pages/code/subpages/code-explorer/styles/ide-search.css';
 
@@ -56,7 +57,7 @@ function ClearIcon() {
 
 // ── SearchPanel Component ──────────────────────────────────────
 
-export default function SearchPanel() {
+export default function SearchPanel({ dashboardId }) {
   var state = useAppState();
   var dispatch = useDispatch();
   var inputRef = useRef(null);
@@ -64,7 +65,8 @@ export default function SearchPanel() {
   var [showFilters, setShowFilters] = useState(false);
   var [searchError, setSearchError] = useState(null);
 
-  var workspace = state.ideWorkspaces.find(function(w) { return w.id === state.ideActiveWorkspaceId; });
+  var activeDashboardId = dashboardId || state.currentDashboardId;
+  var projectPath = activeDashboardId ? getDashboardProject(activeDashboardId) : null;
   var query = state.ideSearchQuery;
   var options = state.ideSearchOptions;
   var results = state.ideSearchResults;
@@ -80,7 +82,7 @@ export default function SearchPanel() {
   // Execute search
   var executeSearch = useCallback(function(searchQuery, searchOptions) {
     searchOptions = searchOptions || options;
-    if (!searchQuery || !workspace) {
+    if (!searchQuery || !projectPath) {
       dispatch({ type: 'IDE_SET_SEARCH_RESULTS', results: null, totalMatches: 0 });
       setSearchError(null);
       return;
@@ -94,7 +96,7 @@ export default function SearchPanel() {
       return;
     }
 
-    api.ideSearch(workspace.path, searchQuery, searchOptions).then(function(result) {
+    api.ideSearch(projectPath, searchQuery, searchOptions).then(function(result) {
       if (result.success) {
         dispatch({
           type: 'IDE_SET_SEARCH_RESULTS',
@@ -110,7 +112,7 @@ export default function SearchPanel() {
       dispatch({ type: 'IDE_SET_SEARCH_RESULTS', results: [], totalMatches: 0 });
       setSearchError(err.message || 'Search failed');
     });
-  }, [workspace, options, dispatch]);
+  }, [projectPath, options, dispatch]);
 
   // Input change with debounce
   var handleInputChange = useCallback(function(e) {
@@ -152,10 +154,10 @@ export default function SearchPanel() {
 
   // Navigate to a search result
   var handleResultClick = useCallback(function(filePath, line, column) {
-    if (!state.ideActiveWorkspaceId) return;
+    if (!activeDashboardId) return;
     dispatch({
       type: 'IDE_OPEN_FILE',
-      workspaceId: state.ideActiveWorkspaceId,
+      dashboardId: activeDashboardId,
       file: { path: filePath, name: filePath.split('/').pop() },
     });
     dispatch({
@@ -163,11 +165,11 @@ export default function SearchPanel() {
       key: 'ideNavigateToLine',
       value: { filePath: filePath, line: line, column: column || 1, ts: Date.now() },
     });
-  }, [state.ideActiveWorkspaceId, dispatch]);
+  }, [activeDashboardId, dispatch]);
 
   // Replace all matches across all files
   var handleReplaceAll = useCallback(function() {
-    if (!results || !replaceText === undefined || !workspace) return;
+    if (!results || replaceText === undefined || !projectPath) return;
     var api = window.electronAPI;
     if (!api || !api.ideSearchReplace) return;
 
@@ -179,7 +181,7 @@ export default function SearchPanel() {
       };
     });
 
-    api.ideSearchReplace(workspace.path, replacements).then(function(result) {
+    api.ideSearchReplace(projectPath, replacements).then(function(result) {
       if (result.success) {
         // Re-search to update results
         executeSearch(query);
@@ -189,15 +191,15 @@ export default function SearchPanel() {
     }).catch(function(err) {
       setSearchError(err.message || 'Replace failed');
     });
-  }, [results, replaceText, workspace, query, executeSearch]);
+  }, [results, replaceText, projectPath, query, executeSearch]);
 
   // Replace all matches in a single file
   var handleReplaceInFile = useCallback(function(fileResult) {
-    if (!workspace) return;
+    if (!projectPath) return;
     var api = window.electronAPI;
     if (!api || !api.ideSearchReplace) return;
 
-    api.ideSearchReplace(workspace.path, [{
+    api.ideSearchReplace(projectPath, [{
       file: fileResult.file,
       matches: fileResult.matches,
       replacement: replaceText,
@@ -206,7 +208,7 @@ export default function SearchPanel() {
         executeSearch(query);
       }
     });
-  }, [workspace, replaceText, query, executeSearch]);
+  }, [projectPath, replaceText, query, executeSearch]);
 
   // Filter change handlers
   var handleIncludeChange = useCallback(function(e) {

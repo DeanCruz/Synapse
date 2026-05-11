@@ -1,0 +1,67 @@
+{
+  "file": "src/ui/pages/chat/components/ChatSidebar.jsx",
+  "content_hash": "baa2c0b9",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "ChatSidebar controls the chat-side project and agent navigation. It manages project tabs, nested agent subtabs, new project flow, chat agent creation/deletion actions, and routes chat selections into AppContext state so ChatPage can show make, dashboard, or instance views.",
+  "exports": [
+    {
+      "name": "ChatSidebar",
+      "kind": "component",
+      "signature": "default function ChatSidebar(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/shared/modals/ProjectModal": [
+      "ProjectModal"
+    ],
+    "src/ui/utils/dashboardProjects": [
+      "saveDashboardProject"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/shared/modals/ProjectModal",
+      "src/ui/utils/dashboardProjects"
+    ],
+    "depended_by": [
+      "src/ui/pages/chat/ChatPage.jsx"
+    ],
+    "related": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/shared/claude/ClaudeView.jsx"
+    ]
+  },
+  "domains": [
+    "react-ui",
+    "chat-workspace",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "chat",
+    "swarm"
+  ],
+  "complexity": "complex"
+}

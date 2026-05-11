@@ -1,60 +1,42 @@
 {
   "file": "agent/instructions/common_pitfalls.md",
   "content_hash": "98e79336",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Quick-reference pitfall table for swarm orchestration. Each row is a distinct mistake (file overlap in waves, missing file paths, modifying initialization.json mid-execution, forgetting to clear progress/, stripping CLAUDE.md conventions, dispatching without user approval, oversize tasks that exhaust worker context, master implementing instead of dispatching, confusing tracker_root vs project_root, skipping the dashboard, working from memory instead of re-reading the command file). Master agents read this before EVERY swarm dispatch as a final sanity check.",
+  "purpose": "Agent protocol/control-plane instruction document: Common Pitfalls \u2014 Swarm Orchestration Reference. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: Common mistakes that cause swarm failures, broken output, or wasted context. Each row is a distinct pitfall not fully covered in other instruction files. Review before every swarm dispatch. The file is 23 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "The 'master agent implementing instead of dispatching' pitfall is bolded as the single worst failure mode — it defeats the entire purpose of Synapse and produces a blind dashboard.",
-    "Forgetting to ARCHIVE before clearing progress/ is silent data loss — the rule is archive-first then `rm -f`, never the reverse.",
-    "Workers cannot find files you don't specify — never assume the worker knows the project layout, always include full relative paths from project root.",
-    "{tracker_root} and {project_root} are different locations and BOTH must be passed in every dispatch prompt — confusing them silently writes code to Synapse or progress files into the project.",
-    "If a task touches more than 5 files, decompose further — workers reading 10+ files exhaust context and silently drop work.",
-    "Quote CLAUDE.md sections directly in worker prompts; paraphrasing produces non-standard code that needs rework.",
-    "After context compaction, upstream task results vanish — downstream prompts must include cached upstream summary, files changed, exports, and deviations."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Pitfall reference table — three columns (Mistake | Effect | Fix) so the master can scan-and-match against the current dispatch.",
-    "Archive-then-clear rule: copy dashboard to Archive/{YYYY-MM-DD}_{task_name}/ then `rm -f progress/*.json` — never clear without archiving.",
-    "initialization.json is write-once — all lifecycle data flows through worker progress files.",
-    "Plan-then-approval gate before any dispatch — wasted compute if user rejects the approach.",
-    "Read the command file (p_track.md / p.md) in full every invocation — do not work from memory."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Single H2 ('Pitfall Reference') with one markdown table — no per-pitfall subsections.",
-    "Mistake | Effect | Fix three-column structure, with the most catastrophic pitfalls (master implementing) bolded inline for emphasis."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/p.md",
-      "agent/instructions/tracker_master_instructions.md"
-    ],
+    "depends_on": [],
     "depended_by": [
-      "agent/instructions/tracker_master_instructions.md (referenced as quick-reference companion)",
-      ".claude/skills/master-protocol (auto-loaded master protocol)"
+      "documentation/troubleshooting/common-issues.md"
     ],
-    "related": [
-      "agent/master/role.md",
-      "agent/master/dashboard_writes.md",
-      "agent/instructions/tracker_master_instructions.md",
-      "agent/_commands/p_track_planning.md"
-    ]
+    "related": []
   },
   "domains": [
-    "master-orchestration",
-    "swarm-failure-modes",
-    "agent-protocol"
+    "agent-protocol",
+    "instructions"
   ],
   "tags": [
     "markdown",
-    "agent-doc",
-    "protocol",
-    "pitfalls",
-    "master-agent",
-    "quick-reference",
-    "non-negotiable"
-  ]
+    "agent-instructions",
+    "instructions",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "sse"
+  ],
+  "complexity": "simple"
 }

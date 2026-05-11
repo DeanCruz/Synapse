@@ -1,88 +1,47 @@
 {
   "file": "agent/_commands/p_track_planning.md",
-  "content_hash": "607cb31b",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "171e9e58",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Phase 1 of !p_track — Planning: deep analysis and decomposition. Documents Steps 1-11 of the master's pre-dispatch flow: Step 1 (resolve {project_root} + read CLAUDE.md + toc.md + additional context dirs), Step 2 (read tracker_master_instructions.md before any write), Step 3 (parse the prompt — extract task name as kebab-case slug + affected directories), Step 4 (deep analysis incl. 4A consult dep_graph.json), Step 5 (read all relevant context files in parallel + 5A build the convention_map), Step 6 (decompose into atomic tasks grouped into logical waves; 6 sub-steps including dep-graph coupling check, decomposition cost-benefit heuristic, context budget check, token budget estimate, and convention relevance checklist), Step 7 (Waves vs Chains decision), Step 8 (write plan.json — the canonical planning artifact with required schema, validate-plan-required.sh hook enforcement, and deep-thinking `approach` requirement), Step 10 (verify deps + topological sort + critical path + bottleneck detection + dep-graph validation), Step 10B (verify full-tracking thresholds), Step 11 (select dashboard via 11-PRE pre-assigned-dashboard rule + 11A archive-and-clear HARD GATE + 11B write initialization.json + 11B-validate dependency graph + 11C write logs.json initialization entry + dashboard-id-survival-rule for compaction + 11D present plan + 11E NON-NEGOTIABLE approval gate). Step 9 was removed (legacy parallel_*.json deprecated).",
+  "purpose": "Agent protocol/control-plane instruction document: p_track Phase 1: Planning \u2014 Deep Analysis & Decomposition. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: > This module covers Steps 1-11 of `!p_track`. It is loaded by the master agent during the planning phase. > For the full NON-NEGOTIABLE rules and command overview, see `{tracker_root}/_commands/Synapse/p_track.md`. The file is 682 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "plan.json is the SINGLE SOURCE OF TRUTH for shared swarm context + per-task instructions. validate-plan-required.sh hook BLOCKS initialization.json writes when plan.json is missing, malformed, or incomplete.",
-    "Required plan.json fields enforced by hook: top-level name+created, context.prompt non-empty, tasks[] length≥1, per-task id+title+description+approach+files (≥1 entry).",
-    "agents.length MUST equal tasks.length — hook cross-checks when both files are written.",
-    "`approach` is NOT a paraphrase of `description` — it is the master's deep-thought how-to (algorithm choices, data flow, file ordering, hazards). Stub approaches corrupt every downstream worker prompt; the hook accepts thin approaches but quality matters.",
-    "Step 9 was REMOVED — legacy tasks/{MM_DD_YY}/parallel_*.json/parallel_plan_*.md are deprecated. plan.json carries all planning data; lifecycle data lives ONLY in worker progress files.",
-    "Step 11A is a HARD GATE — archive-then-clear-then-VERIFY (`ls progress/` MUST be empty) before proceeding to 11B. Skipping verify can leave ghost progress files.",
-    "Pre-assigned dashboards are unconditional — no scanning, no auto-selection. Empty → set up directly; non-empty → auto-archive (no user confirmation) and proceed; never use a different dashboard.",
-    "11E approval gate is NON-NEGOTIABLE — write `permission`-level log entry to trigger dashboard popup, present the explicit prompt 'Ready to execute. Approve to begin dispatching {N} agents?', then HALT. Do not dispatch, do not write master_state.json, do not begin Phase 2.",
-    "Acceptable approval triggers: explicit 'yes/go/approved/proceed/do it/lgtm/looks good'. Modifications: apply to plan.json first then propagate to initialization.json, re-present, request approval again.",
-    "DASHBOARD ID survival: system prompt wraps DASHBOARD ID in `===DASHBOARD_BINDING_START===`/`===DASHBOARD_BINDING_END===` sentinel markers. After compaction, MUST verify the line is still present; if missing, STOP, attempt recovery from initialization.json/parent dir name, ask user as last resort. NEVER auto-select a different dashboard.",
-    "Token budget hard limit per worker prompt: 8000 tokens (~32KB text). Section budgets: CONVENTIONS ≤200 lines, REFERENCE CODE ≤100 lines, UPSTREAM RESULTS ≤50 lines/dep, CONTEXT ≤150 lines, total ≤800 lines.",
-    "Decomposition cost-benefit: if splitting a task doesn't reduce critical path by ≥20%, MERGE it back. 20 tiny tasks cost more in orchestration overhead than 4 medium ones. Sweet spot: 4-8 tasks per swarm, 10-15 for cross-repo.",
-    "If 500+ line CLAUDE.md, ALWAYS summarize (not quote) — extract 5-10 most relevant rules as bullets.",
-    "Convention Relevance Checklist (Step 6D): apply per-worker — different tasks need different convention subsets. Filter by task action types (creates files? touches imports? modifies tests? etc.).",
-    "Dep graph coupling check (Step 6 + Step 10 dep graph validation) catches HIDDEN coupling that task-level analysis misses — concurrent tasks modifying tightly-coupled files cause merge conflicts.",
-    "Dependency validation algorithm: topological sort (catches cycles) + critical-path depth computation + bottleneck detection (any task in 3+ depends_on lists) + orphan check (every depends_on ID exists, every task reachable from a root)."
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "11-step planning flow: resolve roots → read instructions → parse → deep analysis (with dep_graph) → read context (with convention_map) → decompose (with budget+relevance checks) → choose Waves/Chains → write plan.json (hook-validated) → verify deps → check tracking thresholds → select+populate dashboard → present plan → approval gate.",
-    "plan.json schema: {name, created, context: {prompt, project_root, tracker_root, dashboard_id, type, directories, conventions: convention_map, reference_code[], architectural_decisions, edge_cases, shared_constraints}, tasks[]: {id, title, wave, depends_on, directory, description, approach, files[], context, critical, success_criteria[], instruction_mode, tags[]}}.",
-    "convention_map categories: naming, file_structure, imports, frontend_styling, backend_api, error_handling, testing, types — held in working memory, used to filter per-worker.",
-    "Convention Relevance Checklist (Step 6D) — Include When/Skip When per-category cross-referenced against each task's files+description.",
-    "Dependency validation algorithm: topological sort + depth computation + bottleneck detection + orphan check.",
-    "Approval Gate 4-step protocol: write `permission` log entry → present explicit prompt → HALT → on approval log info entry and activate eager dispatch.",
-    "Dashboard claiming follows pre-assigned-binding-is-absolute rule (no scanning, no auto-selection).",
-    "Archive-then-clear-then-verify HARD GATE before initialization.json write."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Step numbering with letter-suffixed sub-steps (4A, 5A, 6B, 6C, 6D, 10B, 11-PRE, 11A, 11B, 11B-validate, 11C, 11D, 11E).",
-    "Tables for convention_map categories, decomposition heuristics, context budget, token budget per section, convention relevance checklist, full-tracking thresholds.",
-    "Inline JSON examples with `// matches initialization.json` cross-reference comments in jsonc.",
-    "PATH SAFETY callout blockquotes before every write step.",
-    "Step 9 retained as a placeholder noting its removal/migration."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/instructions/tracker_master_instructions.md (read in Step 2)",
-      "agent/instructions/dashboard_resolution.md (referenced in 11-PRE)",
-      ".claude/hooks/validate-plan-required.sh (enforces plan.json schema)",
-      "_commands/Synapse/p_track.md (parent command)",
-      "src/server/utils/validation.js (validateDependencyGraph rules)"
-    ],
+    "depends_on": [],
     "depended_by": [
-      ".claude/skills/p-track",
-      "agent/_commands/p_track_execution.md (Phase 2 follows from approved plan)",
-      "agent/_commands/p_track_completion.md (Phase 3 reads plan.json)"
+      "agent/master/initialization_blueprint.md",
+      "documentation/project-integration/pki-overview.md"
     ],
-    "related": [
-      "{project_root}/CLAUDE.md",
-      "{project_root}/.synapse/toc.md",
-      "{project_root}/.synapse/dep_graph.json",
-      "{project_root}/.synapse/project.json",
-      "agent/master/worker_prompts.md",
-      "agent/master/dashboard_writes.md"
-    ]
+    "related": []
   },
   "domains": [
-    "master-orchestration",
-    "swarm-planning",
-    "dashboard-claiming"
+    "agent-protocol",
+    "_commands"
   ],
   "tags": [
     "markdown",
-    "agent-doc",
-    "protocol",
-    "p-track",
-    "phase-1",
-    "planning",
+    "agent-instructions",
+    "-commands",
+    "pki",
+    "dashboard",
+    "progress",
     "plan-json",
-    "convention-map",
-    "dep-graph",
-    "decomposition",
-    "approval-gate",
-    "dashboard-claiming",
-    "archive-protocol",
-    "non-negotiable",
-    "hook-enforced"
-  ]
+    "initialization-json"
+  ],
+  "complexity": "complex"
 }

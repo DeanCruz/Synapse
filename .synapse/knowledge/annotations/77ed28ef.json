@@ -1,0 +1,41 @@
+{
+  "file": "documentation/guide/2.3-projects-and-knowledge-graph.md",
+  "content_hash": "bf7400ba",
+  "annotated_at": "2026-05-11T01:54:48Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Documentation page for the guide area: 2.3 Projects and Knowledge Graph. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Synapse is standalone. It can manage any target project without living inside that project. The file is 125 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
+  ],
+  "patterns": [
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
+  ],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Guide pages use numeric filename prefixes so the in-app Guide modal can display them in a stable reading order."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/guide/1.1-table-of-contents.md"
+    ],
+    "related": []
+  },
+  "domains": [
+    "documentation",
+    "guide"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "guide",
+    "dashboard",
+    "git",
+    "chat",
+    "ide"
+  ],
+  "complexity": "moderate"
+}

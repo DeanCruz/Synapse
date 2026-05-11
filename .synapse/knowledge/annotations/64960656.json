@@ -1,42 +1,42 @@
 {
   "file": ".claude/MIGRATION.md",
   "content_hash": "4f0b5a8f",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Documents the 2026-03-24 architectural migration from prose-only CLAUDE.md enforcement to the three-layer .claude/ architecture (hooks/skills+agents/CLAUDE.md). Maps old prose rules in CLAUDE.md to new deterministic shell hooks (validate-master-write, validate-init-write-once, validate-progress-file, validate-archive-before-clear, verify-final-report). Maps old _commands/ prose-only specs to skill directories (.claude/skills/{p-track,p,master-plan-track,project-workflow,dashboard-ops,worker-protocol}/SKILL.md). Documents the three layers: Layer 1 (hooks: deterministic, cannot bypass), Layer 2 (skills+agents: structural, loaded when invoked), Layer 3 (CLAUDE.md: advisory). Provides 'How to add new commands/enforcement rules' authoring guides. Note: references `validate-init-write-once.sh` which has been renamed to `validate-initialization-immutable.sh`.",
+  "purpose": "Control-plane markdown document: Synapse Architecture Migration \u2014 2026-03-24. Key content: This document records the migration from the prose-only `CLAUDE.md` enforcement model to the three-layer `.claude/` architecture. The file is 92 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "References hook name `validate-init-write-once.sh` — this has since been renamed to `validate-initialization-immutable.sh`. Doc is slightly stale.",
-    "Lists only 2 skills loaded for master agent (p-track, worker-protocol) — actual master-orchestrator.md now loads 4 (added master-protocol, failure-protocol)",
-    "Old root-level `skills/` archived to `Archive/pre-migration-skills/` — do not look there for current skills"
-  ],
+  "gotchas": [],
   "patterns": [
-    "Migration doc pattern: 'old location | new location | what it provides' tables",
-    "Three-layer architecture: deterministic > structural > advisory"
+    "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Date in title (2026-03-24) marks the migration event"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
     "related": [
-      ".claude/README.md",
-      "CLAUDE.md",
-      ".claude/settings.json",
-      ".claude/agents/master-orchestrator.md"
+      ".claude/README.md"
     ]
   },
   "domains": [
-    "migration-documentation",
-    "architecture-doc"
+    "control-plane-docs"
   ],
   "tags": [
     "markdown",
-    "migration",
-    "architecture",
-    "documentation",
-    "history"
-  ]
+    "control-plane",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide",
+    "profile",
+    "codex"
+  ],
+  "complexity": "simple"
 }

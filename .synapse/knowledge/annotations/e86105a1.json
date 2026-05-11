@@ -1,0 +1,41 @@
+{
+  "file": "src/ui/pages/code/subpages/code-explorer/styles/ide-problems.css",
+  "content_hash": "2084dad3",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Standalone stylesheet for the IDE Problems Panel (diagnostics display). Defines .problems-panel container, empty state (centered icon + text), summary bar with filter toggles (errors/warnings/info severity counts), and per-problem row styling with file + line + message + severity icon. Hard-coded dark VS Code-like palette (#1e1e1e, #cccccc, #666 for empty state).",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "DUPLICATE: ide-debug.css ALSO defines .problems-panel styles (lines 206-416 there). The two may diverge.",
+    "Hard-coded #1e1e1e/#cccccc/#666666 palette — does not theme-switch.",
+    "Component imports it via ProblemsPanel.jsx (which actually imports ide-debug.css instead — verify Vite dedupes by path or file content)."
+  ],
+  "patterns": [
+    "Empty state: flex center with min-height:60px and muted icon."
+  ],
+  "conventions": [
+    "Class prefix: .problems-panel-*, .problems-summary-*."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for --sans fallback"
+    ],
+    "depended_by": [
+      "src/ui/shared/ide/ProblemsPanel.jsx (note: actually imports ide-debug.css)"
+    ],
+    "related": [
+      "src/ui/styles/ide-debug.css (overlapping rules)"
+    ]
+  },
+  "domains": [
+    "ide-styles"
+  ],
+  "tags": [
+    "css",
+    "ide",
+    "problems",
+    "diagnostics"
+  ],
+  "complexity": "moderate"
+}

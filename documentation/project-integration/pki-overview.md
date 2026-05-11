@@ -227,4 +227,4 @@ Details: [`_commands/project/context.md`](../../_commands/project/context.md)
 
 - [PKI Schemas](../data-architecture/pki-schemas.md) -- Full JSON schema reference
 - [Project Integration Overview](./overview.md) -- How Synapse integrates with target projects
-- [TOC System](./toc-system.md) -- The complementary Table of Contents system
+- [Project Knowledge Graph](./toc-system.md) -- Legacy discovery workflows now route through `.synapse/knowledge/`

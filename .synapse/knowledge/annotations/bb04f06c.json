@@ -1,64 +1,43 @@
 {
   "file": "_commands/project/toc.md",
-  "content_hash": "1495e2df",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "6d845ca7",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !toc slash command — fast searchable index over the project TOC with four sub-commands plus default keyword search. Sub-commands (exact-match parsing, case-sensitive, only triggered by these four names): (A) `depends-on {file}` — looks up imported_by in dep_graph.json, enriches with TOC summaries, errors with guidance if dep_graph absent; (B) `depended-by {file}` — looks up imports in dep_graph.json (reverse semantics: 'what does this file depend on'), enriches with fingerprints purpose+exports; (C) `cluster {keyword}` — finds keyword-matching core files in TOC then expands one level via dep_graph imports+imported_by, falls back to keyword-only when dep_graph absent; (D) `changes-since {git_ref}` — runs `git diff --name-only {git_ref}`, filters to TOC-indexed, dispatches READ-ONLY scan agents to produce current fingerprints, compares old vs new for PURPOSE/API/SIGNATURE/DEPENDENCY/complexity changes WITHOUT writing fingerprints.json (use !toc_update to persist). Default keyword search supports tag-only mode (#tag, #tag1 #tag2 AND, #tag query combo), general text matching against names/paths/summaries/tags/related (ranked: exact name > summary > tag > related). Always verifies candidates by reading actual files (50 lines), shows 1-hop Related Context per result. Read-only.",
-  "exports": [],
+  "purpose": "Command specification for `!toc`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: This legacy command is deprecated. Execute `!context` against the project knowledge graph instead. The file is 12 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!toc",
+      "kind": "command",
+      "signature": "!context"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Sub-command parsing is EXACT and case-sensitive — only the four defined names trigger sub-command mode. Partial matches (e.g., 'dependency') fall through to keyword search.",
-    "depended-by has confusing semantics: it returns what THIS file imports FROM (forward deps) — i.e., 'this file is depended on BY these other files'. depends-on returns reverse (importers of this file).",
-    "ALWAYS verify keyword-search candidates by reading the actual file (~50 lines) — prevents false positives from stale TOC entries. Dependency-graph results (depends-on/depended-by/cluster related) are NOT verified — graph is source of truth for imports.",
-    "changes-since is READ-ONLY — does NOT modify fingerprints.json or dep_graph.json. Tells user to run !toc_update to persist.",
-    "Tag-only mode: query starting with # OR containing #-prefixed terms. Multiple #tags use AND logic. Mixing #tag with non-tag terms further filters by text.",
-    "If dep_graph.json missing for sub-commands A/B: error with guidance (run !toc_generate). Do NOT fall back to keyword search.",
-    "If dep_graph.json missing for cluster (C): fall back to keyword-only with note suggesting !toc_generate.",
-    "If fingerprints.json missing for changes-since (D): report simplified file-change list without semantic analysis.",
-    "API CHANGE threshold (in changes-since): >50% of export names differ.",
-    "Limit Related Context to 3 per result — prioritize types/interfaces over tests, services over utilities. No recursion (1-hop only).",
-    "Prefer precision over recall — 2 correct results > 10 noisy results.",
-    "If ambiguous query, return multiple candidates and let user decide."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Multi-mode dispatch: sub-command (exact match) vs keyword search (fallback).",
-    "Layered enrichment: dep_graph → toc.md summaries → fingerprints.json purpose/exports.",
-    "Read-only semantic analysis (changes-since) parallel to write-back !toc_update.",
-    "Tag-prefix mode triggered by # in query.",
-    "Verify-before-report for keyword candidates."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations."
   ],
   "conventions": [
-    "Read-only across all modes.",
-    "Sub-command parsing: first arg only, case-sensitive, exact match.",
-    "Output structure varies per sub-command but always markdown.",
-    "Fall through to keyword search on non-match."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments."
   ],
   "relationships": {
-    "depends_on": [
-      "{project_root}/.synapse/toc.md",
-      "{project_root}/.synapse/dep_graph.json",
-      "{project_root}/.synapse/fingerprints.json"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/project/toc_generate.md",
-      "_commands/project/toc_update.md",
-      "_commands/project/scope.md",
-      "_commands/project/context.md"
-    ]
+    "related": []
   },
   "domains": [
-    "toc-management",
-    "project-context"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
+    "slash-command",
     "toc",
-    "search",
-    "dep-graph",
-    "subcommands",
-    "read-only"
-  ]
+    "project-command",
+    "pki"
+  ],
+  "complexity": "simple"
 }

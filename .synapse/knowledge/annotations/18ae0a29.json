@@ -1,0 +1,39 @@
+{
+  "file": "src/ui/shared/modals/index.js",
+  "content_hash": "f03ecc1e",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "index is a shared modal component opened by App-level modal routing. It presents one focused control-plane workflow and relies on Electron IPC/AppContext inputs plus the shared Modal shell rather than owning global application routing.",
+  "exports": [],
+  "imports_from": {
+    "src/ui/shared/modals.js": [
+      "Modal",
+      "ConfirmModal",
+      "AgentDetails"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Modal components compose the shared Modal shell and close via an onClose callback from App-level modal routing."
+  ],
+  "conventions": [],
+  "relationships": {
+    "depends_on": [
+      "src/ui/shared/modals.js"
+    ],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "react-ui",
+    "modal-system",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "renderer",
+    "modal",
+    "swarm"
+  ],
+  "complexity": "simple"
+}

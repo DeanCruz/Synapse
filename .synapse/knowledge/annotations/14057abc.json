@@ -1,31 +1,60 @@
 {
   "file": "documentation/swarm-lifecycle/overview.md",
-  "content_hash": "e468bc2f",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "50eefd0e",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "End-to-end view of a Synapse swarm lifecycle: planning, dispatch, monitoring, completion, and (when triggered) circuit-breaker replanning. Connects the per-phase documents into a single mental model and identifies the artifacts produced at each phase (plan.json -> initialization.json -> progress files -> logs.json -> metrics.json -> insights/).",
+  "purpose": "Documentation page for the swarm-lifecycle area: Swarm Lifecycle Overview. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Synapse swarm lifecycle is the complete end-to-end process of decomposing a complex task into parallel work streams, dispatching autonomous worker agents, tracking their live progress, and compiling a final report. Every swarm follows the same deterministic sequence of phases, governed by strict protocols that ensure reliability, visibility, and maximum parallelism. The file is 275 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Phase boundaries are not always crisp -- monitoring and dispatch overlap during eager dispatch"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Phased lifecycle with distinct write artifacts per phase"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Each phase doc links to the previous and next phase for navigation"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/swarm-lifecycle/planning-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/planning-phase.md"
+    ],
+    "related": [
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/planning-phase.md"
+    ]
   },
   "domains": [
+    "documentation",
     "swarm-lifecycle"
   ],
   "tags": [
-    "lifecycle",
-    "phases",
-    "overview"
-  ]
+    "markdown",
+    "documentation",
+    "swarm-lifecycle",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "profile",
+    "claude"
+  ],
+  "complexity": "moderate"
 }

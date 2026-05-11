@@ -1,44 +1,53 @@
 {
   "file": "documentation/electron/overview.md",
-  "content_hash": "80be4d76",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "a31960a3",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Top-level Electron architecture overview: process model (main/renderer/worker), preload bridge security model (contextIsolation, no nodeIntegration), service layer organization, app:// protocol, and end-to-end data flow examples for swarm dispatch and dashboard updates.",
+  "purpose": "Documentation page for the electron area: Electron App Architecture Overview. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Synapse ships as an Electron desktop application. The Electron layer wraps the React dashboard UI, manages IPC communication between the renderer and main processes, spawns CLI worker processes, and orchestrates parallel agent swarms entirely from the desktop. The file is 245 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
-  "imports_from": [],
+  "imports_from": {},
   "gotchas": [
-    "Worker child processes are killed on window-all-closed — long jobs must persist via files",
-    "Renderer has no direct ipcRenderer access; everything is proxied via preload"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Main delegates business logic to services/",
-    "Two communication modes: push events vs pull invokes",
-    "Process-per-task spawning model for CLI workers"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "electron/ contains main.js, preload.js, ipc-handlers.js, services/",
-    "Services single-purpose, named XxxService.js"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
+    "depends_on": [
+      "documentation/chat/overview.md",
+      "documentation/chat/ipc-handlers.md"
+    ],
     "depended_by": [
-      "documentation/electron/configuration.md",
-      "documentation/electron/services.md",
-      "documentation/electron/ipc-reference.md",
-      "documentation/electron/update-on-master.md"
+      "documentation/README.md"
     ],
     "related": [
-      "documentation/dashboard/overview.md",
-      "documentation/server/overview.md"
+      "documentation/chat/ipc-handlers.md",
+      "documentation/chat/overview.md",
+      "documentation/electron/configuration.md",
+      "documentation/electron/ipc-reference.md",
+      "documentation/electron/services.md",
+      "documentation/electron/update-on-master.md"
     ]
   },
   "domains": [
+    "documentation",
     "electron"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "overview",
-    "architecture"
-  ]
+    "electron",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "codex",
+    "claude"
+  ],
+  "complexity": "moderate"
 }

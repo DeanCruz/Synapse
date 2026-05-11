@@ -1,55 +1,49 @@
 {
   "file": "_commands/Synapse/add_task.md",
   "content_hash": "0533b174",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!add_task [--dashboard {id}] {prompt}` command for injecting new tasks into an active swarm mid-flight. The master must validate the swarm is active (initialization.json non-null), read existing state (initialization.json + all progress files + master_state.json + plan.json), perform deep analysis of the new prompt, decompose into 1+ subtasks, resolve forward and reverse dependencies (including bidirectional rewiring of pending tasks' depends_on), assign waves and IDs ({wave}.{next_index}), update initialization.json and plan.json atomically, append log entries, update master_state.json, and run an eager dispatch round. Produces additional agents[]/tasks[] entries plus dispatch logs.",
-  "exports": [],
+  "purpose": "Command specification for `!add_task`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Inject new tasks into an active swarm mid-flight. The master deeply analyzes the prompt, decomposes it into subtasks, resolves dependencies against all existing tasks (both directions), updates the dashboard, and dispatches any tasks whose dependencies are already satisfied. The file is 274 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!add_task",
+      "kind": "command",
+      "signature": "!add_task [--dashboard {id}] {prompt}"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "NEVER modify depends_on for completed or in-progress tasks — only pending tasks can have their dependencies rewired in Step 7B",
-    "File conflicts with in-progress tasks must trigger a user warning and confirmation prompt — they are not auto-rejected",
-    "Topological sort across the FULL graph (existing + new) is required to detect cycles before writing",
-    "The `ide` dashboard is reserved for the IDE agent and never valid for !add_task",
-    "If no active swarm exists (task is null or agents[] empty), the command MUST stop and direct the user to !p_track",
-    "Reverse dependency rewiring (Step 7B) is the most error-prone step — pending tasks must be updated in BOTH initialization.json and plan.json"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "13-step procedure: parse args → read swarm state → read plan → read project context → deep analysis → decompose → resolve deps in 4 sub-steps (forward, reverse, inter-task, validation) → assign waves/IDs → update initialization.json → update plan.json → log → update master_state.json → eager dispatch",
-    "Dependency resolution is bidirectional — new tasks may depend on existing ones AND existing pending tasks may be rewired to depend on new ones",
-    "Wave assignment uses dependency depth: completed deps → lowest sensible wave; pending/in-progress deps → max(dep wave) + 1; new wave creation when wave > total_waves",
-    "Task IDs follow {wave}.{next_index} format, computed by scanning highest existing index in target wave",
-    "Atomic write protocol: read → parse → modify in memory → stringify → write the full file"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "p_track-era planning pattern: plan.json carries shared context and task entries before initialization.json/progress files handle dashboard rendering and lifecycle state.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Top-level command header with backticked syntax line, Purpose, Syntax, Prerequisites, Steps (numbered), Edge Cases, and 'What This Command Does NOT Do' sections",
-    "Tabular field definitions for task schema (title/description/context/critical/files/tags/layer/directory)",
-    "Inline JSON examples with placeholder syntax {field_name}",
-    "Bold callouts ('Atomic write', 'NEVER modify') for non-negotiable rules"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/instructions/dashboard_resolution.md",
-      "agent/master/eager_dispatch.md",
-      "agent/master/worker_prompts.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/dispatch.md",
-      "_commands/Synapse/eager_dispatch.md"
-    ]
+    "related": []
   },
   "domains": [
-    "swarm-command",
-    "parallel-dispatch",
-    "dependency-rewiring"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "task-injection",
-    "mid-flight"
-  ]
+    "add-task",
+    "swarm-command",
+    "dashboard",
+    "progress",
+    "plan-json"
+  ],
+  "complexity": "moderate"
 }

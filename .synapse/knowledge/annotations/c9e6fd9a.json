@@ -1,0 +1,38 @@
+{
+  "file": "src/ui/pages/code/subpages/git/styles/git-manager.css",
+  "content_hash": "70c8bca3",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Stylesheet for pages/code/subpages/git/styles/git-manager.css that participates in the renderer layout and visual state for the Synapse desktop interface.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Git operations route through Electron IPC and are scoped to selected repository paths; UI components should not call git directly.",
+    "Class names are shared by multiple renderer components; broad selector changes can affect pages outside this stylesheet directory."
+  ],
+  "patterns": [
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules.",
+    "Plain CSS stylesheet imported by renderer modules; styling relies on shared class names rather than CSS modules."
+  ],
+  "conventions": [
+    "Styles are global class selectors under src/ui/styles or subpage style directories."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "ui-styling",
+    "react-ui",
+    "git-workspace"
+  ],
+  "tags": [
+    "css",
+    "styles",
+    "renderer",
+    "git",
+    "swarm"
+  ],
+  "complexity": "complex"
+}

@@ -1,52 +1,53 @@
 {
   "file": "documentation/configuration/theming.md",
   "content_hash": "ef007b5d",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Reference for Synapse's dark-first design system. Documents CSS custom properties for backgrounds, text, fonts (DM Sans, Space Grotesk), status colors (completed green, in_progress purple, pending gray, failed red, claimed lime, blocked orange), gradient accents, terminal/editor color palettes, glass morphism patterns, header gradient, JavaScript color constants in src/ui/utils/constants.js, runtime CSS-to-JS synchronization via initStatusColorsFromCSS(), UI constants, scrollbar styling, theme settings, and a customization guide.",
+  "purpose": "Documentation page for the configuration area: Theming. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Synapse uses a dark-first design system built on CSS custom properties, Google Fonts, and a consistent status color palette shared between CSS and JavaScript. The visual language is characterized by dark backgrounds, translucent surfaces with backdrop blur (glass morphism), purple-to-green gradient accents, and color-coded status indicators. The file is 542 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Status colors must match between CSS and JS -- runtime sync via initStatusColorsFromCSS()",
-    "Subpixel antialiasing intentionally disabled for thinner text on dark backgrounds",
-    "Currently only 'original' theme is implemented; customColors is reserved/unused",
-    "Dashboard labels derive dynamically -- legacy 'dashboardN' converts to 'Dashboard N', short hex IDs displayed uppercase",
-    "Electron BrowserWindow backgroundColor #0a0a0c must match CSS --bg to prevent white flash"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "CSS custom properties on :root, JS constants in src/ui/utils/constants.js, runtime sync",
-    "Glass morphism: rgba surface + backdrop-filter blur + subtle border",
-    "Hover effects with purple glow box-shadow",
-    "Status -> color -> background-with-alpha derivation chain",
-    "colorWithAlpha utility for alpha conversion across hex/rgb/rgba"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Variables on :root, components reference variables not literal colors",
-    "Display font (Space Grotesk) for headings/numbers, sans (DM Sans) for body",
-    "STATUS_COLORS map keys: completed, in_progress, pending, failed, claimed, blocked",
-    "LEVEL_COLORS map: info, warn, error, debug, permission, deviation"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
+      "documentation/configuration/overview.md",
+      "documentation/configuration/server-config.md",
+      "documentation/configuration/electron-config.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/configuration/electron-config.md",
       "documentation/configuration/overview.md"
     ],
-    "depended_by": [],
     "related": [
-      "src/ui/styles/index.css",
-      "src/ui/utils/constants.js",
-      "documentation/configuration/electron-config.md"
+      "documentation/configuration/electron-config.md",
+      "documentation/configuration/overview.md",
+      "documentation/configuration/server-config.md"
     ]
   },
   "domains": [
-    "configuration-docs"
+    "documentation",
+    "configuration"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "theming",
-    "css",
-    "design-tokens",
-    "colors",
-    "fonts"
-  ]
+    "configuration",
+    "dashboard",
+    "progress",
+    "guide",
+    "claude",
+    "electron"
+  ],
+  "complexity": "complex"
 }

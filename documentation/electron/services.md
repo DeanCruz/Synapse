@@ -1,6 +1,6 @@
 # Electron Services Reference
 
-All services live under `electron/services/` and run in the Electron main process. They are CommonJS modules imported by `ipc-handlers.js` during app initialization.
+All 15 service modules live under `electron/services/` and run in the Electron main process. They are CommonJS modules imported by `ipc-handlers.js` during app initialization.
 
 ---
 
@@ -16,7 +16,7 @@ Active swarms are tracked in an in-memory map keyed by dashboard ID:
 
 ```javascript
 activeSwarms = {
-  "dashboard1": {
+    "71894a": {
     state: "running",           // "running" | "paused" | "replanning" | "cancelled" | "completed"
     projectPath: "/path/to/project",
     provider: "claude",         // "claude" | "codex"
@@ -110,7 +110,7 @@ Get the current state of all active swarms.
 **Returns:**
 ```javascript
 {
-  "dashboard1": {
+  "71894a": {
     state: "running",
     dispatched: 3,
     completed: 5,
@@ -201,6 +201,12 @@ The replanner must return a JSON object with:
 
 ---
 
+## GuideService
+
+**File:** `electron/services/GuideService.js`
+
+Loads the in-app Guide from `documentation/guide`. IPC handlers expose `list-guide` and `get-guide` so `GuideModal` can group markdown files, render their titles/sections, and display guide content without a separate server route.
+
 ## ClaudeCodeService
 
 **File:** `electron/services/ClaudeCodeService.js` (369 lines)
@@ -214,7 +220,7 @@ activeWorkers = {
   12345: {                        // Keyed by PID
     provider: "claude",
     taskId: "1.1",
-    dashboardId: "dashboard1",
+    dashboardId: "71894a",
     process: <ChildProcess>,
     pid: 12345,
     startedAt: "2026-03-22T15:00:00Z",
@@ -391,9 +397,9 @@ Builds the system prompt appended via `--append-system-prompt`. Contains the wor
 ## Your Dispatch Context
 
 - **tracker_root:** `/path/to/Synapse`
-- **dashboardId:** `dashboard1`
+- **dashboardId:** `71894a`
 - **task_id:** `1.1`
-- **progress_file:** `/path/to/Synapse/dashboards/dashboard1/progress/1.1.json`
+- **progress_file:** `/path/to/Synapse/dashboards/71894a/progress/1.1.json`
 ```
 
 Falls back to a minimal progress path note if the instructions file is missing.
@@ -764,7 +770,7 @@ Manages chat conversation persistence. Conversations are stored as individual JS
   name: "Session 1",
   created: "2026-03-22T15:00:00Z",
   updated: "2026-03-22T16:30:00Z",
-  dashboardId: "dashboard1",    // optional
+  dashboardId: "71894a",        // optional
   messages: [
     { role: "user", content: "..." },
     { role: "assistant", content: "..." }

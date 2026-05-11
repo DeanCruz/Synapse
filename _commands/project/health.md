@@ -24,11 +24,11 @@ For the project, check:
 - [ ] `CLAUDE.md` covers: tech stack, architecture, conventions, file structure
 - [ ] `_commands/` directory exists (note if absent, not necessarily an error)
 
-For the table of contents:
-- [ ] `{project_root}/.synapse/toc.md` exists and is non-empty
-- [ ] `{project_root}/.synapse/toc.md` lists key directories and files that actually exist on disk
-- [ ] No significant directories on disk are missing from the TOC
-- [ ] No entries in the TOC point to paths that no longer exist
+For the project knowledge graph:
+- [ ] `{project_root}/.synapse/knowledge/manifest.json` exists and is non-empty
+- [ ] Manifest file entries point to paths that actually exist on disk
+- [ ] No significant directories on disk are missing from the knowledge graph coverage
+- [ ] No annotation files referenced by the manifest are missing
 
 ### Step 2: Dependency Health
 
@@ -55,7 +55,7 @@ Check for other dependency manifests (`requirements.txt`, `go.mod`, `Cargo.toml`
 | Item | Status |
 |---|---|
 | CLAUDE.md | {present/missing} |
-| TOC ({project_root}/.synapse/toc.md) | {present/missing/stale} |
+| Knowledge graph ({project_root}/.synapse/knowledge/) | {present/missing/stale} |
 | Commands | {N} commands found |
 
 ### Git Status
@@ -71,7 +71,7 @@ Check for other dependency manifests (`requirements.txt`, `go.mod`, `Cargo.toml`
 ### Cross-Layer Issues
 - {Type `UserProfile` has drifted between frontend and backend}
 - {Frontend references endpoint `POST /api/events` — no backend handler found}
-- {Entry in TOC points to path that no longer exists}
+- {Knowledge graph entry points to path that no longer exists}
 
 ### Recommendations
 1. {Most important fix}
@@ -85,5 +85,5 @@ Check for other dependency manifests (`requirements.txt`, `go.mod`, `Cargo.toml`
 
 - **Do not modify any files.** Report only.
 - **Be thorough but fast.** Check everything but don't deep-read files unnecessarily. Use Glob/Grep for quick checks.
-- **Prioritize findings.** Critical issues (missing CLAUDE.md, broken imports, merge conflicts) first. Minor warnings (stale TOC, missing .env.example) last.
+- **Prioritize findings.** Critical issues (missing CLAUDE.md, broken imports, merge conflicts) first. Minor warnings (stale PKI entries, missing .env.example) last.
 - **Run in serial mode.**

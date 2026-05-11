@@ -83,10 +83,10 @@
 ### Instrumentation
   └─ Add Live Preview labels ────────────── !instrument
   │
-### Table of Contents
-  ├─ Search project TOC ─────────────────── !toc {query}
-  ├─ Generate full TOC ──────────────────── !toc_generate
-  └─ Update TOC incrementally ───────────── !toc_update
+### Project Knowledge Graph
+  ├─ Query project context ──────────────── !context {query}
+  ├─ Generate knowledge graph ───────────── !learn
+  └─ Refresh knowledge graph ────────────── !learn_update
   │
 ### Profiles & discovery
   ├─ List available profiles ────────────── !profiles
@@ -110,7 +110,7 @@
 |---|---|
 | `!project` | Show, set, or clear the target project path. |
 | `!initialize` | Initialize Synapse for a target project — create `.synapse/`, detect tech stack, optionally scaffold `CLAUDE.md`. |
-| `!onboard` | Project walkthrough — read CLAUDE.md, TOC, key files and present a structured orientation. |
+| `!onboard` | Project walkthrough — read CLAUDE.md, the `.synapse/knowledge/` graph, key files and present a structured orientation. |
 | `!scaffold` | Generate a `CLAUDE.md` for a project that doesn't have one. |
 
 ### Swarm Lifecycle
@@ -167,7 +167,7 @@
 |---|---|
 | `!context {query}` | Deep context gathering within the target project. |
 | `!review` | Code review of recent changes or specified files. |
-| `!health` | Project health check — CLAUDE.md quality, dependency health, TOC consistency. |
+| `!health` | Project health check — CLAUDE.md quality, dependency health, PKI coverage and staleness. |
 | `!scope {change}` | Blast radius analysis — what would be affected by a proposed change. |
 | `!trace {endpoint}` | End-to-end code tracing of an endpoint, function, or data flow. |
 | `!contracts` | API contract audit — consistency between interfaces and implementations. |
@@ -184,13 +184,13 @@
 | `!learn_update` | Incrementally refresh the PKI (stale/new files only). |
 | `!instrument` | Add `data-synapse-label` attributes to project files for Live Preview. |
 
-### Table of Contents
+### Project Knowledge Graph
 
 | Command | Description |
 |---|---|
-| `!toc {query}` | Search the project Table of Contents. |
-| `!toc_generate` | Generate a full project TOC via parallel agent swarm. |
-| `!toc_update` | Incrementally update the TOC for changed files. |
+| `!learn` | Generate the `.synapse/knowledge/` graph via parallel agent swarm. |
+| `!learn_update` | Incrementally refresh stale or missing knowledge graph annotations. |
+| `!context {query}` | Query the knowledge graph and supplement with grep/glob. |
 
 ### Profiles & Discovery
 

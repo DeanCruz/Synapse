@@ -1,48 +1,46 @@
 {
   "file": ".claude/skills/dashboard-ops/SKILL.md",
   "content_hash": "b9effb2d",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "User-invocable router skill for dashboard monitoring/operation commands. Maps !status, !logs, !inspect, !deps, !history, !cancel, !cancel-safe, !reset, !start, !stop, !guide, !update_dashboard, !export to their _commands/Synapse/*.md spec files. Also documents dashboard resolution rules (use SYNAPSE_DASHBOARD_ID or DASHBOARD ID directive — never scan or auto-detect), dashboard ID formats (ide, 6-hex, dashboardN legacy), and the key principle that dashboard stats are derived from progress files (master maintains no counters). Includes shell preprocessing (`!\\`...\\``) that injects TRACKER_ROOT and DASHBOARDS list into the prompt at load time.",
-  "exports": [],
-  "imports_from": {
-    "commands": [
-      "_commands/Synapse/{status,logs,inspect,deps,history,cancel,cancel-safe,reset,start,stop,guide,update_dashboard,export}.md"
-    ]
-  },
+  "purpose": "Claude Code skill definition for `dashboard-ops`. It describes trigger conditions, workflow, constraints, and referenced protocol files for that skill. Key content: --- name: dashboard-ops description: > Monitor, inspect, and operate Synapse swarms. Handles status checks, log viewing, task inspection, dependency analysis, history browsing, cancellation, resets, exports, and server control. Use when the user invokes !status, !logs, !inspect, !deps, !history, !cancel, !cancel-safe, !reset, !start, !stop, !guide, !update_dashboard, or !export. argument-hint: <command> [args] user-invocable: true --- The file is 56 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "dashboard-ops",
+      "kind": "skill",
+      "signature": "dashboard-ops SKILL.md instructions"
+    }
+  ],
+  "imports_from": {},
   "gotchas": [
-    "Dispatcher skill — does NOT contain the actual command logic; that lives in _commands/Synapse/*.md",
-    "Dashboard resolution is strict: use assigned dashboard, never scan",
-    "Shell preprocessing runs at skill-load time, injecting live state into the prompt",
-    "argument-hint is `<command> [args]` — user types the command name as argument"
+    "Guide description may be narrow: `!guide` remains a command-decision aid, but the app also exposes an in-app markdown Guide modal backed by documentation/guide via GuideService and IPC."
   ],
   "patterns": [
-    "Router skill: routing table + shell preprocessing + 'read the spec file' instruction",
-    "user-invocable: true — directly callable as a slash command"
+    "Skill-definition pattern: trigger guidance first, then workflow steps and referenced protocol files; these files are loaded on demand by Claude Code.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "All routed commands use ! prefix",
-    "Shell blocks use !` ... ` syntax with backticks"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "_commands/Synapse/*.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      ".claude/skills/project-workflow/SKILL.md (sibling router)"
-    ]
+    "related": []
   },
   "domains": [
-    "skill-definition",
-    "command-router",
+    "claude-skills",
     "dashboard-ops"
   ],
   "tags": [
+    "markdown",
     "skill",
-    "yaml-frontmatter",
-    "router",
+    "dashboard-ops",
     "dashboard",
-    "user-invocable"
-  ]
+    "progress",
+    "guide",
+    "ide"
+  ],
+  "complexity": "simple"
 }

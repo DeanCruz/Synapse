@@ -1,50 +1,45 @@
 {
   "file": ".claude/skills/failure-protocol/SKILL.md",
   "content_hash": "94e3bf9d",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Auto-loaded (user-invocable: false) skill that defines the master's failure recovery protocol. Three sections: (1) Worker Return Validation table — STATUS/SUMMARY/FILES CHANGED/DIVERGENT ACTIONS validation rules, processing order; (2) On Failure Steps 0-7 — double failure check (repair tasks ending in `r` cannot spawn another repair), log failure, create repair task in initialization.json (the documented write-once exception, ID format `{wave}.{next}r`), rewire dependency chain, update chains[] if Chains type, dispatch repair worker with full original prompt + failed progress file + remediation guidance, log repair, eager dispatch scan; (3) Circuit Breaker — thresholds (3+ wave failures, 1 failure blocking 3+ downstreams, 1 failure blocking >50%), 7-step response (pause, gather, analyze, revision plan with categories modified/added/removed/retry, apply, log, resume). Permission gate: repair workers must report major deviations back to master, not proceed autonomously.",
-  "exports": [],
-  "imports_from": {},
-  "gotchas": [
-    "Repair task IDs end in `r` — double failure detection depends on this convention",
-    "Repair task creation is the ONE documented exception to initialization.json's write-once rule (along with circuit breaker replan and !add_task)",
-    "Repair worker dispatch MUST include all 4 items: original prompt, failed progress file, repair task ID, instruction to follow failed_task.md",
-    "Circuit breaker pauses dispatches but the swarm 'continues around failures' — only direct dependents are blocked",
-    "Permission gate triggers dashboard popup via permission-level log entry"
+  "purpose": "Claude Code skill definition for `failure-protocol`. It describes trigger conditions, workflow, constraints, and referenced protocol files for that skill. Key content: --- name: failure-protocol description: > Synapse failure recovery protocol. Loaded automatically when a worker returns with status failed, a task needs repair, or the circuit breaker threshold is approached. Contains repair task creation, dependency rewiring, circuit breaker thresholds, and the repair worker dispatch protocol. user-invocable: false --- The file is 164 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "failure-protocol",
+      "kind": "skill",
+      "signature": "failure-protocol SKILL.md instructions"
+    }
   ],
+  "imports_from": {},
+  "gotchas": [],
   "patterns": [
-    "Numbered recovery steps (Step 0-7 for single failure; Step 1-7 for circuit breaker)",
-    "Auto-loaded protocol skill — referenced from master-protocol, p-track, p-track-resume",
-    "Categorized revision plan: modified | added | removed | retry"
+    "Skill-definition pattern: trigger guidance first, then workflow steps and referenced protocol files; these files are loaded on demand by Claude Code.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Step 0 is the gating check (double failure escalation)",
-    "Repair ID format: `{failed_task_wave}.{next_index}r`"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [
-      ".claude/agents/master-orchestrator.md",
-      ".claude/skills/p-track/SKILL.md",
-      ".claude/skills/p-track-resume/SKILL.md",
-      ".claude/skills/master-protocol/SKILL.md"
-    ],
-    "related": [
-      "agent/master/failure_recovery.md",
-      "agent/instructions/failed_task.md"
-    ]
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "skill-definition",
-    "failure-recovery",
-    "circuit-breaker"
+    "claude-skills",
+    "failure-protocol"
   ],
   "tags": [
+    "markdown",
     "skill",
-    "auto-loaded",
     "failure-protocol",
-    "repair-tasks",
-    "circuit-breaker"
-  ]
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

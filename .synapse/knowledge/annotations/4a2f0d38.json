@@ -1,44 +1,47 @@
 {
   "file": "_commands/Synapse/logs.md",
   "content_hash": "9302943c",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!logs [dashboardId] {filter}` command for displaying log entries from logs.json in the terminal. Supports filters: --level (error/warn/info/debug/permission/deviation), --task {id}, --agent {name}, --last {N}, --since {HH:MM}. Filters can be combined. Renders a 5-column table (Time/Task/Agent/Level/Message) and a summary line counting entries by level. Read-only.",
-  "exports": [],
+  "purpose": "Command specification for `!logs`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Display log entries from the dashboard's event log in the terminal. Supports filtering by level, task ID, or agent. The file is 62 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!logs",
+      "kind": "command",
+      "signature": "!logs [dashboardId] {filter}"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Custom log levels: `permission` triggers an amber popup on the dashboard alerting the user to check the terminal; `deviation` shows with a yellow badge in the log panel — both are non-standard log levels",
-    "--since uses HH:MM format and filters to entries after that time TODAY",
-    "Filters are applied in sequence — --last is applied AFTER other filters",
-    "Argument disambiguation: dashboardId (non-flag, non-task-id) vs filters (start with --) — task IDs contain dots"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "6-step procedure: parse → read logs.json → apply filters in sequence → render table → handle empty → summary line",
-    "Summary counts: total + per-level counts (info/warn/error/deviation)",
-    "Combined filter example: `!logs --level error --last 10`"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Syntax block lists every filter variant explicitly",
-    "Log Levels reference table at the bottom documenting all 6 level values and their dashboard rendering behavior"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/instructions/dashboard_resolution.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/status.md",
-      "_commands/Synapse/inspect.md"
-    ]
+    "related": []
   },
   "domains": [
-    "dashboard-monitoring",
-    "log-filtering"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "filtering"
-  ]
+    "logs",
+    "swarm-command",
+    "dashboard",
+    "ide"
+  ],
+  "complexity": "simple"
 }

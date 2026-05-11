@@ -101,6 +101,8 @@ export default function ChatDashboardView() {
   const [agentLanes, setAgentLanes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedAgent, setSelectedAgent] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [actionBusy, setActionBusy] = useState(null);
 
   // Flat lookup of every task across every lane, for AgentDetails dep labels.
   const taskById = useMemo(() => {
@@ -140,6 +142,48 @@ export default function ChatDashboardView() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  const archiveAgentDashboard = useCallback(async (lane) => {
+    if (!lane?.dashId) return;
+    const api = window.electronAPI;
+    if (!api?.archiveDashboard || !api?.deleteChatAgent) return;
+
+    const agentHex = lane.dashId.replace(/^chat-agent-/, '');
+    setActionBusy(lane.dashId);
+    try {
+      await api.archiveDashboard(lane.dashId);
+      await api.deleteChatAgent(agentHex);
+      if (selectedAgent && lane.tasks.some((t) => t.task_id === selectedAgent.id)) {
+        setSelectedAgent(null);
+      }
+      await loadData();
+    } catch (err) {
+      console.error('Failed to archive chat agent dashboard:', err);
+    } finally {
+      setActionBusy(null);
+    }
+  }, [loadData, selectedAgent]);
+
+  const deleteAgentDashboard = useCallback(async (lane) => {
+    if (!lane?.dashId) return;
+    const api = window.electronAPI;
+    if (!api?.deleteChatAgent) return;
+
+    const agentHex = lane.dashId.replace(/^chat-agent-/, '');
+    setActionBusy(lane.dashId);
+    try {
+      await api.deleteChatAgent(agentHex);
+      if (selectedAgent && lane.tasks.some((t) => t.task_id === selectedAgent.id)) {
+        setSelectedAgent(null);
+      }
+      await loadData();
+    } catch (err) {
+      console.error('Failed to delete chat agent dashboard:', err);
+    } finally {
+      setActionBusy(null);
+      setDeleteConfirm(null);
+    }
+  }, [loadData, selectedAgent]);
 
   useEffect(() => {
     const api = window.electronAPI;
@@ -214,6 +258,9 @@ export default function ChatDashboardView() {
             key={lane.name}
             lane={lane}
             onAgentClick={setSelectedAgent}
+            actionBusy={actionBusy === lane.dashId}
+            onArchive={archiveAgentDashboard}
+            onDelete={(targetLane) => setDeleteConfirm(targetLane)}
           />
         ))}
       </div>
@@ -227,6 +274,32 @@ export default function ChatDashboardView() {
           projectRoot={null}
         />
       )}
+
+      {deleteConfirm && (
+        <div className="sidebar-delete-overlay" onClick={() => setDeleteConfirm(null)}>
+          <div className="sidebar-delete-popup" onClick={(e) => e.stopPropagation()}>
+            <div className="sidebar-delete-popup-title">Delete Chat Agent?</div>
+            <p className="sidebar-delete-popup-text">
+              <strong>{deleteConfirm.name}</strong> will be removed without creating an archive.
+            </p>
+            <div className="sidebar-delete-popup-actions">
+              <button
+                className="sidebar-delete-popup-btn archive"
+                onClick={() => deleteAgentDashboard(deleteConfirm)}
+                disabled={actionBusy === deleteConfirm.dashId}
+              >
+                Delete
+              </button>
+              <button
+                className="sidebar-delete-popup-btn cancel"
+                onClick={() => setDeleteConfirm(null)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -239,7 +312,7 @@ export default function ChatDashboardView() {
 // horizontal strip with no dependency lines.
 // ---------------------------------------------------------------------------
 
-function AgentRow({ lane, onAgentClick }) {
+function AgentRow({ lane, onAgentClick, actionBusy, onArchive, onDelete }) {
   const { name, dashId, tasks, status } = lane;
   const waves = computeWavesForAgent(tasks);
   const completed = tasks.filter((t) => t.status === 'completed').length;
@@ -311,6 +384,45 @@ function AgentRow({ lane, onAgentClick }) {
           </span>
         )}
         <StatusBadge status={status} />
+        {dashId && (
+          <div className="chat-agent-row-actions">
+            <button
+              type="button"
+              className="chat-agent-action-btn archive"
+              title="Archive chat agent"
+              aria-label={`Archive ${name}`}
+              disabled={actionBusy}
+              onClick={(e) => {
+                e.stopPropagation();
+                onArchive(lane);
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 5.5h10v7H3v-7Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                <path d="M2.5 3.5h11v2h-11v-2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                <path d="M6 8h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <button
+              type="button"
+              className="chat-agent-action-btn delete"
+              title="Delete chat agent"
+              aria-label={`Delete ${name}`}
+              disabled={actionBusy}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(lane);
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M3 4.5h10" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <path d="M6.5 2.5h3l.5 2h-4l.5-2Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+                <path d="M5 6.5v6m3-6v6m3-6v6" stroke="currentColor" strokeWidth="1.15" strokeLinecap="round"/>
+                <path d="M4.5 4.5l.5 9h6l.5-9" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round"/>
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       <div
@@ -343,4 +455,3 @@ function AgentRow({ lane, onAgentClick }) {
     </div>
   );
 }
-

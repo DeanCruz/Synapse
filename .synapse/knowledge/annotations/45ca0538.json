@@ -1,27 +1,22 @@
 {
   "file": "src/ui/hooks/useDashboardData.js",
-  "content_hash": "0d6efad6",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "44a6038c",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "Single-instance hook (called once in App.jsx) that wires Electron IPC push events to AppContext dispatches and merges init.json + progress files into a unified status object via mergeState(). Owns all live data ingest for the dashboard view: subscribes to 'initialization', 'logs', 'agent_progress', 'all_progress', 'init_state', 'dashboards_list', 'dashboards_changed', 'queue_changed', 'tasks_unblocked', 'write_rejected', 'heartbeat'. Maintains per-dashboard caches in refs (initRef, progressRef, dashboardListRef) to avoid stale-closure bugs. Detects new swarms (task name/created changed) and flushes stale progress cache. Implements connection-health monitoring that re-fetches if no events arrive for 60s.",
   "exports": [
     {
       "name": "mergeState",
       "kind": "function",
-      "signature": "(init, progress, logs) => { active_task, agents, waves, chains, history }"
+      "signature": "function mergeState(...)"
     },
     {
       "name": "useDashboardData",
-      "kind": "hook",
-      "signature": "() => void — must be called once at App level"
+      "kind": "function",
+      "signature": "function useDashboardData(...)"
     }
   ],
   "imports_from": {
-    "react": [
-      "useEffect",
-      "useCallback",
-      "useRef"
-    ],
     "src/ui/context/AppContext.jsx": [
       "useAppState",
       "useDispatch"
@@ -54,11 +49,11 @@
   ],
   "relationships": {
     "depends_on": [
-      "src/ui/context/AppContext.jsx",
-      "electron/preload.js (for window.electronAPI)"
+      "src/ui/context/AppContext.jsx"
     ],
     "depended_by": [
-      "src/ui/App.jsx"
+      "src/ui/App.jsx",
+      "src/ui/shared/modals/ArchiveModal.jsx"
     ],
     "related": [
       "electron/ipc-handlers.js",
@@ -77,5 +72,6 @@
     "push-events",
     "dashboard-merge",
     "race-condition-safety"
-  ]
+  ],
+  "complexity": "complex"
 }

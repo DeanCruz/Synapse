@@ -1,0 +1,51 @@
+{
+  "file": "src/ui/pages/code/subpages/code-explorer/styles/ide-debug.css",
+  "content_hash": "e1e56fb0",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Composite stylesheet for the IDE debugger UI — covers FOUR sections: (1) Debug Toolbar (lines 1-205, .debug-toolbar with status dot + control buttons for play/pause/step over/step into/step out/restart/stop), (2) Problems Panel (lines 206-416, diagnostics for errors/warnings/info), (3) Debug Console Panel (lines 417-640, REPL-style output with expression evaluator), (4) Debug Panels (lines 641-1124, Variables/Call Stack/Breakpoints/Watch collapsible sections). Despite the four-in-one consolidation, sibling files (ide-debug-console.css, ide-debug-panels.css, ide-problems.css) ALSO define overlapping selectors — this file is loaded by IDEView.jsx alongside the others.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "OVERLAP: This file defines .problems-panel, .debug-console, and .debug-panels styles, but ide-problems.css, ide-debug-console.css, and ide-debug-panels.css ALSO define the same selectors. Last-loaded-wins. The current load order in main.jsx and IDEView.jsx determines which set wins. When fixing styles, search ALL FOUR files, not just one.",
+    "Hard-coded dark theme colors (#1e1e1e, #cccccc, #333) instead of CSS variables for some sections — palette is locked to VS Code-style dark, doesn't follow theme switcher.",
+    "1124 lines spans 4 conceptual sections; section banner comments are essential for navigation."
+  ],
+  "patterns": [
+    "Section banner navigation: each section starts with /* ============ Title ============ */ banner.",
+    "Mix of theme variables and hard-coded VS Code dark palette."
+  ],
+  "conventions": [
+    "Class prefixes: .debug-toolbar-*, .problems-panel-*, .debug-console-*, .debug-panels-*."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for --bg, --surface, --border, --text-secondary, --sans"
+    ],
+    "depended_by": [
+      "src/ui/shared/ide/IDEView.jsx",
+      "src/ui/shared/ide/DebugToolbar.jsx",
+      "src/ui/shared/ide/DebugConsolePanel.jsx",
+      "src/ui/shared/ide/DebugPanels.jsx",
+      "src/ui/shared/ide/ProblemsPanel.jsx"
+    ],
+    "related": [
+      "src/ui/styles/ide-debug-console.css (overlapping)",
+      "src/ui/styles/ide-debug-panels.css (overlapping)",
+      "src/ui/styles/ide-problems.css (overlapping)"
+    ]
+  },
+  "domains": [
+    "ide-styles"
+  ],
+  "tags": [
+    "css",
+    "ide",
+    "debugger",
+    "problems",
+    "console",
+    "variables",
+    "breakpoints"
+  ],
+  "complexity": "complex"
+}

@@ -1,6 +1,6 @@
 # `!learn`
 
-**Purpose:** Bootstrap the Project Knowledge Index (PKI) from scratch by dispatching a parallel swarm to deeply annotate every significant file in the project. Unlike `!toc_generate` which produces a searchable metadata index, `!learn` produces deep operational knowledge — gotchas, patterns, conventions, relationships, and domain taxonomy that agents can query to understand how the project actually works.
+**Purpose:** Bootstrap the Project Knowledge Index (PKI) from scratch by dispatching a parallel swarm to deeply annotate every significant file in the project. `!learn` produces deep operational knowledge — gotchas, patterns, conventions, relationships, and domain taxonomy that agents can query to understand how the project actually works.
 
 **Syntax:** `!learn`
 
@@ -495,23 +495,23 @@ These rules are absolute. Violating any of them is a failure.
 
 4. **The master's only jobs are: discover, dispatch, assemble, report.** It gathers project structure (Phase 1), dispatches agents (Phase 2), assembles their returns into PKI files (Phase 3), and reports completion (Phase 4). It does not read, analyze, or summarize source files — that is the agents' job.
 
-### Annotation Depth — Deeper Than TOC
+### Annotation Depth
 
-Annotations produced by `!learn` MUST be operationally deeper than TOC entries. The difference:
+Annotations produced by `!learn` MUST contain operational knowledge that helps future agents act correctly:
 
-| Dimension | TOC (`!toc_generate`) | PKI (`!learn`) |
-|---|---|---|
-| **Purpose** | 1-3 sentence summary | Full paragraph with role in system |
-| **Exports** | Symbol names only | Names + kinds + signatures |
-| **Imports** | Not tracked | Full module-to-names mapping |
-| **Gotchas** | Not tracked | Operational warnings for agents |
-| **Patterns** | Not tracked | Coding patterns used |
-| **Conventions** | Not tracked | Project conventions observed |
-| **Relationships** | Related files | depends_on + depended_by + related |
-| **Domains** | Not tracked | Domain classification |
-| **Tags** | Flat tag list | Same (shared with TOC) |
+| Dimension | Required PKI depth |
+|---|---|
+| **Purpose** | Full paragraph with role in system |
+| **Exports** | Names + kinds + signatures |
+| **Imports** | Full module-to-names mapping |
+| **Gotchas** | Operational warnings for agents |
+| **Patterns** | Coding patterns used |
+| **Conventions** | Project conventions observed |
+| **Relationships** | depends_on + depended_by + related |
+| **Domains** | Domain classification |
+| **Tags** | Routing tags for discovery |
 
-If an annotation reads like a TOC entry — just a short summary and some tags — it has failed. Every annotation should contain knowledge that would save an agent 5-10 minutes of investigation.
+If an annotation is just a short summary and some tags, it has failed. Every annotation should contain knowledge that would save an agent 5-10 minutes of investigation.
 
 ### Hash Rules
 

@@ -1,46 +1,44 @@
 {
   "file": "_commands/profiles/product.md",
   "content_hash": "705a006a",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Senior Product Manager role: product strategy, user research synthesis, feature prioritization, requirements documentation. Biases the worker toward problem-first thinking (no solutions without articulated problems), actionable specs (no hand-waving), prioritization rigor via RICE/ICE/impact-effort frameworks, stakeholder alignment language, and scope discipline (smallest validating ship). A master assigns this profile for PRDs, user stories, prioritization docs, roadmap proposals, scope/out-of-scope statements, and acceptance criteria definition. Forces engineers to be able to implement without clarifying questions — so specs are typically more verbose than usual.",
-  "exports": [],
+  "purpose": "Profile definition for `product`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Senior Product Manager with expertise in product strategy, user research synthesis, feature prioritization, and requirements documentation. Thinks in terms of user problems, outcomes, and tradeoffs. Every output is designed to align engineering, design, and business around clear product decisions. The file is 53 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "product",
+      "kind": "profile",
+      "signature": "!product profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Won't produce specs without testable acceptance criteria — every story must have unambiguous success conditions.",
-    "Forbids conflating multiple features into one spec — large requests get split into multiple documents.",
-    "Describes behavior, not architecture — masters relying on PM profile for technical implementation choices will be redirected to architect profile.",
-    "Vague directives like 'improve UX' get rejected — be specific about what changes."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Standard profile spine.",
-    "PRD skeleton: Problem Statement → Context/Research → Proposed Solution → User Stories → Acceptance Criteria → Out of Scope → Open Questions → Success Metrics.",
-    "User stories in 'As a [user], I want [goal], so that [benefit]' format."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Tone 'clear, precise, collaborative' — bridges technical and business language."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/architect.md",
-      "_commands/profiles/qa.md",
-      "_commands/profiles/customer-success.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "product-manager-role",
-    "specifications-and-prds"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "product",
-    "prd",
-    "user-stories"
-  ]
+    "progress",
+    "ide"
+  ],
+  "complexity": "simple"
 }

@@ -1,34 +1,60 @@
 {
   "file": "documentation/swarm-lifecycle/completion-phase.md",
-  "content_hash": "ad5f52a0",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "a107ff65",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Specifies the swarm completion phase: how the master detects all-done, the final report format, post-swarm metrics calculation written to metrics.json, automatic knowledge extraction (Step 17G) into the PKI insights/, and the user-facing summary. This phase converts a finished swarm into durable knowledge artifacts.",
+  "purpose": "Documentation page for the swarm-lifecycle area: Completion Phase. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The completion phase begins when all worker agents have returned with terminal status (completed or failed) and no more tasks are dispatchable. The master agent compiles a final report, optionally dispatches a verification agent, updates project metadata, writes final log entries, and prepares for archiving. This phase represents the transition from active swarm orchestration back to normal agent behavior. The file is 529 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Post-swarm knowledge extraction writes to {project_root}/.synapse/knowledge/insights/ -- one file per swarm",
-    "metrics.json is post-swarm-only; not updated incrementally during execution"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Automatic knowledge harvesting from worker annotations and deviations"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Final report includes per-wave timing, deviation counts, and links to relevant artifacts"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md"
+    ],
+    "related": [
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md"
+    ]
   },
   "domains": [
-    "swarm-lifecycle",
-    "completion"
+    "documentation",
+    "swarm-lifecycle"
   ],
   "tags": [
-    "completion",
-    "metrics",
-    "pki",
-    "extraction"
-  ]
+    "markdown",
+    "documentation",
+    "swarm-lifecycle",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "sse",
+    "ide"
+  ],
+  "complexity": "complex"
 }

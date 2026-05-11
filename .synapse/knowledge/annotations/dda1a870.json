@@ -1,52 +1,53 @@
 {
   "file": "documentation/dashboard/state-management.md",
-  "content_hash": "85b47001",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "c1e4c706",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Definitive reference for the dashboard's global state via AppContext + useReducer. Lists every reducer action (CLAUDE_*, IDE_*, GIT_*, DEBUG_*, SET_VIEW, etc.), full state shape, persistence rules (localStorage for repos/settings), and how IPC push events map to dispatches.",
-  "exports": [
-    "AppContext",
-    "DispatchContext",
-    "AppProvider",
-    "appReducer"
-  ],
-  "imports_from": [],
+  "purpose": "Documentation page for the dashboard area: State Management. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Synapse Dashboard uses React's built-in `useReducer` + Context API for centralized state management. There are no external state libraries. The implementation lives in `/src/ui/context/AppContext.jsx`. The file is 420 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [],
+  "imports_from": {},
   "gotchas": [
-    "Action types are flat strings — typos produce silent no-ops",
-    "Git repos and IDE workspaces persist to localStorage; live data is never persisted",
-    "Multiple subdomains (CLAUDE_, IDE_, GIT_, DEBUG_) live in same reducer — keep state slices isolated"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Single root reducer with namespaced action prefixes",
-    "Two contexts: state (AppContext) and dispatch (DispatchContext) for memoization",
-    "localStorage hydration in provider effect"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Action constants UPPER_SNAKE_CASE",
-    "State slices keyed by domain name (gitRepos, ideOpenFiles, claudeSessions, ...)"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/dashboard/overview.md"
+      "documentation/chat/overview.md",
+      "documentation/chat/ipc-handlers.md",
+      "documentation/chat/conversation-persistence.md"
     ],
     "depended_by": [
-      "documentation/dashboard/components.md",
-      "documentation/dashboard/hooks.md",
-      "documentation/dashboard/layout-modes.md",
-      "documentation/git-manager/overview.md",
-      "documentation/ide/overview.md"
+      "documentation/README.md",
+      "documentation/dashboard/components.md"
     ],
     "related": [
-      "documentation/electron/ipc-reference.md"
+      "documentation/chat/conversation-persistence.md",
+      "documentation/chat/ipc-handlers.md",
+      "documentation/chat/overview.md",
+      "documentation/dashboard/overview.md"
     ]
   },
   "domains": [
-    "dashboard-ui"
+    "documentation",
+    "dashboard"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "state",
-    "reducer"
-  ]
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "react",
+    "ipc"
+  ],
+  "complexity": "complex"
 }

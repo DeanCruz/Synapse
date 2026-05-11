@@ -14,8 +14,8 @@ export default function TimelinePanel({ status, visible, onClose }) {
   const bodyRef = useRef(null);
 
   const task    = (status && status.active_task) || null;
-  const agents  = (status && status.agents)      || [];
-  const history = (status && status.history)     || [];
+  const agents  = Array.isArray(status?.agents) ? status.agents : [];
+  const history = Array.isArray(status?.history) ? status.history : [];
 
   // Build sorted event list for current task
   const events = [];

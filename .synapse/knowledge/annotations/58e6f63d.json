@@ -1,8 +1,8 @@
 {
   "file": "vite.config.js",
   "content_hash": "ab13e374",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.415Z",
+  "annotated_by": "learn-update",
   "purpose": "Vite build configuration for the React renderer. Sets `base: './'` so the bundled HTML works when loaded via Electron's `app://` / `file://` protocols (no absolute URLs). Outputs to `dist/`, defines a single path alias `@` → `src/ui`, pre-bundles the five Monaco worker entrypoints (editor, json, css, html, ts) so Monaco's web workers resolve correctly under Vite, pins the dev server to port 5174 with strictPort (fails fast if taken), and emits ES-module workers.",
   "exports": [
     "default config (defineConfig)"
@@ -63,5 +63,6 @@
     "monaco",
     "config",
     "esm"
-  ]
+  ],
+  "complexity": "simple"
 }

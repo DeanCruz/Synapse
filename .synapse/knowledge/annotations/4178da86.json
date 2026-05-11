@@ -1,0 +1,34 @@
+{
+  "file": "src/ui/pages/chat/index.js",
+  "content_hash": "3d16c7bc",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "index.js runtime module in the Synapse app, supporting the Electron, server, or renderer control-plane flow for dashboards, swarms, chat, code, preview, and project operations.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [],
+  "patterns": [
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/shared/claude/ClaudeView.jsx"
+    ]
+  },
+  "domains": [
+    "react-ui",
+    "chat-workspace",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "renderer",
+    "chat",
+    "swarm"
+  ],
+  "complexity": "simple"
+}

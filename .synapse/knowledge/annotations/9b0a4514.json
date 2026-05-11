@@ -1,0 +1,40 @@
+{
+  "file": "src/ui/pages/code/subpages/code-explorer/styles/ide-layout.css",
+  "content_hash": "47e6d0bc",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Stylesheet for pages/code/subpages/code-explorer/styles/ide-layout.css that participates in the renderer layout and visual state for the Synapse desktop interface.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Class names are shared by multiple renderer components; broad selector changes can affect pages outside this stylesheet directory."
+  ],
+  "patterns": [
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules.",
+    "Plain CSS stylesheet imported by renderer modules; styling relies on shared class names rather than CSS modules."
+  ],
+  "conventions": [
+    "Styles are global class selectors under src/ui/styles or subpage style directories."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "electron/services/DebugService.js",
+      "src/ui/utils/monacoWorkerSetup.js"
+    ]
+  },
+  "domains": [
+    "ui-styling",
+    "react-ui",
+    "code-explorer"
+  ],
+  "tags": [
+    "css",
+    "styles",
+    "renderer",
+    "ide",
+    "swarm"
+  ],
+  "complexity": "moderate"
+}

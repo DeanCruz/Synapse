@@ -21,7 +21,7 @@ When the user types `!{command}`, locate and execute the corresponding command f
 
 1. **Check Synapse swarm commands first.** Swarm and dashboard commands (`!p_track`, `!status`, `!dispatch`, etc.) live at `{tracker_root}/_commands/Synapse/`. Always checked first.
 
-2. **Check Synapse project commands second.** Project analysis and management commands (`!context`, `!review`, `!health`, `!toc`, etc.) live at `{tracker_root}/_commands/project/`.
+2. **Check Synapse project commands second.** Project analysis and management commands (`!context`, `!review`, `!health`, `!learn`, etc.) live at `{tracker_root}/_commands/project/`.
 
 3. **Check user commands third.** User-created commands live at `{tracker_root}/_commands/user/` (and subfolders). This directory is git-ignored so user commands persist locally without interfering with repo updates.
 
@@ -62,7 +62,7 @@ When the user types a command prefixed with `!`, resolve it using the command re
 |---|---|
 | `!project` | Show, set, or clear the target project path. |
 | `!initialize` | Initialize Synapse for a target project — create `.synapse/`, detect tech stack, optionally scaffold `CLAUDE.md`. |
-| `!onboard` | Project walkthrough — read CLAUDE.md, TOC, key files and present a structured orientation. |
+| `!onboard` | Project walkthrough — read CLAUDE.md, the `.synapse/knowledge/` graph, key files and present a structured orientation. |
 | `!scaffold` | Generate a `CLAUDE.md` for a project that doesn't have one. |
 | `!create_claude` | Create or update an opinionated `CLAUDE.md` with coding standards, architecture, and styling guidelines. |
 
@@ -101,7 +101,7 @@ When the user types a command prefixed with `!`, resolve it using the command re
 |---|---|
 | `!context {query}` | Deep context gathering within `{project_root}`. |
 | `!review` | Code review of recent changes or specified files. |
-| `!health` | Project health check — CLAUDE.md quality, dependency health, TOC consistency. |
+| `!health` | Project health check — CLAUDE.md quality, dependency health, PKI coverage and staleness. |
 | `!scope {change}` | Blast radius analysis — what would be affected by a proposed change. |
 | `!trace {endpoint}` | End-to-end code tracing of an endpoint, function, or data flow. |
 | `!contracts` | API contract audit — consistency between interfaces and implementations. |
@@ -112,13 +112,13 @@ When the user types a command prefixed with `!`, resolve it using the command re
 | `!learn_update` | Incrementally refresh the PKI (stale/new files only). |
 | `!instrument` | Add `data-synapse-label` attributes to project files for Live Preview. |
 
-### Table of Contents
+### Project Knowledge Graph
 
 | Command | Description |
 |---|---|
-| `!toc {query}` | Search the project TOC at `{project_root}/.synapse/toc.md`. Supports sub-commands: `depends-on`, `depended-by`, `cluster`, and `changes-since`. |
-| `!toc_generate` | Generate a full project TOC via parallel agent swarm. |
-| `!toc_update` | Incrementally update the TOC for changed files. |
+| `!learn` | Generate the `.synapse/knowledge/` graph via parallel agent swarm. |
+| `!learn_update` | Incrementally refresh stale or missing knowledge graph annotations. |
+| `!context {query}` | Query the knowledge graph and supplement with grep/glob. |
 
 ### Profiles & Discovery
 

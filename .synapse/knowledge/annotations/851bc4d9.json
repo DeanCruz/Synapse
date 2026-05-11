@@ -1,67 +1,54 @@
 {
   "file": "_commands/project/learn.md",
-  "content_hash": "3ec2cfdb",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "aeba2735",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !learn slash command — bootstraps the Project Knowledge Index (PKI) from scratch by dispatching a parallel agent swarm to deeply annotate every significant file in the target project. Distinct from !toc_generate which produces a searchable metadata index; !learn produces deep operational knowledge — gotchas, patterns, conventions, relationships, domain taxonomy. Four-phase workflow: (1) Discovery — list project root, map directories, read CLAUDE.md, ensure .synapse/knowledge/{annotations,queries}/ exists; (2) Parallel Scan via !p dispatch — one agent per directory (or grouped small dirs), each agent reads files and produces 11-field annotations (Identity, Purpose, Exports with kind+signature, Imports map, Gotchas, Patterns, Conventions, Relationships depends_on/depended_by/related, Domains, Tags, Complexity); (3) Streaming Assembly — incrementally write annotation files keyed by SHA-256 of relative path, build manifest.json with files map + domain_index + tag_index + concept_map + stats, generate domains.json with descriptions/key_files/related_domains, generate patterns.json with patterns + conventions categories; (4) Report. NON-NEGOTIABLE: master never reads source files — agents do ALL reading; dispatch is parallel batches not sequential; PKI updates are streaming not batched.",
-  "exports": [],
+  "purpose": "Command specification for `!learn`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Bootstrap the Project Knowledge Index (PKI) from scratch by dispatching a parallel swarm to deeply annotate every significant file in the project. `!learn` produces deep operational knowledge \u2014 gotchas, patterns, conventions, relationships, and domain taxonomy that agents can query to understand how the project actually works. The file is 537 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!learn",
+      "kind": "command",
+      "signature": "!learn"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "NON-NEGOTIABLE: master agent NEVER reads source files. Zero exceptions. Master reads ONLY CLAUDE.md, directory listings (ls), and agent return values. Reading source files as master wastes context tokens and defeats the swarm's purpose.",
-    "NON-NEGOTIABLE: agent dispatch MUST be parallelized — multiple Task tool calls in a single message. Sequential one-at-a-time dispatch is forbidden.",
-    "NON-NEGOTIABLE: PKI updates are STREAMING. Master writes annotation files and updates manifest incrementally as agents return — never accumulate all results in memory and write once at end. Protects against context loss from session interruption.",
-    "Master's only jobs: discover, dispatch, assemble, report. Does NOT read/analyze/summarize source files.",
-    "Annotations MUST be operationally deeper than TOC entries — full paragraph purpose, exports with kinds+signatures, imports map, gotchas, patterns, conventions, depends_on/depended_by/related, domains, tags. If it reads like a TOC entry, it has failed.",
-    "Two distinct hashes per file: annotation file hash = SHA-256(relative path) first 8 chars (stable across content changes); content hash = SHA-256(file content) first 8 chars (changes when modified, enables staleness detection). Both mandatory.",
-    "Gotchas must be GENUINE — empty array is valid and preferable to fabricated warnings. Do not invent problems or pad the list.",
-    "Patterns must be SPECIFIC — 'uses async/await' is not a pattern; 'wraps all route handlers in asyncHandler() to centralize error responses' is.",
-    "Conventions must be OBSERVED in code, not assumed.",
-    "Domains must be PROJECT-SPECIFIC — generic labels like 'utility' or 'misc' are not domains. Use authentication/billing/simulation-engine/etc.",
-    "annotated_by field is always 'learn-bootstrap' for !learn (distinguishes from 'learn-update' for !learn_update).",
-    "Skip node_modules/, .next/, dist/, .git/, *.lock, auto-generated files; INCLUDE _commands/ directories — they contain operational knowledge.",
-    "queries/ directory created EMPTY — populated lazily by !context queries that cache their results.",
-    "concept_map is built by fuzzy-matching pattern strings across all annotations to find recurring patterns in 2+ files."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Master-as-orchestrator: discover → dispatch parallel batch → stream assembly → report. Master never touches source files.",
-    "Per-directory agent scoping: 1 agent per dir with 3+ files; group small (1-2 file) dirs into single agent.",
-    "Hash-keyed annotation files: annotations/{path-hash}.json (stable filename across content edits).",
-    "Three index files: manifest.json (per-file routing) + domains.json (taxonomy) + patterns.json (cross-cutting).",
-    "Streaming incremental writes: manifest updated on every agent return."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "p_track-era planning pattern: plan.json carries shared context and task entries before initialization.json/progress files handle dashboard rendering and lifecycle state.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "annotated_by: 'learn-bootstrap'.",
-    "Schema: 11-field annotation (file, content_hash, annotated_at, annotated_by, purpose, exports, imports_from, gotchas, patterns, conventions, relationships, domains, tags).",
-    "Domain taxonomy: project-specific lowercase-hyphenated labels.",
-    "Manifest version: 1.",
-    "Last_updated: ISO 8601 timestamp on every write."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [
-      "{project_root}/CLAUDE.md",
-      "_commands/Synapse/p.md",
-      ".claude/agents/swarm-worker.md"
-    ],
+    "depends_on": [],
     "depended_by": [
-      "_commands/project/learn_update.md",
-      "_commands/project/context.md"
+      "agent/master/pki_integration.md",
+      "documentation/project-integration/pki-overview.md"
     ],
-    "related": [
-      "_commands/project/toc_generate.md",
-      "_commands/project/learn_update.md"
-    ]
+    "related": []
   },
   "domains": [
-    "pki-bootstrap",
-    "swarm-orchestration"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
+    "slash-command",
+    "learn",
+    "project-command",
     "pki",
-    "parallel-dispatch",
-    "non-negotiable-master",
-    "writes-files"
-  ]
+    "dashboard",
+    "progress"
+  ],
+  "complexity": "complex"
 }

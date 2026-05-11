@@ -8,7 +8,7 @@ The Synapse Dashboard is a React-based single-page application that provides rea
 
 | Layer | Technology |
 |---|---|
-| UI Framework | React 18 (JSX, functional components, hooks) |
+| UI Framework | React 19 (JSX, functional components, hooks) |
 | State Management | React Context + `useReducer` (no external libraries) |
 | Desktop Shell | Electron |
 | Communication | Electron IPC (renderer-to-main process) |
@@ -38,27 +38,13 @@ main.jsx
 ```
 <AppProvider>
   <App>
-    <Header />                              -- Top nav bar (logo, task badge, archive, controls)
-    <div.dashboard-layout>
-      <Sidebar />                           -- Dashboard selector + queue items
-      <div.dashboard-content>
-        {activeView === 'home' && <HomeView />}
-        {activeView === 'swarmBuilder' && <SwarmBuilder />}
-        {activeView === 'dashboard' && <DashboardContent />}
-        {activeView === 'claude' && <DashboardContent />}   -- Claude floats on top
-        {activeView === 'git' && <GitManagerView />}         -- Git manager view
-        {activeView === 'ide' && <IDEView />}                -- IDE view
-        {activeView === 'preview' && <PreviewView />}        -- Live Preview view
-      </div>
-      {/* Floating Claude chat panel — always mounted so IPC listeners stay alive */}
-      <ClaudeFloatingPanel>               -- useResize hook for drag-to-resize
-        <ClaudeFloatingHeader />          -- Title bar with minimize/maximize/close
-        <ClaudeView />                    -- Agent chat interface
-      </ClaudeFloatingPanel>
-    </div>
+    <Header />                              -- Chat/Code mode switch, Archive, Guide, Commands, Settings
+    {appMode === 'chat' && <ChatPage />}     -- Full-page chat and conversation management
+    {appMode === 'code' && <CodePage />}     -- Code sidebar + dashboard/code/git/preview subpages
 
     {/* Modals (conditionally rendered) */}
     <CommandsModal />
+    <GuideModal />
     <ProjectModal />
     <PlanningModal />
     <SettingsModal />
@@ -66,35 +52,40 @@ main.jsx
 </AppProvider>
 ```
 
-### DashboardContent (inner component)
+### Code Page Subpages
 
 ```
-<DashboardContent>
-  <dashboard-action-bar>               -- Project button
+<CodePage>
+  <CodeSidebar />                       -- Dashboard list, create/delete/rename/reorder, settings
+  {subpage === 'dashboards' && <DashboardsPage />}
+  {subpage === 'code-explorer' && <CodeExplorerPage />}
+  {subpage === 'git' && <GitPage />}
+  {subpage === 'preview' && <PreviewPage />}
+</CodePage>
+```
+
+### DashboardsPage
+
+```
+<DashboardsPage>
+  <dashboard-action-bar>                -- Project, logs, and swarm controls for the selected dashboard
   <ProgressSection>
-    <ProgressBar />                     -- Thin fill bar
-    <StatsBar />                        -- 6 stat cards
+    <ProgressBar />                      -- Thin fill bar
+    <StatsBar />                         -- 6 stat cards
   </ProgressSection>
-  <ReplanningBanner />                  -- Circuit breaker notification
 
-  {hasTask ? (
-    {taskType === 'Chains'
-      ? <ChainPipeline />
-      : <WavePipeline />}
-    <ClearDashboardSection />
-  ) : (
-    <EmptyState />
-  )}
+  {taskType === 'Chains'
+    ? <ChainPipeline />
+    : <WavePipeline />}
 
-  <TimelinePanel />                     -- Side panel with event timeline
-  <BottomPanel>                         -- VS Code-style bottom panel
-    <TerminalView />                    -- PTY-backed xterm terminal
-    <LogPanel />                        -- Event log drawer
-    <ProblemsPanel />                   -- Diagnostics panel
-    <DebugConsolePanel />               -- Debug console
+  <TimelinePanel />                      -- Event timeline
+  <BottomPanel>                          -- Terminal, logs, metrics, diagnostics/debug panels
+    <TerminalView />
+    <LogPanel />
+    <MetricsPanel />
   </BottomPanel>
-  <AgentDetails />                      -- Modal on agent card click
-</DashboardContent>
+  <AgentDetails />                       -- Modal on agent card click
+</DashboardsPage>
 ```
 
 ## Data Flow
@@ -175,19 +166,17 @@ And produces a merged status object:
 
 ## View System
 
-The application uses a simple view-switching model managed by the `activeView` state field:
+The app has two top-level modes, Chat and Code. Code mode contains its own subpage routing for swarm dashboards, Code Explorer, Git Manager, and Live Preview. Older reducer actions still expose some legacy view names for compatibility, but the current UI is page-centered.
 
 | View | Component | Description |
 |---|---|---|
-| `'dashboard'` | `DashboardContent` | Main pipeline view with wave/chain visualization |
-| `'home'` | `HomeView` | Overview of all dashboards, archives, history |
-| `'swarmBuilder'` | `SwarmBuilder` | Visual swarm plan editor |
-| `'claude'` | `DashboardContent` + `ClaudeFloatingPanel` | Dashboard with floating chat overlay |
-| `'git'` | `GitManagerView` | Git repository manager with branches, commits, diffs, remotes |
-| `'ide'` | `IDEView` | Multi-workspace code editor with file explorer, debug, and terminal |
-| `'preview'` | `PreviewView` | Live Preview with embedded webview and inline text editing |
+| Chat mode | `ChatPage` | Full-page AI chat with conversations and dashboard-linked context |
+| Code / Dashboards | `DashboardsPage` | Main pipeline view with wave/chain visualization |
+| Code / Code Explorer | `CodeExplorerPage` | Dashboard-project-keyed file explorer, editor, search, debug, and problems UI |
+| Code / Git Manager | `GitPage` | Git UI for repositories discovered under the selected dashboard project |
+| Code / Preview | `PreviewPage` | Live Preview with embedded webview and inline text editing |
 
-Views are switched via `dispatch({ type: 'SET_VIEW', view: 'dashboard' })`. The Claude floating panel is visible in all views except `'git'`.
+The Code sidebar controls Code subpage navigation and dashboard selection. The selected dashboard's project binding drives Code Explorer, Git Manager, and Preview.
 
 ## Modal System
 
@@ -196,23 +185,25 @@ Modals are managed by the `activeModal` state field:
 | Modal | Component | Trigger |
 |---|---|---|
 | `'commands'` | `CommandsModal` | Header "Commands" button |
+| `'guide'` | `GuideModal` | Header "Guide" button |
 | `'project'` | `ProjectModal` | Dashboard action bar or sidebar project button |
 | `'planning'` | `PlanningModal` | Swarm planning flow |
 | `'settings'` | `SettingsModal` | Sidebar settings button |
 
-Agent details are handled separately via a `selectedAgent` local state in `DashboardContent`, rendering the `AgentDetails` modal component when an agent card is clicked.
+Agent details are handled separately by the dashboard subpage, rendering the `AgentDetails` modal component when an agent card is clicked.
 
 ## Multi-Dashboard Architecture
 
 The dashboard supports up to N simultaneous swarms (dynamically managed, no hardcoded limit). Each dashboard instance has:
 
 - Its own `initialization.json` (static plan)
+- Its own `plan.json` (current canonical task spec used by workers)
 - Its own `progress/` directory (dynamic worker data)
 - Its own `logs.json` (event log)
 - Its own Claude chat message history (persisted in localStorage)
-- Its own processing state for the Claude agent
+- Its own project path, additional context directories, agent provider, default model, and permission settings
 
-The sidebar shows all active dashboards with color-coded status dots. Switching dashboards (`SWITCH_DASHBOARD` action) stashes the current dashboard's chat state and restores the target's.
+The Code sidebar shows active dashboards with status dots and management controls. Creating a Code dashboard via the sidebar opens a folder picker so the new dashboard is immediately bound to a project. Project settings can later be edited with `ProjectModal`.
 
 ## Communication Protocol
 
@@ -227,7 +218,7 @@ All communication between the renderer and the Electron main process uses IPC:
 | `getDashboardLogs(id)` | Fetch logs.json for a dashboard |
 | `getDashboardStatuses()` | Fetch status summaries for all dashboards |
 | `getDashboards()` | Fetch the list of dashboard IDs |
-| `getOverview()` | Fetch archives + history for HomeView |
+| `getOverview()` | Fetch archives + history summaries |
 | `clearDashboard(id)` | Clear a dashboard's data |
 | `archiveDashboard(id)` | Archive a dashboard before clearing |
 | `createDashboard()` | Create a new dashboard slot |

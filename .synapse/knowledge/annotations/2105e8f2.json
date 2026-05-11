@@ -1,8 +1,8 @@
 {
   "file": "src/server/utils/constants.js",
   "content_hash": "722ae9b4",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.409Z",
+  "annotated_by": "learn-update",
   "purpose": "Defines all server-side named constants — directory paths resolved from the tracker root, polling/timing intervals tuned for fs.watch reliability, and shared default object shapes. `ROOT` is the Synapse repo root, computed as `path.resolve(__dirname, '..', '..', '..')`. Subdirectories `DASHBOARDS_DIR`, `QUEUE_DIR`, `ARCHIVE_DIR`, `HISTORY_DIR`, `CONVERSATIONS_DIR` are all under ROOT. Timing constants control: `INIT_POLL_MS=100` (fs.watchFile poll for init/logs), `PROGRESS_RETRY_MS=80` (re-read after mid-write), `PROGRESS_READ_DELAY_MS=30` (initial debounce on progress change), `RECONCILE_DEBOUNCE_MS=300` (dashboards-dir change debounce), `RECONCILE_INTERVAL_MS=5000` (periodic full scan), `HEARTBEAT_MS=15000` (SSE keepalive), `DEPENDENCY_CHECK_DELAY_MS=100` (delay before dispatch readiness check after status change). `DEFAULT_INITIALIZATION` is the empty-dashboard shape `{task: null, agents: [], waves: [], chains: [], history: []}`; `DEFAULT_LOGS = {entries: []}`. PORT defaults to 3456 with env override.",
   "exports": [
     {
@@ -138,5 +138,6 @@
     "paths",
     "timing",
     "javascript"
-  ]
+  ],
+  "complexity": "simple"
 }

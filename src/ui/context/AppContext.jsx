@@ -269,7 +269,7 @@ const initialState = {
   chatTabs: savedChatTabs, // [{ id, name }]
   chatActiveTabId: savedChatActiveTabIsValid ? savedChatActiveTabId : null,
   chatTabMessages: loadAllChatTabMessages(savedChatTabs), // { [tabId]: [{ id, role, text, ts }] }
-  activeModal: null, // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor'
+  activeModal: null, // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor' | 'archive' | 'logs' | 'guide'
   modalDashboardId: null, // which dashboard a modal was opened for
   claudeDashboardId: null, // which dashboard the Claude view is associated with
   claudeViewMode: 'expanded', // 'minimized' | 'collapsed' | 'expanded' | 'maximized'

@@ -1,52 +1,48 @@
 {
   "file": "_commands/Synapse/reset.md",
   "content_hash": "0fec86d8",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!reset [dashboardId | --all]` command for clearing dashboards. Single-dashboard mode: build a history summary (with lessons_learned: deviations, failure_causes, warnings, patterns), write to history/{YYYY-MM-DD}_{task_name}.json, MANDATORILY archive the entire dashboard directory to Archive/{YYYY-MM-DD}_{task_name}/, then clear progress/*.json files and reset initialization.json+logs.json to empty state. --all mode: iterate every dashboard from listDashboards() applying the same flow.",
-  "exports": [],
+  "purpose": "Command specification for `!reset`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Clear a dashboard and reset it to empty state. Saves a history summary before clearing. The file is 69 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!reset",
+      "kind": "command",
+      "signature": "!reset [dashboardId | --all]"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Archive is MANDATORY — never skip; copies entire dashboard directory before clearing",
-    "Already-empty dashboards (task: null) must report 'already empty' and stop — do not archive empty state",
-    "History summary includes a `lessons_learned` object with 4 nested fields (deviations[], failure_causes[], warnings[], patterns) — different from the regular history summary used by the server",
-    "History filename format: {YYYY-MM-DD}_{task_name}.json — must match the convention used by HistoryService.js",
-    "Empty initialization.json after reset has shape: { task: null, agents: [], waves: [], chains: [], history: [] } — note the empty arrays",
-    "Empty logs.json after reset has shape: { entries: [] }",
-    "TASK_NAME shell extraction uses grep+head+cut — fragile to JSON formatting changes; archive name fallback is ${TASK_NAME:-unnamed}"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "6-step single-dashboard procedure: parse → check empty → build+save history summary → archive → clear progress + reset init+logs → report",
-    "--all mode replays steps 3-5 across all dashboards skipping empty ones",
-    "Two artifacts per reset: history JSON + Archive directory copy (both required)"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
   ],
   "conventions": [
-    "Two parallel sub-sections: Single Dashboard Reset and Reset All (--all)",
-    "Bash code block for archive copy operation with TASK_NAME extraction",
-    "History summary fields enumerated as bulleted list with nested fields"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/instructions/dashboard_resolution.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/history.md",
-      "_commands/Synapse/cancel.md",
-      "src/server/services/HistoryService.js",
-      "src/server/services/ArchiveService.js"
-    ]
+    "related": []
   },
   "domains": [
-    "dashboard-monitoring",
-    "archival",
-    "housekeeping"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "destructive",
-    "history-summary"
-  ]
+    "reset",
+    "swarm-command",
+    "dashboard",
+    "progress",
+    "initialization-json"
+  ],
+  "complexity": "simple"
 }

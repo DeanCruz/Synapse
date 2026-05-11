@@ -1,8 +1,8 @@
 {
   "file": "src/ui/styles/index.css",
-  "content_hash": "26674c98",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "4fe1c8ce",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "The 9198-line global stylesheet and design system root. Defines all CSS custom properties (--bg, --surface, --border, --text/--text-secondary/--text-tertiary, status colors --color-completed/--color-in-progress/--color-pending/--color-failed/--color-claimed/--color-blocked, gradient stops, --color-accent (#9b7cf0 purple), terminal palette, editor palette, file-icon palette, --sans/--display fonts, --sidebar-width). Contains the body reset, scrollbar styling (4px webkit), and styles for nearly every dashboard surface: header bar (glass nav with gradient glow), progress bar, stats bar, task badge & details popup, agent details, permission request modal, wave pipeline, chain pipeline, agent card, log panel, empty states, timeline panel, metrics panel, dashboard layout (sidebar+content), dashboard sidebar list, queue popup, agent log popup, files-changed badge, archive/history dropdowns, clear-dashboard confirm, home view meta-dashboard, color themes, settings modal/theme picker, Claude floating panel & conversation view, commands modal, attachment UI, bottom panel (VS Code-style), logs modal, plus responsive breakpoints (≤768px, ≤600px). Imported once globally from src/ui/main.jsx.",
   "exports": [],
   "imports_from": {},
@@ -48,5 +48,6 @@
     "theming",
     "global-styles",
     "css-variables"
-  ]
+  ],
+  "complexity": "complex"
 }

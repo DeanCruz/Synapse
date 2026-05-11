@@ -376,7 +376,7 @@ Sent when a progress file write is rejected by the WatcherService's validation g
   "filename": "1.1.json",
   "task_id": "1.1",
   "reason": "dashboard_id_mismatch",
-  "details": "File contains dashboard_id \"dashboard2\" but is in dashboard \"dashboard1\"",
+  "details": "File contains dashboard_id \"b2c3d4\" but is in dashboard \"a1b2c3\"",
   "file_dashboard_id": "356dc5",
   "expected_dashboard_id": "2d84ac",
   "timestamp": "2026-03-20T14:05:00.000Z"

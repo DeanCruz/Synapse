@@ -1,90 +1,79 @@
 {
   "file": "electron/services/SwarmOrchestrator.js",
-  "content_hash": "1a4c8abb",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "494bae1e",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "The GUI swarm dispatch engine — the in-app replacement for a terminal-based master agent. Reads dashboards/{id}/initialization.json, tracks dispatched/completed/failed tasks in memory, and dispatches every task whose `depends_on` is satisfied by spawning a Claude or Codex worker. Drives the full lifecycle: startSwarm, pauseSwarm, resumeSwarm, cancelSwarm, retryTask, handleProgressUpdate (called by the watcher on progress-file writes). Implements two circuit breakers: 3+ failures in same wave OR a single failure that blocks 3+ remaining tasks (or >50% of remaining tasks). When the breaker trips, spawns a Claude CLI replanner with the buildReplanPrompt output, parses the returned JSON {modified, added, removed, retry}, mutates initialization.json on disk, and resumes dispatch. On swarm completion (success or partial failure), runs extractSwarmKnowledge() which harvests worker annotations from progress files, generates swarm insights (dependency_insights from CRITICAL deviations, failure_patterns from failed tasks, architecture_notes from MODERATE deviations), and merges everything into the project's `.synapse/knowledge/` PKI manifest + annotations.",
   "exports": [
     {
       "name": "init",
       "kind": "function",
-      "signature": "(broadcast) => void"
+      "signature": "init(...)"
     },
     {
       "name": "startSwarm",
       "kind": "function",
-      "signature": "(dashboardId, opts) => {success, error?}"
+      "signature": "startSwarm(...)"
     },
     {
       "name": "pauseSwarm",
       "kind": "function",
-      "signature": "(dashboardId) => result"
+      "signature": "pauseSwarm(...)"
     },
     {
       "name": "resumeSwarm",
       "kind": "function",
-      "signature": "(dashboardId) => result"
+      "signature": "resumeSwarm(...)"
     },
     {
       "name": "cancelSwarm",
       "kind": "function",
-      "signature": "(dashboardId) => result"
+      "signature": "cancelSwarm(...)"
     },
     {
       "name": "retryTask",
       "kind": "function",
-      "signature": "(dashboardId, taskId) => result"
+      "signature": "retryTask(...)"
     },
     {
       "name": "getSwarmStates",
       "kind": "function",
-      "signature": "() => {[id]: {state, dispatched, completed, failed}}"
+      "signature": "getSwarmStates(...)"
     },
     {
       "name": "isActive",
       "kind": "function",
-      "signature": "(dashboardId) => boolean"
+      "signature": "isActive(...)"
     },
     {
       "name": "handleProgressUpdate",
       "kind": "function",
-      "signature": "(dashboardId, taskId, progressData) => void"
+      "signature": "handleProgressUpdate(...)"
     },
     {
       "name": "extractSwarmKnowledge",
       "kind": "function",
-      "signature": "(dashboardId, projectPath) => void"
+      "signature": "extractSwarmKnowledge(...)"
     }
   ],
   "imports_from": {
-    "src/server/utils/constants": [
-      "DASHBOARDS_DIR"
+    "src/server/utils/constants.js": [
+      "require"
     ],
-    "src/server/services/DashboardService": [
-      "readDashboardInit",
-      "readDashboardProgress"
+    "src/server/services/DashboardService.js": [
+      "require"
     ],
-    "electron/services/ClaudeCodeService": [
-      "init",
-      "spawnWorker",
-      "killWorker",
-      "getActiveWorkers"
+    "electron/services/ClaudeCodeService.js": [
+      "require"
     ],
-    "electron/services/CodexService": [
-      "init",
-      "spawnWorker",
-      "killWorker",
-      "getActiveWorkers"
+    "electron/services/CodexService.js": [
+      "require"
     ],
-    "electron/services/PromptBuilder": [
-      "buildSystemPrompt",
-      "buildTaskPrompt",
-      "readUpstreamResults",
-      "buildReplanPrompt",
-      "buildReplanSystemPrompt"
+    "electron/services/PromptBuilder.js": [
+      "require"
     ],
-    "electron/services/ProjectService": [
-      "getProjectContextWithFallback"
+    "electron/services/ProjectService.js": [
+      "require"
     ]
   },
   "gotchas": [
@@ -114,19 +103,19 @@
   ],
   "relationships": {
     "depends_on": [
-      "src/server/services/DashboardService",
-      "src/server/utils/constants",
-      "electron/services/ClaudeCodeService",
-      "electron/services/CodexService",
-      "electron/services/PromptBuilder",
-      "electron/services/ProjectService"
+      "electron/services/ClaudeCodeService.js",
+      "electron/services/CodexService.js",
+      "electron/services/ProjectService.js",
+      "electron/services/PromptBuilder.js",
+      "src/server/services/DashboardService.js",
+      "src/server/utils/constants.js"
     ],
     "depended_by": [
       "electron/ipc-handlers.js"
     ],
     "related": [
-      "src/server/services/WatcherService.js",
-      "agent/master/role.md"
+      "agent/master/role.md",
+      "src/server/services/WatcherService.js"
     ]
   },
   "domains": [
@@ -146,5 +135,6 @@
     "pki",
     "dispatch",
     "lifecycle"
-  ]
+  ],
+  "complexity": "complex"
 }

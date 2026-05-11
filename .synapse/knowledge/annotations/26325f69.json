@@ -1,43 +1,55 @@
 {
   "file": "documentation/data-architecture/pki-schemas.md",
-  "content_hash": "8da7ee47",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "acebb148",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Authoritative schema reference for the Project Knowledge Index (PKI) at {project_root}/.synapse/knowledge/. Defines manifest.json (master routing index with file/domain/tag/concept indexes), annotations/{hash}.json (deep per-file knowledge: purpose, exports, gotchas, patterns, relationships), domains.json (taxonomy), patterns.json (cross-cutting patterns), and insights/{date}_{slug}.json (post-swarm lessons learned). Establishes cross-schema consistency rules and the content-hash-based staleness model.",
+  "purpose": "Documentation page for the data-architecture area: PKI Schemas -- Schema Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Project Knowledge Index (PKI) is a **persistent, auto-accumulating knowledge layer** that lives in the target project's `.synapse/knowledge/` directory. It gives any future Claude session rich understanding of the codebase without redundant exploration. The PKI is built incrementally by the `!learn` command and maintained by `!learn_update`, with staleness tracked by a PostToolUse hook. The file is 961 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Annotation filename is the first 8 hex chars of SHA-256(relative_file_path) -- must match manifest hash field exactly",
-    "manifest content_hash and annotation content_hash must match for non-stale entries; staleness hook flips stale flag when they diverge",
-    "domain_index and tag_index in the manifest are bidirectional inverses of per-file domains/tags -- writes must keep them consistent",
-    "Insights index in manifest is FIFO-capped at 50 entries"
+    "PKI schema drift risk: domain_index, tag_index, and concept_map now live as sibling files beside manifest.json; manifest.json should not be treated as the only index container."
   ],
   "patterns": [
-    "Hash-keyed annotation files with central manifest routing",
-    "Content-hash-based staleness detection (avoids timestamp false positives)",
-    "Bidirectional indexing (domain_index + tag_index reverse maps)"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Domain and pattern keys are lowercase-hyphenated identifiers (/^[a-z][a-z0-9-]*$/)",
-    "queries/ subdirectory is gitignored cache, regenerable from manifest+annotations",
-    "Schema version field on every PKI file for forward-compatible migration"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md"
+    ],
+    "depended_by": [
+      "agent/master/pki_integration.md",
+      "documentation/README.md",
+      "documentation/project-integration/pki-overview.md"
+    ],
+    "related": [
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/progress-files.md"
+    ]
   },
   "domains": [
-    "data-architecture",
-    "pki",
-    "schema"
+    "documentation",
+    "data-architecture"
   ],
   "tags": [
+    "markdown",
+    "documentation",
+    "data-architecture",
     "pki",
-    "manifest",
-    "annotations",
-    "domains",
-    "patterns",
-    "insights"
-  ]
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude"
+  ],
+  "complexity": "complex"
 }

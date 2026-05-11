@@ -1,33 +1,56 @@
 {
   "file": "documentation/master-agent/statusing.md",
   "content_hash": "cffde3cb",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Documents the master's monitoring and statusing protocol: how it reads progress files to derive overall state, when to append to logs.json, how to surface deviations, and the user-facing status reports it produces during long-running swarms. Defines the cadence and shape of status updates the master streams to the chat.",
+  "purpose": "Documentation page for the master-agent area: Master Agent \u2014 Statusing Protocol. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Status reporting is how the user and the system maintain visibility into an active swarm. This document covers the complete statusing protocol: what the master writes and when, what workers handle themselves, dashboard file management, logs.json patterns, task file updates, terminal output rules, and the permission request flow. The file is 497 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Stat counters are derived, not stored -- the master never maintains its own counts",
-    "Reading progress files mid-write requires the same retry pattern the server uses"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Derived state from progress file scans rather than maintained counters"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Status snapshots include wave-level rollups plus per-agent stage info"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/dispatch-protocol.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/planning.md"
+    ],
+    "related": [
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/planning.md"
+    ]
   },
   "domains": [
-    "master-agent",
-    "monitoring"
+    "documentation",
+    "master-agent"
   ],
   "tags": [
-    "statusing",
+    "markdown",
+    "documentation",
+    "master-agent",
+    "dashboard",
     "progress",
-    "logs"
-  ]
+    "initialization-json",
+    "sse",
+    "ide"
+  ],
+  "complexity": "complex"
 }

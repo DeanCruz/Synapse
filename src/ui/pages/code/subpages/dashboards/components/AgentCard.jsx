@@ -10,9 +10,10 @@ import { formatElapsed, calcDuration } from '@/utils/format.js';
 // ---------------------------------------------------------------------------
 
 export function StatusBadge({ status }) {
-  const label = status.replace(/_/g, ' ');
-  const baseColor = STATUS_COLORS[status] || STATUS_COLORS.pending;
-  const bg = STATUS_BG_COLORS[status] || STATUS_BG_COLORS.pending;
+  const safeStatus = typeof status === 'string' && status ? status : 'pending';
+  const label = safeStatus.replace(/_/g, ' ');
+  const baseColor = STATUS_COLORS[safeStatus] || STATUS_COLORS.pending;
+  const bg = STATUS_BG_COLORS[safeStatus] || STATUS_BG_COLORS.pending;
   const border = colorWithAlpha(baseColor, 0.3);
 
   return (
@@ -67,7 +68,7 @@ export default function AgentCard({ agent, onClick }) {
   const {
     id,
     title,
-    status = 'pending',
+    status: rawStatus = 'pending',
     layer,
     directory,
     assigned_agent,
@@ -79,6 +80,9 @@ export default function AgentCard({ agent, onClick }) {
     deviations,
     files_changed,
   } = agent;
+
+  const status = typeof rawStatus === 'string' && rawStatus ? rawStatus : 'pending';
+  const safeStage = typeof stage === 'string' ? stage : null;
 
   const dotColor = STATUS_COLORS[status] || STATUS_COLORS.pending;
   const bgColor = STATUS_BG_COLORS[status] || STATUS_BG_COLORS.pending;
@@ -107,9 +111,9 @@ export default function AgentCard({ agent, onClick }) {
     bottomContent = (
       <>
         <div className="agent-card-stage-row">
-          {stage && (
-            <span className="agent-stage" data-stage={stage}>
-              {stage.replace(/_/g, ' ')}
+          {safeStage && (
+            <span className="agent-stage" data-stage={safeStage}>
+              {safeStage.replace(/_/g, ' ')}
             </span>
           )}
           <ElapsedTimer startedAt={started_at} />

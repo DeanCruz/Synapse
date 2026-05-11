@@ -4,34 +4,72 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useAppState, useDispatch } from '../context/AppContext.jsx';
 
+function asRecord(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
+}
+
+function asArray(value) {
+  return Array.isArray(value) ? value : [];
+}
+
+function normalizeProgressMap(progress) {
+  if (!progress || typeof progress !== 'object') return {};
+  if (
+    !Array.isArray(progress)
+    && progress.progress
+    && typeof progress.progress === 'object'
+    && !Array.isArray(progress.progress)
+  ) {
+    return progress.progress;
+  }
+  if (Array.isArray(progress)) {
+    return progress.reduce((acc, entry) => {
+      if (entry && typeof entry === 'object' && entry.task_id) {
+        acc[entry.task_id] = entry;
+      }
+      return acc;
+    }, {});
+  }
+  return progress;
+}
+
 /**
  * Merge static plan data (init) with dynamic progress data into a renderable status.
  */
 export function mergeState(init, progress, logs) {
-  if (!init || !init.task) {
+  if (!init || !init.task || typeof init.task !== 'object') {
     return { active_task: null, agents: [], waves: [], chains: [], history: [] };
   }
   const task = { ...init.task };
-  const agents = (init.agents || []).map(agentDef => {
-    const prog = progress[agentDef.id];
+  const progressMap = normalizeProgressMap(progress);
+  const agentDefs = asArray(init.agents).filter(agentDef =>
+    agentDef && typeof agentDef === 'object' && agentDef.id !== undefined
+  );
+  const agents = agentDefs.map(agentDef => {
+    const prog = progressMap[agentDef.id] && typeof progressMap[agentDef.id] === 'object'
+      ? progressMap[agentDef.id]
+      : null;
+    const status = typeof prog?.status === 'string' && prog.status
+      ? prog.status
+      : 'pending';
     return {
       id: agentDef.id,
       title: agentDef.title,
       wave: agentDef.wave,
       layer: agentDef.layer || null,
       directory: agentDef.directory || null,
-      depends_on: agentDef.depends_on || [],
-      status: prog ? prog.status : 'pending',
+      depends_on: Array.isArray(agentDef.depends_on) ? agentDef.depends_on : [],
+      status,
       assigned_agent: prog ? prog.assigned_agent : null,
       started_at: prog ? prog.started_at : null,
       completed_at: prog ? prog.completed_at : null,
       summary: prog ? prog.summary : null,
-      stage: prog ? prog.stage : null,
+      stage: typeof prog?.stage === 'string' ? prog.stage : null,
       message: prog ? prog.message : null,
-      milestones: prog ? prog.milestones : [],
-      deviations: prog ? prog.deviations : [],
-      logs: prog ? prog.logs : [],
-      files_changed: prog ? prog.files_changed : [],
+      milestones: Array.isArray(prog?.milestones) ? prog.milestones : [],
+      deviations: Array.isArray(prog?.deviations) ? prog.deviations : [],
+      logs: Array.isArray(prog?.logs) ? prog.logs : [],
+      files_changed: Array.isArray(prog?.files_changed) ? prog.files_changed : [],
     };
   });
 
@@ -60,7 +98,7 @@ export function mergeState(init, progress, logs) {
   }
 
   // Check for replanning state from circuit breaker
-  if (task.overall_status === 'in_progress' && logs && logs.entries) {
+  if (task.overall_status === 'in_progress' && logs && Array.isArray(logs.entries)) {
     const hasCircuitBreaker = logs.entries.some(e =>
       e.level === 'warn' && e.message && e.message.includes('Circuit breaker triggered')
     );
@@ -78,7 +116,8 @@ export function mergeState(init, progress, logs) {
     }
   }
 
-  const waves = (init.waves || []).map(waveDef => {
+  const waveDefs = asArray(init.waves);
+  const waves = waveDefs.map(waveDef => {
     const waveAgents = agents.filter(a => a.wave === waveDef.id);
     const waveCompleted = waveAgents.filter(a => a.status === 'completed').length;
     const anyActive = waveAgents.some(a => ['in_progress','completed','failed'].includes(a.status));
@@ -91,7 +130,13 @@ export function mergeState(init, progress, logs) {
     };
   });
 
-  return { active_task: task, agents, waves, chains: init.chains || [], history: init.history || [] };
+  return {
+    active_task: task,
+    agents,
+    waves,
+    chains: asArray(init.chains),
+    history: asArray(init.history),
+  };
 }
 
 /**
@@ -116,7 +161,9 @@ export function useDashboardData() {
   const deriveDashboardStatus = useCallback((init, progress) => {
     const hasTask = init && init.task && init.task.name;
     if (!hasTask) return 'idle';
-    const vals = Object.values(progress);
+    const vals = Object.values(asRecord(normalizeProgressMap(progress))).filter(p =>
+      p && typeof p === 'object'
+    );
     if (vals.length === 0) return 'in_progress';
     let allDone = true, hasFailed = false, hasInProgress = false;
     vals.forEach(p => {
@@ -154,8 +201,8 @@ export function useDashboardData() {
         // push-event updates that arrived while this pull was in flight.
         // BUT: if the init changed (new swarm), the cache was already flushed
         // by the initialization handler, so the merge is a no-op / safe.
-        const existing = progressRef.current[id] || {};
-        const merged = { ...progress };
+        const existing = asRecord(progressRef.current[id]);
+        const merged = { ...normalizeProgressMap(progress) };
         for (const [taskId, existingEntry] of Object.entries(existing)) {
           const incoming = merged[taskId];
           if (!incoming) {
@@ -163,7 +210,7 @@ export function useDashboardData() {
             // This prevents stale progress from a previous swarm leaking through
             // if the initialization handler's flush hasn't run yet.
             const currentInit = initRef.current[id];
-            const validIds = currentInit && currentInit.agents
+            const validIds = currentInit && Array.isArray(currentInit.agents)
               ? new Set(currentInit.agents.map(a => a.id))
               : null;
             if (validIds && validIds.has(taskId)) {
@@ -271,7 +318,7 @@ export function useDashboardData() {
     addListener('agent_progress', (data) => {
       if (!data.dashboardId || !data.task_id) return;
       // Update per-dashboard progress cache
-      const dbProgress = { ...(progressRef.current[data.dashboardId] || {}), [data.task_id]: data };
+      const dbProgress = { ...asRecord(progressRef.current[data.dashboardId]), [data.task_id]: data };
       progressRef.current[data.dashboardId] = dbProgress;
       dispatch({ type: 'SET_DASHBOARD_PROGRESS', dashboardId: data.dashboardId, progress: dbProgress });
       if (data.dashboardId === currentDashboardIdRef.current) {
@@ -291,8 +338,8 @@ export function useDashboardData() {
       // Merge with existing progress instead of overwriting — prevents losing
       // recent individual agent_progress updates that may not yet be reflected
       // in the bulk data (race condition between push events and pull data).
-      const existing = progressRef.current[dashboardId] || {};
-      const merged = { ...progressMap };
+      const existing = asRecord(progressRef.current[dashboardId]);
+      const merged = { ...normalizeProgressMap(progressMap) };
       for (const [taskId, existingEntry] of Object.entries(existing)) {
         const incoming = merged[taskId];
         if (!incoming) {
@@ -348,10 +395,11 @@ export function useDashboardData() {
         }
       }
       if (progress) {
-        progressRef.current[dashboardId] = progress;
-        dispatch({ type: 'SET_DASHBOARD_PROGRESS', dashboardId, progress });
+        const normalizedProgress = normalizeProgressMap(progress);
+        progressRef.current[dashboardId] = normalizedProgress;
+        dispatch({ type: 'SET_DASHBOARD_PROGRESS', dashboardId, progress: normalizedProgress });
         if (dashboardId === currentDashboardIdRef.current) {
-          dispatch({ type: 'SET_PROGRESS', data: progress });
+          dispatch({ type: 'SET_PROGRESS', data: normalizedProgress });
         }
       }
       if (logs) {

@@ -1,8 +1,8 @@
 {
   "file": "stop.sh",
   "content_hash": "b1287000",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.414Z",
+  "annotated_by": "learn-update",
   "purpose": "Companion to start.sh. Discovers the SSE server PID via `lsof -ti :3456` and the Electron app PID via `pgrep -f 'Synapse.*electron'`, exits cleanly if neither is running, otherwise sends SIGTERM (`kill`) to whichever PIDs were found and reports each shutdown to stdout. Independent kills mean a partial shutdown (Electron up, server down or vice versa) still gets cleaned up.",
   "exports": [],
   "imports_from": {},
@@ -41,5 +41,6 @@
     "shutdown",
     "process-management",
     "macos"
-  ]
+  ],
+  "complexity": "simple"
 }

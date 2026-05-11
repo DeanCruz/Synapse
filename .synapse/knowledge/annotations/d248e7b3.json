@@ -1,43 +1,49 @@
 {
   "file": "documentation/troubleshooting/faq.md",
   "content_hash": "a764a37a",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "30 frequently asked questions across 7 sections (General, Project Setup, Swarm Execution, Dashboard/Monitoring, Hooks/Validation, Configuration, Profiles/Commands). Covers !p_track vs !p, parallel vs serial execution, waves vs chains, tracker_root vs project_root, project setup, CLAUDE.md, PKI, parallel worker limits, mid-flight task addition, retries, failures, replanning, resume, dashboard updates, multi-dashboard, monitoring commands, cancellation, reset, archives, hooks, configuration storage, server timing, Live Preview, profiles, and command discovery.",
+  "purpose": "Documentation page for the troubleshooting area: FAQ -- Frequently Asked Questions. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Answers to common questions about Synapse usage, configuration, and behavior. For error-specific troubleshooting, see [Common Issues](./common-issues.md). The file is 210 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Auto-escalation suggests !p_track at 3+ subtasks",
-    "Hooks fail open by default; SYNAPSE_SKIP_SCHEMA=1 only bypasses validate-initialization-schema",
-    "Common dashboard-not-updating causes: wrong dashboard_id, validation rejection, server not running, stale browser cache",
-    "validate-archive-before-clear.sh enforces archival before progress file deletion",
-    "No hardcoded parallel worker limit -- bound by API rate limits and system resources"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Q&A organized by topic with cross-references to common-issues.md",
-    "Decision-tree style guidance (when to use which command)"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Cross-references to common-issues.md for error specifics",
-    "Multi-section organization: General, Project Setup, Swarm Execution, Dashboard, Hooks, Config, Profiles"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": [
+    "depends_on": [
       "documentation/troubleshooting/common-issues.md",
-      "documentation/commands/",
-      "documentation/configuration/"
+      "documentation/commands/creating-commands.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/troubleshooting/common-issues.md"
+    ],
+    "related": [
+      "documentation/commands/creating-commands.md",
+      "documentation/troubleshooting/common-issues.md"
     ]
   },
   "domains": [
-    "troubleshooting-docs"
+    "documentation",
+    "troubleshooting"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "faq",
     "troubleshooting",
-    "questions"
-  ]
+    "pki",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide"
+  ],
+  "complexity": "moderate"
 }

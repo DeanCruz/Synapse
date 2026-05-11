@@ -1,0 +1,54 @@
+{
+  "file": "src/ui/pages/code/subpages/preview/inject-overlay.js",
+  "content_hash": "2358cb8d",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Standalone IIFE injected into the Live Preview webview via webContents.executeJavaScript(). Enables inline double-click editing of HTML elements bearing data-synapse-label attributes — the in-page side of the !instrument workflow. Scans the DOM for labeled elements, attaches a hover style, and on dblclick converts the element to contentEditable. On commit (Enter or blur) sends a postMessage of shape { type:'synapse-edit', label, newText, oldText, routePath } back to the host. Uses MutationObserver for SPA navigation/React-rerender detection so newly mounted labeled elements pick up styling automatically.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Idempotent guard via window.__synapseOverlayInjected — re-injection (e.g. on each navigation) is safe but does NOT update existing handlers. If you change the script you MUST clear the flag or reload.",
+    "All CSS classes are 'synapse-' prefixed and CSS custom properties scoped under '--synapse-*' to avoid host-page collisions — DO NOT rename without auditing the host preview/edit flow.",
+    "Communication is one-way via window.postMessage — host listens via webContents.on('ipc-message') / window event handler. There is NO synapse-overlay-ready signal back.",
+    "MutationObserver is wired to document.body || document.documentElement with subtree:true — high-churn pages cause many debouncedScan invocations (debounce: 100ms).",
+    "data-synapse-scanned attribute marks elements already-processed — querySelectorAll filter '[data-synapse-label]:not([data-synapse-scanned])' avoids double-styling.",
+    "On Enter (without Shift) the edit commits — Shift+Enter inserts a newline (browser default). Escape cancels and restores original text.",
+    "Blur-to-commit uses setTimeout(0) so a focus jump to another labeled element triggers startEdit -> commitEdit ordering correctly (otherwise blur would commit AFTER the new edit started).",
+    "findLabeledAncestor walks up to (but not including) document.body — clicking inside a deeply-nested labeled element's child resolves to the labeled ancestor.",
+    "newText is taken from element.textContent — HTML formatting inside labeled elements is LOST on edit.",
+    "All event listeners use capture phase (true) — overrides host page click handlers reliably.",
+    "Activated under window.location.pathname which is sent as routePath in postMessage payload — the host uses this to map the label back to the correct source route."
+  ],
+  "patterns": [
+    "IIFE with strict mode and idempotent guard — required for any executeJavaScript-injected script.",
+    "CSS custom properties for theme variables inside injected styles — avoids hardcoded colors scattered across selectors.",
+    "MutationObserver + debounced scan — the canonical SPA-aware DOM-watching pattern.",
+    "postMessage with structured type field — host filters by message.data.type === 'synapse-edit'."
+  ],
+  "conventions": [
+    "Var (not let/const) — file uses ES5-compatible syntax for maximum webview compatibility.",
+    "All function names use camelCase synapseSomething for any global-leak; locals are short."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "electron/services/InstrumentService.js",
+      "electron/services/PreviewTextWriter.js"
+    ]
+  },
+  "domains": [
+    "live-preview-overlay",
+    "webview-injection",
+    "inline-editor"
+  ],
+  "tags": [
+    "webview",
+    "injection",
+    "contenteditable",
+    "mutation-observer",
+    "post-message",
+    "data-synapse-label"
+  ],
+  "complexity": "complex"
+}

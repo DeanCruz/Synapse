@@ -1,8 +1,8 @@
 {
   "file": "package.json",
   "content_hash": "f7182de0",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.407Z",
+  "annotated_by": "learn-update",
   "purpose": "npm package manifest and the operational entrypoint definition for Synapse. Declares `electron/main.js` as the application entry, defines five scripts (build/start/dev/dist/release plus postinstall), configures electron-builder for macOS DMG+ZIP packaging with GitHub publishing, and pins runtime/dev dependencies including Electron 41, React 19, Monaco Editor, node-pty, xterm, and electron-updater. The build.files array determines what gets bundled into the .dmg, and the postinstall step rebuilds node-pty against the current Electron ABI.",
   "exports": [
     "scripts.build",
@@ -84,5 +84,6 @@
     "build",
     "electron-builder",
     "dependencies"
-  ]
+  ],
+  "complexity": "simple"
 }

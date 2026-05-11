@@ -1,33 +1,61 @@
 {
   "file": "documentation/swarm-lifecycle/monitoring-phase.md",
   "content_hash": "5208fbd6",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Describes the live monitoring phase between dispatch and completion: how the master polls progress files, surfaces deviations and errors, decides when to dispatch the next wave, and streams status snapshots to the user. Details the read patterns (full progress directory scan vs targeted reads) and the cadence at which the master checks for state changes.",
+  "purpose": "Documentation page for the swarm-lifecycle area: Monitoring Phase. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The monitoring phase runs throughout swarm execution, from the moment the first worker is dispatched until the last worker completes or fails. During this phase, workers report live progress via individual progress files, the server broadcasts updates via SSE, the dashboard renders real-time status, the master logs events and processes completions, and the eager dispatch loop keeps the pipeline maximally saturated. The file is 566 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Reading a progress file mid-write may yield malformed JSON -- retry once after ~80ms",
-    "fs.watch on the progress directory provides immediate notification but does not include file content"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Polling-with-retry for resilient progress reads"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Status snapshots favor specificity (wave/agent IDs and stages) over vague summaries"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/completion-phase.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md"
+    ],
+    "related": [
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md"
+    ]
   },
   "domains": [
-    "swarm-lifecycle",
-    "monitoring"
+    "documentation",
+    "swarm-lifecycle"
   ],
   "tags": [
-    "monitoring",
-    "polling",
-    "live-status"
-  ]
+    "markdown",
+    "documentation",
+    "swarm-lifecycle",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "sse"
+  ],
+  "complexity": "complex"
 }

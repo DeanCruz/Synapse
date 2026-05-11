@@ -1,0 +1,64 @@
+{
+  "file": "src/ui/shared/modals/TaskEditorModal.jsx",
+  "content_hash": "0171c286",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Form modal for creating or editing a single task (agent) inside the SwarmBuilder before the swarm is launched. Captures title, wave (existing or '+ New Wave' with name input), layer, directory, dependencies (multi-select checkbox list of other agents), and description. On Save, returns a taskData object via onSave callback containing trimmed values, an _newWaveName field if the user picked '+ New Wave' (signal for parent to create the wave), and (in edit mode) the original id. The available-deps list excludes the agent currently being edited to prevent self-cycles.",
+  "exports": [
+    {
+      "name": "TaskEditorModal",
+      "kind": "component",
+      "signature": "default function TaskEditorModal(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/shared/modals/Modal.jsx": [
+      "Modal"
+    ]
+  },
+  "gotchas": [
+    "Only PREVENTS direct self-dependency (filter a.id !== editTask.id) — does NOT prevent indirect cycles. The SwarmBuilder/parent must validate the full dependency graph (e.g. via Kahn's algorithm in src/server/utils/validation.js).",
+    "When wave='__new__' is selected, the wave field on returned taskData is null (not 0/undefined) — parent handler must check _newWaveName presence to decide whether to create a new wave and assign its id.",
+    "If user selects '+ New Wave' but leaves the name input blank, defaults to 'New Wave' silently — no error or inline validation feedback.",
+    "directory defaults to '.' if blank after trim — meaning empty directory is interpreted as project root, NOT as 'unspecified'.",
+    "Save button is disabled when title is empty, but doesn't validate other fields. Description being empty is allowed (worker will receive an empty description prompt body).",
+    "selectedDeps is initialized from editTask.depends_on — if editTask.depends_on contains stale ids referencing deleted agents, those ids persist in selectedDeps until the user toggles them off."
+  ],
+  "patterns": [
+    "Conditional UI: '+ New Wave' option in select toggles a follow-up name input field — common pattern for inline-creation in dropdowns.",
+    "Boolean isEdit derived from !!editTask drives initial state values."
+  ],
+  "conventions": [
+    "Class names mix .task-editor-* with .settings-app-* (rows/labels/inputs reused from SettingsModal grid)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/shared/modals/Modal.jsx"
+    ],
+    "depended_by": [
+      "src/ui/pages/code/subpages/dashboards/components/SwarmBuilder.jsx"
+    ],
+    "related": [
+      "electron/services/TaskEditorService.js",
+      "src/ui/shared/SwarmBuilder.jsx"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "task-editor",
+    "swarm-builder"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "form",
+    "swarm",
+    "dependencies"
+  ],
+  "complexity": "moderate"
+}

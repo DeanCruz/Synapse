@@ -189,13 +189,15 @@ function SyncIcon() {
 // ── QuickActions component ─────────────────────────────────────
 
 export default function QuickActions({ repoPath }) {
-  const { gitStatus, gitCurrentBranch, gitRemotes, gitLog } = useAppState();
+  const { gitStatus, gitCurrentBranch, gitRemotes, gitLog, gitBranches } = useAppState();
   const dispatch = useDispatch();
 
   // Dialog states
   const [activeDialog, setActiveDialog] = useState(null);
   const [loading, setLoading] = useState(false);
   const [branchName, setBranchName] = useState('');
+  const [switchBranchName, setSwitchBranchName] = useState('');
+  const [stashBeforeSwitch, setStashBeforeSwitch] = useState(true);
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -208,6 +210,10 @@ export default function QuickActions({ repoPath }) {
     (gitStatus.untracked && gitStatus.untracked.length > 0)
   );
   const hasCommits = gitLog && gitLog.length > 0;
+  const switchBranchOptions = (Array.isArray(gitBranches) ? gitBranches : [])
+    .filter(branch => branch && !branch.remote && branch.name && branch.name !== gitCurrentBranch)
+    .map(branch => branch.name)
+    .sort((a, b) => a.localeCompare(b));
 
   // Clear success message after a delay
   const showSuccess = useCallback((msg) => {
@@ -287,6 +293,55 @@ export default function QuickActions({ repoPath }) {
       setLoading(false);
     }
   }, [api, repoPath, branchName, dispatch, showSuccess]);
+
+  // ── Switch Branch ────────────────────────────────────────────
+
+  const handleSwitchBranchConfirm = useCallback(async (selectedBranch) => {
+    const targetBranch = typeof selectedBranch === 'string' ? selectedBranch : switchBranchName;
+    if (!api || !repoPath || !targetBranch) return;
+    setLoading(true);
+    setError(null);
+    try {
+      if (hasChanges && stashBeforeSwitch) {
+        const stashResult = await api.gitStash(repoPath, `Auto-stash before switching to ${targetBranch}`);
+        if (!stashResult || !stashResult.success) {
+          throw new Error(stashResult?.error || 'Failed to stash changes');
+        }
+      }
+
+      const result = await api.gitCheckout(repoPath, targetBranch);
+      if (!result || !result.success) {
+        if (hasChanges && stashBeforeSwitch) {
+          await api.gitStashPop(repoPath).catch(() => {});
+        }
+        throw new Error(result?.error || 'Failed to switch branch');
+      }
+
+      await refreshGitData(api, repoPath, dispatch);
+      setActiveDialog(null);
+      setModalOpen(false);
+      setSwitchBranchName('');
+      setStashBeforeSwitch(true);
+      showSuccess(`Switched to "${targetBranch}"`);
+    } catch (err) {
+      setError(err.message || 'Switch branch failed');
+    } finally {
+      setLoading(false);
+    }
+  }, [api, repoPath, switchBranchName, hasChanges, stashBeforeSwitch, dispatch, showSuccess]);
+
+  const handleSwitchBranchChoice = useCallback((branch) => {
+    if (!branch || loading) return;
+    setError(null);
+    setSwitchBranchName(branch);
+    setStashBeforeSwitch(true);
+    if (hasChanges) {
+      setActiveDialog('switchBranch');
+      setModalOpen(false);
+      return;
+    }
+    handleSwitchBranchConfirm(branch);
+  }, [hasChanges, handleSwitchBranchConfirm, loading]);
 
   // ── Undo Last Commit (soft reset) ────────────────────────────
 
@@ -475,6 +530,8 @@ export default function QuickActions({ repoPath }) {
     setActiveDialog(null);
     setError(null);
     setBranchName('');
+    setSwitchBranchName('');
+    setStashBeforeSwitch(true);
     setLoading(false);
   }, []);
 
@@ -688,6 +745,28 @@ export default function QuickActions({ repoPath }) {
                       {categoryLabels[cat]}
                     </div>
                     <div className="git-manager-qa-modal-grid">
+                      {cat === 'branch' && switchBranchOptions.length > 0 && (
+                        <div className="git-manager-qa-branch-options" aria-label="Switch branch options">
+                          {switchBranchOptions.map(name => (
+                            <button
+                              key={name}
+                              type="button"
+                              className="git-manager-qa-branch-option"
+                              onClick={() => handleSwitchBranchChoice(name)}
+                              disabled={loading}
+                              title={`Switch to ${name}`}
+                            >
+                              <span className="git-manager-qa-branch-option-icon">
+                                <BranchSmallIcon />
+                              </span>
+                              <span className="git-manager-qa-branch-option-text">
+                                <span className="git-manager-qa-branch-option-title">Switch to</span>
+                                <span className="git-manager-qa-branch-option-name">{name}</span>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {catActions.map(action => {
                         const Icon = action.icon;
                         return (
@@ -797,6 +876,76 @@ export default function QuickActions({ repoPath }) {
         </div>
       )}
 
+      {/* Switch Branch */}
+      {activeDialog === 'switchBranch' && (
+        <div className="git-manager-dialog-overlay" onClick={handleCloseDialog}>
+          <div
+            className="git-manager-dialog warning"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Switch Branch"
+          >
+            <div className="git-manager-dialog-header">
+              <div className="git-manager-dialog-icon">
+                <MoveBranchIcon />
+              </div>
+              <div className="git-manager-dialog-title">Switch Branch</div>
+            </div>
+            <div className="git-manager-dialog-body">
+              <div>Choose a local branch to switch to.</div>
+              <div className="git-manager-quick-action-branch-list">
+                {switchBranchOptions.map(name => (
+                  <button
+                    key={name}
+                    type="button"
+                    className={`git-manager-quick-action-branch-option${switchBranchName === name ? ' selected' : ''}`}
+                    onClick={() => setSwitchBranchName(name)}
+                    disabled={loading}
+                  >
+                    <BranchSmallIcon />
+                    <span>{name}</span>
+                  </button>
+                ))}
+              </div>
+              {hasChanges && (
+                <label className="git-manager-quick-action-checkbox">
+                  <input
+                    type="checkbox"
+                    checked={stashBeforeSwitch}
+                    onChange={(e) => setStashBeforeSwitch(e.target.checked)}
+                    disabled={loading}
+                  />
+                  <span>Stash current changes before switching</span>
+                </label>
+              )}
+              {error && <div className="git-manager-quick-action-error">{error}</div>}
+            </div>
+            <div className="git-manager-dialog-footer">
+              <button
+                className="git-manager-dialog-btn cancel"
+                onClick={handleCloseDialog}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                className="git-manager-dialog-btn confirm-warning"
+                onClick={handleSwitchBranchConfirm}
+                disabled={loading || !switchBranchName}
+              >
+                {loading && (
+                  <span className="git-manager-spinner sm">
+                    <span className="git-manager-spinner-circle" />
+                  </span>
+                )}
+                Switch Branch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Undo Last Commit */}
       <ConfirmDialog
         isOpen={activeDialog === 'undoCommit'}
@@ -900,7 +1049,7 @@ export default function QuickActions({ repoPath }) {
       />
 
       {/* Show inline error for non-dialog errors */}
-      {error && activeDialog && activeDialog !== 'moveBranch' && (
+      {error && activeDialog && activeDialog !== 'moveBranch' && activeDialog !== 'switchBranch' && (
         <div className="git-manager-qa-bar-toast error">
           <ErrorXIcon />
           {error}

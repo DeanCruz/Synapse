@@ -1647,6 +1647,9 @@
 }
 
 .git-manager-empty-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   margin-top: 8px;
 }
 
@@ -2170,6 +2173,73 @@
   gap: 2px;
 }
 
+.git-manager-qa-branch-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.git-manager-qa-branch-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  border-radius: 7px;
+  background: rgba(96, 165, 250, 0.06);
+  color: var(--text);
+  font-family: var(--sans);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.git-manager-qa-branch-option:hover:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(96, 165, 250, 0.1);
+}
+
+.git-manager-qa-branch-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.git-manager-qa-branch-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--color-in-progress);
+}
+
+.git-manager-qa-branch-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.git-manager-qa-branch-option-title {
+  font-size: 0.6rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.git-manager-qa-branch-option-name {
+  overflow: hidden;
+  color: var(--text);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Individual action card in modal */
 .git-manager-qa-modal-card {
   display: flex;
@@ -2287,6 +2357,69 @@
   opacity: 0.6;
 }
 
+.git-manager-quick-action-branch-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  margin-top: 12px;
+  overflow-y: auto;
+}
+
+.git-manager-quick-action-branch-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.76rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.git-manager-quick-action-branch-option:hover:not(:disabled) {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.git-manager-quick-action-branch-option.selected {
+  border-color: var(--color-in-progress);
+  background: rgba(96, 165, 250, 0.08);
+  color: var(--text);
+}
+
+.git-manager-quick-action-branch-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.git-manager-quick-action-branch-option svg {
+  flex-shrink: 0;
+  color: var(--color-in-progress);
+}
+
+.git-manager-quick-action-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  color: var(--text-secondary);
+  font-family: var(--sans);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.git-manager-quick-action-checkbox input {
+  accent-color: var(--color-in-progress);
+}
+
 /* Inline error message in dialogs */
 .git-manager-quick-action-error {
   margin-top: 10px;
@@ -2353,6 +2486,10 @@
   background: var(--bg);
 }
 
+.git-manager-repo-tab.is-not-repo {
+  color: var(--text-secondary);
+}
+
 .git-manager-repo-tab.active::before {
   content: '';
   position: absolute;
@@ -2396,4 +2533,40 @@
   font-size: 0.68rem;
   font-weight: 500;
   letter-spacing: 0.02em;
+}
+
+.git-manager-repo-tab-branch.is-setup {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--color-warning, #f59e0b);
+}
+
+.git-manager-clone-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(520px, 100%);
+  margin-top: 12px;
+}
+
+.git-manager-clone-input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: var(--mono, 'SF Mono', 'Fira Code', monospace);
+  font-size: 0.76rem;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.git-manager-clone-input:focus {
+  border-color: var(--color-in-progress);
+}
+
+.git-manager-clone-input::placeholder {
+  color: var(--text-tertiary);
 }

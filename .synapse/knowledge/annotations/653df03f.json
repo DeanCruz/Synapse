@@ -1,0 +1,40 @@
+{
+  "file": "src/ui/pages/code/subpages/code-explorer/styles/ide-search.css",
+  "content_hash": "f27a6a75",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Stylesheet for the IDE Search Panel (.ide-search). Defines header (uppercase title + actions), input area (search/replace fields), filter toggles (case-sensitive/whole-word/regex/include/exclude), results tree with file headers and per-line match excerpts with match-highlight spans, plus empty/loading/no-results states.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    ".ide-search-* prefix is consistent — preserve when adding rules.",
+    "Match highlight spans rely on inline backgrounds — selecting text across them may produce odd selection artifacts."
+  ],
+  "patterns": [
+    "Uppercase 0.06em letter-spaced section titles consistent with ide-explorer.css.",
+    "Inline match highlights via styled <span> wrappers in result text."
+  ],
+  "conventions": [
+    "Class prefix: .ide-search-*."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for --border, --text-secondary, --sans, --color-accent"
+    ],
+    "depended_by": [
+      "src/ui/shared/ide/SearchPanel.jsx"
+    ],
+    "related": [
+      "src/ui/shared/ide/SearchResults.jsx"
+    ]
+  },
+  "domains": [
+    "ide-styles"
+  ],
+  "tags": [
+    "css",
+    "ide",
+    "search"
+  ],
+  "complexity": "complex"
+}

@@ -1,66 +1,48 @@
 {
   "file": ".claude/skills/master-protocol/SKILL.md",
   "content_hash": "c7429b39",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Auto-loaded (user-invocable: false) skill providing the master orchestrator's core identity, constraints, and schemas. Contains: 5 NON-NEGOTIABLE constraints (master never writes code, all implementation dispatched, dashboard mandatory, long prompts mean MORE planning, read command file every time); 5 responsibilities (Gather Context/Plan/Dispatch/Status/Report); allowed-files table (plan.json, initialization.json, logs.json, master_state.json, metrics.json); NEVER list (no .ts/.tsx/.js/.jsx/.py/.css/.html, no app commands, no 'just one thing'); Module Index (10 referenced docs with when-to-read); compact dashboard write schemas (initialization.json/logs.json/master_state.json/metrics.json); dashboard selection priority (assigned > --dashboard flag > ask user, NEVER scan); Eager Dispatch 5-step mechanism; Approval Gate protocol (hook-enforced via validate-approval-gate.sh); 12-row Common Pitfalls table; 11-rule summary.",
-  "exports": [],
-  "imports_from": {
-    "agent_modules": [
-      "agent/master/role.md",
-      "agent/master/initialization_blueprint.md",
-      "agent/master/dashboard_writes.md",
-      "agent/master/ui_map.md",
-      "agent/master/eager_dispatch.md",
-      "agent/master/failure_recovery.md",
-      "agent/master/worker_prompts.md",
-      "agent/master/pki_integration.md",
-      "agent/master/compaction_recovery.md",
-      "agent/master/dashboard_protocol.md"
-    ]
-  },
+  "purpose": "Claude Code skill definition for `master-protocol`. It describes trigger conditions, workflow, constraints, and referenced protocol files for that skill. Key content: --- name: master-protocol description: > Synapse master orchestrator protocol. Loaded automatically when operating as a swarm master agent. Contains role constraints, dashboard write schemas, dispatch rules, module index, and common pitfalls. user-invocable: false --- The file is 210 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "master-protocol",
+      "kind": "skill",
+      "signature": "master-protocol SKILL.md instructions"
+    }
+  ],
+  "imports_from": {},
   "gotchas": [
-    "Auto-loaded for master-orchestrator agent — provides identity AND schemas",
-    "References agent/master/initialization_blueprint.md as MANDATORY pre-read before writing initialization.json",
-    "Lists exactly 3 documented exceptions to initialization.json write-once: repair task creation, circuit breaker replanning, !add_task",
-    "Approval Gate is hook-enforced — agent CANNOT bypass via clever prompting",
-    "Plan.json must be written BEFORE initialization.json — also hook-enforced",
-    "Mentions legacy paths (tasks/{date}/parallel_*.json) as REMOVED — current canonical is dashboards/{id}/plan.json"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Auto-load protocol skill: identity + schemas + module index in one file",
-    "NON-NEGOTIABLE blockquote pattern for the 5 hardest rules",
-    "Compact schema reference (not full schema — points to blueprint for that)"
+    "Skill-definition pattern: trigger guidance first, then workflow steps and referenced protocol files; these files are loaded on demand by Claude Code.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Section ordering: identity -> constraints -> responsibilities -> allowed -> never -> module index -> schemas -> rules"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [
-      ".claude/agents/master-orchestrator.md",
-      ".claude/skills/p-track/SKILL.md",
-      ".claude/skills/p-track-resume/SKILL.md",
-      ".claude/skills/eager-dispatch/SKILL.md",
-      ".claude/skills/master-plan-track/SKILL.md",
-      ".claude/skills/failure-protocol/SKILL.md"
-    ],
-    "related": [
-      "CLAUDE.md",
-      "agent/master/*.md (10 modules)"
-    ]
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "skill-definition",
-    "master-protocol",
-    "agent-identity"
+    "claude-skills",
+    "master-protocol"
   ],
   "tags": [
+    "markdown",
     "skill",
-    "auto-loaded",
-    "master",
-    "non-negotiable",
-    "schemas",
-    "identity"
-  ]
+    "master-protocol",
+    "pki",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "initialization-json"
+  ],
+  "complexity": "moderate"
 }

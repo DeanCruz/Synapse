@@ -1,45 +1,50 @@
 {
   "file": "documentation/dashboard/components.md",
-  "content_hash": "21615c00",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "de884341",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Reference for every React component in the Synapse dashboard UI. Documents Header, Sidebar, layout pipelines (WavePipeline, ChainPipeline), AgentCard, StatsBar, panels (LogPanel, MetricsPanel, TimelinePanel, BottomPanel), modals, and ConnectionIndicator with their props, child components, and rendering responsibilities.",
+  "purpose": "Documentation page for the dashboard area: Dashboard Components Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: This document covers every React component in the Synapse Dashboard UI. Components are organized by their role in the application. The file is 653 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
-  "imports_from": [],
+  "imports_from": {},
   "gotchas": [
-    "WavePipeline / ChainPipeline are the two layout primitives — choose by task.type (Waves vs Chains)",
-    "AgentCard receives merged init + progress data; do not query stores directly",
-    "Modals render through Modal.jsx portal, not inline children"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Functional components only (no class components)",
-    "Props-down/events-up style; state lives in AppContext",
-    "Single-responsibility components per file"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "PascalCase JSX filenames matching component name",
-    "Path: src/ui/components/ with subfolders for git/, ide/, modals/, preview/"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/dashboard/state-management.md",
-      "documentation/dashboard/layout-modes.md"
+      "documentation/chat/overview.md",
+      "documentation/dashboard/state-management.md"
     ],
     "depended_by": [
-      "documentation/dashboard/overview.md"
+      "documentation/README.md"
     ],
     "related": [
-      "documentation/dashboard/hooks.md",
-      "documentation/dashboard/styling.md"
+      "documentation/chat/overview.md",
+      "documentation/dashboard/overview.md",
+      "documentation/dashboard/state-management.md"
     ]
   },
   "domains": [
-    "dashboard-ui"
+    "documentation",
+    "dashboard"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "components",
-    "react"
-  ]
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "multi-provider",
+    "codex",
+    "claude"
+  ],
+  "complexity": "complex"
 }

@@ -451,10 +451,20 @@ function ToolInputFormatted({ name, input, onOpenFile }) {
 // Single collapsible tool call block
 function ToolCallBlock({ block, onOpenFile }) {
   const isCodeChange = block.name === 'Edit' || block.name === 'Write';
+  const isAgent = block.name === 'Agent' || block.name === 'Task';
   const isStreaming = block._streaming;
   const [expanded, setExpanded] = useState(isCodeChange);
   const summary = toolInputSummary(block.name, block.input);
   const hasResult = block._result !== undefined && block._result !== null;
+  // Auto-collapse sub-agent (Agent/Task) tool blocks when the result arrives —
+  // sub-agent results are typically a giant JSON dump that dominates the chat.
+  const prevHasResultRef = useRef(hasResult);
+  useEffect(() => {
+    if (isAgent && hasResult && !prevHasResultRef.current) {
+      setExpanded(false);
+    }
+    prevHasResultRef.current = hasResult;
+  }, [hasResult, isAgent]);
 
   return (
     <div className={'claude-tool-call' + (expanded ? ' expanded' : '') + (hasResult ? ' has-result' : '') + (isStreaming ? ' streaming' : '')}>
@@ -800,6 +810,27 @@ function JsonBlock({ data, raw }) {
   );
 }
 
+// Low-profile collapsible wrapper for JSON results that would otherwise dominate
+// the chat (e.g. final `result` events, standalone tool results). Collapsed by
+// default — shows a small "Result" pill that expands on click.
+function CollapsibleJsonResult({ data, raw, label = 'Result' }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="claude-json-collapsible">
+      <button
+        type="button"
+        className={'claude-json-collapsible-toggle' + (expanded ? ' is-expanded' : '')}
+        onClick={(e) => { e.stopPropagation(); setExpanded(v => !v); }}
+        title={expanded ? 'Click to collapse' : 'Click to expand'}
+      >
+        <span className="claude-json-collapsible-caret">{expanded ? '▾' : '▸'}</span>
+        <span className="claude-json-collapsible-label">{label}</span>
+      </button>
+      {expanded && <JsonBlock data={data} raw={raw} />}
+    </div>
+  );
+}
+
 // Markdown content with file-path linkification + click delegation.
 // Renders the markdown HTML once per text change, then walks text nodes
 // to wrap detected file paths in clickable spans. A single delegated
@@ -892,9 +923,12 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }
     // run-on string.
     const sysJson = tryParseJson(msg.text);
     if (sysJson !== null) {
+      const label = (sysJson && typeof sysJson === 'object' && sysJson.type === 'result')
+        ? 'Result'
+        : (msg.isError ? 'Error details' : 'Result');
       return (
-        <div className={'claude-system-msg' + (msg.isError ? ' claude-error' : '')}>
-          <JsonBlock data={sysJson} raw={msg.text} />
+        <div className={'claude-system-msg claude-system-msg-collapsed' + (msg.isError ? ' claude-error' : '')}>
+          <CollapsibleJsonResult data={sysJson} raw={msg.text} label={label} />
         </div>
       );
     }
@@ -910,14 +944,17 @@ function ConversationMessage({ msg, isLatestThinking, onSendAnswer, onOpenFile }
   if (msg.type === 'tool_result_standalone') {
     const resultText = toolResultText(msg.content);
     const trJson = tryParseJson(resultText);
+    if (trJson !== null) {
+      return (
+        <div className="claude-system-msg claude-system-msg-collapsed">
+          <CollapsibleJsonResult data={trJson} raw={resultText} label="Tool result" />
+        </div>
+      );
+    }
     return (
       <div style={{ background: 'var(--surface)', border: '1px solid var(--color-completed)', borderRadius: 6, padding: '6px 10px', alignSelf: 'flex-start', maxWidth: '90%', fontSize: '0.75rem', overflowWrap: 'break-word', wordBreak: 'break-word', minWidth: 0 }}>
         <span style={{ color: 'var(--color-completed)' }}>[TOOL_RESULT_STANDALONE]</span>{' '}
-        {trJson !== null ? (
-          <JsonBlock data={trJson} raw={resultText} />
-        ) : (
-          <span style={{ color: 'var(--text-secondary)' }}>{String(resultText).substring(0, 100)}</span>
-        )}
+        <span style={{ color: 'var(--text-secondary)' }}>{String(resultText).substring(0, 100)}</span>
       </div>
     );
   }
@@ -1528,13 +1565,6 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
           if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
             appendMsg({ type: 'assistant', text: data.lastMessage });
           }
-          if (data.errorOutput) {
-            dispatch({
-              type: 'CLAUDE_APPEND_MSG',
-              surface,
-              msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true }
-            });
-          }
           // If the process exited with a non-zero code and no visible response
           // was produced, show feedback so the user isn't left staring at silence.
           if (data.exitCode && data.exitCode !== 0 && !sawStreamingRef.current) {
@@ -1549,9 +1579,6 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
           // Different tab on same dashboard — route to tab stash
           if (data.provider === 'codex' && data.lastMessage && !codexStreamedTaskIdsRef.current.has(data.taskId)) {
             dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: taskTab, msg: { type: 'assistant', text: data.lastMessage } });
-          }
-          if (data.errorOutput) {
-            dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: taskTab, msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true } });
           }
           // Lightweight cleanup (skip auto-save — messages persisted in stash)
           activeTaskIdsRef.current.delete(data.taskId);
@@ -1574,9 +1601,6 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
         if (!targetDash) return;
         if (data.provider === 'codex' && data.lastMessage) {
           dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'assistant', text: data.lastMessage } });
-        }
-        if (data.errorOutput) {
-          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'system', text: '[stderr] ' + data.errorOutput, isError: true } });
         }
         // Remove from stashed active tasks and update processing state
         const stashedSet = activeTaskStashRef.current[targetDash];
@@ -2652,9 +2676,8 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       { label: '!scaffold', command: '!scaffold', autoSend: true },
       { label: '!initialize', command: '!initialize', autoSend: true },
       { label: '!onboard', command: '!onboard', autoSend: true },
-      { label: '!toc', command: '!toc ', autoSend: false },
-      { label: '!toc_generate', command: '!toc_generate', autoSend: true },
-      { label: '!toc_update', command: '!toc_update', autoSend: true },
+      { label: '!learn', command: '!learn', autoSend: true },
+      { label: '!learn_update', command: '!learn_update', autoSend: true },
       { label: '!commands', command: '!commands', autoSend: true },
       { label: '!help', command: '!help', autoSend: true },
       { label: '!profiles', command: '!profiles', autoSend: true },

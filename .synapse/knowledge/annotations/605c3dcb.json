@@ -1,8 +1,8 @@
 {
   "file": "Start Synapse.command",
   "content_hash": "f01e49aa",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.403Z",
+  "annotated_by": "learn-update",
   "purpose": "End-user-friendly macOS double-clickable launcher. Unlike launch_synapse.command (self-relocating, dev mode), this one MUST live in the Synapse repo (it cd's to its own directory) and runs `npm start` (production build via Vite + Electron). Performs the same port-3456 conflict check as start.sh and refuses to launch when the app is already running. Adds a 'Press any key to close...' prompt on error so the Terminal window stays visible for the user.",
   "exports": [],
   "imports_from": {},
@@ -45,5 +45,6 @@
     "command-file",
     "launcher",
     "production"
-  ]
+  ],
+  "complexity": "simple"
 }

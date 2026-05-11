@@ -1,48 +1,47 @@
 {
   "file": "_commands/Synapse/project.md",
-  "content_hash": "29d07a67",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "1d4d819b",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!project` command for managing the target project path. Three modes: `!project` (display current project, resolution method, CLAUDE.md presence, .synapse/ presence, tech stack indicators), `!project set /path/to/repo` (validate path, write {tracker_root}/.synapse/project.json with current_project + set_at, create {project_root}/.synapse/), `!project clear` (remove current_project from project.json, revert to CWD detection). Establishes the canonical resolution order: explicit --project flag > stored config in .synapse/project.json > CWD.",
-  "exports": [],
+  "purpose": "Command specification for `!project`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: Set, display, or clear the target project that Synapse operates on. The target project is the codebase where worker agents do their actual work \u2014 separate from Synapse's own location. The file is 63 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!project",
+      "kind": "command",
+      "signature": "!project \u2014 Manage Target Project"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "{project_root} is ALWAYS an absolute path — relative paths to !project set must be resolved",
-    "Resolution order is strict: --project flag > stored config > CWD (third tier is the agent's CWD, not the user's shell)",
-    "Validation only WARNS (doesn't block) when: no .git/ directory, no project markers (package.json/CLAUDE.md/src/), empty/home directory",
-    "task.project_root is stored in initialization.json when a swarm starts — different dashboards can serve different projects",
-    "Projects should add .synapse/ to their .gitignore — this is a setup recommendation"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Three sub-commands documented separately under one parent command",
-    "Stored config schema: { current_project: string, set_at: ISO8601 }",
-    "Display output enumerates: resolved path, resolution method, CLAUDE.md status, .synapse/ status, tech stack indicators (package.json/tsconfig.json/Cargo.toml/go.mod/requirements.txt)"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
   ],
   "conventions": [
-    "Different layout from other Synapse commands — no Steps section; uses 'How It Works' subsections per mode",
-    "Trailing Notes section for cross-cutting concerns"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/p.md",
-      "_commands/Synapse/master_plan_track.md"
-    ],
-    "related": [
-      "_commands/project/initialize.md",
-      ".claude/skills/project-workflow/"
-    ]
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "project-configuration",
-    "path-resolution"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "config",
-    "tracker-vs-project"
-  ]
+    "project",
+    "swarm-command",
+    "dashboard",
+    "initialization-json",
+    "claude"
+  ],
+  "complexity": "simple"
 }

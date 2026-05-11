@@ -63,8 +63,8 @@ export default function WavePipeline({ status, activeStatFilter, onAgentClick, p
     return () => clearTimeout(timer);
   }, [unblockedTasks, appDispatch]);
 
-  const agents = status?.agents || [];
-  const waves = status?.waves || [];
+  const agents = Array.isArray(status?.agents) ? status.agents : [];
+  const waves = Array.isArray(status?.waves) ? status.waves : [];
 
   // Build agent map for dependency line drawing
   const agentMap = {};

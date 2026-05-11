@@ -1,8 +1,8 @@
 {
   "file": "electron/services/InstrumentService.js",
   "content_hash": "d1f815a4",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.406Z",
+  "annotated_by": "learn-update",
   "purpose": "Implements the `!instrument` command: scans .jsx/.tsx/.html/.htm files in a target project and adds `data-synapse-label=\"<UUID>\"` attributes to text-bearing elements (h1-h6, p, span, button, a, label, li, td, th, blockquote, dt, dd, plus a small set of common custom text components like TextAnimated, TextLoop, Marquee, StyledText, Link). The labels are used by Live Preview to map a clicked DOM element back to its source file. Also provides removeInstrumentation() to strip every label attribute. The hand-rolled parser handles JSX expression braces, quoted attributes (\", ', `), HTML comments, JSX `{/* */}` comments, and skips child-component JSX expressions when checking whether a tag has direct text content.",
   "exports": [
     {
@@ -71,5 +71,6 @@
     "tsx",
     "data-synapse-label",
     "live-preview"
-  ]
+  ],
+  "complexity": "complex"
 }

@@ -43,7 +43,7 @@ const ROOT = path.resolve(__dirname, '..', '..', '..');
 | Constant | Resolved Path | Purpose |
 |---|---|---|
 | `ROOT` | `{tracker_root}` | Repository root — the anchor for all other paths |
-| `DASHBOARDS_DIR` | `{tracker_root}/dashboards` | Contains `dashboard1/` through `dashboard5/`, each with `initialization.json`, `logs.json`, and `progress/` |
+| `DASHBOARDS_DIR` | `{tracker_root}/dashboards` | Contains `a1b2c3/` through `e5f6a1/`, each with `initialization.json`, `logs.json`, and `progress/` |
 | `QUEUE_DIR` | `{tracker_root}/queue` | Overflow queue slots for swarms waiting for a dashboard |
 | `ARCHIVE_DIR` | `{tracker_root}/Archive` | Archived dashboard snapshots from completed swarms |
 | `HISTORY_DIR` | `{tracker_root}/history` | Summary JSON files for past swarms |

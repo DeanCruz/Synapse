@@ -17,7 +17,7 @@ You're working with **Synapse**, a distributed agent swarm control system. It ca
 - Dispatch parallel agent swarms for large tasks
 - Track progress in real-time via a live dashboard
 - Manage dependencies between tasks automatically
-- Maintain a semantic index of your project
+- Maintain a `.synapse/knowledge/` graph for your project
 
 ---
 
@@ -26,12 +26,9 @@ You're working with **Synapse**, a distributed agent swarm control system. It ca
 **Context & Discovery** — Understand before you code
 | Command | What it does |
 |---|---|
-| `!toc {query}` | Search the project's semantic index for files |
-| `!toc_update` | Incrementally update the project index |
-| `!toc_generate` | Full rebuild of the project index (swarm) |
 | `!context {query}` | Deep context gathering within the project |
-| `!learn` | Bootstrap the Project Knowledge Index (PKI) |
-| `!learn_update` | Incrementally refresh the PKI |
+| `!learn` | Bootstrap the `.synapse/knowledge/` graph |
+| `!learn_update` | Incrementally refresh stale or new knowledge graph entries |
 
 **Parallel Execution** — Go fast
 | Command | What it does |
@@ -81,7 +78,7 @@ You're working with **Synapse**, a distributed agent swarm control system. It ca
 ### Tips for Best Results
 
 **1. Start with context, not code.**
-Before asking the agent to build something, use `!toc {topic}` to understand the existing codebase first. The agent works best when it understands the full picture before writing code.
+Before asking the agent to build something, use `!context {topic}` to query the `.synapse/knowledge/` graph and understand the existing codebase first. The agent works best when it understands the full picture before writing code.
 
 **2. Let the agent go parallel when it makes sense.**
 For large tasks, use `!p_track {task}` to dispatch a swarm. The agent will break the work into independent pieces and run them simultaneously. Open the dashboard (`!start`) to watch progress in real-time.
@@ -95,11 +92,11 @@ The agent reads your project's CLAUDE.md before every task. If the conventions i
 **5. Run `!env_check` periodically.**
 Catches missing or inconsistent environment variables that only surface at runtime.
 
-**6. Use `!toc_update` after structural changes.**
-After adding new files or directories, run `!toc_update` so the semantic index stays current.
+**6. Use `!learn_update` after structural changes.**
+After adding new files or directories, run `!learn_update` so the knowledge graph stays current.
 
 **7. Bootstrap project knowledge with `!learn`.**
-Run once per project to build the PKI, then `!learn_update` to keep it current. Workers get better context when PKI exists.
+Run once per project to build the knowledge graph, then `!learn_update` to keep it current. Workers get better context when PKI exists.
 
 ---
 
@@ -118,7 +115,7 @@ Agent builds it directly in serial mode.
 `!project set /path` -> `!initialize` -> `!learn` -> `!onboard`
 
 **Start of session:**
-`!toc_update` (if stale) -> start working
+`!learn_update` (if stale) -> start working
 
 **Code review workflow:**
 `!review` -> `!scope {change}` -> `!contracts`
@@ -127,7 +124,7 @@ Agent builds it directly in serial mode.
 `!scope {proposed change}` -> review affected files -> plan accordingly
 
 **Periodic maintenance:**
-`!env_check` -> fix issues -> `!toc_update` -> `!learn_update`
+`!env_check` -> fix issues -> `!learn_update`
 ```
 
 ---

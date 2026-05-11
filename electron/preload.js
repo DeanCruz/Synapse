@@ -135,6 +135,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteUserCommand: (name, folderName) => ipcRenderer.invoke('delete-user-command', name, folderName),
   generateUserCommand: (description, folderName, commandName, opts) => ipcRenderer.invoke('generate-user-command', description, folderName, commandName, opts),
 
+  // Guide: listGuide() returns [{ folder, guides: [{ id, name, path, title, purpose, filePath, lastModified, subfolder }] }].
+  // Pass guide.id or guide.path to getGuide(nameOrPath) for the full { ...metadata, content } object.
+  listGuide: () => ipcRenderer.invoke('list-guide'),
+  getGuide: (nameOrPath) => ipcRenderer.invoke('get-guide', nameOrPath),
+
   // Chat context
   getChatSystemPrompt: (projectDir, dashboardId, additionalContextDirs) => ipcRenderer.invoke('get-chat-system-prompt', projectDir, dashboardId, additionalContextDirs),
   logChatEvent: (dashboardId, entry) => ipcRenderer.invoke('log-chat-event', dashboardId, entry),
@@ -219,6 +224,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   gitIsRepo: (repoPath) => ipcRenderer.invoke('git-is-repo', repoPath),
   gitDiscoverRepos: (rootPath, options) => ipcRenderer.invoke('git-discover-repos', rootPath, options),
   gitInit: (repoPath) => ipcRenderer.invoke('git-init', repoPath),
+  gitClone: (repoPath, remoteUrl) => ipcRenderer.invoke('git-clone', repoPath, remoteUrl),
   gitStatus: (repoPath) => ipcRenderer.invoke('git-status', repoPath),
   gitDiff: (repoPath, staged) => ipcRenderer.invoke('git-diff', repoPath, staged),
   gitDiffFile: (repoPath, filePath, staged) => ipcRenderer.invoke('git-diff-file', repoPath, filePath, staged),

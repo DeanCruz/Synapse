@@ -1,8 +1,8 @@
 {
   "file": "launch.sh",
   "content_hash": "6bf89e02",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.407Z",
+  "annotated_by": "learn-update",
   "purpose": "Minimal POSIX launcher script intended to be double-clicked or executed from the Synapse repo root. Changes to its own directory, runs `npm install` if `node_modules/` is missing, then runs `npm run dev` (Vite watch + Electron concurrent). Used as the simplest possible 'just open Synapse' affordance; comments tell first-time macOS users to right-click → Open if Gatekeeper blocks the file.",
   "exports": [],
   "imports_from": {},
@@ -44,5 +44,6 @@
     "launcher",
     "macos",
     "npm"
-  ]
+  ],
+  "complexity": "simple"
 }

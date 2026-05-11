@@ -1,44 +1,50 @@
 {
   "file": "documentation/commands/overview.md",
-  "content_hash": "642c7c3f",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "d29c35a6",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Top-level reference for Synapse's !{command} invocation system. Explains the three-tier command resolution hierarchy, path placeholders ({tracker_root}/{project_root}), categorized command groups (Swarm Lifecycle, Monitoring, Server Control, Project Setup, Analysis, TOC, PKI, Audit, Discovery), how command files work, and dashboard resolution semantics. Includes a quick-reference table of every command grouped by category.",
+  "purpose": "Documentation page for the commands area: Command System. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Synapse uses a `!{command}` invocation system to expose a rich set of operations for swarm orchestration, project management, monitoring, and analysis. Commands are defined as Markdown specification files stored in `_commands/` directories. When a user types `!{command}`, Synapse locates the corresponding `.md` file, reads it in full, and follows its instructions exactly. The file is 174 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Command files are read fresh on every invocation -- the agent does not 'remember' command behavior",
-    "Project root resolution priority: --project flag > .synapse/project.json > CWD",
-    "Agents have a fixed DASHBOARD ID directive in their system prompt -- no auto-detection or scanning"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Command files are complete specifications -- agents follow them exactly without improvising",
-    "Commands organized by functional groups (Swarm Lifecycle, Monitoring, Setup, Analysis, etc.)"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "First-match-wins resolution starting from highest-priority Synapse commands",
-    "Dashboard arguments default to assigned dashboard, override with --dashboard {id}"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [
-      "documentation/commands/creating-commands.md",
+    "depends_on": [
       "documentation/commands/swarm-commands.md",
-      "documentation/commands/project-commands.md"
+      "documentation/commands/project-commands.md",
+      "documentation/commands/creating-commands.md"
+    ],
+    "depended_by": [
+      "documentation/README.md"
     ],
     "related": [
-      "agent/instructions/dashboard_resolution.md",
-      "CLAUDE.md"
+      "documentation/commands/creating-commands.md",
+      "documentation/commands/project-commands.md",
+      "documentation/commands/swarm-commands.md"
     ]
   },
   "domains": [
-    "command-docs"
+    "documentation",
+    "commands"
   ],
   "tags": [
     "markdown",
     "documentation",
     "commands",
-    "overview",
-    "resolution-hierarchy"
-  ]
+    "pki",
+    "dashboard",
+    "progress",
+    "guide",
+    "profile"
+  ],
+  "complexity": "moderate"
 }

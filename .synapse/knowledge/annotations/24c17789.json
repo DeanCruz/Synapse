@@ -1,53 +1,47 @@
 {
   "file": "_commands/Synapse/eager_dispatch.md",
   "content_hash": "645a5d36",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!eager_dispatch [--dashboard {id}]` command — a standalone eager dispatch round that reads current state, identifies all dispatch-ready tasks, builds full production-quality worker prompts (with conventions, upstream results, reference code, KEY DETAILS), and dispatches them simultaneously. Use for stalled-swarm recovery, post-circuit-breaker resumption, or kicking off plan-approved swarms. Writes logs.json and master_state.json but does NOT monitor completions, retry failures, or run circuit breakers.",
-  "exports": [],
+  "purpose": "Command specification for `!eager_dispatch`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Run a standalone eager dispatch round on an active swarm. Reads current dashboard state, identifies all tasks whose dependencies are satisfied but haven't been dispatched, builds complete worker prompts, and dispatches them all immediately. The file is 54 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!eager_dispatch",
+      "kind": "command",
+      "signature": "!eager_dispatch [--dashboard {id}]"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Eager dispatch must include FULL worker prompts with UPSTREAM RESULTS, CONVENTIONS, REFERENCE CODE — not stubs (this is the key difference from !dispatch --ready)",
-    "Does NOT monitor worker completions — for full lifecycle recovery use !p_track_resume instead",
-    "Does NOT retry failed tasks (use !retry) and does NOT run the circuit breaker — it's a one-shot dispatch round",
-    "Includes an approval gate before dispatching — presents summary first",
-    "Reads project CLAUDE.md to build convention_map (whereas !dispatch --ready does not)"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "When-to-use decision matrix differentiates !eager_dispatch from !p_track_resume, !dispatch, and !retry",
-    "Differences-table contrasts !dispatch --ready vs !eager_dispatch on prompt quality, master_state writes, approval gate, and convention map building",
-    "7-action workflow: read state → build sets → identify ready → present summary → build full prompts → dispatch all → update logs+master_state",
-    "Rule of thumb: use !dispatch --ready for quick simple dispatches, !eager_dispatch for production-quality prompts"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Two contrast tables (When to Use, Differences from !dispatch --ready) front-loaded",
-    "What This Does and What This Does NOT Do bulleted lists",
-    "Compact relative to other command docs — defers prompt construction details to agent/master/eager_dispatch.md and worker_prompts.md"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/instructions/dashboard_resolution.md",
-      "agent/master/eager_dispatch.md",
-      "agent/master/worker_prompts.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/dispatch.md",
-      "_commands/Synapse/p_track_resume.md",
-      "_commands/Synapse/retry.md",
-      ".claude/skills/eager-dispatch/"
-    ]
+    "related": []
   },
   "domains": [
-    "swarm-command",
-    "eager-dispatch",
-    "stall-recovery"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "approval-gate",
-    "one-shot"
-  ]
+    "eager-dispatch",
+    "swarm-command",
+    "dashboard",
+    "progress",
+    "initialization-json"
+  ],
+  "complexity": "simple"
 }

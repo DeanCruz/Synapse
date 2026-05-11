@@ -1,34 +1,60 @@
 {
   "file": "documentation/swarm-lifecycle/dispatch-phase.md",
   "content_hash": "043cb92e",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Mechanics of the dispatch phase: how the master spawns workers via the Task tool, how dispatch prompts are constructed (TEMPLATE_VERSION, paths, FILES, CRITICAL, UPSTREAM RESULTS), and how parallel dispatch is achieved by issuing multiple Task tool calls in a single message. Covers eager dispatch (dispatch as soon as deps are satisfied) vs wave-gated dispatch.",
+  "purpose": "Documentation page for the swarm-lifecycle area: Dispatch Phase. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The dispatch phase transforms the static plan into active execution. The master agent spawns worker agents via the Task tool, feeds them self-contained prompts with upstream results, and manages the execution pipeline using dependency-driven dispatch. This phase is where Synapse's parallelism advantage is realized -- the pipeline must flow continuously, never stalling for artificial barriers. The file is 456 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Multiple Task tool calls must go in a SINGLE message to actually run in parallel; sequential messages serialize",
-    "Each dispatch prompt is fully self-contained -- workers cannot call back to the master"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Self-contained dispatch prompts with full context inlined",
-    "Eager dispatch where dependency satisfaction immediately unblocks downstream tasks"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Prompts always include both {tracker_root} and {project_root} explicitly"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md"
+    ],
+    "related": [
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md"
+    ]
   },
   "domains": [
-    "swarm-lifecycle",
-    "dispatch"
+    "documentation",
+    "swarm-lifecycle"
   ],
   "tags": [
-    "dispatch",
-    "task-tool",
-    "prompt-construction"
-  ]
+    "markdown",
+    "documentation",
+    "swarm-lifecycle",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "sse"
+  ],
+  "complexity": "complex"
 }

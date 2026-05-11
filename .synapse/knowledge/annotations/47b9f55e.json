@@ -1,35 +1,54 @@
 {
   "file": "documentation/master-agent/dispatch-protocol.md",
   "content_hash": "400832d3",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the master agent's dispatch protocol: eager dispatch loop, dependency-driven worker spawning, repair task creation when workers fail, and the circuit-breaker conditions that pause replanning. Specifies the exact write contract the master uses against initialization.json and progress observations to decide what to dispatch next.",
+  "purpose": "Documentation page for the master-agent area: Master Agent \u2014 Dispatch Protocol. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Dispatch is the execution phase of a swarm. This document covers the complete dispatch protocol: initial dispatch of Wave 1, the eager dispatch loop that fires on every worker completion, dependency-driven dispatch logic, upstream result injection, failure handling, repair tasks, and the circuit breaker. The file is 397 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "initialization.json is write-once except for repair task additions -- regular updates go to logs.json",
-    "Repair tasks use an 'r' suffix on task IDs and are appended to the existing wave"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Eager dispatch (dispatch as soon as deps are met)",
-    "Circuit breaker on cascading failure (3+ related failures in a wave)"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Master never writes worker progress files",
-    "Dispatch decisions based on reads of progress/{id}.json snapshots"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/statusing.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/statusing.md"
+    ],
+    "related": [
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/statusing.md"
+    ]
   },
   "domains": [
-    "master-agent",
-    "dispatch"
+    "documentation",
+    "master-agent"
   ],
   "tags": [
-    "eager-dispatch",
-    "repair-tasks",
-    "circuit-breaker"
-  ]
+    "markdown",
+    "documentation",
+    "master-agent",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "sse"
+  ],
+  "complexity": "complex"
 }

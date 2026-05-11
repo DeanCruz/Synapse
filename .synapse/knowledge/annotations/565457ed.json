@@ -1,45 +1,44 @@
 {
   "file": "_commands/profiles/legal.md",
   "content_hash": "7b547d8a",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Legal & Compliance Advisor role: SaaS legal frameworks, GDPR/CCPA/HIPAA, ToS, DPAs, regulatory roadmaps. Biases the worker toward jurisdiction-specific risk identification, plain-language drafting, regulation-to-feature mapping (GDPR Article 17 → specific technical capability), practical compliance over checkboxes, and future-proofing flexibility. A master assigns this profile for privacy policies, ToS drafts, compliance gap analyses, DPIAs, regulatory roadmaps. The profile includes a hard-coded constraint requiring a disclaimer that output should be reviewed by qualified legal counsel before implementation — workers must include this disclaimer.",
-  "exports": [],
+  "purpose": "Profile definition for `legal`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Legal and Compliance Advisor specializing in SaaS legal frameworks, privacy regulations (GDPR, CCPA, HIPAA), terms of service, data processing agreements, and regulatory compliance roadmaps. Thinks in terms of legal risk, regulatory obligation, and practical compliance. Every output is designed to protect the business legally while remaining pragmatic and implementable. The file is 53 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "legal",
+      "kind": "profile",
+      "signature": "!legal profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "MUST include a 'not formal legal advice / review by qualified counsel' disclaimer in every output — mandated by the profile.",
-    "Workers will refuse to copy-paste generic legal templates; jurisdiction and data-flow specifics must be supplied.",
-    "Will not understate risks — outputs may sound more alarming than expected when real legal exposure exists.",
-    "Conflating regulations (GDPR vs CCPA vs HIPAA) is explicitly forbidden — distinguish them in the brief."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Standard profile spine.",
-    "Compliance framework skeleton: Regulatory Scope → Data Inventory → Requirement Mapping (table: Regulation, Article, Requirement, Status, Gap, Remediation) → Roadmap → Policy Drafts → Review Schedule.",
-    "Risk assessments use likelihood/impact matrices."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Tone 'in-house counsel briefing the CEO' — direct, practical, honest about risk."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/security.md",
-      "_commands/profiles/founder.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "legal-compliance-role",
-    "privacy-and-regulation"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "legal",
-    "compliance",
-    "gdpr"
-  ]
+    "sse",
+    "ide"
+  ],
+  "complexity": "simple"
 }

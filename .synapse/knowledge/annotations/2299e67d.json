@@ -1,35 +1,37 @@
 {
   "file": ".claude/README.md",
   "content_hash": "0dd35aee",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Brief overview of the .claude/ directory structure for humans browsing the codebase. Lists the four sub-areas (hooks/, agents/, skills/, settings.json) with one-line purposes, and clarifies the relationship to other Synapse directories (_commands/, agent/, CLAUDE.md). Points to MIGRATION.md for the 'why' behind the structure.",
+  "purpose": "Control-plane markdown document: .claude/ Directory Structure. Key content: This directory contains the Claude Code architecture enforcement layer for Synapse. The file is 22 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "Very high-level overview — actual hook/skill/agent contracts live in their respective files",
-    "Does not enumerate the 18 hooks or 10 skills — see directory listings for current set"
-  ],
+  "gotchas": [],
   "patterns": [
-    "Directory README pattern: table of subdirs + relationships + see-also"
+    "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
-  "conventions": [],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
+  ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
     "related": [
       ".claude/MIGRATION.md",
-      "CLAUDE.md"
+      ".claude/plan.md"
     ]
   },
   "domains": [
-    "directory-readme",
-    "documentation"
+    "control-plane-docs"
   ],
   "tags": [
     "markdown",
-    "readme",
-    "documentation",
-    "overview"
-  ]
+    "control-plane",
+    "progress",
+    "claude"
+  ],
+  "complexity": "simple"
 }

@@ -1,8 +1,8 @@
 {
   "file": "electron/services/ProjectService.js",
   "content_hash": "acb8a675",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.406Z",
+  "annotated_by": "learn-update",
   "purpose": "Project detection, context loading, and CLI binary discovery. loadProject inspects a directory for language-defining files (package.json, tsconfig.json, Cargo.toml, go.mod, requirements.txt, pyproject.toml, Gemfile, pom.xml, build.gradle), prefers the package.json `name` for display, and locates CLAUDE.md at the root + one level deep. getProjectContext reads every CLAUDE.md and returns {path, content} pairs for prompt injection. detectClaudeCLI / detectCodexCLI use `which` + a list of common install paths to find the CLI binary so swarms work without manual configuration.",
   "exports": [
     {
@@ -86,5 +86,6 @@
     "project-discovery",
     "claude-md",
     "language-detection"
-  ]
+  ],
+  "complexity": "moderate"
 }

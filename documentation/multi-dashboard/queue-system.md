@@ -122,7 +122,7 @@ When a dashboard slot becomes available (either cleared by `!reset`, auto-cleare
 Users can also manually promote a queue item using dashboard management commands:
 
 ```
-!reset dashboard2          # Clear dashboard 2
+!reset b2c3d4          # Clear dashboard 2
 # Queue item is now eligible for promotion to dashboard 2
 ```
 

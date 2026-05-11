@@ -229,9 +229,8 @@ Synapse/                            <- {tracker_root}
 │   │   ├── trace.md                <- End-to-end code tracing
 │   │   ├── contracts.md            <- API contract audit
 │   │   ├── env_check.md            <- Environment variable audit
-│   │   ├── toc.md                  <- Search project TOC
-│   │   ├── toc_generate.md         <- Generate project TOC
-│   │   ├── toc_update.md           <- Update project TOC
+│   │   ├── learn.md                <- Generate project knowledge graph
+│   │   ├── learn_update.md         <- Refresh project knowledge graph
 │   │   ├── commands.md             <- List all available commands
 │   │   ├── help.md                 <- Master agent guide
 │   │   └── profiles.md             <- List available profiles
@@ -297,8 +296,8 @@ Created by Synapse at `{project_root}`:
 ```
 {project_root}/
 ├── .synapse/                       <- Synapse project metadata (add to .gitignore)
-│   ├── toc.md                      <- Project Table of Contents (opt-in)
-│   └── config.json                 <- Project-Synapse configuration
+│   ├── config.json                 <- Project-Synapse configuration
+│   └── knowledge/                  <- Project knowledge graph
 ├── CLAUDE.md                       <- Project conventions (may already exist)
 ├── _commands/                      <- Project-specific commands (optional)
 └── ... (project files)

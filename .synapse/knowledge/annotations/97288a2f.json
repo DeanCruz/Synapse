@@ -1,63 +1,47 @@
 {
   "file": ".claude/skills/worker-protocol/SKILL.md",
   "content_hash": "1e12c284",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Auto-loaded (user-invocable: false) skill providing the worker agent's complete progress reporting protocol. Contains: full progress file schema (task_id/dashboard_id/status/started_at/completed_at/summary/assigned_agent/template_version/stage/message/milestones/deviations/logs/files_changed/annotations/prompt_size/shared_context/sibling_reads); 7 fixed stages (reading_context -> planning -> implementing -> testing -> finalizing -> completed/failed); 8 mandatory writes (before-start, after-upstream, on-stage-transition, on-deviation, on-error, on-file-change, on-completion, on-failure); deviation reporting with severity levels CRITICAL/MODERATE/MINOR + common deviations table; upstream dependency 4-step procedure (read-extract-adapt-log); sibling communication rules (MAY read, MUST NOT depend, SHOULD populate shared_context, MUST log every read, MUST NEVER write to another's progress file); partial completion protocol (80%+ done with blocker = completed not failed); PKI annotation schema (gotchas/patterns/conventions per file); structured RETURN FORMAT; log levels (info/warn/error/deviation); 10-rule summary.",
-  "exports": [],
-  "imports_from": {
-    "agent_modules": [
-      "agent/worker/upstream_deps.md",
-      "agent/worker/sibling_comms.md"
-    ]
-  },
-  "gotchas": [
-    "Workers write the FULL file every update — no read-modify-write; sole-writer model",
-    "dashboard_id field MUST match the dashboard directory — server rejects mismatches",
-    "files_changed is REQUIRED from `implementing` stage onward — empty at completion is a major quality flag",
-    "Timestamps via `date -u +%Y-%m-%dT%H:%M:%SZ` — never hardcode or guess",
-    "Use Write tool (not echo/cat) for progress files",
-    "Partial completion (80%+) = `completed` with deviation, not `failed` — preserves downstream value",
-    "PKI annotations are OPTIONAL but feed the persistent knowledge layer — only annotate files actually read deeply",
-    "Sibling reads are optional but MUST be logged; MUST NOT cause hard dependency"
+  "purpose": "Claude Code skill definition for `worker-protocol`. It describes trigger conditions, workflow, constraints, and referenced protocol files for that skill. Key content: --- name: worker-protocol description: > Synapse worker agent protocol for progress reporting, deviation tracking, and structured returns. Loaded automatically when operating as a swarm worker agent. Contains the complete progress file schema, mandatory write points, and return format. user-invocable: false --- The file is 285 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "worker-protocol",
+      "kind": "skill",
+      "signature": "worker-protocol SKILL.md instructions"
+    }
   ],
+  "imports_from": {},
+  "gotchas": [],
   "patterns": [
-    "Auto-loaded worker protocol skill",
-    "Sole-writer model: full-file overwrite per update",
-    "Severity-tiered deviation reporting (CRITICAL/MODERATE/MINOR)",
-    "Stage-progressive requirements (files_changed required from implementing+)"
+    "Skill-definition pattern: trigger guidance first, then workflow steps and referenced protocol files; these files are loaded on demand by Claude Code.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Stages are lowercase snake (reading_context, in_progress)",
-    "Status enum: in_progress|completed|failed",
-    "Deviation severity: CRITICAL|MODERATE|MINOR (uppercase)",
-    "RETURN FORMAT keys: STATUS:/SUMMARY:/FILES CHANGED:/EXPORTS:/DIVERGENT ACTIONS:/ANNOTATIONS:/WARNINGS:/ERRORS:"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [
-      ".claude/agents/swarm-worker.md",
-      ".claude/agents/master-orchestrator.md (referenced for return format parsing)"
-    ],
-    "related": [
-      "agent/instructions/tracker_worker_instructions.md",
-      "agent/instructions/tracker_worker_instructions_lite.md",
-      "agent/worker/*.md",
-      ".claude/hooks/validate-progress-file.sh",
-      ".claude/hooks/validate-progress-log-detail.sh"
-    ]
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "skill-definition",
-    "worker-protocol",
-    "progress-reporting"
+    "claude-skills",
+    "worker-protocol"
   ],
   "tags": [
+    "markdown",
     "skill",
-    "auto-loaded",
-    "worker",
-    "progress-file",
-    "deviation",
-    "schema"
-  ]
+    "worker-protocol",
+    "pki",
+    "dashboard",
+    "progress",
+    "claude",
+    "sse"
+  ],
+  "complexity": "moderate"
 }

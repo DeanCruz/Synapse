@@ -1,0 +1,56 @@
+{
+  "file": "src/ui/pages/code/subpages/code-explorer/components/ProblemsPanel.jsx",
+  "content_hash": "991d9545",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "ProblemsPanel participates in the code explorer subpage. It supports the IDE-style workspace with file tree, Monaco editor tabs, search, debug panels, diagnostics, and Electron-backed file/debug IPC while preserving page-level state under CodeExplorerPage.",
+  "exports": [
+    {
+      "name": "ProblemsPanel",
+      "kind": "component",
+      "signature": "default function ProblemsPanel(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext"
+    ],
+    "depended_by": [
+      "src/ui/pages/code/subpages/dashboards/components/BottomPanel.jsx"
+    ],
+    "related": [
+      "electron/services/DebugService.js",
+      "src/ui/utils/monacoWorkerSetup.js"
+    ]
+  },
+  "domains": [
+    "react-ui",
+    "code-explorer"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "ide"
+  ],
+  "complexity": "moderate"
+}

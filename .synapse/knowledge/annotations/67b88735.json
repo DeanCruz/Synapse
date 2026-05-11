@@ -1,0 +1,44 @@
+{
+  "file": "documentation/chat/components.md",
+  "content_hash": "a0a1932e",
+  "annotated_at": "2026-05-11T01:54:48Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Documentation page for the chat area: Chat System Components. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The top-level shell for the Chat mode. Composes the sidebar and content area, routing between views. The file is 216 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
+  ],
+  "patterns": [
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses markdown tables for compact command, file, or option matrices."
+  ],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/README.md"
+    ],
+    "related": [
+      "documentation/chat/overview.md"
+    ]
+  },
+  "domains": [
+    "documentation",
+    "chat"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "chat",
+    "dashboard",
+    "progress",
+    "codex",
+    "claude",
+    "react"
+  ],
+  "complexity": "moderate"
+}

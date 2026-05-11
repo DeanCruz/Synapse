@@ -1,32 +1,61 @@
 {
   "file": "src/ui/App.jsx",
-  "content_hash": "57f625e3",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "04bec438",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "Root React component that owns view routing, IPC bootstrap, modal hosting, and the floating Claude chat panel. Calls useDashboardData() once at the top level to establish all IPC push listeners (initialization/logs/agent_progress/all_progress/init_state/queue_changed/tasks_unblocked/write_rejected). Mounts a dual shell: app-shell-chat (ChatSidebar + chat surface) and app-shell-code (Sidebar + code surface) — both always mounted, hidden via CSS based on state.appMode so chat IPC listeners never unmount. Renders DashboardContent with WavePipeline/ChainPipeline keyed off task.type, the action bar, ProgressBar, ReplanningBanner (circuit breaker), TimelinePanel, BottomPanel and modal dialogs (commands, project, planning, settings, logs).",
   "exports": [
     {
       "name": "App",
       "kind": "component",
-      "signature": "default function App() — root shell, no props"
+      "signature": "default function App(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
     }
   ],
   "imports_from": {
-    "src/ui/context/AppContext.jsx": [
+    "src/ui/context/AppContext": [
       "useAppState",
       "useDispatch"
     ],
-    "src/ui/hooks/useDashboardData.js": [
+    "src/ui/hooks/useDashboardData": [
       "useDashboardData"
     ],
-    "src/ui/hooks/useResize.js": [
-      "useResize"
-    ],
-    "src/ui/utils/constants.js": [
+    "src/ui/utils/constants": [
       "initStatusColorsFromCSS"
     ],
-    "src/ui/utils/dashboardProjects.js": [
-      "getDashboardProject"
+    "src/ui/shared/Header": [
+      "Header"
+    ],
+    "src/ui/shared/modals/CommandsModal": [
+      "CommandsModal"
+    ],
+    "src/ui/shared/modals/ProjectModal": [
+      "ProjectModal"
+    ],
+    "src/ui/shared/modals/PlanningModal": [
+      "PlanningModal"
+    ],
+    "src/ui/shared/modals/SettingsModal": [
+      "SettingsModal"
+    ],
+    "src/ui/shared/modals/LogsModal": [
+      "LogsModal"
+    ],
+    "src/ui/shared/modals/ArchiveModal": [
+      "ArchiveModal"
+    ],
+    "src/ui/shared/modals/GuideModal": [
+      "GuideModal"
+    ],
+    "src/ui/pages/chat/ChatPage": [
+      "ChatPage"
+    ],
+    "src/ui/pages/code/CodePage": [
+      "CodePage"
     ]
   },
   "gotchas": [
@@ -54,25 +83,32 @@
   ],
   "relationships": {
     "depends_on": [
-      "src/ui/context/AppContext.jsx",
-      "src/ui/hooks/useDashboardData.js",
-      "src/ui/hooks/useResize.js",
-      "src/ui/utils/constants.js",
-      "src/ui/utils/dashboardProjects.js",
-      "src/ui/components/Header.jsx",
-      "src/ui/components/Sidebar.jsx",
-      "src/ui/components/chat/ChatSidebar.jsx",
-      "src/ui/components/ClaudeView.jsx"
+      "src/ui/context/AppContext",
+      "src/ui/hooks/useDashboardData",
+      "src/ui/pages/chat/ChatPage",
+      "src/ui/pages/code/CodePage",
+      "src/ui/shared/Header",
+      "src/ui/shared/modals/ArchiveModal",
+      "src/ui/shared/modals/CommandsModal",
+      "src/ui/shared/modals/GuideModal",
+      "src/ui/shared/modals/LogsModal",
+      "src/ui/shared/modals/PlanningModal",
+      "src/ui/shared/modals/ProjectModal",
+      "src/ui/shared/modals/SettingsModal",
+      "src/ui/utils/constants"
     ],
     "depended_by": [
       "src/ui/main.jsx"
     ],
     "related": [
-      "src/ui/components/HomeView.jsx",
-      "src/ui/components/SwarmBuilder.jsx",
-      "src/ui/components/ide/IDEView.jsx",
-      "src/ui/components/git/GitManagerView.jsx",
-      "src/ui/components/preview/PreviewView.jsx"
+      "src/ui/pages/chat/ChatPage.jsx",
+      "src/ui/pages/code/CodePage.jsx",
+      "src/ui/shared/Header.jsx",
+      "src/ui/shared/HomeView.jsx",
+      "src/ui/shared/SwarmBuilder.jsx",
+      "src/ui/shared/git/GitManagerView.jsx",
+      "src/ui/shared/ide/IDEView.jsx",
+      "src/ui/shared/preview/PreviewView.jsx"
     ]
   },
   "domains": [
@@ -88,5 +124,6 @@
     "modal-host",
     "view-router",
     "floating-panel"
-  ]
+  ],
+  "complexity": "moderate"
 }

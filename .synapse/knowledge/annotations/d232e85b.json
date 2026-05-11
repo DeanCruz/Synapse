@@ -1,52 +1,45 @@
 {
   "file": ".claude/agents/swarm-worker.md",
   "content_hash": "a42b7a32",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the swarm-worker subagent role for Claude Code. YAML frontmatter declares the agent name, description (single-task swarm worker), one auto-loaded skill (worker-protocol), and one role-specific hook (PostToolUse on Write -> validate-progress-file.sh). The body documents the dual-path convention (code in {project_root}, progress in {tracker_root}/dashboards/{id}/progress/{task_id}.json), the seven fixed stages (reading_context -> planning -> implementing -> testing -> finalizing -> completed/failed), the 8 mandatory progress writes, and the structured RETURN FORMAT (STATUS / SUMMARY / FILES CHANGED / EXPORTS / DIVERGENT ACTIONS / WARNINGS / ERRORS) the master parses on completion.",
-  "exports": [],
-  "imports_from": {
-    "skills": [
-      "worker-protocol"
-    ],
-    "hooks": [
-      ".claude/hooks/validate-progress-file.sh"
-    ]
-  },
-  "gotchas": [
-    "Workers MUST distinguish {project_root} (code) from {tracker_root} (progress) — confusing them is the most common worker failure mode",
-    "The 8 mandatory writes are the bare minimum — validate-progress-log-detail.sh PostToolUse hook nags on stage-relative log count thresholds",
-    "RETURN FORMAT keys (STATUS:/SUMMARY:/FILES CHANGED:) are parsed by the master via failure-protocol — typos in headers break parsing"
+  "purpose": "Claude Code agent definition for `swarm-worker`. It configures the agent role, loaded skills, and behavioral constraints used by the swarm runtime. Key content: --- name: swarm-worker description: > Synapse swarm worker agent. Implements a single task from a parallel swarm and reports progress via progress files. Use when dispatched by a master orchestrator to execute a specific task with live dashboard tracking. skills: hooks: PostToolUse: hooks: command: \".claude/hooks/validate-progress-file.sh\" --- The file is 69 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "swarm-worker",
+      "kind": "agent",
+      "signature": "swarm-worker Claude Code agent definition"
+    }
   ],
+  "imports_from": {},
+  "gotchas": [],
   "patterns": [
-    "Single-skill subagent: only worker-protocol auto-loads; the dispatched prompt provides the rest",
-    "Hook is PostToolUse (after Write), not PreToolUse — validates without blocking"
+    "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
   ],
   "conventions": [
-    "Stage names are lowercase snake-friendly underscored (`reading_context`)",
-    "Status values: `in_progress` | `completed` | `failed` (no other values)"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      ".claude/skills/worker-protocol/SKILL.md",
-      ".claude/hooks/validate-progress-file.sh"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      ".claude/agents/master-orchestrator.md",
-      "agent/instructions/tracker_worker_instructions.md",
-      "agent/instructions/tracker_worker_instructions_lite.md"
-    ]
+    "related": []
   },
   "domains": [
-    "worker-agent-definition",
-    "agent-config"
+    "claude-agents",
+    "agent-definitions"
   ],
   "tags": [
+    "markdown",
     "agent-definition",
-    "worker",
-    "yaml-frontmatter",
-    "progress-reporting",
-    "swarm"
-  ]
+    "swarm-worker",
+    "dashboard",
+    "progress",
+    "claude",
+    "sse",
+    "ide"
+  ],
+  "complexity": "simple"
 }

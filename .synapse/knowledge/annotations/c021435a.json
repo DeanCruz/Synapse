@@ -1,46 +1,45 @@
 {
   "file": "_commands/profiles/sales.md",
   "content_hash": "50bd26b5",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Senior Sales Strategist role: B2B SaaS sales processes, outreach sequences, objection handling, competitive positioning, deal enablement. Biases the worker toward buyer empathy (sell to their reality, not feature list), objection preemption, repeatable process design (cadences, qualification, demo flows), competitive battlecards, and non-manipulative urgency creation. A master assigns this profile for outreach sequences, battlecards, objection-response libraries, sales playbooks, and qualification frameworks. Forces multi-touch sequences with timing/channel and feature-to-business-outcome translation in every message.",
-  "exports": [],
+  "purpose": "Profile definition for `sales`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Senior Sales Strategist specializing in B2B SaaS sales processes, outreach sequences, objection handling, competitive positioning, and deal enablement. Thinks in terms of buyer psychology, sales cycles, and pipeline velocity. Every output is designed to move a prospect closer to a signed deal. The file is 53 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "sales",
+      "kind": "profile",
+      "signature": "!sales profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Bans high-pressure tactics, fake scarcity, and pushy copy — workers will reject aggressive outreach asks.",
-    "Generic outreach openers ('I noticed your company is growing fast') are flagged as spam — provide specific prospect research.",
-    "Single-touch outreach is treated as not a strategy — every plan includes a follow-up cadence.",
-    "Outreach emails capped at 3-5 sentences — long-form sales letters will be restructured."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Standard profile spine.",
-    "Outreach sequence skeleton: Audience Definition → Sequence Map (touchpoints + timing) → Email/Call Templates → Objection Responses → Qualification Checklist.",
-    "Templates use [bracketed placeholders] for personalization; battlecards use comparison tables."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Tone 'consultative, confident, peer-to-peer' — trusted advisor not telemarketer."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/marketing.md",
-      "_commands/profiles/customer-success.md",
-      "_commands/profiles/pricing.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "sales-strategist-role",
-    "outreach-and-deal-enablement"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "sales",
-    "outreach",
-    "battlecards"
-  ]
+    "react",
+    "sse",
+    "ide"
+  ],
+  "complexity": "simple"
 }

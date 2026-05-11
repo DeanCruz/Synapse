@@ -1,24 +1,24 @@
 # Project Setup
 
-This guide walks through connecting Synapse to a new project, from initial pointing to full initialization with TOC generation.
+This guide walks through connecting Synapse to a new project, from initial pointing to full initialization with knowledge graph generation.
 
 ---
 
 ## Quick Start
 
-For users who want to get started immediately:
+For users who want to get started immediately in the Electron app:
+
+1. Start Synapse with `npm start` or open the packaged app.
+2. Switch to **Code** mode.
+3. Click the sidebar **+** button and choose the project folder. Synapse creates a new hex-ID dashboard and binds it to that folder.
+4. Use the dashboard action bar **Project** button to adjust the project path, add context directories, pick the agent provider, set the default model, and configure permission behavior.
+5. Launch a swarm from the UI or run `!p_track "Implement feature X"` in the connected agent session.
+
+CLI fallback:
 
 ```bash
-# 1. Point Synapse at your project
 !project set /path/to/your/project
-
-# 2. Run full initialization
-!initialize
-
-# 3. Start the dashboard
-!start
-
-# 4. Launch your first swarm
+!initialize --skip-learn   # optional if you want project metadata without a full PKI scan
 !p_track "Implement feature X"
 ```
 
@@ -26,7 +26,24 @@ For a more detailed setup, follow the sections below.
 
 ---
 
-## Step 1: Set the Target Project
+## Step 1: Bind a Dashboard to a Project
+
+In the current Electron-first workflow, project selection is per dashboard:
+
+- **Code sidebar + button:** creates a new dashboard after a folder picker selection, then stores that project path for the dashboard.
+- **Dashboard action bar Project button:** opens `ProjectModal` for the active dashboard. Use it to change the project path, add additional context directories, select Claude Code or Codex as the worker provider, set a default model, choose a CLI path, and configure interactive/bypass permissions.
+- **Chat projects:** creating a Chat project opens project setup before the chat project tab is created.
+
+Dashboard IDs are dynamically generated 6-character hex strings. Synapse no longer pre-creates fixed numbered dashboard slots for normal Electron use.
+
+The selected dashboard's project path drives:
+
+- Code Explorer file tree, editor, search, debug, and problems panels
+- Git Manager repository discovery and active repo tabs
+- Preview dev-server detection and inline edit mapping
+- Worker `{project_root}` in swarm dispatch prompts
+
+## CLI Fallback: Set the Target Project
 
 Tell Synapse which project you want to work on.
 
@@ -91,9 +108,9 @@ After clearing, `{project_root}` will resolve from CWD.
 
 ---
 
-## Step 2: Initialize Synapse
+## Step 2: Initialize Project Metadata
 
-The `!initialize` command performs a comprehensive setup:
+The `!initialize` command remains useful for CLI workflows and for bootstrapping project metadata:
 
 ```bash
 !initialize
@@ -132,8 +149,7 @@ Creates the metadata directory inside the project:
 ```
 {project_root}/.synapse/
 ├── config.json     # Project-Synapse configuration
-├── toc.md          # Table of Contents placeholder
-└── knowledge/      # PKI data (created later by !learn)
+└── knowledge/      # Project knowledge graph (created by !learn)
 ```
 
 The `config.json` file links the project to Synapse:
@@ -145,7 +161,7 @@ The `config.json` file links the project to Synapse:
   "tracker_root": "/Users/dean/tools/Synapse",
   "tech_stack": ["typescript", "next.js", "postgresql"],
   "initialized_at": "2026-03-22T10:00:00Z",
-  "toc_path": ".synapse/toc.md",
+  "knowledge_path": ".synapse/knowledge/",
   "monorepo": null
 }
 ```
@@ -173,30 +189,19 @@ If the project does not have a `CLAUDE.md`, a starter template is created based 
 
 Use `--skip-claude` to skip this step.
 
-#### 5. Generate Table of Contents
+#### 5. Generate Project Knowledge Graph
 
-Dispatches a parallel agent swarm to scan every directory and produce a comprehensive `toc.md`. This is the most time-consuming step.
+Dispatches a parallel agent swarm to scan every significant file and produce a comprehensive `.synapse/knowledge/` graph. This is the most time-consuming step.
 
-Use `--skip-toc` to skip this step and run `!toc_generate` later.
+Use `--skip-learn` to skip this step and run `!learn` later.
 
-#### 6. Initialize Dashboard Infrastructure
+#### 6. Verify Synapse Data Directories
 
-Verifies and creates the 5 dashboard slots:
+Ensures `{tracker_root}/dashboards/`, `{tracker_root}/tasks/`, `{tracker_root}/history/`, and related data directories exist. Dashboard directories are created dynamically as hex-ID dashboards in the Electron app or by commands that need a dashboard.
 
-```
-{tracker_root}/dashboards/
-├── dashboard1/
-│   ├── initialization.json
-│   ├── logs.json
-│   └── progress/
-├── dashboard2/ ... dashboard5/
-```
+#### 7. Report Next Steps
 
-Also ensures `{tracker_root}/tasks/` and `{tracker_root}/history/` exist.
-
-#### 7. Start Dashboard Server
-
-Launches the Synapse dashboard server and opens it in the browser.
+Reports what was initialized and how to continue. In the Electron-first workflow, open the app and bind a dashboard to the project through the Code sidebar or Project modal. The browser/server path via `!start` is available as an advanced standalone mode.
 
 #### 8. Final Report
 
@@ -206,7 +211,7 @@ Displays a summary of everything that was done.
 
 ```bash
 !initialize                  # Full initialization
-!initialize --skip-toc       # Skip TOC generation
+!initialize --skip-learn     # Skip knowledge graph generation
 !initialize --skip-claude    # Skip CLAUDE.md scaffolding
 ```
 
@@ -215,7 +220,7 @@ Displays a summary of everything that was done.
 The command is idempotent. Running it again will:
 - Skip creating directories and files that already exist
 - Warn that `.synapse/` is already present
-- Never overwrite existing `CLAUDE.md` or `toc.md` content
+- Never overwrite existing `CLAUDE.md` or populated `.synapse/knowledge/` content
 
 ---
 
@@ -233,17 +238,17 @@ See [Conventions](./conventions.md) for detailed guidance on writing effective p
 
 ---
 
-## Step 4: Generate the Table of Contents
+## Step 4: Generate the Project Knowledge Graph
 
-If you skipped TOC generation during initialization:
+If you skipped knowledge graph generation during initialization:
 
 ```bash
-!toc_generate
+!learn
 ```
 
-This dispatches a parallel agent swarm to scan every directory in the project and produce a semantic index at `{project_root}/.synapse/toc.md`.
+This dispatches a parallel agent swarm to scan significant files in the project and produce a semantic graph at `{project_root}/.synapse/knowledge/`.
 
-See [TOC System](./toc-system.md) for details on generation, searching, and maintenance.
+See [Project Knowledge Graph](./toc-system.md) for details on generation, searching, and maintenance.
 
 ---
 
@@ -278,9 +283,8 @@ With the project connected, you can now use any Synapse command:
 !health
 !scope "What would be affected by changing the User model?"
 
-# Search the TOC
-!toc "auth middleware"
-!toc #api #backend
+# Query the knowledge graph
+!context "auth middleware"
 
 # Review code
 !review src/services/AuthService.ts
@@ -344,7 +348,7 @@ Previous initialization detected. This is safe -- `!initialize` skips existing f
 
 ### Dashboard shows empty after project change
 
-Dashboards are swarm-specific, not project-specific. Changing the project with `!project set` does not affect existing dashboards. Each dashboard remembers which project its swarm targets via `task.project_root`.
+Dashboards have their own project binding. Changing the CLI fallback path with `!project set` does not automatically rebind existing Electron dashboards. Use the active dashboard's Project button to update that dashboard's project path.
 
 ---
 

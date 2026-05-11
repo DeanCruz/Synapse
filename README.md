@@ -76,7 +76,7 @@ Synapse is fully standalone -- it works with any project, no special directory s
 
 **Setting a project directory**
 
-When you create a new dashboard, click the **Project** button in the sidebar to open the project selector. Choose a directory -- this becomes the dashboard's **project root**, where agents will read and write code.
+When you create a new Code dashboard with the **+** button, Synapse asks you to choose a folder first, then creates a dashboard bound to that project. You can later change the active dashboard's project path, additional context directories, provider, model, and permission settings from the **Project** button in the dashboard action bar.
 
 Each dashboard remembers its own project independently. You can have five dashboards open, each pointing at a different repo.
 
@@ -92,10 +92,9 @@ Additional context is injected into worker prompts as clearly marked READ-ONLY m
 
 **Quick start**
 ```
-1. Click "+" in the sidebar to create a dashboard
-2. Click the Project button → select your project directory
-3. (Optional) Add additional context directories for reference material
-4. Start working: !p_track Implement user authentication with JWT tokens
+1. Click "+" in the Code sidebar and select your project directory
+2. (Optional) Open the Project button in the dashboard action bar to add context directories
+3. Start working: !p_track Implement user authentication with JWT tokens
 ```
 
 **Full initialization (recommended for new projects)**
@@ -103,14 +102,14 @@ Additional context is injected into worker prompts as clearly marked READ-ONLY m
 # After selecting your project directory, run full setup in chat
 !initialize
 
-# This detects your tech stack, creates .synapse/, scaffolds CLAUDE.md, generates TOC
+# This detects your tech stack, creates .synapse/, scaffolds CLAUDE.md, and prepares the knowledge graph
 ```
 
 `!initialize` does the following automatically:
 1. Detects your tech stack (package.json, tsconfig.json, go.mod, Cargo.toml, pyproject.toml, etc.)
-2. Creates a `.synapse/` directory in your project with configuration and a semantic table of contents
+2. Creates a `.synapse/` directory in your project with configuration and a knowledge graph directory
 3. Scaffolds a `CLAUDE.md` in your project root if one doesn't exist (tech-stack-aware template)
-4. Generates a full TOC index of your codebase for faster agent context gathering
+4. Prompts you to run `!learn` to build the `.synapse/knowledge/` graph for faster agent context gathering
 
 **Just scaffold a CLAUDE.md**
 ```
@@ -127,6 +126,8 @@ Your project's `CLAUDE.md` tells agents about your tech stack, conventions, file
 | `npm start` | Build UI + launch the desktop app |
 | `npm run dev` | Vite watch mode + Electron (concurrent -- useful for Synapse development) |
 | `npm run dist` | Package a signed `.dmg` for macOS distribution |
+
+Current app stack: Electron 41.0.3, React 19.2.4, and Vite 8.0.0.
 
 ---
 
@@ -252,20 +253,24 @@ AI-assisted planning wizard that accepts a plain-language prompt and automatical
 
 Browse and execute all Synapse commands from a searchable modal UI. See available commands organized by category (Synapse, Project, User), read their descriptions, and run them directly. Supports creating, editing, and deleting custom user commands.
 
+### In-App Guide
+
+Open the **Guide** button in the header to browse user-facing documentation inside Synapse. The Guide modal loads markdown from `documentation/guide` through Electron IPC and renders it in the app, so the same guide files can serve both repository docs and the desktop UI.
+
 ### Worker Terminal
 
 Live terminal output per worker process. See exactly what each agent is doing as it runs. Powered by `node-pty` for full terminal emulation with resize support.
 
 ### Multi-Dashboard
 
-Multiple simultaneous swarms across independent dashboards. Each chat is bound to its own dashboard -- agents use their assigned dashboard exclusively and archive/clear it if it has previous data. Switch between dashboards from the sidebar. Dashboards can be renamed, reordered, created, and deleted. A dedicated `ide` dashboard auto-links Code Explorer workspaces to their own chat context.
+Multiple simultaneous swarms across independent dashboards. Each chat is bound to its own dashboard -- agents use their assigned dashboard exclusively and archive/clear it if it has previous data. Switch between dashboards from the sidebar. Dashboards can be renamed, reordered, created, and deleted. Code Explorer, Git Manager, and Preview use the selected dashboard's project binding as their working context.
 
 ### Git Manager
 
-Full-featured git UI built into the app. Open any repository (or multiple at once via tabs), stage and unstage files, view unified diffs, compose commits with subject-line guidelines, manage branches with a visual SVG graph, browse commit history with infinite scroll and filters, and push/pull/fetch with ahead-behind badges. Protected branch warnings and tiered confirmation dialogs keep destructive operations safe. A **Quick Actions** bar provides one-click workflows like "Save My Work" and "Update from Remote" for users who don't want to think in git commands.
+Full-featured git UI built into the app. Git Manager uses the selected dashboard's project path, discovers the root and nested git repositories under it, and lets you switch between discovered repos. Stage and unstage files, view unified diffs, compose commits with subject-line guidelines, manage branches with a visual SVG graph, browse commit history with infinite scroll and filters, and push/pull/fetch with ahead-behind badges. Protected branch warnings and tiered confirmation dialogs keep destructive operations safe. A **Quick Actions** bar provides one-click workflows like "Save My Work" and "Update from Remote" for users who don't want to think in git commands.
 
 Key capabilities:
-- **Multi-repo tabs** -- Open several repositories side by side, each with independent state
+- **Discovered repo tabs** -- Switch between the root repo and nested repos discovered under the selected dashboard project
 - **Staging and diffs** -- File-level staging controls with a unified diff viewer showing line-by-line changes
 - **Branch management** -- Create, switch, merge, and delete branches with an SVG branch graph
 - **Commit history** -- Searchable log with author/date/branch filters and infinite scroll
@@ -275,13 +280,13 @@ Key capabilities:
 
 ### Code Explorer (IDE)
 
-Built-in code editor powered by Monaco (the same engine as VS Code). Open any folder as a workspace, browse its file tree, and edit files with syntax highlighting for 25+ languages, bracket matching, minimap, multi-cursor, and all the editing features you'd expect from a modern editor. Each workspace automatically links to its own Synapse dashboard, so Claude chat context stays associated with the project you're working on.
+Built-in code editor powered by Monaco (the same engine as VS Code). Code Explorer browses the selected dashboard's project path, so the dashboard is the project/workspace selector for chat, code, git, and preview context. Edit files with syntax highlighting for 25+ languages, bracket matching, minimap, multi-cursor, and all the editing features you'd expect from a modern editor.
 
 Key capabilities:
 - **Monaco Editor** -- VS Code-grade editing with IntelliSense, syntax highlighting, minimap, and multi-cursor
-- **Workspace tabs** -- Open multiple project folders simultaneously, each with its own file tree and open files
+- **Dashboard-bound projects** -- Switch dashboards to switch the project root used by Code Explorer
 - **Lazy-loaded file tree** -- Directories load children on demand, keeping large projects responsive
-- **Workspace-dashboard bridge** -- Each workspace auto-links to a Synapse dashboard for persistent Claude chat context
+- **Shared dashboard context** -- Code Explorer, Claude chat, Git Manager, and Preview all use the active dashboard's project binding
 - **Dirty file tracking** -- Unsaved changes are indicated on editor tabs with a visual marker
 - **Search and replace** -- Project-wide search powered by ripgrep (with Node.js fallback), with regex, case-sensitive, whole-word, and glob filter support
 - **Syntax checking** -- Real-time diagnostics for JSON, JavaScript, TypeScript, and CSS files
@@ -319,32 +324,32 @@ Population mechanisms:
 - **Automatic staleness detection** -- A PostToolUse hook marks annotations as stale when source files change
 - **`!learn_update`** -- Incremental refresh that re-scans only stale or new files
 
-### Table of Contents (TOC) System
+### Project Knowledge Graph
 
-Semantic file discovery stored at `{project_root}/.synapse/toc.md`. The TOC provides agents with a searchable index of your codebase so they can find relevant code faster during planning.
+Semantic file discovery and operational project knowledge live at `{project_root}/.synapse/knowledge/`. The knowledge graph gives agents a queryable index of file purposes, domains, tags, relationships, gotchas, and conventions so they can plan without repeatedly rediscovering the same context.
 
-- **`!toc_generate`** -- Full generation via parallel agent swarm
-- **`!toc {query}`** -- Search the TOC by topic, keyword, or object name. Sub-commands: `depends-on`, `depended-by`, `cluster`, `changes-since`
-- **`!toc_update`** -- Incremental update for changed files only
-- Supporting files: `fingerprints.json` (content fingerprints for change detection), `dep_graph.json` (file-level dependency graph)
+- **`!learn`** -- Full knowledge graph generation via parallel agent swarm
+- **`!context {query}`** -- Query the knowledge graph by topic, keyword, or object name, then supplement with grep/glob
+- **`!learn_update`** -- Incremental refresh for stale or new files
+- Supporting files: `knowledge/manifest.json`, `knowledge/domain_index.json`, `knowledge/tag_index.json`, `knowledge/concept_map.json`, and `knowledge/annotations/*.json`
 
 ### Conversation Persistence
 
 Chat conversations are saved as JSON files in `{tracker_root}/conversations/`. Each conversation is associated with a dashboard, supports multiple tabs, and persists across app restarts. Create, rename, delete, and switch between conversations.
 
-### Home View
+### Dashboard Overview
 
-Overview dashboard showing all dashboards at a glance with status indicators, recent archives (top 10), recent history (top 10), and recent log entries (top 30). Quick access to any dashboard or past swarm.
+Code mode opens with a dashboard-focused overview for the selected dashboard. The sidebar shows dashboard status, queue entries, and quick switching, while each dashboard page exposes swarm stats, progress, logs, metrics, timeline, and terminal panels.
 
 ### Queue System
 
-Overflow mechanism for `!master_plan_track` multi-stream orchestration. When all dashboards are in use, additional swarm streams are queued in `queue/` directories with the same structure as dashboards. Queued items are promoted to dashboards as they free up. The queue is visible from the Home view and via the API.
+Overflow mechanism for `!master_plan_track` multi-stream orchestration. When all dashboards are in use, additional swarm streams are queued in `queue/` directories with the same structure as dashboards. Queued items are promoted to dashboards as they free up. The queue is visible from the Code sidebar and via the API.
 
 ---
 
 ## Commands
 
-Commands work in both the built-in chat and the terminal Claude Code CLI. Synapse has **47 commands** across two categories.
+Commands work in both the built-in chat and the terminal Claude Code CLI. Synapse currently has **59 primary command files**: 35 Synapse commands and 24 project commands. The Commands modal also surfaces user-local and project-specific commands when present.
 
 ### Dispatching Work
 
@@ -388,8 +393,8 @@ Commands work in both the built-in chat and the terminal Claude Code CLI. Synaps
 
 | Command | What It Does |
 |---|---|
-| `!project` | Show current project path and status. Use the Project button in the sidebar to set a project per-dashboard. |
-| `!initialize` | Full setup -- tech stack detection, `.synapse/` creation, CLAUDE.md scaffold, TOC generation. |
+| `!project` | Show current project path and status. In the app, use the Project button in the dashboard action bar to set or edit a project per dashboard. |
+| `!initialize` | Full setup -- tech stack detection, `.synapse/` creation, CLAUDE.md scaffold, knowledge graph preparation. |
 | `!scaffold` | Generate a `CLAUDE.md` for your project from its structure and tech stack. |
 | `!create_claude` | Create or update an opinionated `CLAUDE.md` with rules for how the project should be built. |
 | `!onboard` | Guided walkthrough of your project's structure, architecture, and conventions. |
@@ -399,11 +404,9 @@ Commands work in both the built-in chat and the terminal Claude Code CLI. Synaps
 
 | Command | What It Does |
 |---|---|
-| `!learn` | Bootstrap the Project Knowledge Index (PKI) from scratch via parallel swarm. |
-| `!learn_update` | Incrementally refresh the PKI -- re-scans only stale/new files. |
-| `!toc {query}` | Search the project TOC. Sub-commands: `depends-on`, `depended-by`, `cluster`, `changes-since`. |
-| `!toc_generate` | Generate a full project TOC via parallel agent swarm. |
-| `!toc_update` | Incrementally update the TOC for changed files. |
+| `!learn` | Generate the `.synapse/knowledge/` graph via parallel agent swarm. |
+| `!context {query}` | Query the project knowledge graph and supplement with grep/glob. |
+| `!learn_update` | Incrementally refresh stale or new knowledge graph entries. |
 
 ### Analysis (no swarm needed)
 
@@ -498,26 +501,20 @@ Run `!profiles` to see the full list with descriptions.
 
 ### Index Your Codebase
 
-For large codebases, generate a semantic table of contents and knowledge index so agents can find relevant code faster:
+For large codebases, generate the `.synapse/knowledge/` graph so agents can find relevant code faster:
 
 ```
-# Generate a full TOC (runs as a parallel swarm)
-!toc_generate
-
-# Search the TOC
-!toc "authentication middleware"
-
-# Incremental update after code changes
-!toc_update
-
 # Bootstrap deep project knowledge (runs as a parallel swarm)
 !learn
+
+# Search the knowledge graph and codebase
+!context "authentication middleware"
 
 # Incremental PKI refresh (stale/new files only)
 !learn_update
 ```
 
-The TOC is stored in `{project_root}/.synapse/toc.md` and is automatically included in agent context during planning. The PKI provides deeper operational knowledge (gotchas, patterns, conventions) that the master injects into worker prompts.
+The knowledge graph is stored in `{project_root}/.synapse/knowledge/` and is automatically queried during planning. It provides operational knowledge (gotchas, patterns, conventions, relationships) that the master injects into worker prompts.
 
 ### Run Analysis Without a Swarm
 
@@ -667,10 +664,10 @@ A single agent on a large task will exhaust its context window -- it forgets ear
 ```
 Electron Main Process (electron/)
 +-- main.js                          <- Window management, app lifecycle, app:// protocol
-+-- preload.js                       <- IPC bridge (window.electronAPI) -- ~140 methods, 26 push channels
++-- preload.js                       <- IPC bridge (window.electronAPI) -- ~140 methods, 27 push channels
 +-- ipc-handlers.js                  <- IPC handler registration, broadcast bridge, file watchers
 +-- settings.js                      <- Persisted settings (JSON in userData)
-+-- services/
++-- services/                         <- 15 Electron services
     +-- ClaudeCodeService.js         <- Claude Code CLI integration (spawn, kill, stream output)
     +-- CodexService.js              <- OpenAI Codex CLI integration (parallel to Claude)
     +-- SwarmOrchestrator.js         <- Self-managing dispatch engine, circuit breaker, replanner
@@ -684,27 +681,24 @@ Electron Main Process (electron/)
     +-- InstrumentService.js         <- Live Preview: add data-synapse-label to project files
     +-- PreviewService.js            <- Live Preview: label-to-source file mapping
     +-- PreviewTextWriter.js         <- Live Preview: write text changes back to source
-    +-- AutoUpdateService.js        <- Electron auto-update state machine
+    +-- GuideService.js              <- Guide modal markdown loader
+    +-- AutoUpdateService.js         <- Electron auto-update state machine
 
 React Renderer (src/ui/, Vite build)
 +-- main.jsx                         <- Entry point, IPC fetch shim, CSS imports
-+-- App.jsx                          <- Root layout: Header + Sidebar + View Router + Claude Float
++-- App.jsx                          <- Root layout: Header + Chat/Code page shells
 +-- context/AppContext.jsx           <- Global state (useReducer, ~80 state keys)
-+-- components/
-|   +-- Header.jsx                   <- Navigation, project selector, controls
-|   +-- Sidebar.jsx                  <- Dashboard list with status dots, view switcher
-|   +-- HomeView.jsx                 <- Overview: all dashboards, archives, history, logs
-|   +-- ClaudeView.jsx               <- Chat interface (streaming, tabs, attachments, permissions)
-|   +-- ClaudeFloatingPanel.jsx      <- Always-mounted chat panel (minimized/expanded/maximized)
-|   +-- DashboardContent.jsx         <- Swarm visualization container
-|   +-- WavePipeline.jsx             <- Wave layout dashboard
-|   +-- ChainPipeline.jsx            <- Chain layout dashboard
-|   +-- AgentCard.jsx                <- Per-task progress card
-|   +-- SwarmBuilder.jsx             <- Visual task graph editor
-|   +-- git/                         <- Git Manager (12 components)
-|   +-- ide/                         <- Code Explorer (12 components)
-|   +-- preview/                     <- Live Preview tab
-|   +-- modals/                      <- Commands, Project, Settings, Planning, TaskEditor
++-- shared/
+|   +-- Header.jsx                   <- Mode switch, Archive, Guide, Commands, active count
+|   +-- claude/                      <- Agent chat and floating panel
+|   +-- modals/                      <- Commands, Guide, Project, Settings, Planning, task details
++-- pages/
+|   +-- chat/                        <- Chat mode project tabs, conversations, chat dashboard
+|   +-- code/                        <- Code mode sidebar and subpages
+|       +-- subpages/dashboards/     <- Swarm visualization, logs, metrics, timeline, terminal
+|       +-- subpages/code-explorer/  <- Monaco editor, file tree, search, debug panels
+|       +-- subpages/git/            <- Git Manager
+|       +-- subpages/preview/        <- Live Preview tab
 +-- hooks/                           <- useElectronData, useSSE, useGitActions, etc.
 +-- utils/                           <- Formatting, status derivation, helpers
 +-- styles/                          <- Dark theme CSS
@@ -730,8 +724,8 @@ Agent System (agent/, _commands/)
 +-- agent/master/                    <- Master role, dashboard writes, eager dispatch, failure recovery (10 files)
 +-- agent/worker/                    <- Progress reporting, return format, deviations, upstream deps (5 files)
 +-- agent/core/                      <- Command resolution, parallel principles, profiles, paths (7 files)
-+-- _commands/Synapse/               <- 25 swarm/orchestration command files
-+-- _commands/project/               <- 22 project/analysis command files
++-- _commands/Synapse/               <- 35 swarm/orchestration command files
++-- _commands/project/               <- 24 project/analysis command files
 +-- _commands/profiles/              <- 15 role profiles (architect, security, qa, devops, etc.)
 +-- .claude/skills/                  <- 10 skills (7 user-invocable, 3 auto-loaded protocols)
 +-- .claude/agents/                  <- 2 agent definitions (master-orchestrator, swarm-worker)
@@ -783,9 +777,6 @@ Project-specific configuration is stored in `{project_root}/.synapse/` (created 
 | File | Purpose |
 |---|---|
 | `project.json` | Target project path and metadata |
-| `toc.md` | Semantic table of contents |
-| `fingerprints.json` | File content fingerprints for TOC change detection |
-| `dep_graph.json` | File-level dependency graph |
 | `knowledge/manifest.json` | PKI routing index (domains, tags, concept map) |
 | `knowledge/annotations/*.json` | Per-file deep knowledge annotations |
 | `knowledge/domains.json` | Domain taxonomy |

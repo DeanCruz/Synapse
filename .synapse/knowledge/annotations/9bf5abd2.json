@@ -1,35 +1,45 @@
 {
   "file": "documentation/architecture/data-flow.md",
-  "content_hash": "bc414db9",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "823f56b1",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Describes how data flows through Synapse end-to-end: workers write progress JSON, the WatcherService detects changes, the server validates and broadcasts via SSE/IPC, and the React dashboard merges static plan with dynamic progress to render. Covers the dual transport model (Electron IPC for the desktop app, SSE for browser clients) and the broadcast bridge that fans events to both.",
+  "purpose": "Documentation page for the architecture area: Synapse Data Flow. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: This document describes how data flows through Synapse from the moment a swarm is planned to the final rendering of real-time updates on the dashboard. It covers the three main data flows: planning, execution, and rendering. The file is 706 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Server validates progress writes and rejects mismatched dashboard_id with a write_rejected SSE event",
-    "Workers do code work in {project_root} but write progress to {tracker_root} -- conflating the two breaks dashboard rendering"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Event-driven file watching with SSE/IPC fan-out",
-    "Client-side merge of static plan + dynamic progress via mergeState"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Atomic file writes via write-temp-then-rename for all JSON files"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depended_by": [
+      "documentation/README.md"
+    ],
+    "related": [
+      "documentation/architecture/overview.md"
+    ]
   },
   "domains": [
-    "architecture",
-    "data-flow"
+    "documentation",
+    "architecture"
   ],
   "tags": [
-    "sse",
-    "ipc",
-    "watcher",
-    "broadcast"
-  ]
+    "markdown",
+    "documentation",
+    "architecture",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "codex",
+    "claude"
+  ],
+  "complexity": "complex"
 }

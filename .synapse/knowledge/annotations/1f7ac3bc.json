@@ -1,82 +1,41 @@
 {
   "file": "agent/_commands/p_track_execution.md",
   "content_hash": "f9457dc6",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Phase 2 of !p_track — Execution: dependency-driven dispatch. Documents Steps 12-16 of the master agent's execution loop: Step 12 (begin execution — initialization.json is NOT updated post-planning), Step 13 (dispatch initial agents — every task with satisfied deps, A: launch agent FIRST, B: log AFTER dispatch), Step 14 (the canonical worker-prompt TEMPLATE_VERSION p_track_v2 with sections for Description/Context/Conventions/Reference Code/Upstream Results/Sibling Tasks/Critical/Success Criteria/Files/Directory plus Preparation Required + Live Progress Reporting + Deviation Reporting + Execution Rules + Return Format, Prompt Completeness Checklist, and FULL-vs-LITE Instruction Mode Selection criteria), Step 15 (process completions and IMMEDIATE eager dispatch — A: parse return, A-2: validate STATUS/SUMMARY/FILES CHANGED, A-3: validate progress file exists or create stub, B: update task file, C: append logs, D: cache result, E: scan for newly-dispatchable tasks across ALL waves, F: circuit breaker check), Step 16 (handle failures — circuit breaker thresholds, Failure Taxonomy by stage, Retry vs Replan decision). Plus Compaction Recovery, Terminal Output rules, and Master State Checkpoint schema.",
+  "purpose": "Agent protocol/control-plane instruction document: p_track \u2014 Phase 2: Execution \u2014 Dependency-Driven Dispatch. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: > **Module:** This file contains the Execution phase (Steps 12-16) of the `!p_track` command. > **Source:** Extracted from `{tracker_root}/_commands/Synapse/p_track.md` > **Related modules:** `p_track_planning.md` (Phase 1), `p_track_completion.md` (Phase 3) The file is 573 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "WAVES ARE VISUAL ONLY — dispatch is driven exclusively by individual task `depends_on` arrays, never by wave boundaries. A task in wave 5 with all deps satisfied is dispatchable IMMEDIATELY even if waves 2/3/4 still have running tasks.",
-    "REMINDER: master NEVER writes code during a swarm — even for the last single task. The single-task trap is a code-writing violation.",
-    "NON-NEGOTIABLE dispatch sequence: launch the Task agent FIRST, THEN update tracker files. Updating before dispatch creates phantom 'dispatched' state without an actual agent.",
-    "Master does NOT update initialization.json on dispatch or on completions — workers write their own status/started_at/completed_at to progress files.",
-    "Worker Return Validation: STATUS missing → treat as failure; SUMMARY generic ('Done', 'Completed') → log warn but still count completed; FILES CHANGED missing for file-modifying task → log warn.",
-    "STATUS:PARTIAL → treat as completed but log warn entry, list incomplete items in final report.",
-    "Progress File Validation: if worker returned but no progress file exists, master must CREATE A STUB from return data (not lose the result).",
-    "If progress file status mismatches return value, RETURN VALUE wins for dispatch decisions — log a warn for the mismatch.",
-    "KEY DETAILS in upstream-result injection is THE most important field — without it downstream workers know WHAT was done but not HOW, leading to redundant reads or wrong assumptions.",
-    "Circuit breaker thresholds (any one fires): A) 3+ failures in same wave, B) single failure blocks 3+ downstream, C) single failure blocks majority of remaining. After firing, log warn + set replanning flag + block all new dispatches + run replanning procedure.",
-    "After context compaction, file-change data is LOST unless summary/milestones mention specific files — note the gap in UPSTREAM RESULTS as 'File change details unavailable due to context compaction'.",
-    "Default to FULL Instruction Mode when uncertain — LITE is an optimization for simple tasks only, never use it for tasks with dependencies or coordination requirements.",
-    "Master state checkpoint is the master's OWN file — workers never read or write master_state.json. Keep summaries one-line, total file <2000 tokens.",
-    "Failure Taxonomy by stage: reading_context → upstream issue (check upstream output, verify paths); implementing → ambiguous spec (rewrite prompt with more detail); testing → integration issue (verification agent or merge with conflicting task).",
-    "Retry-vs-Replan: blocks >50% remaining → replan whole swarm; <50% → retry individual task; same task fails twice → escalate to user regardless of blast radius."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Worker prompt TEMPLATE_VERSION: p_track_v2 — workers MUST include this in their progress file's template_version field on every write.",
-    "Worker prompt sections: Description / Context / Project+Tracker Roots / Conventions (filtered) / Reference Code / Upstream Results (only for downstream tasks) / Sibling Tasks (optional, for same-wave file-area awareness) / Critical / Success Criteria (specific verifiable conditions) / Files (READ/MODIFY/CREATE actions) / Directory.",
-    "Preparation Required block — three-step pre-work flow: read plan.json + your task entry, read CLAUDE.md if not extracted, run readiness checklist (file paths listed, pattern reference read, one-sentence task statement, files exist at expected paths, upstream exports confirmed); after 3 fruitless reads, report as blocker.",
-    "Eager dispatch loop — on EVERY completion: parse return → validate → update task file → append logs → cache result → scan ALL pending tasks across ALL waves → dispatch every newly unblocked task IMMEDIATELY → circuit breaker check.",
-    "Upstream Result Summary Format per dependency: STATUS / SUMMARY / FILES CHANGED / NEW EXPORTS / DEVIATIONS / KEY DETAILS — list each in its own `--- Dependency ---` block, ordered by relevance.",
-    "Master State Checkpoint schema: completed[], in_progress[], failed[] with repair_id, ready_to_dispatch[], upstream_results{} (one-line summaries per task), next_agent_number counter, permanently_failed[].",
-    "Compaction Recovery: detect via missing cache for completed task → re-read all completed progress files → rebuild cache from task_id+summary+milestones+deviations → log warn → resume dispatch with rebuilt cache.",
-    "Terminal output minimal: dispatch one-liner, completion one-liner, failure one-liner, deviation one-liner — full status tables only on !status."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Step-letter sub-numbering: 13A, 13B, 15A, 15A-2, 15A-3, 15B-F, 16A.",
-    "TEMPLATE_VERSION at top of worker prompt (currently p_track_v2) — versioning the prompt template.",
-    "Tables for Prompt Completeness Checklist, Instruction Mode Selection criteria, Worker Return Validation, Failure Taxonomy by stage.",
-    "Inline JSON log-entry examples for every write moment with placeholder syntax."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/_commands/p_track_planning.md (Phase 1 — produces plan.json/initialization.json)",
-      "agent/instructions/tracker_worker_instructions.md (Worker FULL mode)",
-      "agent/instructions/tracker_worker_instructions_lite.md (Worker LITE mode)",
-      "_commands/Synapse/p_track.md (parent command)"
-    ],
-    "depended_by": [
-      ".claude/skills/p-track",
-      ".claude/skills/eager-dispatch",
-      ".claude/skills/p-track-resume"
-    ],
-    "related": [
-      "agent/master/eager_dispatch.md",
-      "agent/master/failure_recovery.md",
-      "agent/master/worker_prompts.md",
-      "agent/master/compaction_recovery.md",
-      "agent/instructions/tracker_master_instructions.md",
-      "agent/instructions/failed_task.md"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "master-orchestration",
-    "eager-dispatch",
-    "failure-recovery"
+    "agent-protocol",
+    "_commands"
   ],
   "tags": [
     "markdown",
-    "agent-doc",
-    "protocol",
-    "p-track",
-    "phase-2",
-    "execution",
-    "worker-prompt-template",
-    "eager-dispatch",
-    "circuit-breaker",
-    "compaction-recovery",
-    "master-state-checkpoint",
-    "non-negotiable"
-  ]
+    "agent-instructions",
+    "-commands",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "initialization-json",
+    "profile"
+  ],
+  "complexity": "complex"
 }

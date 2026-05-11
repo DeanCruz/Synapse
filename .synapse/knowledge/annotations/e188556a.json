@@ -1,0 +1,73 @@
+{
+  "file": "src/ui/shared/modals/LogsModal.jsx",
+  "content_hash": "4f4fcc6b",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Full-screen log viewer for a single dashboard's logs.json content. Receives `logs` prop with shape {entries: []}; entries have timestamp, task_id, agent, level, message. Renders a toolbar with five filter buttons (all/info/warn/error/deviation) showing per-level counts plus a search input. Filtering and counting are computed via useMemo. The entries list area sticky-scrolls to bottom only when the user is already near bottom (within 60px) — preventing scroll-jumping when the user is reading scrolled-up history. Auto-scroll trigger is the entries.length change tracked in prevLengthRef.",
+  "exports": [
+    {
+      "name": "LogsModal",
+      "kind": "component",
+      "signature": "default function LogsModal(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/shared/modals/Modal.jsx": [
+      "Modal"
+    ],
+    "src/ui/utils/constants": [
+      "LEVEL_COLORS",
+      "LEVEL_BG_COLORS"
+    ],
+    "src/ui/utils/format": [
+      "formatTime"
+    ]
+  },
+  "gotchas": [
+    "Smart-scroll threshold is hardcoded to 60px — if entries are tall (multi-line messages), users may not feel 'at bottom' even when they are; conversely a 60px gap can hide that user has scrolled away.",
+    "Empty filter result still renders 'No log entries' message — message text varies if `search` is set ('matching search') vs not. Filter-only empty does NOT mention the active filter.",
+    "Uses path alias '@/utils/...' rather than relative '../../utils/...' — different convention from sibling modals; depends on Vite/build resolver config and may break in environments without alias support.",
+    "dashLabel converts 'dashboard1' → 'Dashboard 1' via simple string.replace — non-numeric or chat- prefixed dashboard IDs will not transform meaningfully (e.g. 'chat-agent-x' stays 'chat-agent-x').",
+    "Logs list is rendered as flat divs (.logs-modal-row) with grid CSS — each row has fixed columns (ts, task, agent, level, msg). Long messages truncate or wrap based on CSS, not JS."
+  ],
+  "patterns": [
+    "useMemo wraps filter and counts to avoid re-computation on every render.",
+    "prevLengthRef pattern (vs length-as-state) prevents render-cycle dependency on prev length.",
+    "data-level attribute on filter buttons enables CSS to color buttons per level (vs inline style)."
+  ],
+  "conventions": [
+    "FILTER_LEVELS constant declared at module top; level names are lowercase."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/shared/modals/Modal.jsx",
+      "src/ui/utils/constants",
+      "src/ui/utils/format"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "src/ui/shared/LogPanel.jsx"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "log-viewer",
+    "swarm-monitoring"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "logs",
+    "filter",
+    "search",
+    "auto-scroll"
+  ],
+  "complexity": "moderate"
+}

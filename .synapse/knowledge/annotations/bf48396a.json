@@ -1,0 +1,57 @@
+{
+  "file": "electron/services/GuideService.js",
+  "content_hash": "5b4ec689",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "GuideService is the read-only Electron main-process loader for documentation/guide markdown. It walks guide folders recursively, extracts titles and purpose metadata, preserves natural numeric ordering, returns grouped summaries for the Guide sidebar, and resolves a selected guide id/path/name back to full markdown content without allowing arbitrary filesystem access.",
+  "exports": [
+    {
+      "name": "GUIDE_DIR",
+      "kind": "class",
+      "signature": "GUIDE_DIR(...)"
+    },
+    {
+      "name": "listGuide",
+      "kind": "function",
+      "signature": "listGuide(...)"
+    },
+    {
+      "name": "getGuide",
+      "kind": "function",
+      "signature": "getGuide(...)"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Guide lookup only reads under documentation/guide and uses isSafeRelativePath before direct path resolution; do not widen it to arbitrary markdown paths."
+  ],
+  "patterns": [
+    "Electron main-process service module exported via CommonJS and consumed by ipc-handlers or orchestration services."
+  ],
+  "conventions": [
+    "Electron main-process files use CommonJS require/module.exports rather than ESM imports."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "electron/ipc-handlers.js"
+    ],
+    "related": [
+      "electron/ipc-handlers.js",
+      "electron/preload.js",
+      "src/ui/shared/modals/GuideModal.jsx"
+    ]
+  },
+  "domains": [
+    "electron-runtime",
+    "service-layer",
+    "in-app-guide"
+  ],
+  "tags": [
+    "javascript",
+    "electron",
+    "service",
+    "guide"
+  ],
+  "complexity": "moderate"
+}

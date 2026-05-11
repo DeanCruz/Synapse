@@ -1,52 +1,48 @@
 {
   "file": "_commands/project/create_claude.md",
   "content_hash": "95cb15f9",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !create_claude slash command — generates a PRESCRIPTIVE CLAUDE.md establishing coding standards, architecture patterns, documentation requirements, and styling guidelines for the target project. Differs fundamentally from !scaffold (which DOCUMENTS what exists); this command PRESCRIBES what should be. Accepts an optional inline prompt with architecture directions, otherwise interactively prompts the user via AskUserQuestion for architecture pattern (MVC/MVVM/Feature/Custom), styling approach (CSS Modules/Tailwind/CSS-in-JS/Plain), and standards priority (Strict/Balanced/Minimal). Falls back to detected-stack best-practice defaults when user declines. Supports --update (merge with existing, preserve user customization) and --force (overwrite with confirmation) flags. Refuses to overwrite existing CLAUDE.md without an explicit flag.",
-  "exports": [],
+  "purpose": "Command specification for `!create_claude`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: Generates a **prescriptive** `CLAUDE.md` for the target project that establishes coding standards, architectural patterns, documentation requirements, and styling guidelines. Unlike `!scaffold` (which documents what exists), `!create_claude` sets the rules for how the project **should** be built. The file is 301 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!create_claude",
+      "kind": "command",
+      "signature": "!create_claude \u2014 Create or Update an Opinionated CLAUDE.md"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Differentiation is critical: !scaffold documents what IS; !create_claude prescribes what SHOULD BE. If both run, !create_claude takes precedence as actionable standards.",
-    "Never overwrite existing CLAUDE.md without --update or --force flag — existing files represent user work.",
-    "Read ONLY config/structure/READMEs/linter configs — do NOT deep-read source files. Infer from tooling, not implementation.",
-    "Make CONCRETE decisions: 'Use good naming' is unacceptable; 'Use camelCase for functions, PascalCase for components' is required.",
-    "Respect existing patterns when project already has established conventions visible from configs — do not impose conflicting rules.",
-    "When user gives no/vague directions, auto-detect the stack and apply best-practice defaults — do not leave TODOs for style choices.",
-    "Opinionated > permissive: when in doubt, pick the stricter convention; easier to relax than to add later."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Three-question interactive setup: architecture / styling / standards level.",
-    "Stack-adaptive defaults: detected technologies drive specific guideline choices.",
-    "Diff-and-merge for --update mode: preserve customized sections, replace scaffold-marked sections, add new sections."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Two-flag mode system: --update (merge) and --force (overwrite with confirm).",
-    "Templated CLAUDE.md sections: Tech Stack → Architecture → Coding Standards → Styling → Documentation → Testing → Git → Commands → Environment.",
-    "Serial execution."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "{project_root}/package.json",
-      "{project_root}/CLAUDE.md",
-      "{project_root}/.eslintrc"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/project/scaffold.md",
-      "_commands/project/initialize.md"
-    ]
+    "related": []
   },
   "domains": [
-    "project-setup",
-    "claude-md-generation"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
-    "scaffolding",
-    "interactive",
-    "writes-files"
-  ]
+    "slash-command",
+    "create-claude",
+    "project-command",
+    "guide",
+    "claude",
+    "react"
+  ],
+  "complexity": "complex"
 }

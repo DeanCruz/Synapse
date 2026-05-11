@@ -1,8 +1,8 @@
 {
   "file": "src/server/services/QueueService.js",
   "content_hash": "2307097d",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.409Z",
+  "annotated_by": "learn-update",
   "purpose": "Read-only accessor for the queue/ overflow directory used by !master_plan_track when more swarms are planned than the active dashboard slots can hold. Mirrors DashboardService's read API (sync + async pairs for init/logs/progress) but rooted at QUEUE_DIR. listQueue() returns sorted queue ids whose directory has an initialization.json (validity gate). listQueueSummaries() is the showpiece function: for each queue item, computes a derived `status` string ('pending' | 'in_progress' | 'completed' | 'error') by walking progress entries — accounts for partially-written queues by comparing progressValues.length vs init.task.total_tasks and only declares completed when ALL tasks are accounted for AND none are in progress. Returns lightweight summaries for the QueuePopup UI.",
   "exports": [
     {
@@ -109,5 +109,6 @@
     "queue",
     "filesystem",
     "read-only"
-  ]
+  ],
+  "complexity": "moderate"
 }

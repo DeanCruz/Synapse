@@ -1,37 +1,42 @@
 {
   "file": ".claude/plan.md",
   "content_hash": "fc40953c",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Historical planning artifact for the 'Convert XML Task Files to JSON' migration (predates current dashboards/{id}/plan.json convention). Documents the JSON schema that replaced the legacy XML master task file format (tasks/{date}/parallel_{name}.xml -> .json), enumerates ~47 files to edit grouped by priority (Core, Agent Protocol, Commands, Documentation, Other), terminology mapping ('master XML' -> 'master task file'), and execution strategy in batches. Stale: tasks/{date}/parallel_*.json is itself now deprecated in favor of dashboards/{id}/plan.json + initialization.json.",
+  "purpose": "Control-plane markdown document: Plan: Convert XML Task Files to JSON. Key content: Replace the XML-based master task file format (`parallel_{name}.xml`) with JSON (`parallel_{name}.json`) across the entire Synapse codebase. This affects ~50 documentation/instruction files and zero application code (no programmatic XML parsing exists). The file is 181 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Plan is HISTORICAL — describes the XML->JSON conversion that already happened. The post-conversion JSON schema (tasks/{date}/parallel_{name}.json) is itself now legacy/deprecated.",
-    "Current canonical plan format is dashboards/{id}/plan.json (different schema) — see .claude/skills/p-track/SKILL.md or agent/master/initialization_blueprint.md",
-    "Listed file paths reference repos at /Users/dean/Desktop/Working/Repos/Synapse — not the current /Users/dean/Desktop/Synapse layout"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Migration plan pattern: schema-first, then file groupings, then terminology mapping"
+    "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
   ],
-  "conventions": [],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
+  ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
     "related": [
-      ".claude/MIGRATION.md",
-      "agent/master/initialization_blueprint.md"
+      ".claude/README.md"
     ]
   },
   "domains": [
-    "historical-plan",
-    "migration-documentation"
+    "control-plane-docs"
   ],
   "tags": [
     "markdown",
-    "plan",
-    "historical",
-    "xml-to-json",
-    "migration"
-  ]
+    "control-plane",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "electron",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

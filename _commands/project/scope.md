@@ -28,7 +28,7 @@ Parse the task description and identify:
 
 ### Step 2: Search for Affected Files
 
-Using Grep, Glob, and `{project_root}/.synapse/toc.md`:
+Using Grep, Glob, and `{project_root}/.synapse/knowledge/`:
 
 1. Find all files directly related to the task
 2. For each file, check its imports and exports to find indirect dependencies

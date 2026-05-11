@@ -1,40 +1,46 @@
 {
   "file": "_commands/Synapse/stop.md",
   "content_hash": "c595f326",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!stop` command for stopping the Synapse dashboard server. Three steps: lsof to find PID on port 3456, kill the PID if found, verify via lsof+sleep. Handles the not-running case explicitly.",
-  "exports": [],
+  "purpose": "Command specification for `!stop`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Stop the Synapse dashboard server. The file is 27 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!stop",
+      "kind": "command",
+      "signature": "!stop"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Only stops the standalone server on port 3456 — the Electron app's embedded server is not killed by this command (closing the Electron window stops it)",
-    "1-second sleep before verification is required because kill doesn't return synchronously",
-    "lsof -i :3456 -t with 2>/dev/null suppresses errors — never assumes a server is running"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "3-step procedure: lsof → kill → verify with sleep+lsof",
-    "Bash idiom: `kill $(lsof -i :3456 -t) 2>/dev/null` for safe pid resolution+kill"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
   ],
   "conventions": [
-    "Minimal command doc — 4 numbered steps, no Output Files",
-    "Bash code blocks with explicit lsof/kill commands"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/start.md",
-      "src/server/index.js"
-    ]
+    "related": []
   },
   "domains": [
-    "server-control",
-    "lifecycle"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "process-management"
-  ]
+    "stop",
+    "swarm-command",
+    "dashboard"
+  ],
+  "complexity": "simple"
 }

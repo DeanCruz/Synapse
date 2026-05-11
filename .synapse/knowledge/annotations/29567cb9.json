@@ -1,60 +1,51 @@
 {
   "file": "documentation/electron/services.md",
-  "content_hash": "b7a45318",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "ddc90bb2",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Per-service reference for the 14+ Electron service modules (SwarmOrchestrator, ClaudeCodeService, CodexService, PromptBuilder, ProjectService, CommandsService, TaskEditorService, ConversationService, DebugService, TerminalService, InstrumentService, PreviewService, PreviewTextWriter, AutoUpdateService). Documents each service's API, responsibilities, lifecycle, and inter-service relationships.",
-  "exports": [
-    "SwarmOrchestrator",
-    "ClaudeCodeService",
-    "CodexService",
-    "PromptBuilder",
-    "ProjectService",
-    "CommandsService",
-    "TaskEditorService",
-    "ConversationService",
-    "DebugService",
-    "TerminalService",
-    "InstrumentService",
-    "PreviewService",
-    "PreviewTextWriter",
-    "AutoUpdateService"
-  ],
-  "imports_from": [],
+  "purpose": "Documentation page for the electron area: Electron Services Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: All services live under `electron/services/` and run in the Electron main process. They are CommonJS modules imported by `ipc-handlers.js` during app initialization. The file is 1218 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [],
+  "imports_from": {},
   "gotchas": [
-    "SwarmOrchestrator runs a circuit breaker — repeated failures pause dispatch automatically",
-    "DebugService uses Chrome DevTools Protocol; only one debug session per process",
-    "TerminalService backs PTY sessions — closing window must dispose all sessions"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "One responsibility per service module",
-    "Stateless functions where possible; instance state where lifecycle matters",
-    "Services consumed only by ipc-handlers.js (no cross-service imports from renderer)"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Files: electron/services/XxxService.js",
-    "Services expose register/start/stop and method-per-IPC-handler"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/electron/overview.md",
-      "documentation/electron/ipc-reference.md"
+      "documentation/chat/conversation-persistence.md",
+      "documentation/chat/overview.md"
     ],
     "depended_by": [
+      "documentation/README.md",
       "documentation/electron/update-on-master.md"
     ],
     "related": [
-      "documentation/electron/configuration.md",
-      "documentation/git-manager/ipc-handlers.md",
-      "documentation/ide/ipc-handlers.md"
+      "documentation/chat/conversation-persistence.md",
+      "documentation/chat/overview.md",
+      "documentation/electron/overview.md"
     ]
   },
   "domains": [
+    "documentation",
     "electron"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "services"
-  ]
+    "electron",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "codex",
+    "claude"
+  ],
+  "complexity": "complex"
 }

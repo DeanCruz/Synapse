@@ -1,0 +1,60 @@
+{
+  "file": "src/ui/pages/chat/components/ChatInstanceView.jsx",
+  "content_hash": "b8df8212",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "ChatInstanceView participates in the chat workspace surface. It connects project/agent tab state from AppContext to chat dashboards or chat instances, keeping chat-agent dashboards distinct from code dashboard orchestration while sharing the same Electron IPC bridge.",
+  "exports": [
+    {
+      "name": "ChatInstanceView",
+      "kind": "component",
+      "signature": "default function ChatInstanceView(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/shared/claude/ClaudeView": [
+      "ClaudeView"
+    ],
+    "src/ui/context/AppContext": [
+      "useAppState"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/shared/claude/ClaudeView"
+    ],
+    "depended_by": [
+      "src/ui/pages/chat/ChatPage.jsx"
+    ],
+    "related": [
+      "src/ui/context/AppContext.jsx",
+      "src/ui/shared/claude/ClaudeView.jsx"
+    ]
+  },
+  "domains": [
+    "react-ui",
+    "chat-workspace"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "chat"
+  ],
+  "complexity": "simple"
+}

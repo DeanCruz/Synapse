@@ -1,84 +1,45 @@
 {
   "file": "agent/master/worker_prompts.md",
   "content_hash": "32a7dfe2",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The master agent's complete worker prompt construction guide: the full TEMPLATE_VERSION p_track_v2 dispatch template, instruction mode selection (FULL vs LITE), context budgeting (~800 line per-prompt cap, 8000 token estimate), the convention_map system, per-task convention filtering, PKI context injection guidelines, prompt completeness checklist, right-sizing tasks (1-5 min principle), upstream result injection format with KEY DETAILS, and sibling tasks section. The single source of truth for what a worker dispatch looks like.",
+  "purpose": "Agent protocol/control-plane instruction document: Worker Prompt Construction Guidelines. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: This module covers everything the master agent needs to construct high-quality, self-contained worker dispatch prompts. It includes the full prompt template, instruction mode selection, context budgeting, convention filtering, and the pre-dispatch quality checklist. The file is 588 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "Worker prompts MUST be self-contained — agent must execute without reading additional files or asking questions. Missing context is the #1 cause of worker confusion.",
-    "Every worker prompt MUST include both {tracker_root} (for progress reporting) AND {project_root} (for code work) — workers cannot auto-detect these.",
-    "PLAN FILE pointer is mandatory: 'PLAN FILE: {tracker_root}/dashboards/{dashboardId}/plan.json' — worker reads its task entry plus context plus depends_on entries from this single artifact.",
-    "Prompt bloat is the #1 cause of worker context exhaustion — a 15,000 token prompt consumes 15% of worker context before any code is written. Budget cap: 8000 tokens / ~32KB / ~800 lines.",
-    "When a prompt exceeds budget: split the task FIRST (decompose further), then summarize conventions (3-5 most relevant rules as bullets), then trim reference code (specific functions only with line ranges), then condense upstream results (one-line summaries).",
-    "FILTER conventions per-worker — never dump full CLAUDE.md. Use the convention_map and Convention Relevance Checklist to select only categories relevant to THIS task. A backend API task gets backend_api/error_handling/naming/types — NOT frontend_styling.",
-    "For CLAUDE.md > 500 lines, ALWAYS summarize as 5-10 bullet points — never quote in full. Cap content at ~200 lines.",
-    "PKI gotchas are NEVER cut for budget. When trimming: cut conventions first, then relationships, then patterns. Gotchas always stay.",
-    "MANDATORY first-write line: 'Write your first progress file IMMEDIATELY with status: \"in_progress\", stage: \"reading_context\" BEFORE doing any work.' Without this, workers don't report progress until completion.",
-    "TEMPLATE_VERSION must be embedded in the prompt and worker must echo it as 'template_version' field in every progress file write.",
-    "INSTRUCTION MODE selection: default to FULL when uncertain. LITE is an optimization for simple tasks — never use it for tasks with dependencies or coordination requirements (3+ files, upstream deps, coordination needs, high deviation risk).",
-    "UPSTREAM RESULTS KEY DETAILS field is the most important — bridges WHAT was done with HOW (function signatures, export names, file locations). Without it, downstream worker re-reads files redundantly.",
-    "SIBLING TASKS section warns workers about same-wave concurrent tasks: 'You do NOT depend on these tasks ... Do NOT modify any files listed under sibling tasks.' If they discover need to modify, it must be a deviation."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Full template structure: TEMPLATE_VERSION header -> TASK header -> DESCRIPTION -> CONTEXT (with optional [PKI] relationships) -> PROJECT_ROOT/TRACKER_ROOT/PLAN FILE -> CONVENTIONS (filtered + optional [PKI] file knowledge) -> REFERENCE CODE -> UPSTREAM RESULTS -> SIBLING TASKS -> CRITICAL -> SUCCESS CRITERIA -> FILES (READ/MODIFY/CREATE) -> DIRECTORY -> PREPARATION steps -> LIVE PROGRESS REPORTING (FULL or LITE) -> DEVIATION REPORTING -> EXECUTION RULES -> RETURN FORMAT.",
-    "Per-task budget: CONVENTIONS ~200 lines (PKI shares this; cap at 5 files), REFERENCE CODE ~100 lines, UPSTREAM RESULTS ~50 lines per dep, CONTEXT ~150 lines, total ~800 lines / ~8000 tokens.",
-    "PKI lookup procedure: check manifest exists -> match task files against manifest.files -> filter out stale -> read annotations via hash -> prioritize MODIFY > READ files (cap 5) -> inject under [PKI] label in CONVENTIONS (gotchas/patterns/conventions) and CONTEXT (relationships).",
-    "PKI priority order when budget tight: keep gotchas (1) -> patterns (2) -> relationships (3) -> conventions (4 — first to cut).",
-    "Convention map categories: naming, file_structure, imports, frontend_styling, backend_api, error_handling, testing, types — applied per-worker via Convention Relevance Checklist.",
-    "Right-sizing principle: each task takes single agent 1-5 minutes; reads 2-3 files / modifies 1-2 files is typical. >10 reads or >5 modifies means decompose further.",
-    "UPSTREAM RESULTS injection per dependency: STATUS / SUMMARY (verbatim) / FILES CHANGED (with action) / NEW EXPORTS / DEVIATIONS / KEY DETAILS (1-2 sentences of specific technical context).",
-    "RETURN FORMAT: STATUS (completed|failed) / SUMMARY / FILES CHANGED (with action) / EXPORTS (omit if none) / DIVERGENT ACTIONS (omit if none) / WARNINGS (omit if none) / ERRORS (omit if none).",
-    "Workers also PRODUCE PKI annotations via ANNOTATIONS section in return + annotations field in progress file — master merges these into PKI for next swarm (feedback loop)."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "TEMPLATE_VERSION 'p_track_v2' for full mode, 'p_v2' for lightweight.",
-    "Quote CLAUDE.md sections directly (not paraphrased) for conventions; for >500 line CLAUDE.md, summarize as bullet points.",
-    "Sibling Tasks format: '{sibling_id}: {sibling_title} — modifies {sibling_files}' followed by warning text.",
-    "Critical sections never cut for space: SUCCESS CRITERIA, CRITICAL, gotchas (PKI). Cut REFERENCE CODE and CONVENTIONS first.",
-    "Append PKI relationships to CONTEXT section under [PKI] label, NOT a separate section.",
-    "Worker progress file mandatory writes: (1) before starting work, (2) on every stage transition, (3) on any deviation, (4) on completion/failure.",
-    "Stages enum: reading_context | planning | implementing | testing | finalizing | completed | failed."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/master/role.md",
-      "agent/master/pki_integration.md",
-      "agent/instructions/tracker_worker_instructions.md",
-      "agent/instructions/tracker_worker_instructions_lite.md",
-      "agent/worker/return_format.md"
-    ],
+    "depends_on": [],
     "depended_by": [
-      ".claude/skills/master-protocol",
-      ".claude/skills/p-track",
-      ".claude/skills/p",
-      ".claude/skills/eager-dispatch",
-      ".claude/skills/p-track-resume",
-      "agent/master/eager_dispatch.md",
-      "agent/master/failure_recovery.md",
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/p.md",
-      "electron/services/PromptBuilder.js"
+      "agent/master/pki_integration.md",
+      "documentation/master-agent/planning.md",
+      "documentation/project-integration/pki-overview.md"
     ],
-    "related": [
-      "agent/master/dashboard_protocol.md",
-      "agent/instructions/failed_task.md",
-      "agent/worker/upstream_deps.md",
-      "agent/worker/sibling_comms.md"
-    ]
+    "related": []
   },
   "domains": [
-    "worker-prompt-construction",
-    "master-orchestration",
-    "pki-integration"
+    "agent-protocol",
+    "master"
   ],
   "tags": [
     "markdown",
-    "master-agent",
-    "template",
-    "context-budgeting",
-    "convention-map",
-    "right-sizing"
-  ]
+    "agent-instructions",
+    "master",
+    "pki",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "guide"
+  ],
+  "complexity": "complex"
 }

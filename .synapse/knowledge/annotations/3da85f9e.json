@@ -1,8 +1,8 @@
 {
   "file": "src/ui/main.jsx",
-  "content_hash": "0f2af373",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "c140a7fb",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "Vite entry point. Mounts <AppProvider><App/></AppProvider> into #root and installs the Electron fetch shim that intercepts /api/* requests and routes them through window.electronAPI IPC handlers. Imports global stylesheets (index.css) and the four IDE-specific stylesheets eagerly so they're available before IDE view mounts. The fetch shim is the bridge between Synapse's standalone-server mental model (where components fetch /api/*) and the Electron-app reality (where data flows over IPC).",
   "exports": [],
   "imports_from": {
@@ -10,7 +10,7 @@
       "AppProvider"
     ],
     "src/ui/App.jsx": [
-      "default"
+      "App"
     ]
   },
   "gotchas": [
@@ -33,16 +33,13 @@
   ],
   "relationships": {
     "depends_on": [
-      "src/ui/context/AppContext.jsx",
       "src/ui/App.jsx",
-      "src/ui/styles/index.css"
+      "src/ui/context/AppContext.jsx"
     ],
-    "depended_by": [
-      "index.html (Vite entry script)"
-    ],
+    "depended_by": [],
     "related": [
-      "electron/preload.js",
-      "electron/ipc-handlers.js"
+      "electron/ipc-handlers.js",
+      "electron/preload.js"
     ]
   },
   "domains": [
@@ -57,5 +54,6 @@
     "ipc",
     "electron",
     "vite"
-  ]
+  ],
+  "complexity": "moderate"
 }
