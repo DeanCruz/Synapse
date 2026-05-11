@@ -39,13 +39,13 @@ These paths are computed relative to the Synapse repository root (`ROOT`), which
 ```
 {ROOT}/
   dashboards/
-    dashboard1/
+    a1b2c3/
       initialization.json
       logs.json
       progress/
         1.1.json
         1.2.json
-    dashboard2/
+    b2c3d4/
       ...
   queue/
     queue1/

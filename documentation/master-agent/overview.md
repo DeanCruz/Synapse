@@ -40,7 +40,7 @@ Specific context-gathering actions:
 
 - Read the Synapse `CLAUDE.md` for swarm protocols (non-negotiable on every invocation).
 - Read `{project_root}/CLAUDE.md` for target project conventions, architecture, and constraints.
-- If a project TOC exists at `{project_root}/.synapse/toc.md`, read it for semantic orientation.
+- If a project knowledge graph exists at `{project_root}/.synapse/knowledge/`, query it for semantic orientation.
 - Use Glob and Grep within `{project_root}` for targeted file discovery.
 - Read source files, documentation, types, schemas, and configs needed to understand the task.
 - Read relevant command files from `_commands/` directories.
@@ -78,7 +78,7 @@ See [statusing.md](./statusing.md) for the complete statusing protocol.
 
 ### 5. Report
 
-When all agents have completed (or failed), the master compiles a final summary. It reports what was accomplished, what failed, and what needs follow-up. If the swarm created, moved, or restructured files, the master updates the project TOC at `{project_root}/.synapse/toc.md` (if one exists).
+When all agents have completed (or failed), the master compiles a final summary. It reports what was accomplished, what failed, and what needs follow-up. If the swarm created, moved, or restructured files, the master refreshes the project knowledge graph via `!learn_update`.
 
 The final report includes:
 

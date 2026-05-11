@@ -1,0 +1,50 @@
+{
+  "file": "_commands/Synapse/q_research.md",
+  "content_hash": "e2d6ef44",
+  "annotated_at": "2026-05-11T01:54:48Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Command specification for `!q_research`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: > **Lightweight version of `!p_research`.** Same research quality and output artifacts. Drastically reduced tracking overhead: one task card per wave, no worker progress files, master aggregates returns. > > **Read `!p_research` for:** output schemas, decomposition framework, depth tiers, raw findings file schema, worker return schema, source weighting protocol, synthesis worker protocol, quality rules. This file ONLY describes what's different. The file is 160 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!q_research",
+      "kind": "command",
+      "signature": "!q_research {topic}"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
+  ],
+  "patterns": [
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "p_track-era planning pattern: plan.json carries shared context and task entries before initialization.json/progress files handle dashboard rendering and lifecycle state.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
+  ],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "command-system",
+    "Synapse"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "q-research",
+    "swarm-command",
+    "dashboard",
+    "progress",
+    "plan-json"
+  ],
+  "complexity": "moderate"
+}

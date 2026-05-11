@@ -1,43 +1,48 @@
 {
   "file": "documentation/ide/overview.md",
   "content_hash": "6533f8d5",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Architecture overview of the embedded Code Explorer: workspace-dashboard bridge, multi-workspace tab system, Monaco editor integration, file-system service, search service, and debug system using Node CDP. Explains how IDE state coexists with dashboard/git state in the shared AppContext.",
+  "purpose": "Documentation page for the ide area: Code Explorer (IDE) Architecture Overview. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Code Explorer is Synapse's built-in IDE, accessible via a tab in the sidebar alongside the Dashboards tab. It provides a file explorer, Monaco-powered code editor with breakpoint support, multi-workspace tabs, an integrated Node.js debugger with VS Code-style debug panels, syntax diagnostics, and a bridge to link workspaces with dashboards for integrated Claude chat. The file is 386 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
-  "imports_from": [],
+  "imports_from": {},
   "gotchas": [
-    "Workspace folder is independent of dashboard project_root — they may diverge",
-    "Debug sessions piggyback on the dashboard worker process when applicable"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Workspace bridge syncs IDE folder with active dashboard project",
-    "Monaco-based editor with custom worker config",
-    "CDP debugger over websocket inside main process"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "src/ui/components/ide/ for components, electron/services/DebugService.js for debug runtime"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/electron/overview.md"
-    ],
-    "depended_by": [
-      "documentation/ide/components.md",
       "documentation/ide/ipc-handlers.md"
     ],
+    "depended_by": [
+      "documentation/README.md"
+    ],
     "related": [
-      "documentation/dashboard/state-management.md",
-      "documentation/electron/services.md"
+      "documentation/ide/components.md",
+      "documentation/ide/ipc-handlers.md"
     ]
   },
   "domains": [
+    "documentation",
     "ide"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "overview",
-    "ide"
-  ]
+    "ide",
+    "dashboard",
+    "progress",
+    "claude",
+    "electron",
+    "react"
+  ],
+  "complexity": "complex"
 }

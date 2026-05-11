@@ -1,50 +1,49 @@
 {
   "file": "_commands/Synapse/retry.md",
   "content_hash": "a299dd50",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!retry [dashboardId] {task_id}` command for re-dispatching a single failed task. Validates task exists, has a progress file (must be failed for proceed; in_progress/completed require confirmation), all upstream deps are completed (warns if a dep failed), saves the previous failure summary, deletes the old progress file, reads plan.json, ANALYZES THE FAILURE ROOT CAUSE (reads previous logs, identifies cause: missing file/type mismatch/wrong pattern/env issue/ambiguity, reads relevant files), then dispatches a new agent with PREVIOUS FAILURE/ROOT CAUSE ANALYSIS/REMEDIATION GUIDANCE/PREVIOUS WORKER LOGS sections.",
-  "exports": [],
+  "purpose": "Command specification for `!retry`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Re-dispatch a failed or blocked task. Deletes the old progress file and launches a fresh agent. The file is 84 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!retry",
+      "kind": "command",
+      "signature": "!retry [dashboardId] {task_id}"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Pending tasks (no progress file) cannot be retried — direct user to !dispatch instead",
-    "Failed dependencies are warned about, not auto-retried — the user must !retry the dep first to unblock",
-    "in_progress and completed status retries require user confirmation before proceeding",
-    "The master MUST analyze the failure root cause BEFORE re-dispatching — do not blindly retry; read previous logs, identify cause, read relevant files",
-    "For complex failures requiring a diagnostic-first approach, dispatch a repair worker via failed_task.md protocol instead of !retry",
-    "REMEDIATION GUIDANCE in the retry prompt should include SPECIFIC fixes (correct import paths, function signatures) — vague guidance defeats the purpose"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "13-step procedure: parse → read init → read progress → validate (existence+status+deps) → save previous summary → delete old progress → read plan → analyze root cause → resolve project_root → dispatch with retry sections → log → display confirmation",
-    "Retry prompt sections: PREVIOUS FAILURE → ROOT CAUSE ANALYSIS → REMEDIATION GUIDANCE → PREVIOUS WORKER LOGS",
-    "Validation order: existence first, then status, then dependencies"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "p_track-era planning pattern: plan.json carries shared context and task entries before initialization.json/progress files handle dashboard rendering and lifecycle state.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
   ],
   "conventions": [
-    "Numbered steps with embedded code blocks for the retry prompt sections and bash commands",
-    "Trailing footnote redirecting complex failures to failed_task.md / repair worker protocol"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/instructions/dashboard_resolution.md",
-      "agent/instructions/failed_task.md",
-      "_commands/Synapse/p_track.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/dispatch.md",
-      "_commands/Synapse/p_track_resume.md",
-      "_commands/Synapse/track_resume.md"
-    ]
+    "related": []
   },
   "domains": [
-    "swarm-command",
-    "failure-recovery",
-    "single-task-retry"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "root-cause-analysis"
-  ]
+    "retry",
+    "swarm-command",
+    "dashboard",
+    "progress",
+    "plan-json"
+  ],
+  "complexity": "simple"
 }

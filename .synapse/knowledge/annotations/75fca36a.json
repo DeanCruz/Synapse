@@ -1,0 +1,46 @@
+{
+  "file": "src/ui/pages/code/subpages/code-explorer/styles/ide-debug-panels.css",
+  "content_hash": "e5744e7c",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Standalone stylesheet for the IDE Debug Panels area (Variables, Call Stack, Breakpoints, Watch). Defines .debug-panels container (vertical scroll with thin custom scrollbar), .debug-panel-section collapsible groups with header (cursor:pointer, expand/collapse on click), .debug-panel-section-title (uppercase letter-spaced), and per-panel item styling for variable rows, stack frames, breakpoint entries, and watch expressions.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "DUPLICATE: ide-debug.css ALSO defines .debug-panels styles (lines 641-1124 there). The two may diverge — edit both when fixing rules.",
+    "Uses var(--bg, #1e1e1e) etc. fallback pattern; if --bg is the typical #0a0a0c, the panel background will differ from the surrounding chrome.",
+    "Panel sections use cursor:pointer on header for expand/collapse — relies on JS toggling an .expanded/.collapsed class (verify component usage when changing)."
+  ],
+  "patterns": [
+    "Custom thin scrollbar via scrollbar-width:thin + scrollbar-color combo.",
+    "Collapsible section pattern with header acting as toggle."
+  ],
+  "conventions": [
+    "Class prefix: .debug-panel-* (note: singular 'panel' — distinct from .debug-panels container)."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/styles/index.css for --bg, --border, --text-secondary, --sans, --surface, --surface-hover"
+    ],
+    "depended_by": [
+      "src/ui/shared/ide/IDEView.jsx",
+      "src/ui/shared/ide/DebugPanels.jsx"
+    ],
+    "related": [
+      "src/ui/styles/ide-debug.css (overlapping rules)"
+    ]
+  },
+  "domains": [
+    "ide-styles"
+  ],
+  "tags": [
+    "css",
+    "ide",
+    "debugger",
+    "variables",
+    "call-stack",
+    "breakpoints",
+    "watch"
+  ],
+  "complexity": "complex"
+}

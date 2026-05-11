@@ -1,0 +1,60 @@
+{
+  "file": "documentation/guide/1.1-table-of-contents.md",
+  "content_hash": "08fa88f4",
+  "annotated_at": "2026-05-11T01:54:48Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Documentation page for the guide area: 1.1 Table of Contents. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Read these files in order for a practical user path through Synapse. The file is 25 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
+  ],
+  "patterns": [
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses markdown tables for compact command, file, or option matrices."
+  ],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Guide pages use numeric filename prefixes so the in-app Guide modal can display them in a stable reading order.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
+  ],
+  "relationships": {
+    "depends_on": [
+      "documentation/guide/1.0-intro.md",
+      "documentation/guide/1.1-table-of-contents.md",
+      "documentation/guide/2.0-getting-started.md",
+      "documentation/guide/2.1-commands.md",
+      "documentation/guide/2.2-swarms-and-dashboards.md",
+      "documentation/guide/2.3-projects-and-knowledge-graph.md",
+      "documentation/guide/2.4-chat-code-git-and-preview.md",
+      "documentation/guide/3.0-troubleshooting.md"
+    ],
+    "depended_by": [
+      "documentation/guide/1.1-table-of-contents.md"
+    ],
+    "related": [
+      "documentation/guide/1.0-intro.md",
+      "documentation/guide/1.1-table-of-contents.md",
+      "documentation/guide/2.0-getting-started.md",
+      "documentation/guide/2.1-commands.md",
+      "documentation/guide/2.2-swarms-and-dashboards.md",
+      "documentation/guide/2.3-projects-and-knowledge-graph.md",
+      "documentation/guide/2.4-chat-code-git-and-preview.md",
+      "documentation/guide/3.0-troubleshooting.md"
+    ]
+  },
+  "domains": [
+    "documentation",
+    "guide"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "guide",
+    "dashboard",
+    "git",
+    "chat",
+    "ide"
+  ],
+  "complexity": "simple"
+}

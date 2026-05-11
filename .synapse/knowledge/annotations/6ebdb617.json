@@ -1,60 +1,52 @@
 {
   "file": "CLAUDE.md",
-  "content_hash": "f0d6ad4e",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "08060996",
+  "annotated_at": "2026-05-11T01:56:26Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Project-level instructions auto-loaded by Claude Code when working inside this repository. Acts as the canonical, condensed orientation document for any Claude agent operating on Synapse itself — it explains that Synapse is a distributed agent swarm control system, defines the {tracker_root} vs {project_root} path convention, summarizes how master/worker orchestration writes JSON files that Watcher/SSE/IPC pipelines stream into the React dashboard, and lists every command the user can invoke. Functionally, this is the agent-facing spec for the entire project — it overrides default behavior and is treated as authoritative by Claude Code's harness.",
+  "purpose": "Auto-loaded Claude Code project instructions that orient agents working inside Synapse and summarize current architecture, paths, commands, and control-plane rules. Key content: Synapse coordinates autonomous agent swarms for parallel software development. It operates on a **target project** at `{project_root}` \u2014 separate from Synapse's own location at `{tracker_root}`. A master agent plans and dispatches; worker agents execute in the target project and report progress back to Synapse. The file is 419 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Despite the project being self-targeted (.synapse/project.json points at /Users/dean/Desktop/Synapse), this file describes the architecture as if running against an external target — when Synapse is its own target, {tracker_root} and {project_root} resolve to the same path.",
-    "The 'Quick Start' block tells users to run `!project set /path/...` and then `npm start`, but `npm start` runs `vite build && electron .` — there is no separate server process; the SSE server runs INSIDE Electron's main process (per Synapse.md and package.json main field).",
-    "CLAUDE.md and AGENTS.md overlap heavily but are not synonyms — Claude Code reads CLAUDE.md as project instructions automatically; AGENTS.md is a longer master-protocol spec that is read on demand. Edits to one without the other will drift.",
-    "The directory listing claims `tasks/{date}/` is legacy/deprecated and that planning lives in `dashboards/{id}/plan.json`, but other docs (AGENTS.md, README.md) still reference `tasks/{date}/parallel_*.json` as live master writes. Verify before relying on either path.",
-    "Mandatory full-tracking thresholds (3+ agents OR multi-wave) are stated as non-negotiable — this is a behavioral constraint enforced by the agent itself, not by tooling, so a careless `!p` invocation can silently violate it."
+    "Guide description may be narrow: `!guide` remains a command-decision aid, but the app also exposes an in-app markdown Guide modal backed by documentation/guide via GuideService and IPC.",
+    "Stale dependency reference: this file says React 18, but package.json currently uses react/react-dom ^19.2.4; documentation updates should say React 19 unless discussing history."
   ],
   "patterns": [
-    "Doc-as-config: this file is loaded by the harness (NOT by application code) — the 'IMPORTANT: These instructions OVERRIDE any default behavior' lead is the trigger that elevates it to system-prompt status.",
-    "Path convention pattern: every operational doc in the repo uses {tracker_root} / {project_root} placeholders rather than concrete paths to keep agent instructions portable across machines.",
-    "Layered protocol pattern: CLAUDE.md (short orientation) → AGENTS.md (full protocol) → agent/master/*.md + agent/worker/*.md (deep references) → .claude/skills/*/SKILL.md (loaded on demand).",
-    "Mode taxonomy: Serial / Parallel-tracked (`!p_track`) / Lightweight-parallel (`!p`) / Multi-stream (`!master_plan_track`) — every command in the repo maps onto one of these execution modes."
+    "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "ASCII tree diagrams use `|--`, `+--`, `+-->` (no Unicode box-drawing) so the file renders identically in plain terminals, GitHub, and Claude Code.",
-    "Command names are always written with a leading `!` (e.g., `!p_track`).",
-    "Tables list one command per row with a single 'Description' column — kept concise so the file fits in the context window.",
-    "Quick-Start code fences use ```bash and assume a macOS shell.",
-    "Directory annotations after `<--` describe the file's role in 1 short sentence."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
     "depends_on": [
-      ".synapse/project.json",
-      "AGENTS.md",
-      "package.json"
+      "documentation/project-integration/pki-overview.md"
     ],
     "depended_by": [
-      ".claude/agents/master-orchestrator.md",
-      ".claude/agents/swarm-worker.md",
-      "_commands/Synapse/*.md",
-      "agent/instructions/tracker_master_instructions.md"
+      "documentation/troubleshooting/common-issues.md"
     ],
     "related": [
       "README.md",
-      "Synapse.md",
       "documentation/project-integration/pki-overview.md"
     ]
   },
   "domains": [
     "project-docs",
-    "agent-instructions",
-    "orchestration-spec"
+    "agent-instructions"
   ],
   "tags": [
     "markdown",
-    "claude-code",
-    "agent-config",
-    "swarm",
+    "top-level",
     "documentation",
-    "path-convention"
-  ]
+    "pki",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "initialization-json"
+  ],
+  "complexity": "complex"
 }

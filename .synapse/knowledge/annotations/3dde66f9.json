@@ -1,42 +1,50 @@
 {
   "file": "documentation/dashboard/overview.md",
   "content_hash": "3db80184",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:56:26Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Top-level introduction to the React 18 dashboard architecture. Describes the component hierarchy, data flow from IPC/SSE into AppContext, the role of useDashboardData, and how progress files merge with the static plan to render live agent state.",
+  "purpose": "Documentation page for the dashboard area: Dashboard UI Architecture Overview. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Synapse Dashboard is a React-based single-page application that provides real-time visualization and monitoring of distributed agent swarms. It runs inside an Electron desktop application and communicates with the backend via IPC (Inter-Process Communication) channels. The dashboard merges static plan data from `initialization.json` with dynamic lifecycle data from worker progress files to produce a live, continuously-updated view of swarm ex The file is 274 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
-  "imports_from": [],
+  "imports_from": {},
   "gotchas": [
-    "Renderer never talks directly to the file system — all data flows via IPC/SSE through hooks"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims.",
+    "Stale dependency reference: this file says React 18, but package.json currently uses react/react-dom ^19.2.4; documentation updates should say React 19 unless discussing history."
   ],
   "patterns": [
-    "Single global Context + useReducer state machine",
-    "Push-driven UI updates via subscription hooks",
-    "Dashboard-scoped data isolation"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Components, hooks, context, and styles each live in distinct subfolders under src/ui/"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [
-      "documentation/dashboard/components.md",
-      "documentation/dashboard/hooks.md",
-      "documentation/dashboard/state-management.md",
-      "documentation/dashboard/layout-modes.md",
-      "documentation/dashboard/styling.md"
+      "documentation/README.md"
     ],
     "related": [
-      "documentation/electron/overview.md",
-      "documentation/server/overview.md"
+      "documentation/dashboard/components.md",
+      "documentation/dashboard/hooks.md",
+      "documentation/dashboard/layout-modes.md",
+      "documentation/dashboard/state-management.md",
+      "documentation/dashboard/styling.md"
     ]
   },
   "domains": [
-    "dashboard-ui"
+    "documentation",
+    "dashboard"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "overview"
-  ]
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "electron",
+    "react"
+  ],
+  "complexity": "moderate"
 }

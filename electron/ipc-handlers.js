@@ -1102,6 +1102,17 @@ function registerIPCHandlers(getMainWindow) {
     return CommandsService.generateUserCommand(description, folderName, commandName, opts || {});
   });
 
+  // --- Guide handlers ---
+  const GuideService = require('./services/GuideService');
+
+  ipcMain.handle('list-guide', async () => {
+    return GuideService.listGuide();
+  });
+
+  ipcMain.handle('get-guide', async (_event, nameOrPath) => {
+    return GuideService.getGuide(nameOrPath);
+  });
+
   // --- Orchestration handlers ---
   const SwarmOrchestrator = require('./services/SwarmOrchestrator');
   SwarmOrchestrator.init(broadcastFn);
@@ -2359,6 +2370,24 @@ function registerIPCHandlers(getMainWindow) {
     try {
       const resolved = await gitValidateRepoPath(repoPath);
       const result = await gitExec(['init'], resolved);
+      if (!result.success) return result;
+      return { success: true, data: result.data.trim() };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
+  // --- git-clone: Clone a remote repository into an existing folder ---
+  ipcMain.handle('git-clone', async (_event, repoPath, remoteUrl) => {
+    try {
+      const resolved = await gitValidateRepoPath(repoPath);
+      if (!remoteUrl || typeof remoteUrl !== 'string' || !remoteUrl.trim()) {
+        throw new Error('remoteUrl is required and must be a string');
+      }
+      const result = await gitExec(['clone', '--', remoteUrl.trim(), '.'], resolved, {
+        timeout: 120000,
+        maxBuffer: 20 * 1024 * 1024,
+      });
       if (!result.success) return result;
       return { success: true, data: result.data.trim() };
     } catch (err) {

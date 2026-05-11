@@ -1506,6 +1506,12 @@ body {
   margin-right: 6px;
 }
 
+.agent-deviation-severity {
+  color: #eab308;
+  font-weight: 600;
+  margin-right: 6px;
+}
+
 /* ----- Live progress in agent details popup ----- */
 .agent-details-progress {
   display: flex;
@@ -3376,15 +3382,24 @@ a:hover {
   color: var(--color-purple-start);
 }
 
-/* Commands Button — purple accent */
-.header-commands-btn {
+/* Commands / Guide buttons — purple accent */
+.header-commands-btn,
+.header-guide-btn {
   color: var(--color-purple-end);
   border-color: color-mix(in srgb, var(--color-purple-end) 30%, transparent);
 }
-.header-commands-btn:hover {
+
+.header-commands-btn:hover,
+.header-guide-btn:hover {
   background: color-mix(in srgb, var(--color-purple-end) 12%, var(--surface));
   border-color: color-mix(in srgb, var(--color-purple-end) 50%, transparent);
   color: var(--color-purple-start);
+}
+
+.header-guide-btn span {
+  max-width: 82px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ============================================================
@@ -7081,6 +7096,60 @@ a:hover {
   background: var(--surface, rgba(255, 255, 255, 0.12));
 }
 
+.claude-json-collapsible {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+.claude-json-collapsible-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  background: var(--surface-hover, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  color: var(--text-secondary);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 0.7rem;
+  line-height: 1.4;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.claude-json-collapsible-toggle:hover {
+  color: var(--text);
+  background: var(--surface, rgba(255, 255, 255, 0.08));
+  border-color: var(--border-strong, rgba(255, 255, 255, 0.16));
+}
+.claude-json-collapsible-toggle.is-expanded {
+  color: var(--text);
+}
+.claude-json-collapsible-caret {
+  display: inline-block;
+  width: 10px;
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: 0.65rem;
+}
+.claude-json-collapsible-label {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+.claude-system-msg-collapsed {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 2px 0;
+  text-align: left;
+}
+.claude-system-msg-collapsed.claude-error {
+  background: transparent;
+  padding: 0;
+}
+
 .tool-field-code {
   font-family: 'Space Grotesk', monospace;
   background: var(--background);
@@ -7634,6 +7703,7 @@ a:hover {
   gap: 0;
   min-height: 400px;
   max-height: 60vh;
+  min-width: 0;
 }
 
 .commands-sidebar {
@@ -7642,6 +7712,7 @@ a:hover {
   border-right: 1px solid var(--border);
   overflow-y: auto;
   background: var(--surface);
+  flex: 0 0 240px;
 }
 
 .commands-sidebar-header {
@@ -7703,6 +7774,7 @@ a:hover {
   align-items: center;
   gap: 6px;
   width: 100%;
+  min-width: 0;
   padding: 8px 12px;
   border: none;
   background: none;
@@ -7731,13 +7803,18 @@ a:hover {
 
 .commands-folder-name {
   flex: 1;
+  min-width: 0;
   text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .commands-folder-count {
   font-size: 0.68rem;
   color: var(--text-tertiary);
   font-weight: 400;
+  flex-shrink: 0;
 }
 
 .commands-folder-add-btn {
@@ -7794,6 +7871,7 @@ a:hover {
   cursor: pointer;
   border-left: 3px solid transparent;
   transition: background 0.12s;
+  min-width: 0;
 }
 
 .commands-list-item:hover {
@@ -7806,10 +7884,13 @@ a:hover {
 }
 
 .commands-item-name {
+  display: block;
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--text);
   font-family: 'Space Grotesk', monospace;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
 }
 
 .commands-item-purpose {
@@ -7830,6 +7911,7 @@ a:hover {
 
 .commands-viewer {
   flex: 1;
+  min-width: 0;
   overflow-y: auto;
   padding: 16px 20px;
 }
@@ -7855,6 +7937,7 @@ a:hover {
   font-weight: 600;
   color: var(--text);
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .commands-viewer-actions {
@@ -7904,6 +7987,158 @@ a:hover {
   margin-top: 12px;
   max-height: 400px;
   overflow-y: auto;
+}
+
+.commands-viewer-content:not(pre) {
+  font-family: var(--sans);
+  font-size: 0.86rem;
+  color: var(--text-secondary);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.commands-viewer-content:not(pre) h1,
+.commands-viewer-content:not(pre) h2,
+.commands-viewer-content:not(pre) h3 {
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  line-height: 1.25;
+  margin: 0 0 12px;
+}
+
+.commands-viewer-content:not(pre) h1 { font-size: 1.2rem; }
+.commands-viewer-content:not(pre) h2 { font-size: 1.02rem; margin-top: 18px; }
+.commands-viewer-content:not(pre) h3 { font-size: 0.92rem; margin-top: 16px; }
+
+.commands-viewer-content:not(pre) p,
+.commands-viewer-content:not(pre) ul,
+.commands-viewer-content:not(pre) ol,
+.commands-viewer-content:not(pre) blockquote,
+.commands-viewer-content:not(pre) table {
+  margin: 0 0 12px;
+}
+
+.commands-viewer-content:not(pre) ul,
+.commands-viewer-content:not(pre) ol {
+  padding-left: 20px;
+}
+
+.commands-viewer-content:not(pre) li {
+  margin-bottom: 6px;
+}
+
+.commands-viewer-content:not(pre) code {
+  font-family: 'Space Grotesk', monospace;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  word-break: break-word;
+}
+
+.commands-viewer-content:not(pre) pre {
+  overflow-x: auto;
+  white-space: pre-wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.commands-viewer-content:not(pre) pre code {
+  display: block;
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.commands-viewer-content:not(pre) table {
+  width: 100%;
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+
+.commands-viewer-content:not(pre) th,
+.commands-viewer-content:not(pre) td {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.history-modal.guide-modal {
+  width: min(94vw, 1500px);
+  max-width: none;
+  height: 88vh;
+  max-height: 88vh;
+}
+
+.guide-modal .history-modal-body {
+  min-height: 0;
+  padding: 0;
+}
+
+.guide-modal .commands-layout {
+  min-height: 0;
+  height: 100%;
+  max-height: none;
+}
+
+.guide-modal .commands-sidebar {
+  width: clamp(260px, 24vw, 380px);
+  flex-basis: clamp(260px, 24vw, 380px);
+}
+
+.guide-modal .commands-viewer {
+  padding: 24px 32px;
+}
+
+.guide-modal .commands-viewer-content {
+  max-height: none;
+}
+
+@media (max-width: 720px) {
+  .commands-layout {
+    flex-direction: column;
+    min-height: 0;
+    max-height: 70vh;
+  }
+
+  .commands-sidebar {
+    width: 100%;
+    min-width: 0;
+    max-height: 180px;
+    flex: 0 0 auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .commands-viewer {
+    min-height: 240px;
+  }
+
+  .history-modal.guide-modal {
+    width: 96vw;
+    height: 92vh;
+    max-height: 92vh;
+  }
+
+  .guide-modal .commands-layout {
+    max-height: none;
+  }
+
+  .guide-modal .commands-sidebar {
+    width: 100%;
+    max-height: 220px;
+    flex-basis: auto;
+  }
+
+  .guide-modal .commands-viewer {
+    min-height: 0;
+    padding: 18px 20px;
+  }
 }
 
 /* Commands editor */
@@ -9376,6 +9611,50 @@ a:hover {
   background: var(--hover-bg, rgba(255,255,255,0.06));
   padding: 1px 6px;
   border-radius: 8px;
+}
+
+.chat-agent-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+}
+
+.chat-agent-action-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color, rgba(255,255,255,0.12));
+  border-radius: 6px;
+  background: var(--hover-bg, rgba(255,255,255,0.06));
+  color: var(--text-secondary, #888);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.chat-agent-action-btn:hover:not(:disabled) {
+  color: var(--text-primary, #e0e0e0);
+  border-color: rgba(255,255,255,0.24);
+  background: rgba(255,255,255,0.1);
+}
+
+.chat-agent-action-btn.archive:hover:not(:disabled) {
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.45);
+  background: rgba(52, 211, 153, 0.12);
+}
+
+.chat-agent-action-btn.delete:hover:not(:disabled) {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.45);
+  background: rgba(248, 113, 113, 0.12);
+}
+
+.chat-agent-action-btn:disabled {
+  cursor: default;
+  opacity: 0.45;
 }
 
 .chat-agent-row-tasks {

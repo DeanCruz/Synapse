@@ -3,45 +3,570 @@
     "version": 1,
     "moved_from": "manifest.json",
     "moved_from_field": "concept_map",
-    "moved_at": "2026-05-06T03:34:27Z",
-    "entry_count": 10
+    "moved_at": "2026-05-11T02:17:17.734Z",
+    "entry_count": 74
   },
-  "archive-then-clear-then-verify": {
-    "pattern": "Archive-then-clear-then-verify when reusing a pre-assigned dashboard with prior data: copy to Archive/{date}_{task_name}/, rm -f progress/*.json, reset logs.json, verify ls is empty before writing initialization.json.",
+  "action-buttons-sized-22x22-slightly-smaller": {
+    "pattern": "Action buttons sized 22x22 (slightly smaller than nav buttons elsewhere — IDE compactness convention).",
     "files": [
-      "agent/_commands/p_track_planning.md",
-      "agent/instructions/dashboard_resolution.md"
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-explorer.css",
+      "src/ui/styles/ide-explorer.css"
     ]
   },
-  "convention-map-categories-naming-file": {
-    "pattern": "convention_map categories: naming, file_structure, imports, frontend_styling, backend_api, error_handling, testing, types \u2014 held in working memory, used to filter per-worker.",
+  "active-state-applied-via-sidebar-tab": {
+    "pattern": "Active state applied via .sidebar-tab.active conditional class.",
     "files": [
-      "agent/_commands/p_track_planning.md",
-      "agent/master/worker_prompts.md"
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-sidebar.css",
+      "src/ui/styles/ide-sidebar.css"
     ]
   },
-  "dashboard-merges-initialization-json-static": {
-    "pattern": "Dashboard merges initialization.json (static) with progress/{task_id}.json files (dynamic) client-side \u2014 all stat counts derive from progress files.",
+  "affecteditems-list-rendered-as-a-scrollable": {
+    "pattern": "AffectedItems list rendered as a scrollable code-style list (git-manager-dialog-affected) — keeps long file lists readable.",
     "files": [
-      "agent/master/dashboard_writes.md",
-      "agent/master/initialization_blueprint.md"
+      "src/ui/components/git/SafetyDialogs.jsx",
+      "src/ui/pages/code/subpages/git/components/SafetyDialogs.jsx"
     ]
   },
-  "repair-task-ids-r-suffix": {
-    "pattern": "Repair task IDs use 'r' suffix and don't break the regex: '2.1r' is valid.",
+  "boolean-isedit-derived-from-edittask-drives": {
+    "pattern": "Boolean isEdit derived from !!editTask drives initial state values.",
     "files": [
-      "agent/core/parallel_principles.md",
-      "agent/master/initialization_blueprint.md"
+      "src/ui/components/modals/TaskEditorModal.jsx",
+      "src/ui/shared/modals/TaskEditorModal.jsx"
     ]
   },
-  "standard-profile-spine": {
-    "pattern": "Standard profile spine.",
+  "buttons-follow-naming-convention-modal-btn": {
+    "pattern": "Buttons follow naming convention .modal-btn + variant suffix (.modal-btn-cancel, .modal-btn-confirm, .modal-btn-close).",
     "files": [
+      "src/ui/components/modals/ConfirmModal.jsx",
+      "src/ui/shared/modals/ConfirmModal.jsx"
+    ]
+  },
+  "collapsible-section-pattern-with-header-acting": {
+    "pattern": "Collapsible section pattern with header acting as toggle.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-debug-panels.css",
+      "src/ui/styles/ide-debug-panels.css"
+    ]
+  },
+  "command-spec-pattern-title-names-the": {
+    "pattern": "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "files": [
+      "_commands/project/commands.md",
+      "_commands/project/context.md",
+      "_commands/project/contracts.md",
+      "_commands/project/create_claude.md",
+      "_commands/project/env_check.md",
+      "_commands/project/health.md",
+      "_commands/project/help.md",
+      "_commands/project/initialize.md",
+      "_commands/project/instrument.md",
+      "_commands/project/learn_update.md",
+      "_commands/project/learn.md",
+      "_commands/project/onboard.md",
+      "_commands/project/plan.md",
+      "_commands/project/product_plan.md",
+      "_commands/project/profiles.md",
+      "_commands/project/prompt_audit.md",
+      "_commands/project/review.md",
+      "_commands/project/scaffold.md",
+      "_commands/project/scope.md",
+      "_commands/project/toc_generate.md",
+      "_commands/project/toc_update.md",
+      "_commands/project/toc.md",
+      "_commands/project/trace.md",
+      "_commands/project/wiki.md",
+      "_commands/Synapse/add_task.md",
+      "_commands/Synapse/cancel-safe.md",
+      "_commands/Synapse/cancel.md",
+      "_commands/Synapse/deps.md",
+      "_commands/Synapse/dispatch.md",
+      "_commands/Synapse/eager_dispatch.md",
+      "_commands/Synapse/export.md",
+      "_commands/Synapse/guide.md",
+      "_commands/Synapse/history.md",
+      "_commands/Synapse/inspect.md",
+      "_commands/Synapse/logs.md",
+      "_commands/Synapse/master_plan_track.md",
+      "_commands/Synapse/p_product_plan.md",
+      "_commands/Synapse/p_product_research_resume.md",
+      "_commands/Synapse/p_product_research.md",
+      "_commands/Synapse/p_research.md",
+      "_commands/Synapse/p_status.md",
+      "_commands/Synapse/p_synthesize.md",
+      "_commands/Synapse/p_track_plan.md",
+      "_commands/Synapse/p_track_resume.md",
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/p.md",
+      "_commands/Synapse/project.md",
+      "_commands/Synapse/q_product_plan.md",
+      "_commands/Synapse/q_product_research.md",
+      "_commands/Synapse/q_research.md",
+      "_commands/Synapse/q_synthesize.md",
+      "_commands/Synapse/reset.md",
+      "_commands/Synapse/resume.md",
+      "_commands/Synapse/retry.md",
+      "_commands/Synapse/start.md",
+      "_commands/Synapse/status.md",
+      "_commands/Synapse/stop.md",
+      "_commands/Synapse/track_resume.md",
+      "_commands/Synapse/update_dashboard.md"
+    ]
+  },
+  "companion-to-errormodal-both-are-minimal": {
+    "pattern": "Companion to ErrorModal — both are minimal wrappers over Modal with stylized actions.",
+    "files": [
+      "src/ui/components/modals/ConfirmModal.jsx",
+      "src/ui/shared/modals/ConfirmModal.jsx"
+    ]
+  },
+  "conditional-render-of-expanded-panel-as": {
+    "pattern": "Conditional render of expanded panel as sibling of FAB inside a single .queue-popup-container.",
+    "files": [
+      "src/ui/components/QueuePopup.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/QueuePopup.jsx"
+    ]
+  },
+  "conditional-ui-new-wave-option-in": {
+    "pattern": "Conditional UI: '+ New Wave' option in select toggles a follow-up name input field — common pattern for inline-creation in dropdowns.",
+    "files": [
+      "src/ui/components/modals/TaskEditorModal.jsx",
+      "src/ui/shared/modals/TaskEditorModal.jsx"
+    ]
+  },
+  "control-plane-documentation-pattern-markdown-is": {
+    "pattern": "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose.",
+    "files": [
+      ".claude/agents/master-orchestrator.md",
+      ".claude/agents/swarm-worker.md",
+      ".claude/MIGRATION.md",
+      ".claude/plan.md",
+      ".claude/plans/resize-fix.md",
+      ".claude/README.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "README.md",
+      "Synapse.md"
+    ]
+  },
+  "css-custom-properties-for-theme-variables": {
+    "pattern": "CSS custom properties for theme variables inside injected styles — avoids hardcoded colors scattered across selectors.",
+    "files": [
+      "src/ui/pages/code/subpages/preview/inject-overlay.js",
+      "src/ui/preview/inject-overlay.js"
+    ]
+  },
+  "custom-thin-scrollbar-via-scrollbar-width": {
+    "pattern": "Custom thin scrollbar via scrollbar-width:thin + scrollbar-color combo.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-debug-panels.css",
+      "src/ui/styles/ide-debug-panels.css"
+    ]
+  },
+  "data-level-attribute-on-filter-buttons": {
+    "pattern": "data-level attribute on filter buttons enables CSS to color buttons per level (vs inline style).",
+    "files": [
+      "src/ui/components/modals/LogsModal.jsx",
+      "src/ui/shared/modals/LogsModal.jsx"
+    ]
+  },
+  "documentation-pattern-h1-title-short-introduction": {
+    "pattern": "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "files": [
+      "documentation/architecture/data-flow.md",
+      "documentation/architecture/directory-structure.md",
+      "documentation/architecture/overview.md",
+      "documentation/chat/components.md",
+      "documentation/chat/conversation-persistence.md",
+      "documentation/chat/ipc-handlers.md",
+      "documentation/chat/overview.md",
+      "documentation/commands/creating-commands.md",
+      "documentation/commands/overview.md",
+      "documentation/commands/project-commands.md",
+      "documentation/commands/swarm-commands.md",
+      "documentation/configuration/electron-config.md",
+      "documentation/configuration/hooks.md",
+      "documentation/configuration/overview.md",
+      "documentation/configuration/server-config.md",
+      "documentation/configuration/settings.md",
+      "documentation/configuration/skills.md",
+      "documentation/configuration/theming.md",
+      "documentation/dashboard/components.md",
+      "documentation/dashboard/hooks.md",
+      "documentation/dashboard/layout-modes.md",
+      "documentation/dashboard/overview.md",
+      "documentation/dashboard/state-management.md",
+      "documentation/dashboard/styling.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/pki-schemas.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/xml-task-files.md",
+      "documentation/electron/configuration.md",
+      "documentation/electron/ipc-reference.md",
+      "documentation/electron/overview.md",
+      "documentation/electron/services.md",
+      "documentation/electron/update-on-master.md",
+      "documentation/final_reports/04-18-2026_updates.md",
+      "documentation/git-manager/components.md",
+      "documentation/git-manager/ipc-handlers.md",
+      "documentation/git-manager/overview.md",
+      "documentation/guide/1.0-intro.md",
+      "documentation/guide/1.1-table-of-contents.md",
+      "documentation/guide/2.0-getting-started.md",
+      "documentation/guide/2.1-commands.md",
+      "documentation/guide/2.2-swarms-and-dashboards.md",
+      "documentation/guide/2.3-projects-and-knowledge-graph.md",
+      "documentation/guide/2.4-chat-code-git-and-preview.md",
+      "documentation/guide/3.0-troubleshooting.md",
+      "documentation/ide/components.md",
+      "documentation/ide/ipc-handlers.md",
+      "documentation/ide/overview.md",
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/statusing.md",
+      "documentation/multi-dashboard/archive-history.md",
+      "documentation/multi-dashboard/dashboard-selection.md",
+      "documentation/multi-dashboard/overview.md",
+      "documentation/multi-dashboard/queue-system.md",
+      "documentation/posts/linkedin-synapse-introduction.md",
+      "documentation/profiles/available-profiles.md",
+      "documentation/profiles/overview.md",
+      "documentation/project-integration/conventions.md",
+      "documentation/project-integration/overview.md",
+      "documentation/project-integration/pki-overview.md",
+      "documentation/project-integration/project-setup.md",
+      "documentation/project-integration/toc-system.md",
+      "documentation/README.md",
+      "documentation/reports/claude_restructure_report.md",
+      "documentation/server/api-reference.md",
+      "documentation/server/configuration.md",
+      "documentation/server/overview.md",
+      "documentation/server/services.md",
+      "documentation/server/sse-events.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md",
+      "documentation/troubleshooting/common-issues.md",
+      "documentation/troubleshooting/faq.md",
+      "documentation/worker-protocol/deviations.md",
+      "documentation/worker-protocol/overview.md",
+      "documentation/worker-protocol/progress-reporting.md",
+      "documentation/worker-protocol/upstream-results.md"
+    ]
+  },
+  "dumb-component-zero-logic": {
+    "pattern": "Dumb component, zero logic.",
+    "files": [
+      "src/ui/components/EmptyState.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/EmptyState.jsx"
+    ]
+  },
+  "empty-state-flex-center-with-min": {
+    "pattern": "Empty state: flex center with min-height:60px and muted icon.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-problems.css",
+      "src/ui/styles/ide-problems.css"
+    ]
+  },
+  "empty-state-stub-pattern-render-a": {
+    "pattern": "Empty-state stub pattern: render a low-opacity SVG icon plus heading + subtext, used uniformly across Synapse for placeholder views.",
+    "files": [
+      "src/ui/components/chat/ChatMakePage.jsx",
+      "src/ui/pages/chat/components/ChatMakePage.jsx"
+    ]
+  },
+  "every-other-modal-in-this-directory": {
+    "pattern": "Every other modal in this directory wraps its body in <Modal title=... onClose=... className=...> rather than reimplementing overlay/ESC/header logic — single source of truth for keyboard and click-out behavior.",
+    "files": [
+      "src/ui/components/modals/Modal.jsx",
+      "src/ui/shared/modals/Modal.jsx"
+    ]
+  },
+  "fileresult-relativepath-optional-falls-back-to": {
+    "pattern": "fileResult.relativePath optional — falls back to fileResult.file when missing.",
+    "files": [
+      "src/ui/components/ide/SearchResults.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/SearchResults.jsx"
+    ]
+  },
+  "focus-visible-outline-offset-2px-to": {
+    "pattern": "Focus-visible outline-offset: -2px to inset focus ring.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-editor.css",
+      "src/ui/styles/ide-editor.css"
+    ]
+  },
+  "functional-react-component-with-hooks-for": {
+    "pattern": "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "files": [
+      "src/ui/pages/chat/ChatPage.jsx",
+      "src/ui/pages/chat/components/ChatDashboardView.jsx",
+      "src/ui/pages/chat/components/ChatInstanceView.jsx",
+      "src/ui/pages/chat/components/ChatSidebar.jsx",
+      "src/ui/pages/code/CodePage.jsx",
+      "src/ui/pages/code/components/CodeSidebar.jsx",
+      "src/ui/pages/code/subpages/code-explorer/CodeExplorerPage.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/CodeEditor.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/DebugConsolePanel.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/DebugPanels.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/DebugToolbar.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/EditorTabs.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/FileExplorer.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/ProblemsPanel.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/SearchPanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/AgentCard.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/BottomPanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/ChainPipeline.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/StatsBar.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/SwarmBuilder.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/TerminalView.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/TimelinePanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/WavePipeline.jsx",
+      "src/ui/pages/code/subpages/dashboards/DashboardsPage.jsx",
+      "src/ui/pages/code/subpages/git/components/BranchPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/ChangesPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/CommitPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/DiffViewer.jsx",
+      "src/ui/pages/code/subpages/git/components/HistoryPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/InitFlow.jsx",
+      "src/ui/pages/code/subpages/git/components/QuickActions.jsx",
+      "src/ui/pages/code/subpages/git/components/RemotePanel.jsx",
+      "src/ui/pages/code/subpages/git/GitPage.jsx",
+      "src/ui/pages/code/subpages/preview/PreviewPage.jsx",
+      "src/ui/shared/claude/ClaudeFloatingPanel.jsx",
+      "src/ui/shared/claude/ClaudeView.jsx",
+      "src/ui/shared/Header.jsx",
+      "src/ui/shared/modals/AgentDetails.jsx",
+      "src/ui/shared/modals/ArchiveModal.jsx",
+      "src/ui/shared/modals/GuideModal.jsx",
+      "src/ui/shared/modals/PlanningModal.jsx",
+      "src/ui/shared/modals/ProjectModal.jsx",
+      "src/ui/shared/modals/SettingsModal.jsx",
+      "src/ui/shared/modals/TaskDetails.jsx",
+      "src/ui/shared/ModeMenu.jsx"
+    ]
+  },
+  "handlechunkref-current-handlechunk-pattern-workaround-for": {
+    "pattern": "handleChunkRef.current = handleChunk pattern — workaround for IPC listener closure capturing stale state.",
+    "files": [
+      "src/ui/components/modals/WorkerTerminal.jsx",
+      "src/ui/shared/modals/WorkerTerminal.jsx"
+    ]
+  },
+  "header-comment-mirrors-historymodal-js-jsx": {
+    "pattern": "Header comment 'Mirrors HistoryModal.js' — JSX-converted from older vanilla.",
+    "files": [
+      "src/ui/components/modals/HistoryModal.jsx",
+      "src/ui/shared/modals/HistoryModal.jsx"
+    ]
+  },
+  "heavy-use-of-var-token-fallback": {
+    "pattern": "Heavy use of var(--token, fallback) pattern for graceful degradation.",
+    "files": [
+      "src/ui/pages/code/subpages/preview/styles/preview-view.css",
+      "src/ui/styles/preview-view.css"
+    ]
+  },
+  "iife-with-strict-mode-and-idempotent": {
+    "pattern": "IIFE with strict mode and idempotent guard — required for any executeJavaScript-injected script.",
+    "files": [
+      "src/ui/pages/code/subpages/preview/inject-overlay.js",
+      "src/ui/preview/inject-overlay.js"
+    ]
+  },
+  "inline-mark-for-highlighting-picks-up": {
+    "pattern": "Inline <mark> for highlighting — picks up CSS via .ide-search-match-highlight class.",
+    "files": [
+      "src/ui/components/ide/SearchResults.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/SearchResults.jsx"
+    ]
+  },
+  "inline-match-highlights-via-styled-span": {
+    "pattern": "Inline match highlights via styled <span> wrappers in result text.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-search.css",
+      "src/ui/styles/ide-search.css"
+    ]
+  },
+  "loading-bar-absolutely-positioned-within-url": {
+    "pattern": "Loading bar absolutely positioned within URL form with translateX keyframe animation.",
+    "files": [
+      "src/ui/pages/code/subpages/preview/styles/preview-view.css",
+      "src/ui/styles/preview-view.css"
+    ]
+  },
+  "mix-of-theme-variables-and-hard": {
+    "pattern": "Mix of theme variables and hard-coded VS Code dark palette.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-debug.css",
+      "src/ui/styles/ide-debug.css"
+    ]
+  },
+  "modal-components-compose-the-shared-modal": {
+    "pattern": "Modal components compose the shared Modal shell and close via an onClose callback from App-level modal routing.",
+    "files": [
+      "src/ui/shared/modals/AgentDetails.jsx",
+      "src/ui/shared/modals/ArchiveModal.jsx",
+      "src/ui/shared/modals/GuideModal.jsx",
+      "src/ui/shared/modals/index.js",
+      "src/ui/shared/modals/PlanningModal.jsx",
+      "src/ui/shared/modals/ProjectModal.jsx",
+      "src/ui/shared/modals/SettingsModal.jsx",
+      "src/ui/shared/modals/TaskDetails.jsx"
+    ]
+  },
+  "modals-that-need-fixed-action-buttons": {
+    "pattern": "Modals that need fixed action buttons at the bottom use the `footer` prop (e.g. ProjectModal); modals with inline buttons in the body do not (e.g. ConfirmModal, ErrorModal, TaskEditorModal).",
+    "files": [
+      "src/ui/components/modals/Modal.jsx",
+      "src/ui/shared/modals/Modal.jsx"
+    ]
+  },
+  "monospace-font-stack-cascadia-code-fira": {
+    "pattern": "Monospace font stack 'Cascadia Code', 'Fira Code', 'Consolas' for REPL feel.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-debug-console.css",
+      "src/ui/styles/ide-debug-console.css"
+    ]
+  },
+  "multi-scope-sidebar-with-collapsible-folders": {
+    "pattern": "Multi-scope sidebar with collapsible folders and per-folder Add (+) buttons — same expand/collapse pattern as IDE FileExplorer but lighter weight.",
+    "files": [
+      "src/ui/components/modals/CommandsModal.jsx",
+      "src/ui/shared/modals/CommandsModal.jsx"
+    ]
+  },
+  "mutationobserver-debounced-scan-the-canonical-spa": {
+    "pattern": "MutationObserver + debounced scan — the canonical SPA-aware DOM-watching pattern.",
+    "files": [
+      "src/ui/pages/code/subpages/preview/inject-overlay.js",
+      "src/ui/preview/inject-overlay.js"
+    ]
+  },
+  "p-track-era-planning-pattern-plan": {
+    "pattern": "p_track-era planning pattern: plan.json carries shared context and task entries before initialization.json/progress files handle dashboard rendering and lifecycle state.",
+    "files": [
+      "_commands/project/learn_update.md",
+      "_commands/project/learn.md",
+      "_commands/Synapse/add_task.md",
+      "_commands/Synapse/dispatch.md",
+      "_commands/Synapse/inspect.md",
+      "_commands/Synapse/master_plan_track.md",
+      "_commands/Synapse/p_product_plan.md",
+      "_commands/Synapse/p_product_research_resume.md",
+      "_commands/Synapse/p_product_research.md",
+      "_commands/Synapse/p_research.md",
+      "_commands/Synapse/p_status.md",
+      "_commands/Synapse/p_synthesize.md",
+      "_commands/Synapse/p_track_plan.md",
+      "_commands/Synapse/p_track_resume.md",
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/q_product_plan.md",
+      "_commands/Synapse/q_product_research.md",
+      "_commands/Synapse/q_research.md",
+      "_commands/Synapse/q_synthesize.md",
+      "_commands/Synapse/retry.md",
+      "_commands/Synapse/track_resume.md"
+    ]
+  },
+  "page-directory-organization-separates-high-level": {
+    "pattern": "Page-directory organization separates high-level page shells from nested component, style, and index modules.",
+    "files": [
+      "src/ui/pages/chat/ChatPage.jsx",
+      "src/ui/pages/chat/components/ChatDashboardView.jsx",
+      "src/ui/pages/chat/components/ChatInstanceView.jsx",
+      "src/ui/pages/chat/components/ChatSidebar.jsx",
+      "src/ui/pages/chat/index.js",
+      "src/ui/pages/code/CodePage.jsx",
+      "src/ui/pages/code/components/CodeSidebar.jsx",
+      "src/ui/pages/code/subpages/code-explorer/CodeExplorerPage.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/CodeEditor.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/DebugConsolePanel.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/DebugPanels.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/DebugToolbar.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/EditorTabs.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/FileExplorer.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/ProblemsPanel.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/SearchPanel.jsx",
+      "src/ui/pages/code/subpages/code-explorer/index.js",
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-layout.css",
+      "src/ui/pages/code/subpages/dashboards/components/AgentCard.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/BottomPanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/ChainPipeline.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/StatsBar.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/SwarmBuilder.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/TerminalView.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/TimelinePanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/WavePipeline.jsx",
+      "src/ui/pages/code/subpages/dashboards/DashboardsPage.jsx",
+      "src/ui/pages/code/subpages/dashboards/index.js",
+      "src/ui/pages/code/subpages/git/components/BranchPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/ChangesPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/CommitPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/DiffViewer.jsx",
+      "src/ui/pages/code/subpages/git/components/HistoryPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/InitFlow.jsx",
+      "src/ui/pages/code/subpages/git/components/QuickActions.jsx",
+      "src/ui/pages/code/subpages/git/components/RemotePanel.jsx",
+      "src/ui/pages/code/subpages/git/GitPage.jsx",
+      "src/ui/pages/code/subpages/git/index.js",
+      "src/ui/pages/code/subpages/git/styles/git-manager.css",
+      "src/ui/pages/code/subpages/preview/index.js",
+      "src/ui/pages/code/subpages/preview/PreviewPage.jsx"
+    ]
+  },
+  "pinned-right-buttons-via-margin-left": {
+    "pattern": "Pinned-right buttons via margin-left:auto inside flex row.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-sidebar.css",
+      "src/ui/styles/ide-sidebar.css"
+    ]
+  },
+  "plain-css-stylesheet-imported-by-renderer": {
+    "pattern": "Plain CSS stylesheet imported by renderer modules; styling relies on shared class names rather than CSS modules.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-layout.css",
+      "src/ui/pages/code/subpages/git/styles/git-manager.css"
+    ]
+  },
+  "poll-only-when-expanded-closes-interval": {
+    "pattern": "POLL only when expanded — closes interval in cleanup so collapsed panels don't burn requests.",
+    "files": [
+      "src/ui/components/MetricsPanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/MetricsPanel.jsx"
+    ]
+  },
+  "postmessage-with-structured-type-field-host": {
+    "pattern": "postMessage with structured type field — host filters by message.data.type === 'synapse-edit'.",
+    "files": [
+      "src/ui/pages/code/subpages/preview/inject-overlay.js",
+      "src/ui/preview/inject-overlay.js"
+    ]
+  },
+  "prevlengthref-pattern-vs-length-as-state": {
+    "pattern": "prevLengthRef pattern (vs length-as-state) prevents render-cycle dependency on prev length.",
+    "files": [
+      "src/ui/components/modals/LogsModal.jsx",
+      "src/ui/shared/modals/LogsModal.jsx"
+    ]
+  },
+  "profile-pattern-role-priorities-constraints-output": {
+    "pattern": "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier.",
+    "files": [
+      "_commands/profiles/analyst.md",
+      "_commands/profiles/architect.md",
       "_commands/profiles/copywriter.md",
       "_commands/profiles/customer-success.md",
       "_commands/profiles/devops.md",
+      "_commands/profiles/founder.md",
       "_commands/profiles/growth.md",
       "_commands/profiles/legal.md",
+      "_commands/profiles/marketing.md",
       "_commands/profiles/pricing.md",
       "_commands/profiles/product.md",
       "_commands/profiles/qa.md",
@@ -50,40 +575,650 @@
       "_commands/profiles/technical-writer.md"
     ]
   },
-  "6-step-procedure-parse-read": {
-    "pattern": "6-step procedure: parse \u2192 read logs.json \u2192 apply filters in sequence \u2192 render table \u2192 handle empty \u2192 summary line",
+  "promise-all-loads-history-analytics-in": {
+    "pattern": "Promise.all loads history + analytics in parallel.",
     "files": [
-      "_commands/Synapse/logs.md",
-      "_commands/Synapse/status.md",
-      "_commands/Synapse/update_dashboard.md"
+      "src/ui/components/modals/HistoryModal.jsx",
+      "src/ui/shared/modals/HistoryModal.jsx"
     ]
   },
-  "dispatch-sequence-launch-agent-first": {
-    "pattern": "Dispatch sequence: launch agent FIRST \u2192 log AFTER dispatch \u2192 write master_state checkpoint after batch",
+  "protocol-module-pattern-focused-markdown-files": {
+    "pattern": "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
     "files": [
+      "agent/_commands/p_track_completion.md",
+      "agent/_commands/p_track_execution.md",
+      "agent/_commands/p_track_planning.md",
+      "agent/core/command_resolution.md",
+      "agent/core/dashboard_features.md",
+      "agent/core/data_architecture.md",
+      "agent/core/parallel_principles.md",
+      "agent/core/path_convention.md",
+      "agent/core/profile_system.md",
+      "agent/core/project_discovery.md",
+      "agent/instructions/common_pitfalls.md",
+      "agent/instructions/dashboard_resolution.md",
+      "agent/instructions/failed_task.md",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/instructions/tracker_multi_plan_instructions.md",
+      "agent/instructions/tracker_worker_instructions_lite.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/master/compaction_recovery.md",
+      "agent/master/dashboard_protocol.md",
+      "agent/master/dashboard_writes.md",
+      "agent/master/eager_dispatch.md",
+      "agent/master/failure_recovery.md",
+      "agent/master/initialization_blueprint.md",
+      "agent/master/pki_integration.md",
+      "agent/master/role.md",
+      "agent/master/ui_map.md",
+      "agent/master/worker_prompts.md",
+      "agent/worker/deviations.md",
+      "agent/worker/progress_reporting.md",
+      "agent/worker/return_format.md",
+      "agent/worker/sibling_comms.md",
+      "agent/worker/upstream_deps.md"
+    ]
+  },
+  "pure-presentational-computes-color-string-inline": {
+    "pattern": "Pure presentational; computes color string inline from a ternary.",
+    "files": [
+      "src/ui/components/ConnectionIndicator.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/ConnectionIndicator.jsx"
+    ]
+  },
+  "pure-presentational-no-state": {
+    "pattern": "Pure presentational; no state.",
+    "files": [
+      "src/ui/components/ProgressBar.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/ProgressBar.jsx"
+    ]
+  },
+  "same-minimal-wrapping-pattern-as-confirmmodal": {
+    "pattern": "Same minimal wrapping pattern as ConfirmModal — Modal + message paragraph + .modal-actions row.",
+    "files": [
+      "src/ui/components/modals/ErrorModal.jsx",
+      "src/ui/shared/modals/ErrorModal.jsx"
+    ]
+  },
+  "section-banner-navigation-each-section-starts": {
+    "pattern": "Section banner navigation: each section starts with /* ============ Title ============ */ banner.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-debug.css",
+      "src/ui/styles/ide-debug.css"
+    ]
+  },
+  "single-component-handles-two-distinct-modes": {
+    "pattern": "Single component handles two distinct modes via a boolean prop — simpler than two separate components but increases prop API surface.",
+    "files": [
+      "src/ui/components/modals/PermissionModal.jsx",
+      "src/ui/shared/modals/PermissionModal.jsx"
+    ]
+  },
+  "single-pass-count-aggregation-in-usememo": {
+    "pattern": "Single-pass count aggregation in useMemo to avoid filtering N times for N levels.",
+    "files": [
+      "src/ui/components/LogPanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/LogPanel.jsx"
+    ]
+  },
+  "skill-definition-pattern-trigger-guidance-first": {
+    "pattern": "Skill-definition pattern: trigger guidance first, then workflow steps and referenced protocol files; these files are loaded on demand by Claude Code.",
+    "files": [
+      ".claude/skills/dashboard-ops/SKILL.md",
+      ".claude/skills/eager-dispatch/SKILL.md",
+      ".claude/skills/failure-protocol/SKILL.md",
+      ".claude/skills/master-plan-track/SKILL.md",
+      ".claude/skills/master-protocol/SKILL.md",
+      ".claude/skills/p-track-resume/SKILL.md",
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/skills/p/SKILL.md",
+      ".claude/skills/project-workflow/SKILL.md",
+      ".claude/skills/worker-protocol/SKILL.md"
+    ]
+  },
+  "smart-auto-scroll-guard-el-scrollheight": {
+    "pattern": "Smart auto-scroll guard: `el.scrollHeight - el.scrollTop - el.clientHeight < 40` — same idiom used in ClaudeView (with 80px threshold).",
+    "files": [
+      "src/ui/components/LogPanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/LogPanel.jsx"
+    ]
+  },
+  "stateless-presentational-component-receives-all-data": {
+    "pattern": "Stateless presentational component — receives all data via props.",
+    "files": [
+      "src/ui/components/ide/SearchResults.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/SearchResults.jsx"
+    ]
+  },
+  "stoppropagation-on-fab-click-prevents-the": {
+    "pattern": "stopPropagation on FAB click prevents the document listener from immediately collapsing the panel.",
+    "files": [
+      "src/ui/components/QueuePopup.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/QueuePopup.jsx"
+    ]
+  },
+  "stream-json-event-router-processevent-switch": {
+    "pattern": "Stream-JSON event router (processEvent switch) with provider parity (Claude SDK + Codex stream-json) — same parsing strategy used in PlanningModal.extractJSON.",
+    "files": [
+      "src/ui/components/modals/WorkerTerminal.jsx",
+      "src/ui/shared/modals/WorkerTerminal.jsx"
+    ]
+  },
+  "tab-top-accent-via-pseudo-element": {
+    "pattern": "Tab top-accent via pseudo-element rather than border-top to avoid layout shift.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-editor.css",
+      "src/ui/styles/ide-editor.css"
+    ]
+  },
+  "three-sub-components-analyticssection-top-historyentry": {
+    "pattern": "Three sub-components: AnalyticsSection (top), HistoryEntry (per row) — keeps render concerns separated.",
+    "files": [
+      "src/ui/components/modals/HistoryModal.jsx",
+      "src/ui/shared/modals/HistoryModal.jsx"
+    ]
+  },
+  "three-tier-danger-level-system-with": {
+    "pattern": "Three-tier danger level system with consistent icon + button class mapping — used by QuickActions for all destructive flows.",
+    "files": [
+      "src/ui/components/git/SafetyDialogs.jsx",
+      "src/ui/pages/code/subpages/git/components/SafetyDialogs.jsx"
+    ]
+  },
+  "tool-call-tool-result-correlation-via": {
+    "pattern": "Tool call + tool result correlation via id-to-index map — enables collapsed result expansion without parent re-render.",
+    "files": [
+      "src/ui/components/modals/WorkerTerminal.jsx",
+      "src/ui/shared/modals/WorkerTerminal.jsx"
+    ]
+  },
+  "toolbar-uses-min-height-height-flex": {
+    "pattern": "Toolbar uses min-height + height + flex-shrink:0 to lock its size.",
+    "files": [
+      "src/ui/pages/code/subpages/preview/styles/preview-view.css",
+      "src/ui/styles/preview-view.css"
+    ]
+  },
+  "two-step-double-confirm-step-1": {
+    "pattern": "Two-step double-confirm: step 1 is just acknowledge, step 2 has the type-to-confirm input — the actual onConfirm only fires from step 2.",
+    "files": [
+      "src/ui/components/git/SafetyDialogs.jsx",
+      "src/ui/pages/code/subpages/git/components/SafetyDialogs.jsx"
+    ]
+  },
+  "uppercase-0-04em-letter-spaced-title": {
+    "pattern": "Uppercase 0.04em letter-spaced title.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-debug-console.css",
+      "src/ui/styles/ide-debug-console.css"
+    ]
+  },
+  "uppercase-0-06em-letter-spaced-section": {
+    "pattern": "Uppercase 0.06em letter-spaced section titles consistent with ide-explorer.css.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-search.css",
+      "src/ui/styles/ide-search.css"
+    ]
+  },
+  "uppercase-letter-spaced-0-06em-titles": {
+    "pattern": "Uppercase letter-spaced 0.06em titles for section headers.",
+    "files": [
+      "src/ui/pages/code/subpages/code-explorer/styles/ide-explorer.css",
+      "src/ui/styles/ide-explorer.css"
+    ]
+  },
+  "usecallback-wraps-fetchmetrics-so-the-polling": {
+    "pattern": "useCallback wraps fetchMetrics so the polling effect's deps stay stable.",
+    "files": [
+      "src/ui/components/MetricsPanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/MetricsPanel.jsx"
+    ]
+  },
+  "usememo-wraps-filter-and-counts-to": {
+    "pattern": "useMemo wraps filter and counts to avoid re-computation on every render.",
+    "files": [
+      "src/ui/components/modals/LogsModal.jsx",
+      "src/ui/shared/modals/LogsModal.jsx"
+    ]
+  },
+  "user-can-choose-between-bare-template": {
+    "pattern": "User can choose between bare-template manual creation (CommandEditor with COMMAND_TEMPLATE) and AI-generated rich command (CommandGenerator).",
+    "files": [
+      "src/ui/components/modals/CommandsModal.jsx",
+      "src/ui/shared/modals/CommandsModal.jsx"
+    ]
+  },
+  "uses-color-failed-css-variable-rather": {
+    "pattern": "Uses --color-failed CSS variable rather than a hardcoded red — themable across all 6 theme presets.",
+    "files": [
+      "src/ui/components/modals/ErrorModal.jsx",
+      "src/ui/shared/modals/ErrorModal.jsx"
+    ]
+  },
+  "uses-explicit-non-negotiable-language-to": {
+    "pattern": "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "files": [
+      "_commands/project/learn.md",
+      "_commands/project/product_plan.md",
+      "_commands/project/wiki.md",
+      "_commands/Synapse/master_plan_track.md",
+      "_commands/Synapse/p_product_plan.md",
+      "_commands/Synapse/p_product_research_resume.md",
+      "_commands/Synapse/p_product_research.md",
+      "_commands/Synapse/p_research.md",
+      "_commands/Synapse/p_status.md",
+      "_commands/Synapse/p_synthesize.md",
+      "_commands/Synapse/p_track_plan.md",
       "_commands/Synapse/p_track_resume.md",
-      "_commands/Synapse/track_resume.md"
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/p.md",
+      "_commands/Synapse/q_product_plan.md",
+      "_commands/Synapse/q_product_research.md",
+      "_commands/Synapse/q_research.md",
+      "_commands/Synapse/q_synthesize.md",
+      "_commands/Synapse/track_resume.md",
+      ".claude/MIGRATION.md",
+      ".claude/skills/eager-dispatch/SKILL.md",
+      ".claude/skills/failure-protocol/SKILL.md",
+      ".claude/skills/master-plan-track/SKILL.md",
+      ".claude/skills/master-protocol/SKILL.md",
+      ".claude/skills/p-track-resume/SKILL.md",
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/skills/p/SKILL.md",
+      ".claude/skills/worker-protocol/SKILL.md",
+      "agent/_commands/p_track_completion.md",
+      "agent/_commands/p_track_execution.md",
+      "agent/_commands/p_track_planning.md",
+      "agent/core/parallel_principles.md",
+      "agent/instructions/common_pitfalls.md",
+      "agent/instructions/failed_task.md",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/instructions/tracker_multi_plan_instructions.md",
+      "agent/instructions/tracker_worker_instructions_lite.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/master/compaction_recovery.md",
+      "agent/master/dashboard_protocol.md",
+      "agent/master/dashboard_writes.md",
+      "agent/master/eager_dispatch.md",
+      "agent/master/pki_integration.md",
+      "agent/master/role.md",
+      "agent/master/worker_prompts.md",
+      "agent/worker/deviations.md",
+      "agent/worker/progress_reporting.md",
+      "agent/worker/upstream_deps.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "documentation/commands/creating-commands.md",
+      "documentation/commands/swarm-commands.md",
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/statusing.md",
+      "documentation/reports/claude_restructure_report.md",
+      "documentation/worker-protocol/deviations.md",
+      "documentation/worker-protocol/overview.md",
+      "documentation/worker-protocol/progress-reporting.md",
+      "documentation/worker-protocol/upstream-results.md"
     ]
   },
-  "sole-writer-per-file-ownership": {
-    "pattern": "Sole-writer-per-file ownership eliminating write conflicts",
+  "uses-fenced-code-blocks-for-command": {
+    "pattern": "Uses fenced code blocks for command examples, schemas, or prompt templates.",
     "files": [
+      "_commands/profiles/marketing.md",
+      "_commands/project/commands.md",
+      "_commands/project/context.md",
+      "_commands/project/contracts.md",
+      "_commands/project/create_claude.md",
+      "_commands/project/env_check.md",
+      "_commands/project/health.md",
+      "_commands/project/help.md",
+      "_commands/project/initialize.md",
+      "_commands/project/instrument.md",
+      "_commands/project/learn_update.md",
+      "_commands/project/learn.md",
+      "_commands/project/onboard.md",
+      "_commands/project/plan.md",
+      "_commands/project/product_plan.md",
+      "_commands/project/profiles.md",
+      "_commands/project/prompt_audit.md",
+      "_commands/project/review.md",
+      "_commands/project/scaffold.md",
+      "_commands/project/scope.md",
+      "_commands/project/trace.md",
+      "_commands/project/wiki.md",
+      "_commands/Synapse/add_task.md",
+      "_commands/Synapse/cancel-safe.md",
+      "_commands/Synapse/cancel.md",
+      "_commands/Synapse/deps.md",
+      "_commands/Synapse/dispatch.md",
+      "_commands/Synapse/export.md",
+      "_commands/Synapse/guide.md",
+      "_commands/Synapse/history.md",
+      "_commands/Synapse/inspect.md",
+      "_commands/Synapse/logs.md",
+      "_commands/Synapse/master_plan_track.md",
+      "_commands/Synapse/p_product_plan.md",
+      "_commands/Synapse/p_product_research_resume.md",
+      "_commands/Synapse/p_product_research.md",
+      "_commands/Synapse/p_research.md",
+      "_commands/Synapse/p_status.md",
+      "_commands/Synapse/p_synthesize.md",
+      "_commands/Synapse/p_track_plan.md",
+      "_commands/Synapse/p_track_resume.md",
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/p.md",
+      "_commands/Synapse/project.md",
+      "_commands/Synapse/q_product_plan.md",
+      "_commands/Synapse/q_product_research.md",
+      "_commands/Synapse/q_research.md",
+      "_commands/Synapse/q_synthesize.md",
+      "_commands/Synapse/reset.md",
+      "_commands/Synapse/resume.md",
+      "_commands/Synapse/retry.md",
+      "_commands/Synapse/start.md",
+      "_commands/Synapse/status.md",
+      "_commands/Synapse/stop.md",
+      "_commands/Synapse/track_resume.md",
+      "_commands/Synapse/update_dashboard.md",
+      ".claude/agents/swarm-worker.md",
+      ".claude/MIGRATION.md",
+      ".claude/plan.md",
+      ".claude/plans/resize-fix.md",
+      ".claude/skills/eager-dispatch/SKILL.md",
+      ".claude/skills/master-plan-track/SKILL.md",
+      ".claude/skills/p-track-resume/SKILL.md",
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/skills/worker-protocol/SKILL.md",
+      "agent/_commands/p_track_completion.md",
+      "agent/_commands/p_track_execution.md",
+      "agent/_commands/p_track_planning.md",
+      "agent/core/command_resolution.md",
+      "agent/core/dashboard_features.md",
+      "agent/core/path_convention.md",
+      "agent/core/profile_system.md",
+      "agent/core/project_discovery.md",
+      "agent/instructions/dashboard_resolution.md",
+      "agent/instructions/failed_task.md",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/instructions/tracker_multi_plan_instructions.md",
+      "agent/instructions/tracker_worker_instructions_lite.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/master/compaction_recovery.md",
+      "agent/master/dashboard_protocol.md",
+      "agent/master/dashboard_writes.md",
+      "agent/master/eager_dispatch.md",
+      "agent/master/failure_recovery.md",
+      "agent/master/initialization_blueprint.md",
+      "agent/master/pki_integration.md",
+      "agent/master/ui_map.md",
+      "agent/master/worker_prompts.md",
+      "agent/worker/deviations.md",
+      "agent/worker/progress_reporting.md",
+      "agent/worker/return_format.md",
+      "agent/worker/sibling_comms.md",
+      "agent/worker/upstream_deps.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "documentation/architecture/data-flow.md",
+      "documentation/architecture/directory-structure.md",
+      "documentation/architecture/overview.md",
+      "documentation/chat/conversation-persistence.md",
+      "documentation/chat/ipc-handlers.md",
+      "documentation/chat/overview.md",
+      "documentation/commands/creating-commands.md",
+      "documentation/commands/project-commands.md",
+      "documentation/commands/swarm-commands.md",
+      "documentation/configuration/electron-config.md",
+      "documentation/configuration/hooks.md",
+      "documentation/configuration/overview.md",
+      "documentation/configuration/server-config.md",
+      "documentation/configuration/settings.md",
+      "documentation/configuration/skills.md",
+      "documentation/configuration/theming.md",
+      "documentation/dashboard/components.md",
+      "documentation/dashboard/hooks.md",
+      "documentation/dashboard/layout-modes.md",
+      "documentation/dashboard/overview.md",
+      "documentation/dashboard/state-management.md",
+      "documentation/dashboard/styling.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
       "documentation/data-architecture/overview.md",
-      "documentation/worker-protocol/overview.md"
-    ]
-  },
-  "append-only-arrays-milestones-deviations": {
-    "pattern": "Append-only arrays for milestones/deviations/logs",
-    "files": [
+      "documentation/data-architecture/pki-schemas.md",
       "documentation/data-architecture/progress-files.md",
-      "documentation/worker-protocol/progress-reporting.md"
+      "documentation/data-architecture/xml-task-files.md",
+      "documentation/electron/configuration.md",
+      "documentation/electron/ipc-reference.md",
+      "documentation/electron/overview.md",
+      "documentation/electron/services.md",
+      "documentation/git-manager/components.md",
+      "documentation/git-manager/ipc-handlers.md",
+      "documentation/git-manager/overview.md",
+      "documentation/guide/2.0-getting-started.md",
+      "documentation/guide/2.1-commands.md",
+      "documentation/guide/2.2-swarms-and-dashboards.md",
+      "documentation/guide/2.3-projects-and-knowledge-graph.md",
+      "documentation/guide/2.4-chat-code-git-and-preview.md",
+      "documentation/guide/3.0-troubleshooting.md",
+      "documentation/ide/components.md",
+      "documentation/ide/ipc-handlers.md",
+      "documentation/ide/overview.md",
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/statusing.md",
+      "documentation/multi-dashboard/archive-history.md",
+      "documentation/multi-dashboard/dashboard-selection.md",
+      "documentation/multi-dashboard/overview.md",
+      "documentation/multi-dashboard/queue-system.md",
+      "documentation/profiles/available-profiles.md",
+      "documentation/profiles/overview.md",
+      "documentation/project-integration/conventions.md",
+      "documentation/project-integration/overview.md",
+      "documentation/project-integration/pki-overview.md",
+      "documentation/project-integration/project-setup.md",
+      "documentation/project-integration/toc-system.md",
+      "documentation/reports/claude_restructure_report.md",
+      "documentation/server/api-reference.md",
+      "documentation/server/configuration.md",
+      "documentation/server/overview.md",
+      "documentation/server/services.md",
+      "documentation/server/sse-events.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md",
+      "documentation/worker-protocol/deviations.md",
+      "documentation/worker-protocol/overview.md",
+      "documentation/worker-protocol/progress-reporting.md",
+      "documentation/worker-protocol/upstream-results.md",
+      "README.md",
+      "Synapse.md"
     ]
   },
-  "standardized-success-data-error-responses": {
-    "pattern": "Standardized { success, data, error } responses",
+  "uses-markdown-tables-for-compact-command": {
+    "pattern": "Uses markdown tables for compact command, file, or option matrices.",
     "files": [
+      "_commands/project/commands.md",
+      "_commands/project/contracts.md",
+      "_commands/project/create_claude.md",
+      "_commands/project/env_check.md",
+      "_commands/project/health.md",
+      "_commands/project/help.md",
+      "_commands/project/initialize.md",
+      "_commands/project/learn.md",
+      "_commands/project/onboard.md",
+      "_commands/project/product_plan.md",
+      "_commands/project/profiles.md",
+      "_commands/project/prompt_audit.md",
+      "_commands/project/scaffold.md",
+      "_commands/project/trace.md",
+      "_commands/project/wiki.md",
+      "_commands/Synapse/add_task.md",
+      "_commands/Synapse/cancel-safe.md",
+      "_commands/Synapse/deps.md",
+      "_commands/Synapse/eager_dispatch.md",
+      "_commands/Synapse/export.md",
+      "_commands/Synapse/guide.md",
+      "_commands/Synapse/history.md",
+      "_commands/Synapse/inspect.md",
+      "_commands/Synapse/logs.md",
+      "_commands/Synapse/master_plan_track.md",
+      "_commands/Synapse/p_product_plan.md",
+      "_commands/Synapse/p_product_research_resume.md",
+      "_commands/Synapse/p_product_research.md",
+      "_commands/Synapse/p_research.md",
+      "_commands/Synapse/p_status.md",
+      "_commands/Synapse/p_track_plan.md",
+      "_commands/Synapse/p_track_resume.md",
+      "_commands/Synapse/p_track.md",
+      "_commands/Synapse/p.md",
+      "_commands/Synapse/q_product_plan.md",
+      "_commands/Synapse/q_product_research.md",
+      "_commands/Synapse/q_research.md",
+      "_commands/Synapse/status.md",
+      "_commands/Synapse/track_resume.md",
+      "_commands/Synapse/update_dashboard.md",
+      ".claude/MIGRATION.md",
+      ".claude/README.md",
+      ".claude/skills/dashboard-ops/SKILL.md",
+      ".claude/skills/eager-dispatch/SKILL.md",
+      ".claude/skills/failure-protocol/SKILL.md",
+      ".claude/skills/master-plan-track/SKILL.md",
+      ".claude/skills/master-protocol/SKILL.md",
+      ".claude/skills/p-track-resume/SKILL.md",
+      ".claude/skills/p-track/SKILL.md",
+      ".claude/skills/p/SKILL.md",
+      ".claude/skills/project-workflow/SKILL.md",
+      ".claude/skills/worker-protocol/SKILL.md",
+      "agent/_commands/p_track_completion.md",
+      "agent/_commands/p_track_execution.md",
+      "agent/_commands/p_track_planning.md",
+      "agent/core/command_resolution.md",
+      "agent/core/dashboard_features.md",
+      "agent/core/data_architecture.md",
+      "agent/core/parallel_principles.md",
+      "agent/core/path_convention.md",
+      "agent/core/profile_system.md",
+      "agent/core/project_discovery.md",
+      "agent/instructions/common_pitfalls.md",
+      "agent/instructions/dashboard_resolution.md",
+      "agent/instructions/failed_task.md",
+      "agent/instructions/tracker_master_instructions.md",
+      "agent/instructions/tracker_multi_plan_instructions.md",
+      "agent/instructions/tracker_worker_instructions_lite.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/master/compaction_recovery.md",
+      "agent/master/dashboard_protocol.md",
+      "agent/master/dashboard_writes.md",
+      "agent/master/eager_dispatch.md",
+      "agent/master/failure_recovery.md",
+      "agent/master/initialization_blueprint.md",
+      "agent/master/pki_integration.md",
+      "agent/master/role.md",
+      "agent/master/ui_map.md",
+      "agent/master/worker_prompts.md",
+      "agent/worker/deviations.md",
+      "agent/worker/progress_reporting.md",
+      "agent/worker/return_format.md",
+      "agent/worker/sibling_comms.md",
+      "agent/worker/upstream_deps.md",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "documentation/architecture/data-flow.md",
+      "documentation/architecture/directory-structure.md",
+      "documentation/architecture/overview.md",
+      "documentation/chat/components.md",
+      "documentation/chat/conversation-persistence.md",
+      "documentation/chat/overview.md",
+      "documentation/commands/creating-commands.md",
+      "documentation/commands/overview.md",
+      "documentation/commands/project-commands.md",
+      "documentation/commands/swarm-commands.md",
+      "documentation/configuration/electron-config.md",
+      "documentation/configuration/hooks.md",
+      "documentation/configuration/overview.md",
+      "documentation/configuration/server-config.md",
+      "documentation/configuration/settings.md",
+      "documentation/configuration/skills.md",
+      "documentation/configuration/theming.md",
+      "documentation/dashboard/components.md",
+      "documentation/dashboard/hooks.md",
+      "documentation/dashboard/layout-modes.md",
+      "documentation/dashboard/overview.md",
+      "documentation/dashboard/state-management.md",
+      "documentation/dashboard/styling.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/pki-schemas.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/xml-task-files.md",
+      "documentation/electron/configuration.md",
+      "documentation/electron/ipc-reference.md",
+      "documentation/electron/overview.md",
+      "documentation/electron/services.md",
+      "documentation/final_reports/04-18-2026_updates.md",
+      "documentation/git-manager/components.md",
       "documentation/git-manager/ipc-handlers.md",
-      "documentation/ide/ipc-handlers.md"
+      "documentation/git-manager/overview.md",
+      "documentation/guide/1.0-intro.md",
+      "documentation/guide/1.1-table-of-contents.md",
+      "documentation/guide/2.0-getting-started.md",
+      "documentation/guide/2.1-commands.md",
+      "documentation/guide/2.2-swarms-and-dashboards.md",
+      "documentation/ide/components.md",
+      "documentation/ide/ipc-handlers.md",
+      "documentation/ide/overview.md",
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/statusing.md",
+      "documentation/multi-dashboard/archive-history.md",
+      "documentation/multi-dashboard/dashboard-selection.md",
+      "documentation/multi-dashboard/overview.md",
+      "documentation/multi-dashboard/queue-system.md",
+      "documentation/profiles/available-profiles.md",
+      "documentation/profiles/overview.md",
+      "documentation/project-integration/conventions.md",
+      "documentation/project-integration/overview.md",
+      "documentation/project-integration/pki-overview.md",
+      "documentation/project-integration/project-setup.md",
+      "documentation/project-integration/toc-system.md",
+      "documentation/README.md",
+      "documentation/reports/claude_restructure_report.md",
+      "documentation/server/api-reference.md",
+      "documentation/server/configuration.md",
+      "documentation/server/overview.md",
+      "documentation/server/services.md",
+      "documentation/server/sse-events.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md",
+      "documentation/troubleshooting/faq.md",
+      "documentation/worker-protocol/deviations.md",
+      "documentation/worker-protocol/overview.md",
+      "documentation/worker-protocol/progress-reporting.md",
+      "documentation/worker-protocol/upstream-results.md",
+      "README.md",
+      "Synapse.md"
+    ]
+  },
+  "uses-unicode-escapes-for-icon-u26a0": {
+    "pattern": "Uses unicode escapes for icon (\\u26A0 = warning triangle, \\u2192 = right arrow) rather than emoji — consistent ASCII rendering across platforms.",
+    "files": [
+      "src/ui/components/modals/PermissionModal.jsx",
+      "src/ui/shared/modals/PermissionModal.jsx"
+    ]
+  },
+  "viewer-state-machine-placeholder-view-edit": {
+    "pattern": "Viewer state machine ('placeholder'|'view'|'edit'|'generate') drives which sub-component renders — clean state isolation between view/edit/generate flows.",
+    "files": [
+      "src/ui/components/modals/CommandsModal.jsx",
+      "src/ui/shared/modals/CommandsModal.jsx"
     ]
   }
 }

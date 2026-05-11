@@ -1,64 +1,41 @@
 {
   "file": "agent/master/dashboard_protocol.md",
   "content_hash": "95dce1de",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the differential write protocol between !p (lightweight) and !p_track (full tracking) execution modes — which files the master writes, when, and at what granularity. Also specifies auto-escalation thresholds for automatic parallel mode and the master-written progress file bridge for lightweight/serial dispatches. Loaded whenever the master must decide HOW to populate a dashboard for a given execution mode.",
+  "purpose": "Agent protocol/control-plane instruction document: Dashboard Protocol \u2014 `!p` vs `!p_track` Modes. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: This document defines when and how the master agent interacts with dashboard files for each execution mode. Both `!p` and `!p_track` populate the dashboard \u2014 the difference is granularity. The file is 373 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "The >1 wave threshold is ABSOLUTELY non-negotiable — multi-wave swarms ALWAYS get full !p_track tracking regardless of agent count. Even 2-task/2-wave swarms must use full tracking.",
-    "The 'ide' dashboard is RESERVED — master agents must NEVER write swarm initialization, logs, or progress to it. It is permanent and auto-created on Electron startup.",
-    "In !p mode, workers do NOT write progress files — the master MUST bridge by writing minimal progress files from worker returns, otherwise the dashboard has no file change tracking or per-task detail.",
-    "If the assigned dashboard contains previous data, the master MUST ASK the user before archiving — do not proceed without approval (NON-NEGOTIABLE assigned-dashboard rule).",
-    "Worker prompts use TEMPLATE_VERSION 'p_track_v2' for full tracking and 'p_v2' for lightweight — using the wrong version causes workers to either skip progress files (full mode) or attempt writes that aren't expected (lite mode).",
-    "logs.json is ALWAYS written, even in !p mode — at minimum the init entry, per-task completion entries, and the swarm complete summary.",
-    "Always clear progress/ before writing initialization.json — stale progress from a previous swarm will appear on cards if not cleared."
-  ],
+  "gotchas": [],
   "patterns": [
-    "!p_track writes 5 files: initialization.json (write-once), logs.json (continuous), progress/{id}.json (workers), master_state.json (after every event), metrics.json (write-once at end).",
-    "!p writes 2 files: initialization.json (write-once) + logs.json (init entry + final batch). NO master_state.json or metrics.json.",
-    "Auto-escalation: if 3+ parallel agents OR >1 wave -> full !p_track tracking; otherwise lightweight.",
-    "Both modes follow the same dashboard-selection priority chain: assigned dashboard (NON-NEGOTIABLE) -> --dashboard flag -> ask user.",
-    "Master-written progress file schema in lightweight mode: status, started_at, completed_at, summary, assigned_agent, stage, message, milestones[], deviations[], logs[], files_changed[].",
-    "Parse worker FILES CHANGED return into files_changed[]: {created|modified|deleted} prefix becomes the action field."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Archive before clear: copy entire dashboard dir to {tracker_root}/Archive/{YYYY-MM-DD}_{task_name}/ before resetting state — applies in BOTH modes, no exceptions.",
-    "logs.json !p entries: only init, per-task completion, per-task failure, and swarm-complete summary entries are written.",
-    "initialization.json schema is identical across both modes — dashboard renders the same plan view regardless of execution mode.",
-    "Failed worker progress files written by master use status='failed', stage='failed', and extract ERRORS section into a 'level: error' log entry."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/master/dashboard_writes.md",
-      "agent/instructions/dashboard_resolution.md"
-    ],
-    "depended_by": [
-      ".claude/skills/p-track",
-      ".claude/skills/p",
-      ".claude/skills/master-protocol",
-      "_commands/Synapse/p.md",
-      "_commands/Synapse/p_track.md"
-    ],
-    "related": [
-      "agent/master/initialization_blueprint.md",
-      "agent/instructions/tracker_worker_instructions.md",
-      "agent/instructions/tracker_worker_instructions_lite.md",
-      "agent/core/dashboard_features.md"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "dashboard-protocol",
-    "master-orchestration",
-    "execution-mode-selection"
+    "agent-protocol",
+    "master"
   ],
   "tags": [
     "markdown",
-    "master-agent",
-    "protocol",
-    "p-track",
-    "p",
-    "auto-escalation"
-  ]
+    "agent-instructions",
+    "master",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "sse",
+    "ide"
+  ],
+  "complexity": "complex"
 }

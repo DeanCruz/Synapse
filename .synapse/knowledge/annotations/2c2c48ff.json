@@ -1,34 +1,34 @@
 {
   "file": "electron/services/CodexService.js",
-  "content_hash": "5f3535d0",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "da377fdd",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "OpenAI Codex CLI counterpart to ClaudeCodeService — spawns codex worker processes for swarm tasks. Builds Codex-specific args (`exec --json` or `exec resume --json`, `--full-auto` or `--dangerously-bypass-approvals-and-sandbox`, `--skip-git-repo-check`, `-C projectDir`), passes the prompt via stdin, and parses NDJSON output line-by-line. Writes Codex's `last message` to a temp file (`-o /tmp/synapse_codex_last_message_*.txt`) which is read on close and included in the `worker-complete` payload as `lastMessage`. Strips Codex's noisy `Reading prompt from stdin...` line from stderr.",
   "exports": [
     {
       "name": "init",
       "kind": "function",
-      "signature": "(broadcast) => void"
+      "signature": "init(...)"
     },
     {
       "name": "spawnWorker",
       "kind": "function",
-      "signature": "(opts) => {pid, taskId, dashboardId}"
+      "signature": "spawnWorker(...)"
     },
     {
       "name": "killWorker",
       "kind": "function",
-      "signature": "(pid) => boolean"
+      "signature": "killWorker(...)"
     },
     {
       "name": "killAllWorkers",
       "kind": "function",
-      "signature": "() => count"
+      "signature": "killAllWorkers(...)"
     },
     {
       "name": "getActiveWorkers",
       "kind": "function",
-      "signature": "() => Worker[]"
+      "signature": "getActiveWorkers(...)"
     }
   ],
   "imports_from": {},
@@ -50,14 +50,10 @@
     "Same `opts.dangerouslySkipPermissions` boolean used for both providers — the service maps it internally to the provider-appropriate flag."
   ],
   "relationships": {
-    "depends_on": [
-      "child_process.spawn",
-      "node:os",
-      "node:fs"
-    ],
+    "depends_on": [],
     "depended_by": [
-      "electron/services/SwarmOrchestrator.js",
-      "electron/ipc-handlers.js"
+      "electron/ipc-handlers.js",
+      "electron/services/SwarmOrchestrator.js"
     ],
     "related": [
       "electron/services/ClaudeCodeService.js"
@@ -76,5 +72,6 @@
     "child-process",
     "ndjson-streaming",
     "tmpfile-roundtrip"
-  ]
+  ],
+  "complexity": "moderate"
 }

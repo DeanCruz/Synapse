@@ -1,41 +1,45 @@
 {
   "file": "documentation/ide/components.md",
   "content_hash": "68532f01",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Reference for the Code Explorer (IDE) React components: IDEView, IDEWelcome, FileExplorer, CodeEditor (Monaco), EditorTabs, WorkspaceTabs, SearchPanel, SearchResults, DebugToolbar, DebugPanels, DebugConsolePanel, ProblemsPanel. Documents responsibilities, prop contracts, and integration with Monaco Editor.",
+  "purpose": "Documentation page for the ide area: IDE Components Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: All IDE components live in `src/ui/components/ide/`. They use React Context (`useAppState()` and `useDispatch()`) for state management -- no prop drilling required except where noted. The file is 819 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
-  "imports_from": [],
+  "imports_from": {},
   "gotchas": [
-    "Monaco editor instance must be disposed on tab close to prevent leaks",
-    "FileExplorer is virtualized — large directories require lazy expansion",
-    "Debug panels only render when an active debug session exists"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Multi-workspace tabs with isolated state per workspace",
-    "Editor tabs share single Monaco instance via models",
-    "Resizable split panes"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Components in src/ui/components/ide/"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "documentation/ide/overview.md",
-      "documentation/dashboard/state-management.md"
+    "depends_on": [],
+    "depended_by": [
+      "documentation/README.md"
     ],
-    "depended_by": [],
     "related": [
-      "documentation/ide/ipc-handlers.md"
+      "documentation/ide/overview.md"
     ]
   },
   "domains": [
+    "documentation",
     "ide"
   ],
   "tags": [
     "markdown",
     "documentation",
     "ide",
-    "monaco"
-  ]
+    "dashboard",
+    "progress",
+    "claude",
+    "electron",
+    "react"
+  ],
+  "complexity": "complex"
 }

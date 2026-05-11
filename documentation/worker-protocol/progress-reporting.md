@@ -33,7 +33,7 @@ Each worker owns exactly one file:
 ```
 
 - `{tracker_root}` — Absolute path to the Synapse repository
-- `{dashboardId}` — The dashboard slot (e.g., `dashboard1` through `dashboard5`)
+- `{dashboardId}` — The assigned dashboard ID (usually a 6-character hex string such as `71894a`)
 - `{task_id}` — The task identifier (e.g., `1.1`, `2.3`)
 
 All three values are provided in the worker's dispatch prompt.

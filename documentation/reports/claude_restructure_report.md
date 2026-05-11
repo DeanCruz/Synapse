@@ -2,7 +2,7 @@
 
 **Generated:** 2026-03-23
 **Agent:** Agent 14 (Task 4.1)
-**Swarm:** claude-modular-restructure (dashboard5)
+**Swarm:** claude-modular-restructure (e5f6a1)
 **Scope:** Comprehensive comparison of the new modular documentation system against the original monolithic files
 
 ---

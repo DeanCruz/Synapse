@@ -62,7 +62,7 @@ Synapse is project-agnostic and fully standalone. To use it with any project:
 
 4. **Project-specific commands** can be defined at `{project_root}/_commands/`. These are checked after Synapse's own commands in the resolution hierarchy.
 
-5. **The `.synapse/` directory** is created inside the target project for TOC and configuration. Add it to `.gitignore`.
+5. **The `.synapse/` directory** is created inside the target project for configuration and the project knowledge graph. Add it to `.gitignore`.
 
 6. **All Synapse data** (dashboards, tasks, history, logs) stays at `{tracker_root}`. Nothing except `.synapse/` is written to the target project.
 

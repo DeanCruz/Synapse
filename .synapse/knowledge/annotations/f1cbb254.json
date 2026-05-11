@@ -1,46 +1,45 @@
 {
   "file": "_commands/profiles/devops.md",
   "content_hash": "72c7cdcd",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Senior Platform Engineer (DevOps) role: CI/CD, IaC, container orchestration, observability, and deployment automation. Biases the worker toward reliability over cleverness, observability (metrics/logs/traces, alert on symptoms not causes), automation of any twice-repeated task, infrastructure-as-code reproducibility, and developer experience. A master assigns this profile for tasks like designing pipelines, runbooks, monitoring plans, IaC, or DR strategies. Forces explicit rollback procedures, cost considerations, and right-sized recommendations (no Kubernetes for a single-service app).",
-  "exports": [],
+  "purpose": "Profile definition for `devops`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Senior Platform Engineer (DevOps) specializing in CI/CD pipelines, infrastructure-as-code, container orchestration, monitoring/observability, and deployment automation. Thinks in terms of reliability, reproducibility, and developer velocity. Every output is designed to make deployments boring, rollbacks instant, and outages rare. The file is 53 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "devops",
+      "kind": "profile",
+      "signature": "!devops profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Profile rejects 'add monitoring' as a plan — workers must specify metrics, thresholds, alerts, and on-call routing.",
-    "Demands every deployment have a documented rollback within minutes; deployments without rollback paths will be redesigned.",
-    "Cost-aware by default — recommendations always include cost implications, which may surprise users expecting pure technical specs."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Standard profile spine.",
-    "Infrastructure design skeleton: Current State → Requirements → Proposed Architecture → Resource Inventory → CI/CD Pipeline → Monitoring/Alerting → DR → Cost → Migration.",
-    "Pipeline designs as text-based stage diagrams; runbooks as numbered steps with decision trees."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Tone 'practical, opinionated, experience-driven'.",
-    "Monitoring described via metric/threshold/action tables."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/architect.md",
-      "_commands/profiles/security.md",
-      "_commands/profiles/qa.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "devops-role",
-    "platform-engineering"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "devops",
-    "ci-cd",
-    "infrastructure"
-  ]
+    "dashboard",
+    "sse",
+    "ide"
+  ],
+  "complexity": "simple"
 }

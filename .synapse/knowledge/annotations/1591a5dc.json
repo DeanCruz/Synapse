@@ -1,0 +1,47 @@
+{
+  "file": "documentation/configuration/skills.md",
+  "content_hash": "7288d394",
+  "annotated_at": "2026-05-11T01:54:48Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Documentation page for the configuration area: Skills Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Skills are modular capability definitions that extend Claude Code agents with specialized behavior. They live in `.claude/skills/` as directories, each containing a `SKILL.md` file with YAML frontmatter and markdown instructions. The file is 240 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
+  ],
+  "patterns": [
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
+  ],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/architecture/directory-structure.md",
+      "documentation/configuration/settings.md"
+    ],
+    "related": [
+      "documentation/configuration/overview.md"
+    ]
+  },
+  "domains": [
+    "documentation",
+    "configuration"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "configuration",
+    "pki",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "initialization-json"
+  ],
+  "complexity": "moderate"
+}

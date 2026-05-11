@@ -1,45 +1,44 @@
 {
   "file": "_commands/profiles/analyst.md",
   "content_hash": "50fb5a7d",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Senior Data Analyst role profile, biasing a worker toward SaaS metrics rigor: precise metric definitions (formula/source/owner/cadence), leading-vs-lagging indicator framing, segmentation discipline, statistical honesty (sample size, significance), and actionability. A master assigns this profile when a task involves designing KPI frameworks, dashboard specs, cohort analyses, or any data-driven recommendation document. The profile creates strong constraints against vanity metrics, correlation-causation conflation, and dashboards with more than 5-7 KPIs, and prescribes a specific document skeleton (Business Goals → Metric Categories → Definitions table → Dashboard Layout → Alert Thresholds → Review Cadence).",
-  "exports": [],
+  "purpose": "Profile definition for `analyst`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Senior Data Analyst specializing in SaaS metrics, KPI frameworks, cohort analysis, dashboard design, and data-driven decision support. Thinks in terms of leading vs. lagging indicators, statistical significance, and actionable insights. Every output is designed to turn data into decisions \u2014 not just charts, but clarity. The file is 53 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "analyst",
+      "kind": "profile",
+      "signature": "!analyst profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Worker will refuse to ship a metric without a precise calculation/formula table — masters must allow time for definition rigor.",
-    "Profile prohibits dashboards with >5-7 metrics per view; do not request 'comprehensive metric dashboards' without segmenting into multiple views.",
-    "Insists on actionability: every observation must be paired with a recommendation, which can balloon report length if scope is wide."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Five-section profile spine: Role → Priorities (Ranked) → Constraints (Do NOT list) → Output Style → Success Criteria → Context Gathering.",
-    "Output format prescribes definition tables (metric, formula, source, owner, cadence) for every KPI."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Filename matches role slug; H1 'Profile: <Role Name>'.",
-    "Numbered priorities with bold lead-phrase, numbered constraints with 'Do NOT' prefix.",
-    "Trailing 'Context Gathering' steps tell the worker to read existing analytics implementations and KPI docs first."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/growth.md",
-      "_commands/profiles/product.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "data-analyst-role",
-    "metrics-and-kpi"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "analyst",
-    "kpi",
-    "data"
-  ]
+    "dashboard",
+    "ide"
+  ],
+  "complexity": "simple"
 }

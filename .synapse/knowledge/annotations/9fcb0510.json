@@ -1,36 +1,57 @@
 {
   "file": "documentation/data-architecture/xml-task-files.md",
-  "content_hash": "4343c1f5",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "11e5f3e7",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Schema reference for task files at tasks/{MM_DD_YY}/parallel_{name}.json -- the authoritative master record for each swarm with full task descriptions, context, critical instructions, file lists, dependencies, statuses, and completion summaries. Differentiates task files (rich, master-updated on every completion) from initialization.json (minimal, write-once, dashboard-driving). Note: filename retains 'xml' for historical reasons but task files are JSON.",
+  "purpose": "Documentation page for the data-architecture area: Task Files -- Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: > **Note on filename:** This file is named `xml-task-files.md` for historical reasons. Task files are **JSON**, not XML. The filename has been retained to avoid breaking internal documentation links. The file is 420 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Filename says xml but the format is JSON -- legacy naming preserved to avoid breaking links",
-    "Task file status fields are updated on every worker completion (unlike initialization.json which is write-once)",
-    "Repair tasks are appended with id suffix 'r' to the relevant wave's tasks array"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Mutable authoritative record vs write-once dashboard plan",
-    "Wave-grouped task arrays with descriptive wave names for human readability"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Task IDs use 'wave.index' format and match agents[].id in initialization.json",
-    "Companion plan_{name}.md captures rationale; .json captures structure"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/progress-files.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/progress-files.md"
+    ],
+    "related": [
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/progress-files.md"
+    ]
   },
   "domains": [
-    "data-architecture",
-    "schema"
+    "documentation",
+    "data-architecture"
   ],
   "tags": [
-    "task-file",
-    "schema",
-    "master-record"
-  ]
+    "markdown",
+    "documentation",
+    "data-architecture",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "profile",
+    "claude"
+  ],
+  "complexity": "complex"
 }

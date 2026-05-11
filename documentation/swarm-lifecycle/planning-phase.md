@@ -36,7 +36,7 @@ The planning phase encompasses everything from the moment the user invokes `!p_t
 +---------------------------+
 | 10. Choose Layout Type    |  Waves vs Chains
 | 11. Create Plan Document  |  parallel_plan_{name}.md
-| 12. Create Master Task    |  parallel_{name}.json
+| 12. Create Dashboard Plan |  dashboards/{id}/plan.json
 | 13. Validate Dependencies |  Cycle/orphan/dangling detection
 +---------------------------+
     |
@@ -70,7 +70,7 @@ When the user types `!p_track {prompt}`, three things happen immediately and non
 | **Synapse CLAUDE.md** | Swarm protocols, principles, constraints | `{tracker_root}/CLAUDE.md` |
 | **Master Instructions** | Dashboard field-to-UI mappings, write timing | `{tracker_root}/agent/instructions/tracker_master_instructions.md` |
 | **Project CLAUDE.md** | Target project conventions, architecture | `{project_root}/CLAUDE.md` |
-| **Project TOC** | Semantic file index (if it exists) | `{project_root}/.synapse/toc.md` |
+| **Project knowledge graph** | Semantic file relationships and operational annotations (if it exists) | `{project_root}/.synapse/knowledge/` |
 
 These reads are non-negotiable. The master reads the command file and master instructions every time. Skipping these reads is the single most common cause of dashboard errors, missed protocols, and incomplete plans.
 
@@ -99,7 +99,7 @@ The target project path is resolved in this priority order:
 | Source | Purpose |
 |---|---|
 | `{project_root}/CLAUDE.md` | Project conventions, architecture, naming rules, testing requirements |
-| `{project_root}/.synapse/toc.md` | Semantic index of files and directories (if it exists) |
+| `{project_root}/.synapse/knowledge/` | Semantic graph of files, domains, tags, relationships, and annotations (if it exists) |
 | Sub-directory CLAUDE.md files | Per-directory conventions when work spans multiple areas |
 | Source code files | Types, existing implementations, patterns to follow |
 | Documentation | API docs, architecture docs, anything relevant to the task |
@@ -282,9 +282,11 @@ Created at `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`, this 
 - **Risk assessment** -- Potential failure points, tasks most likely to produce warnings, cascade analysis
 - **Alternative approaches** -- Why the chosen approach was selected over alternatives
 
-### Master Task File
+### Dashboard Plan and Companion Task File
 
-Created at `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`, this is the authoritative task record. It contains everything needed to understand and track the swarm: metadata, task definitions with descriptions and context, critical details, file lists, dependencies, status tracking, and dependency chains.
+Created at `{tracker_root}/dashboards/{dashboardId}/plan.json`, this is the canonical current task specification. It contains the shared swarm context and task definitions with descriptions, approach, context, critical details, file lists, dependencies, and success criteria. Workers read this file before starting work.
+
+When produced, `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` is a legacy/companion record for history, review, and CLI compatibility rather than the active source of truth.
 
 ```json
 {
@@ -325,7 +327,7 @@ Created at `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`, this is 
 }
 ```
 
-Every agent reads the task file for context. The master updates it on every completion with summaries, timing, and status changes.
+Every tracked worker reads `dashboards/{dashboardId}/plan.json` for context. Lifecycle data comes from worker progress files. Companion task files may be updated with summaries, timing, and status changes for history, but they are not the canonical active task spec.
 
 ---
 

@@ -1,57 +1,43 @@
 {
   "file": "agent/instructions/tracker_worker_instructions_lite.md",
-  "content_hash": "d4a48bfd",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "daccc727",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "LITE worker-agent progress-reporting protocol for simple, independent tasks (no upstream dependencies). Streamlined alternative to tracker_worker_instructions.md. Defines the {tracker_root} vs {project_root} key-paths distinction, plan.json task-spec read requirement, the progress-file path and minimal JSON schema with all 10 fields (task_id, status, started_at/completed_at, summary, assigned_agent, stage, message, milestones, deviations, logs, optional annotations), the seven fixed stages, the FIVE mandatory writes (vs FULL's 8 — no upstream-deps step, no files_changed enforcement, no shared_context), live-timestamp rule, optional PKI annotations rule, and the structured return format. Used when the master selects INSTRUCTION MODE: LITE for a worker.",
+  "purpose": "Agent protocol/control-plane instruction document: Worker Agent \u2014 Lite Progress Reporting Instructions. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: **For:** Worker agents on simple, independent tasks (no upstream dependencies). For dependent or complex tasks, use `tracker_worker_instructions.md`. The file is 127 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "LITE is for simple INDEPENDENT tasks only — for dependent or complex tasks, use the FULL tracker_worker_instructions.md instead.",
-    "Workers reading LITE vs FULL get DIFFERENT mandatory-write counts (5 vs 8) and DIFFERENT progress-file requirements — confirm which mode the master assigned via the dispatch prompt's INSTRUCTION MODE field.",
-    "LITE does NOT enforce files_changed[] (FULL does) — but you should still populate it if your task creates/modifies/deletes files for dashboard rendering.",
-    "Always use the Write tool, not shell echo/cat — even in LITE mode.",
-    "Worker is sole owner of the progress file — write the FULL file every time, no read-modify-write.",
-    "Live timestamps only — `date -u +\"%Y-%m-%dT%H:%M:%SZ\"`. Never guess or hardcode.",
-    "plan.json is the source of truth — your dispatch prompt summarizes the task entry and shared `context`, but read plan.json directly before doing anything else.",
-    "Deviation severity classifications still apply in LITE: CRITICAL (affects downstream), MODERATE (different approach, same outcome), MINOR (cosmetic).",
-    "PKI annotations are OPTIONAL — only annotate files you actually read deeply, don't speculate."
+    "Progress file writes must include template_version and dashboard_id and use the exact assigned dashboard path; relative dashboard paths corrupt visibility in tracked swarms."
   ],
   "patterns": [
-    "Compressed schema documentation — single JSON example with field-name | type | description table.",
-    "Five mandatory writes (vs FULL's eight): before starting work, on every stage transition, on any deviation, on completion, on failure.",
-    "Same fixed stages as FULL: reading_context → planning → implementing → testing → finalizing → completed | failed.",
-    "Same return format as FULL: STATUS / SUMMARY / FILES CHANGED / EXPORTS / DIVERGENT ACTIONS / WARNINGS / ERRORS — with omit-if-none rule for optional sections.",
-    "Same annotations schema as FULL but emphasized as 'Optional'."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Field-name | Type | Description table for the progress-file schema.",
-    "Stage | Description table for the fixed stages.",
-    "Numbered Mandatory Writes list, terse one-line each."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [
-      "agent/_commands/p_track_execution.md (Step 14 worker prompt template — INSTRUCTION MODE: LITE)",
-      "agent/master/worker_prompts.md (INSTRUCTION MODE selection)"
-    ],
-    "related": [
-      "agent/instructions/tracker_worker_instructions.md (full version)",
-      ".claude/hooks/validate-progress-file.sh"
-    ]
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "worker-progress-reporting",
-    "agent-protocol"
+    "agent-protocol",
+    "instructions"
   ],
   "tags": [
     "markdown",
-    "agent-doc",
-    "protocol",
-    "worker-agent",
-    "lite-mode",
-    "simple-task",
-    "progress-file",
-    "minimal-schema"
-  ]
+    "agent-instructions",
+    "instructions",
+    "pki",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "claude"
+  ],
+  "complexity": "moderate"
 }

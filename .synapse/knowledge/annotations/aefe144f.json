@@ -1,14 +1,19 @@
 {
   "file": "src/ui/utils/markdown.js",
-  "content_hash": "2708cac3",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "319adfcb",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "Lightweight zero-dependency Markdown renderer specifically tuned for the subset Claude produces. Used by ClaudeView/MetricsPanel/AgentDetails to render assistant messages safely as innerHTML. Supports fenced code blocks, inline code, bold/italic, H1-H3, ordered/unordered lists, paragraphs (blank-line separated), single-newline→<br>, horizontal rules, blockquotes, and pipe-delimited tables with alignment. Uses placeholder substitution to protect code blocks from inline processing, then HTML-escapes raw text before applying inline formatting — output is safe for direct innerHTML assignment.",
   "exports": [
     {
       "name": "renderMarkdown",
       "kind": "function",
-      "signature": "(text: string) => string — HTML-safe"
+      "signature": "function renderMarkdown(...)"
+    },
+    {
+      "name": "linkifyFilePaths",
+      "kind": "function",
+      "signature": "function linkifyFilePaths(...)"
     }
   ],
   "imports_from": {},
@@ -35,10 +40,8 @@
   "relationships": {
     "depends_on": [],
     "depended_by": [
-      "src/ui/components/ClaudeView.jsx",
-      "src/ui/components/chat/ChatInstanceView.jsx",
-      "src/ui/components/MetricsPanel.jsx",
-      "src/ui/components/modals/AgentDetails.jsx"
+      "src/ui/shared/claude/ClaudeView.jsx",
+      "src/ui/shared/modals/GuideModal.jsx"
     ],
     "related": []
   },
@@ -53,5 +56,6 @@
     "xss-safe",
     "html-escape",
     "claude-output"
-  ]
+  ],
+  "complexity": "complex"
 }

@@ -91,7 +91,7 @@ The primary swarm orchestration skill. Runs a full parallel swarm with live dash
 
 1. **Planning (Steps 1-11):** Resolve project root, read master instructions, parse the prompt, deep analysis, decompose into tasks, group into waves, write `plan.json`, write `initialization.json`, write initial logs, present plan for approval.
 2. **Execution (Steps 12-15):** Dispatch Wave 1 workers, run eager dispatch loop (on every completion, scan for newly unblocked tasks), handle failures via failure-protocol, maintain master_state.json checkpoint.
-3. **Completion (Steps 16-18):** Compile final report, write metrics.json, update project TOC if files were created.
+3. **Completion (Steps 16-18):** Compile final report, write metrics.json, refresh the project knowledge graph if files were created.
 
 **Dependencies:** Loads `master-protocol`, `worker-protocol`, and `failure-protocol` skills.
 
@@ -199,10 +199,10 @@ Routes to the correct Synapse monitoring/operation command. Contains a routing t
 
 #### project-workflow
 
-**Invoked by:** `!project`, `!initialize`, `!onboard`, `!context`, `!review`, `!health`, `!scaffold`, `!plan`, `!scope`, `!trace`, `!contracts`, `!env_check`, `!toc`, `!toc_generate`, `!toc_update`, `!commands`, `!profiles`, `!help`, `!create_claude`, `!learn`, `!learn_update`, `!instrument`, `!prompt_audit`
+**Invoked by:** `!project`, `!initialize`, `!onboard`, `!context`, `!review`, `!health`, `!scaffold`, `!plan`, `!scope`, `!trace`, `!contracts`, `!env_check`, `!commands`, `!profiles`, `!help`, `!create_claude`, `!learn`, `!learn_update`, `!instrument`, `!prompt_audit`
 **User-invocable:** yes
 
-Routes to the correct Synapse project setup, discovery, auditing, and analysis command. Covers project configuration, PKI management, TOC management, code review, health checks, and instrumentation.
+Routes to the correct Synapse project setup, discovery, auditing, and analysis command. Covers project configuration, PKI management, code review, health checks, and instrumentation.
 
 ---
 

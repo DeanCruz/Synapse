@@ -1,44 +1,49 @@
 {
   "file": "documentation/server/overview.md",
   "content_hash": "974b307e",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Top-level overview of the Synapse SSE server: zero-dependency Node http server, modular structure (index/SSEManager/routes/services/utils), startup/shutdown sequence, CORS handling, request logging, and the file-watcher → SSE → browser real-time data pipeline. Explains key design decisions (zero deps, SSE over WebSockets, file-based state, hybrid watching).",
+  "purpose": "Documentation page for the server area: Server Architecture Overview. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Synapse server is a lightweight, zero-dependency Node.js HTTP server that provides real-time dashboard updates via Server-Sent Events (SSE) and a REST API for managing dashboards, archives, history, and queues. It uses only Node.js built-in modules (`http`, `fs`, `path`) with no external npm dependencies. The file is 217 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
-  "imports_from": [],
+  "imports_from": {},
   "gotchas": [
-    "Zero npm dependencies by design — only built-in modules",
-    "SIGINT/SIGTERM handlers must run cleanly to release watchers",
-    "Hybrid watching strategy needed because fs.watch alone misses events on some platforms"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Pure-function service modules (no class instances)",
-    "Push-driven SSE updates",
-    "Atomic JSON writes for resilience"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "src/server/{index.js, SSEManager.js, routes/, services/, utils/}",
-    "PORT env var only external configuration"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [
+      "documentation/README.md",
+      "documentation/server/api-reference.md"
+    ],
+    "related": [
       "documentation/server/api-reference.md",
       "documentation/server/configuration.md",
       "documentation/server/services.md",
       "documentation/server/sse-events.md"
-    ],
-    "related": [
-      "documentation/electron/overview.md"
     ]
   },
   "domains": [
+    "documentation",
     "server"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "overview",
-    "sse"
-  ]
+    "server",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "sse",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

@@ -1,37 +1,59 @@
 {
   "file": "documentation/data-architecture/overview.md",
   "content_hash": "da3ff611",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "High-level overview of Synapse's file-based data architecture: no database, JSON files watched by the server and broadcast via SSE, strict file ownership per writer, and derived (not stored) statistics. Explains the static-plan vs dynamic-lifecycle vs event-log split, the mergeState client-side merge, and the file-watching mechanisms (fs.watchFile polling for init/logs, fs.watch for progress).",
+  "purpose": "Documentation page for the data-architecture area: Data Architecture Overview. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Synapse uses a **file-based data architecture** with no database. All state is stored as JSON files on disk, watched by the server for changes, and broadcast to the dashboard via Server-Sent Events (SSE). This design eliminates external dependencies and keeps the system fully portable. The file is 388 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Statistics are derived at render time -- never stored as counters; modifying counters introduces drift",
-    "fs.watch on progress/ uses OS events; fs.watchFile on init/logs polls at 100ms intervals",
-    "Reconciliation runs every 5s as a safety net for missed OS events on network filesystems"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Derived state from authoritative file reads",
-    "Sole-writer-per-file ownership preventing write conflicts",
-    "Atomic temp-write-then-rename for crash safety"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Default empty states defined in src/server/utils/constants.js (DEFAULT_INITIALIZATION, DEFAULT_LOGS)",
-    "Dashboard IDs are 6-character hex strings"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/xml-task-files.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/pki-schemas.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/xml-task-files.md"
+    ],
+    "related": [
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/pki-schemas.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/xml-task-files.md"
+    ]
   },
   "domains": [
+    "documentation",
     "data-architecture"
   ],
   "tags": [
-    "overview",
-    "file-based",
-    "watcher",
-    "merge-state"
-  ]
+    "markdown",
+    "documentation",
+    "data-architecture",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "react",
+    "sse"
+  ],
+  "complexity": "complex"
 }

@@ -1,82 +1,44 @@
 {
   "file": "agent/instructions/tracker_master_instructions.md",
   "content_hash": "58ff2f42",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The master agent's primary reference / hub. Defines the absolute non-negotiable constraints (master never writes code, all implementation dispatched to workers, dashboard mandatory, full-tracking thresholds at 3+ agents or >1 wave, master writes progress in lightweight mode, long prompts mean MORE planning not direct execution, read the command file every time). Provides a Module Index pointing at the nine files in agent/master/* (role, dashboard_writes, ui_map, eager_dispatch, failure_recovery, worker_prompts, compaction_recovery, dashboard_protocol, pki_integration), a high-level overview of how the dashboard works, eager dispatch summary, failure recovery summary with circuit breaker thresholds, worker-prompt construction summary, PKI integration summary, dashboard-write summary, role-and-constraints summary, compaction-recovery summary, the tracker layout tree, and a quick common-mistakes table. Master agents read this FIRST when invoking !p_track or any swarm command.",
+  "purpose": "Agent protocol/control-plane instruction document: Synapse \u2014 Master Agent Reference. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: > ## ABSOLUTE, NON-NEGOTIABLE CONSTRAINTS > > **You are the MASTER AGENT. These rules override everything else. They cannot be relaxed, ignored, or worked around under any circumstances.** > > **1. THE MASTER AGENT NEVER WRITES CODE.** Not a single line. Not a \"quick fix.\" Not \"just this one file because it's faster.\" Not a small tweak, a helper function, a config change, or a test. If it belongs to the application codebase, a WORKER AGENT writes The file is 169 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "ABSOLUTE CONSTRAINT 1: The master agent NEVER writes code — not a single line, not a 'quick fix', not even one helper. Every implementation is dispatched to a worker via the Task tool. Violating this defeats the entire purpose of Synapse.",
-    "Long or complex user prompts mean MORE decomposition and dispatching — never an excuse for the master to do the work directly.",
-    "PATH SAFETY: Always resolve {tracker_root} to absolute. Relative `dashboards/` paths from project_root CWD will write into the target project; a PreToolUse hook blocks misplaced writes.",
-    "Full-tracking thresholds (3+ agents OR >1 wave) are NON-NEGOTIABLE for multi-wave swarms — only `!p` lightweight mode is exempt.",
-    "In lightweight mode, the master MUST create minimal progress files from worker returns (files_changed, summary, completion logs) — otherwise dashboard shows no per-task file changes.",
-    "initialization.json is write-once. Only repair-task append and circuit-breaker replanning are exceptions.",
-    "Eager dispatch is on every worker completion, scanning ALL remaining tasks across ALL waves — never wait for a wave to finish, never batch by wave number.",
-    "Failed tasks do NOT satisfy dependencies — repair tasks (with `r`-suffixed IDs) replace them in the dependency chain.",
-    "Circuit breaker triggers automatic replanning when 3+ tasks fail in a wave, a single failure blocks 3+ downstream tasks, or a single failure blocks majority of remaining tasks.",
-    "Master may resume normal behavior (writing code) ONLY after the swarm completes — not 'almost done'."
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files.",
+    "PKI schema drift risk: domain_index, tag_index, and concept_map now live as sibling files beside manifest.json; manifest.json should not be treated as the only index container."
   ],
   "patterns": [
-    "Hub-and-modules layout: this file gives constraints + summary + module index, agent/master/*.md contain detailed procedures.",
-    "Five master responsibilities: Gather Context, Plan, Dispatch, Status, Report — nothing else.",
-    "Convention map → per-task filtered injection — master extracts CLAUDE.md categories from {project_root}, includes only relevant ones in each worker prompt.",
-    "Worker-prompt budget target ~8000 tokens (~800 lines), task duration target 1-5 minutes.",
-    "Master writes exactly four dashboard files: initialization.json (write-once static plan), logs.json (append-only event log), master_state.json (state checkpoint after every event), metrics.json (once at swarm end).",
-    "All dashboard writes are atomic — read full file, modify in memory, write full file.",
-    "PKI integration as enhancement-not-requirement — if no manifest.json exists, master proceeds with standard planning."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Top-of-file blockquote section for ABSOLUTE CONSTRAINTS — bolded, numbered, with explicit STOP fallback line.",
-    "Module Index table with When-to-Read and per-row Constraint reminder columns.",
-    "Tracker layout shown as ASCII directory tree with comment annotations (e.g., `← Reserved (IDE agent...)`).",
-    "Quick Common Mistakes table at the end as a final scannable summary."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/master/role.md",
-      "agent/master/dashboard_writes.md",
-      "agent/master/ui_map.md",
-      "agent/master/eager_dispatch.md",
-      "agent/master/failure_recovery.md",
-      "agent/master/worker_prompts.md",
-      "agent/master/compaction_recovery.md",
-      "agent/master/dashboard_protocol.md",
-      "agent/master/pki_integration.md"
-    ],
-    "depended_by": [
-      ".claude/skills/master-protocol",
-      ".claude/agents/master-orchestrator.md",
-      "agent/_commands/p_track_planning.md (Step 2)",
-      "agent/instructions/tracker_multi_plan_instructions.md (child masters read this)",
-      "_commands/Synapse/p_track.md"
-    ],
-    "related": [
-      "CLAUDE.md (project root)",
-      "agent/instructions/common_pitfalls.md",
-      "agent/instructions/dashboard_resolution.md",
-      "agent/instructions/tracker_worker_instructions.md",
-      "agent/instructions/failed_task.md"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "master-orchestration",
     "agent-protocol",
-    "dashboard-writes"
+    "instructions"
   ],
   "tags": [
     "markdown",
-    "agent-doc",
-    "protocol",
-    "master-agent",
-    "hub",
-    "non-negotiable",
-    "module-index",
-    "constraints",
-    "no-code-rule",
-    "eager-dispatch",
-    "circuit-breaker",
-    "pki"
-  ]
+    "agent-instructions",
+    "instructions",
+    "pki",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "initialization-json"
+  ],
+  "complexity": "moderate"
 }

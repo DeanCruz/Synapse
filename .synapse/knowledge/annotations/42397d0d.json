@@ -1,0 +1,50 @@
+{
+  "file": "src/ui/pages/code/subpages/dashboards/components/ProgressBar.jsx",
+  "content_hash": "3eecbd75",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Thin horizontal fill bar showing completed/total ratio. Computes pct = round((completed/total)*100), clamps at 100, and adds a progress-complete modifier when pct === 100. Includes ARIA progressbar role with valuenow/min/max.",
+  "exports": [
+    {
+      "name": "ProgressBar",
+      "kind": "component",
+      "signature": "default function ProgressBar(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "When total === 0 the pct is 0 and width is 0% — there's no indeterminate state.",
+    "completed > total still rounds correctly thanks to Math.min(100, ...) clamp, but visually the user can't tell the swarm is over-completed."
+  ],
+  "patterns": [
+    "Pure presentational; no state."
+  ],
+  "conventions": [
+    "Default export; uses CSS classes progress-track + progress-fill (+progress-complete)."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/pages/code/subpages/dashboards/DashboardsPage.jsx"
+    ],
+    "related": [
+      "src/server/services/DashboardService.js",
+      "src/ui/hooks/useDashboardData.js"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "progress-bar"
+  ],
+  "complexity": "simple"
+}

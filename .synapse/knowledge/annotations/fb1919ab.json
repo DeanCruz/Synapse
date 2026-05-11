@@ -1,43 +1,47 @@
 {
   "file": "documentation/profiles/overview.md",
   "content_hash": "f169ae77",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Conceptual overview of the Synapse profile system. Explains what profiles do (modify priorities, constraints, output style, success criteria, context gathering without changing technical capabilities), how to invoke them, profile resolution from {tracker_root}/_commands/profiles/, profile file structure, task-scoped behavior, swarm-mode propagation to workers, and creation guidance for custom profiles.",
+  "purpose": "Documentation page for the profiles area: Profile System. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Profiles are role-based persona modifiers that change how the Synapse agent prioritizes, frames, and delivers its output. A profile does not replace the agent's core instructions -- it layers on top of them, adjusting what the agent optimizes for, how it communicates, and what success looks like for the duration of a task. The file is 132 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Profile is task-scoped -- agent reverts to default behavior after task",
-    "Profiles do NOT change tool access or orchestration protocols -- only persona/priorities/style",
-    "Custom profiles have duplicate detection -- alerts on name collision"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Five required sections: Role, Priorities, Constraints, Output Style, Success Criteria",
-    "Layered modification: profile sits on top of core instructions"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Single resolution location: {tracker_root}/_commands/profiles/{name}.md",
-    "Priority list ordered, first priority wins on conflict",
-    "Constraints framed as explicit 'do NOT' rules"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [
+    "depends_on": [
       "documentation/profiles/available-profiles.md"
     ],
+    "depended_by": [
+      "documentation/README.md"
+    ],
     "related": [
-      "_commands/profiles/",
-      "agent/core/profile_system.md"
+      "documentation/profiles/available-profiles.md"
     ]
   },
   "domains": [
-    "profile-docs"
+    "documentation",
+    "profiles"
   ],
   "tags": [
     "markdown",
     "documentation",
     "profiles",
-    "overview",
-    "personas"
-  ]
+    "dashboard",
+    "guide",
+    "profile",
+    "sse",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

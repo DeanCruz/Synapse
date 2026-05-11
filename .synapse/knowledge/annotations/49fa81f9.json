@@ -1,70 +1,51 @@
 {
   "file": "agent/master/initialization_blueprint.md",
   "content_hash": "4d17630e",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The authoritative schema and worked examples for initialization.json. Mandatory pre-read before any write — the validate-initialization-schema.sh hook enforces every rule and blocks malformed writes. Provides minimum-viable, full-Waves, and full-Chains examples plus a 13-item pre-write checklist and failure-modes-to-symptoms mapping. Exists to eliminate the class of bugs where wave headers render with no task cards.",
+  "purpose": "Agent protocol/control-plane instruction document: initialization.json Blueprint. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: **Authoritative schema + worked examples for the master agent.** Read this before writing `initialization.json`. The schema hook (`.claude/hooks/validate-initialization-schema.sh`) enforces the rules below \u2014 a write that violates any rule is blocked with a detailed reason. The file is 208 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "plan.json MUST exist FIRST — validate-plan-required.sh hook blocks writes to initialization.json unless plan.json is present in the same dashboard directory with non-empty context.prompt and tasks[] where every task has id, title, description, approach, files.",
-    "agents.length MUST equal plan.tasks.length — schema hook blocks if not.",
-    "Never invent or scan for a dashboard ID — use only the assigned id from DASHBOARD ID directive or SYNAPSE_DASHBOARD_ID env var. If unassigned, stop and ask the user.",
-    "task.total_tasks MUST equal agents.length and task.total_waves MUST equal waves.length — mismatch blocks the write and produces wrong stat-bar counts.",
-    "sum(waves[].total) MUST equal agents.length — every agent must belong to a counted wave.",
-    "Every agents[i].id must match regex ^\\d+\\.\\d+r?$ (e.g., '1.1', '2.3', '2.1r') AND be unique AND its wave must match a waves[j].id.",
-    "Every agents[i].depends_on[k] MUST reference an existing agents[].id — dangling references make dispatch readiness unstable.",
-    "In Chains mode: chains.length>=1, every agent appears in exactly one chain's tasks[], no duplicates across chains. Even Chains mode requires waves[] (at least 1).",
-    "Empty agents[] with populated waves[] -> dashboard renders wave headers with ZERO task cards (the canonical 'invisible swarm' bug).",
-    "Wrong dashboard directory write -> swarm runs but user's open dashboard panel stays empty — they see no progress despite workers executing.",
-    "SYNAPSE_SKIP_SCHEMA=1 escape hatch bypasses ALL schema validation — use sparingly, only for scratch/non-standard writes outside a real swarm."
-  ],
+  "gotchas": [],
   "patterns": [
-    "13-item pre-write checklist: kebab-case name -> 'Waves'|'Chains' type -> ISO 8601 created -> total_tasks==agents.length -> total_waves==waves.length -> agents.length>=1 AND waves.length>=1 -> id regex match -> id uniqueness -> agent.wave references waves[j].id -> depends_on references existing IDs -> sum(waves.total)==agents.length -> Chains rules -> correct dashboard path.",
-    "Atomic full-file write: read -> parse -> modify -> stringify (2-space indent) -> write. Partial writes silently freeze dashboard.",
-    "Repair task IDs use 'r' suffix and don't break the regex: '2.1r' is valid.",
-    "Dashboard merges initialization.json (static plan) with progress files (dynamic lifecycle) — malformed init means UI cannot render running workers."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "task.name: kebab-case slug only (lowercase letters/digits/hyphens, starts alphanum).",
-    "task.type: exact string match 'Waves' or 'Chains'.",
-    "agents[].title: short verb phrase, ~40 chars max.",
-    "agents[].layer: optional category badge — 'frontend', 'backend', 'tests', 'documentation', 'migration', 'types', 'config'.",
-    "waves[].name: descriptive (UI prepends 'Wave {id}: ' automatically) — not just 'Wave 1'.",
-    "chains[].tasks: ordered array of agent IDs left-to-right tracing the dependency path.",
-    "history[]: empty array at creation — populated by archive-move, not at write time."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
-      ".claude/hooks/validate-plan-required.sh",
-      ".claude/hooks/validate-initialization-schema.sh",
-      "agent/_commands/p_track_planning.md"
+      "agent/_commands/p_track_planning.md",
+      "agent/master/dashboard_writes.md",
+      "agent/instructions/dashboard_resolution.md"
     ],
     "depended_by": [
-      "agent/master/dashboard_writes.md",
-      ".claude/skills/master-protocol",
-      ".claude/skills/p-track",
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/p.md",
-      "_commands/Synapse/add_task.md"
+      ".claude/skills/p-track/SKILL.md",
+      "agent/master/dashboard_writes.md"
     ],
     "related": [
-      "agent/master/ui_map.md",
+      "agent/_commands/p_track_planning.md",
       "agent/instructions/dashboard_resolution.md",
-      "agent/master/dashboard_protocol.md"
+      "agent/master/dashboard_writes.md"
     ]
   },
   "domains": [
-    "dashboard-protocol",
-    "schema-validation",
-    "master-orchestration"
+    "agent-protocol",
+    "master"
   ],
   "tags": [
     "markdown",
-    "master-agent",
-    "schema",
-    "blueprint",
-    "hook-enforced",
-    "checklist"
-  ]
+    "agent-instructions",
+    "master",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "initialization-json",
+    "claude"
+  ],
+  "complexity": "moderate"
 }

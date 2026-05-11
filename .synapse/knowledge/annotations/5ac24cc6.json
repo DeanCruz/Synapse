@@ -1,46 +1,44 @@
 {
   "file": "_commands/profiles/founder.md",
   "content_hash": "8485cbf8",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Startup Strategist / Founder Advisor role: GTM, competitive analysis, fundraising narratives, market sizing, strategic positioning. Biases the worker toward strategic clarity (cut to the real decision), market-grounded recommendations (no fantasy TAM), narrative coherence, resource awareness for actual startup constraints, and decision velocity (reversible vs. irreversible framing). A master assigns this profile for pitch decks, investor updates, vision docs, competitive analyses, or any high-stakes founder-facing decision support. Notably the only profile whose Role section uses an extra '---' separator before the Role heading.",
-  "exports": [],
+  "purpose": "Profile definition for `founder`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Startup Strategist and Founder Advisor with expertise in go-to-market strategy, competitive analysis, fundraising narratives, market sizing, and strategic positioning. Thinks like a founder who's been through multiple cycles \u2014 balancing vision with pragmatism, ambition with focus. Every output is designed to help founders make high-stakes decisions with clarity. The file is 55 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "founder",
+      "kind": "profile",
+      "signature": "!founder profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Profile refuses 'we have no competitors' framing — alternative is always 'do nothing' or 'spreadsheets'.",
-    "Will not produce open-ended option menus; demands a recommendation with rationale.",
-    "Pushes back on Silicon Valley default playbooks; explicitly note if blitzscaling/VC strategy is desired or it will be filtered out.",
-    "Format quirk: this profile has '---' before the Role heading whereas other profiles do not — minor inconsistency."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Standard profile spine (with the leading '---' anomaly).",
-    "Strategic analysis skeleton: Executive Summary → Market Context → Competitive Landscape → Strategic Options → Recommended Path → Resource Requirements → Key Risks → Decision Timeline.",
-    "Pitch deck outlines capped at 10-12 slides with speaker notes; investor updates one page."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Tone framed 'founder-to-founder' — direct, transparent about assumptions."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/marketing.md",
-      "_commands/profiles/pricing.md",
-      "_commands/profiles/growth.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "founder-strategy-role",
-    "fundraising-and-gtm"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "founder",
-    "strategy",
-    "pitch"
-  ]
+    "sse",
+    "ide"
+  ],
+  "complexity": "simple"
 }

@@ -4,7 +4,7 @@
 // for nested .git directories; each discovered repo appears as a tab and the
 // active repo drives all git operations.
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { useAppState, useDispatch } from '@/context/AppContext.jsx';
 import InitFlow from './components/InitFlow.jsx';
 import ChangesPanel from './components/ChangesPanel.jsx';
@@ -29,6 +29,10 @@ const DEFAULT_SIDEBAR_WIDTH = 300;
 function basename(p) {
   if (!p) return '';
   return p.replace(/[/\\]+$/, '').split(/[/\\]/).pop() || p;
+}
+
+function normalizePath(p) {
+  return p ? p.replace(/[/\\]+$/, '') : '';
 }
 
 // Compute a short label for a repo relative to the project root.
@@ -66,6 +70,35 @@ export default function GitPage() {
   const dragRef = useRef({ startX: 0, startWidth: 0 });
   const autoFetchedFileRef = useRef(null);
 
+  const repoTabs = useMemo(() => {
+    if (!projectPath) return discoveredRepos;
+
+    const root = normalizePath(projectPath);
+    const hasRootTab = discoveredRepos.some(repo => normalizePath(repo.path) === root);
+    const normalizedRepos = discoveredRepos.map(repo => ({
+      ...repo,
+      isGitRepo: repo.isGitRepo !== false,
+    }));
+
+    if (hasRootTab) return normalizedRepos;
+
+    return [
+      {
+        path: projectPath,
+        name: projectName,
+        isRoot: true,
+        isGitRepo: false,
+      },
+      ...normalizedRepos,
+    ];
+  }, [discoveredRepos, projectName, projectPath]);
+
+  const activeRepo = useMemo(
+    () => repoTabs.find(repo => repo.path === activeRepoPath) || null,
+    [repoTabs, activeRepoPath]
+  );
+  const activeRepoIsGitRepo = !activeRepo || activeRepo.isGitRepo !== false;
+
   // Discover all git repos under the project root whenever it changes.
   useEffect(() => {
     if (!currentDashboardId || !projectPath) {
@@ -92,10 +125,13 @@ export default function GitPage() {
         const repos = (result && result.success && Array.isArray(result.data)) ? result.data : [];
         setDiscoveredRepos(repos);
 
-        // Pick active repo: previously-saved choice if still valid, else first discovered.
+        // Pick active repo: previously-saved choice if still valid, else the project root tab.
         const saved = getDashboardActiveRepo(currentDashboardId);
-        const valid = saved && repos.some(r => r.path === saved);
-        const next = valid ? saved : (repos[0] ? repos[0].path : null);
+        const valid = saved && (
+          normalizePath(saved) === normalizePath(projectPath) ||
+          repos.some(r => r.path === saved)
+        );
+        const next = valid ? saved : projectPath;
         setActiveRepoPath(next);
         if (next && next !== saved) {
           saveDashboardActiveRepo(currentDashboardId, next);
@@ -127,12 +163,13 @@ export default function GitPage() {
     dispatch({ type: 'GIT_SET_DIFF', diff: null });
     dispatch({ type: 'GIT_SET_REMOTES', remotes: [] });
     dispatch({ type: 'GIT_SET_SELECTED_FILE', filePath: null });
+    dispatch({ type: 'GIT_SET_LOADING', value: false });
     autoFetchedFileRef.current = null;
   }, [activeRepoPath, currentDashboardId, dispatch]);
 
   // Load git data when the active repo changes.
   useEffect(() => {
-    if (!activeRepoPath) return;
+    if (!activeRepoPath || !activeRepoIsGitRepo) return;
 
     let cancelled = false;
     const api = window.electronAPI;
@@ -181,7 +218,7 @@ export default function GitPage() {
     })();
 
     return () => { cancelled = true; };
-  }, [activeRepoPath, dispatch]);
+  }, [activeRepoPath, activeRepoIsGitRepo, dispatch]);
 
   // Re-fetch all git data (used after commits, pushes, etc.)
   const refreshGitData = useCallback(async () => {
@@ -242,7 +279,7 @@ export default function GitPage() {
 
   // Poll git status every 3 seconds while the active repo is set.
   useEffect(() => {
-    if (!activeRepoPath) return;
+    if (!activeRepoPath || !activeRepoIsGitRepo) return;
     const interval = setInterval(async () => {
       const api = window.electronAPI;
       if (!api) return;
@@ -254,7 +291,7 @@ export default function GitPage() {
       } catch (_) {}
     }, 3000);
     return () => clearInterval(interval);
-  }, [activeRepoPath, dispatch]);
+  }, [activeRepoPath, activeRepoIsGitRepo, dispatch]);
 
   // Keyboard shortcut: Ctrl+Enter to focus commit input
   useEffect(() => {
@@ -334,10 +371,12 @@ export default function GitPage() {
       const result = await api.gitDiscoverRepos(projectPath);
       if (result && result.success && Array.isArray(result.data)) {
         setDiscoveredRepos(result.data);
-        if (result.data[0]) {
-          setActiveRepoPath(result.data[0].path);
+        const rootRepo = result.data.find(repo => normalizePath(repo.path) === normalizePath(projectPath));
+        const nextRepo = rootRepo || result.data[0];
+        if (nextRepo) {
+          setActiveRepoPath(nextRepo.path);
           if (currentDashboardId) {
-            saveDashboardActiveRepo(currentDashboardId, result.data[0].path);
+            saveDashboardActiveRepo(currentDashboardId, nextRepo.path);
           }
         }
       }
@@ -411,16 +450,22 @@ export default function GitPage() {
     );
   }
 
-  // No git repos found anywhere under the project — offer to init the root.
-  if (discoveredRepos.length === 0) {
+  if (activeRepo && activeRepo.isGitRepo === false) {
     return (
       <div className="git-manager-view">
+        <RepoTabs
+          repos={repoTabs}
+          activeRepoPath={activeRepoPath}
+          projectPath={projectPath}
+          currentBranch={gitCurrentBranch}
+          onSwitch={handleSwitchRepo}
+        />
         <div className="git-manager-main">
           <div className="git-manager-content">
             <div className="git-manager-content-body">
               <InitFlow
-                repoPath={projectPath}
-                repoName={projectName}
+                repoPath={activeRepo.path}
+                repoName={repoLabel(activeRepo, projectPath)}
                 onInitComplete={handleInitComplete}
               />
             </div>
@@ -432,15 +477,13 @@ export default function GitPage() {
 
   return (
     <div className="git-manager-view">
-      {discoveredRepos.length > 0 && (
-        <RepoTabs
-          repos={discoveredRepos}
-          activeRepoPath={activeRepoPath}
-          projectPath={projectPath}
-          currentBranch={gitCurrentBranch}
-          onSwitch={handleSwitchRepo}
-        />
-      )}
+      <RepoTabs
+        repos={repoTabs}
+        activeRepoPath={activeRepoPath}
+        projectPath={projectPath}
+        currentBranch={gitCurrentBranch}
+        onSwitch={handleSwitchRepo}
+      />
 
       <div className="git-manager-main">
         <div
@@ -520,7 +563,7 @@ function RepoTabs({ repos, activeRepoPath, projectPath, currentBranch, onSwitch 
             type="button"
             role="tab"
             aria-selected={active}
-            className={`git-manager-repo-tab${active ? ' active' : ''}${repo.isRoot ? ' is-root' : ''}`}
+            className={`git-manager-repo-tab${active ? ' active' : ''}${repo.isRoot ? ' is-root' : ''}${repo.isGitRepo === false ? ' is-not-repo' : ''}`}
             onClick={() => onSwitch(repo.path)}
             title={repo.path}
           >
@@ -528,7 +571,12 @@ function RepoTabs({ repos, activeRepoPath, projectPath, currentBranch, onSwitch 
               <RepoIcon />
             </span>
             <span className="git-manager-repo-tab-label">{label}</span>
-            {active && currentBranch && (
+            {repo.isGitRepo === false && (
+              <span className="git-manager-repo-tab-branch is-setup">
+                Setup
+              </span>
+            )}
+            {active && currentBranch && repo.isGitRepo !== false && (
               <span className="git-manager-repo-tab-branch">
                 <BranchIcon />
                 {currentBranch}

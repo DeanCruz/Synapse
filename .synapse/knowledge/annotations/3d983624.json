@@ -1,61 +1,44 @@
 {
   "file": ".claude/agents/master-orchestrator.md",
   "content_hash": "e6100608",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the master-orchestrator subagent role for Claude Code. YAML frontmatter declares its name, description (Synapse swarm master), the four skills auto-loaded for it (p-track, worker-protocol, master-protocol, failure-protocol), and the role-specific hooks (PreToolUse on Edit|Write -> validate-master-write.sh; Stop -> verify-final-report.sh). The body restates the master's five responsibilities (Gather Context, Plan, Dispatch, Status, Report) and the hard constraint that the master writes ONLY to dashboards/{id}/{plan,initialization,logs,master_state,metrics}.json + Archive/, never project source code. References that plan.json must be written BEFORE initialization.json (hook-enforced via validate-plan-required.sh).",
-  "exports": [],
-  "imports_from": {
-    "skills": [
-      "p-track",
-      "worker-protocol",
-      "master-protocol",
-      "failure-protocol"
-    ],
-    "hooks": [
-      ".claude/hooks/validate-master-write.sh",
-      ".claude/hooks/verify-final-report.sh"
-    ]
-  },
-  "gotchas": [
-    "YAML frontmatter is structural — Claude Code parses skills[] and hooks[] from it; bad indentation breaks the agent definition silently",
-    "Role-specific hooks here are duplicated in .claude/settings.json (which applies globally) — the agent-level hook block declares the agent's own enforcement contract",
-    "The 'never write project code' rule is enforced by validate-master-write.sh — but this file is the prose source of truth that humans read"
+  "purpose": "Claude Code agent definition for `master-orchestrator`. It configures the agent role, loaded skills, and behavioral constraints used by the swarm runtime. Key content: --- name: master-orchestrator description: > Synapse swarm master agent. Plans task decomposition, dispatches worker agents via Task tool, monitors progress through dashboard files, and compiles comprehensive final reports. Use when orchestrating parallel work with !p_track, !p, or !master_plan_track commands. The master NEVER writes project source code \u2014 only dashboard/tracker files. skills: hooks: PreToolUse: hooks: command: \".claude/hooks/vali The file is 52 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "master-orchestrator",
+      "kind": "agent",
+      "signature": "master-orchestrator Claude Code agent definition"
+    }
   ],
+  "imports_from": {},
+  "gotchas": [],
   "patterns": [
-    "Subagent definition pattern: YAML frontmatter (name/description/skills/hooks) + Markdown body with role description",
-    "References skills by short name (no path) — Claude Code resolves to .claude/skills/{name}/SKILL.md"
+    "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose."
   ],
   "conventions": [
-    "Filename matches frontmatter `name` field",
-    "Description starts with capital, summarizes when to use",
-    "Body opens with 'You are...' second-person framing"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      ".claude/skills/p-track/SKILL.md",
-      ".claude/skills/worker-protocol/SKILL.md",
-      ".claude/skills/master-protocol/SKILL.md",
-      ".claude/skills/failure-protocol/SKILL.md",
-      ".claude/hooks/validate-master-write.sh",
-      ".claude/hooks/verify-final-report.sh"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      ".claude/agents/swarm-worker.md",
-      "agent/master/role.md",
-      "CLAUDE.md"
-    ]
+    "related": []
   },
   "domains": [
-    "master-agent-definition",
-    "agent-config"
+    "claude-agents",
+    "agent-definitions"
   ],
   "tags": [
+    "markdown",
     "agent-definition",
-    "master",
-    "yaml-frontmatter",
-    "claude-code",
-    "swarm-orchestration"
-  ]
+    "master-orchestrator",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "initialization-json",
+    "claude"
+  ],
+  "complexity": "simple"
 }

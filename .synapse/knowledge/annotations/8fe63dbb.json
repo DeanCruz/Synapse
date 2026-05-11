@@ -1,8 +1,8 @@
 {
   "file": "src/ui/utils/monacoWorkerSetup.js",
   "content_hash": "4a65f383",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.414Z",
+  "annotated_by": "learn-update",
   "purpose": "One-shot Monaco Editor web-worker bootstrap for Vite. Imports the five worker entries (editor, json, css, html, ts) using Vite's ?worker query suffix and registers self.MonacoEnvironment.getWorker so Monaco can spawn the right worker per language. Without this, Monaco falls back to synchronous mode and syntax highlighting, code completion, and validation all degrade. Must be imported ONCE before any Monaco editor instance is constructed (typically by IDEView's CodeEditor).",
   "exports": [],
   "imports_from": {
@@ -59,5 +59,6 @@
     "vite",
     "ide",
     "editor-bootstrap"
-  ]
+  ],
+  "complexity": "simple"
 }

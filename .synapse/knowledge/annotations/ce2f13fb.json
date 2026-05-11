@@ -1,39 +1,44 @@
 {
   "file": "documentation/electron/update-on-master.md",
   "content_hash": "f9325c22",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Release-management guide for shipping desktop builds tracking the master branch via electron-updater. Describes the auto-update flow, two release options (auto-on-master vs build-on-master/release-on-tag), version bump strategy, and required macOS signing/notarization secrets in GitHub Actions.",
+  "purpose": "Documentation page for the electron area: Update on `master`. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: This document describes the simplest release model for Synapse when you want desktop builds to track the `master` branch. The file is 140 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
-  "imports_from": [],
+  "imports_from": {},
   "gotchas": [
-    "Without code signing on macOS, auto-update behavior is degraded and Gatekeeper warnings appear",
-    "Auto-update check runs 10 seconds after launch, downloads in background"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Tag-driven release pipeline",
-    "Push-event update broadcasting to renderer (update-status channel)"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers."
   ],
   "conventions": [
-    "Tags formatted vMAJOR.MINOR.PATCH",
-    "Commit markers #minor / #major to override default patch bump"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
       "documentation/electron/services.md"
     ],
-    "depended_by": [],
+    "depended_by": [
+      "documentation/README.md"
+    ],
     "related": [
-      "documentation/electron/overview.md"
+      "documentation/electron/overview.md",
+      "documentation/electron/services.md"
     ]
   },
   "domains": [
+    "documentation",
     "electron"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "release",
-    "auto-update"
-  ]
+    "electron",
+    "progress",
+    "git",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

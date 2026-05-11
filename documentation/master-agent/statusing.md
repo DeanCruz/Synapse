@@ -1,6 +1,6 @@
 # Master Agent — Statusing Protocol
 
-Status reporting is how the user and the system maintain visibility into an active swarm. This document covers the complete statusing protocol: what the master writes and when, what workers handle themselves, dashboard file management, logs.json patterns, task file updates, terminal output rules, and the permission request flow.
+Status reporting is how the user and the system maintain visibility into an active swarm. This document covers the complete statusing protocol: what the master writes and when, what workers handle themselves, dashboard file management, logs.json patterns, progress/plan coordination, companion task-record updates, terminal output rules, and the permission request flow.
 
 ---
 
@@ -34,11 +34,11 @@ The master does not maintain counters. There are no `completed_tasks`, `failed_t
 
 ### What the Master Handles
 
-The master handles event logging and task file updates only:
+The master handles event logging and companion task-record updates only:
 
 - Agent dispatched -- Append to `logs.json`.
-- Agent completed -- Append to `logs.json` + update task file.
-- Agent failed -- Append to `logs.json` + update task file.
+- Agent completed -- Append to `logs.json` + optionally update companion task file.
+- Agent failed -- Append to `logs.json` + optionally update companion task file.
 - Agent deviated -- Append to `logs.json` at level `"deviation"`.
 - Swarm initialized -- Append to `logs.json`.
 - Swarm completed -- Append to `logs.json`.
@@ -66,6 +66,10 @@ No lifecycle fields exist in `initialization.json`:
 - No `completed_tasks` or `failed_tasks` on the task object (derived from progress file counts).
 - No `overall_status` on the task object (derived from aggregate of progress files).
 - No `status` or `completed` on waves (derived from progress files of agents in each wave).
+
+### plan.json
+
+`dashboards/{dashboardId}/plan.json` is the canonical current task specification for a tracked swarm. Workers read it before implementation to get the shared context, task approach, dependencies, file list, critical constraints, and success criteria. It is not a lifecycle store; progress files remain authoritative for status, timing, summaries, logs, and deviations.
 
 ### logs.json
 
@@ -294,13 +298,13 @@ After each worker completion, when new tasks become available:
 
 ---
 
-## Task File Updates
+## Companion Task File Updates
 
-The master task file at `{tracker_root}/tasks/{date}/parallel_{name}.json` is the authoritative task record. The master updates it on every worker completion.
+If a companion task file exists at `{tracker_root}/tasks/{date}/parallel_{name}.json`, the master may update it on worker completion for history and CLI compatibility. It is no longer the canonical active task spec; `dashboards/{dashboardId}/plan.json` is the canonical spec and progress files are the lifecycle record.
 
 ### On Agent Completion
 
-Read the task file. Find the task by ID:
+Read the companion task file. Find the task by ID:
 
 - Set `status` to `"completed"` or `"failed"`.
 - Write `summary` with the agent's SUMMARY line.
@@ -316,7 +320,7 @@ Same as completion, but:
 
 ### On Overall Completion
 
-Update the wave statuses to reflect final state (`"completed"` or `"failed"` as appropriate).
+Optionally update the companion wave statuses to reflect final state (`"completed"` or `"failed"` as appropriate). The dashboard derives final state from progress files.
 
 ---
 
@@ -494,4 +498,3 @@ The master's last statusing action is the comprehensive swarm report, delivered 
 - [Master Agent Overview](./overview.md) -- Role definition, constraints, and responsibilities.
 - [Planning Protocol](./planning.md) -- Task decomposition, dependency mapping, wave grouping, and prompt writing.
 - [Dispatch Protocol](./dispatch-protocol.md) -- Eager dispatch, dependency-driven dispatch, pipeline flow, and error handling.
-

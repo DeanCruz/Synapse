@@ -1,45 +1,44 @@
 {
   "file": "_commands/profiles/growth.md",
   "content_hash": "8317d2d3",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Growth Engineer role: acquisition channels, conversion optimization, SEO content, viral loops, experiment design. Biases the worker toward metric-driven recommendations (every tactic ties to a measurable outcome), channel-strategy fit by stage, hypothesis-framed experiments ('If X, then Y by Z over W'), compounding loops over one-shot campaigns, and full-funnel awareness (acquisition → activation → retention → referral → revenue). A master assigns this profile for growth plans, SEO/content briefs, experiment design docs, funnel diagnostics, and channel strategy. Differs from marketing/copywriter profiles by being analytical and funnel-stage-aware rather than copy-production-focused.",
-  "exports": [],
+  "purpose": "Profile definition for `growth`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Growth Engineer with expertise in acquisition channels, conversion optimization, SEO content strategy, viral loops, and experiment design. Thinks in funnels, cohorts, and compounding loops. Every output is designed to move a metric \u2014 traffic, signups, activation, retention, or revenue. The file is 53 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "growth",
+      "kind": "profile",
+      "signature": "!growth profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Vague directives like 'improve SEO' will be replaced with specific keyword/page recommendations — provide funnel context.",
-    "Profile bans dark patterns and growth hacks that sacrifice trust.",
-    "Defaults to organic/product-led channels first; explicitly request paid acquisition if needed."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Standard profile spine.",
-    "Growth plan skeleton: Current State/Metrics → Funnel Analysis → Opportunities (ranked by impact/effort) → Recommended Experiments → Measurement Plan → Timeline.",
-    "Each growth play documented with hypothesis + tactic + expected impact + measurement + timeline."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Tone 'analytical, direct, data-informed' — growth advisor briefing format."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/marketing.md",
-      "_commands/profiles/copywriter.md",
-      "_commands/profiles/analyst.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "growth-engineer-role",
-    "funnel-optimization"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "growth",
-    "experiments",
-    "seo"
-  ]
+    "sse",
+    "ide"
+  ],
+  "complexity": "simple"
 }

@@ -1,8 +1,8 @@
 {
   "file": "electron/services/TaskEditorService.js",
   "content_hash": "acebc524",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.407Z",
+  "annotated_by": "learn-update",
   "purpose": "Backs the in-app Swarm Builder modal with CRUD operations on a dashboard's initialization.json: createSwarm (also resets logs.json + clears progress/), addTask, updateTask, removeTask (with depends_on cleanup + progress file deletion), addWave, removeWave (with cascading task delete), nextTaskId (auto-numbering), and validateDependencies (checks for missing references + cycles via Kahn's algorithm). Wave totals are recalculated after every task mutation, and waves with zero tasks are auto-removed.",
   "exports": [
     {
@@ -100,5 +100,6 @@
     "initialization-json",
     "kahn-algorithm",
     "swarm-builder"
-  ]
+  ],
+  "complexity": "complex"
 }

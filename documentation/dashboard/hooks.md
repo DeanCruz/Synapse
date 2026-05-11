@@ -263,10 +263,10 @@ Per-dashboard project path storage using localStorage.
 
 ```javascript
 // Get the project path for a dashboard
-const path = getDashboardProject('dashboard1');  // string | null
+const path = getDashboardProject('71894a');  // string | null
 
 // Save a project path for a dashboard
-saveDashboardProject('dashboard1', '/path/to/project');
+saveDashboardProject('71894a', '/path/to/project');
 
 // Get all dashboard-to-project mappings
 const map = getAllDashboardProjects();  // { [dashboardId]: path }

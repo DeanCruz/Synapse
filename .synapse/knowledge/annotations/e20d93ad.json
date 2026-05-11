@@ -1,0 +1,81 @@
+{
+  "file": "src/ui/pages/code/subpages/dashboards/components/BottomPanel.jsx",
+  "content_hash": "f2f2cc88",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "BottomPanel participates in the dashboards subpage. It renders live swarm state by combining initialization plans, worker progress files, queue/output data, dependency lines, and detail panels without mutating dashboard initialization data from the renderer.",
+  "exports": [
+    {
+      "name": "BottomPanel",
+      "kind": "component",
+      "signature": "default function BottomPanel(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState"
+    ],
+    "src/ui/pages/code/subpages/dashboards/components/LogPanel.jsx": [
+      "LogPanel"
+    ],
+    "src/ui/pages/code/subpages/dashboards/components/TerminalView.jsx": [
+      "TerminalView"
+    ],
+    "src/ui/pages/code/subpages/code-explorer/components/ProblemsPanel": [
+      "ProblemsPanel"
+    ],
+    "src/ui/pages/code/subpages/code-explorer/components/DebugConsolePanel": [
+      "DebugConsolePanel"
+    ],
+    "src/ui/utils/dashboardProjects": [
+      "getDashboardProject"
+    ]
+  },
+  "gotchas": [
+    "Dashboard UI consumes merged initialization plus worker progress; lifecycle state comes from progress files, not mutation of initialization.json after planning."
+  ],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/pages/code/subpages/code-explorer/components/DebugConsolePanel",
+      "src/ui/pages/code/subpages/code-explorer/components/ProblemsPanel",
+      "src/ui/pages/code/subpages/dashboards/components/LogPanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/TerminalView.jsx",
+      "src/ui/utils/dashboardProjects"
+    ],
+    "depended_by": [
+      "src/ui/pages/code/subpages/code-explorer/CodeExplorerPage.jsx",
+      "src/ui/pages/code/subpages/dashboards/DashboardsPage.jsx"
+    ],
+    "related": [
+      "src/server/services/DashboardService.js",
+      "src/ui/hooks/useDashboardData.js"
+    ]
+  },
+  "domains": [
+    "react-ui",
+    "dashboard-control-plane",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "dashboard",
+    "swarm"
+  ],
+  "complexity": "complex"
+}

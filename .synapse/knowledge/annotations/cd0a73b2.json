@@ -1,60 +1,43 @@
 {
   "file": "agent/core/dashboard_features.md",
-  "content_hash": "dc0771c7",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "1ca6a915",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The user-and-agent-facing reference for what the Synapse dashboard does, how it merges initialization.json (static plan) with per-worker progress files (dynamic lifecycle) into the live UI, and what the worker progress protocol implies for that rendering. Covers layout modes (Waves vs Chains), dependency lines (BFS pathfinding through corridor gaps in Wave mode), the multi-dashboard sidebar with its strict dashboard-selection priority chain (chat-spawned MANDATORY ISOLATION > explicit --dashboard flag > ask user), the reserved 'ide' dashboard, the six stat cards (Total/Completed/In Progress/Failed/Pending/Elapsed) all derived from progress files, the log panel with deviation filter, the popup log box, the amber permission popup tied to logs at level 'permission', the seven worker stages, and the context-savings comparison between old (single status.json) and new (dashboards/{id}/) architectures. Also includes the canonical Synapse directory structure.",
+  "purpose": "Agent protocol/control-plane instruction document: Dashboard Features. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: The Synapse dashboard provides real-time visibility into swarm execution. It merges static plan data from `initialization.json` with dynamic lifecycle data from worker progress files to produce the combined view. The file is 304 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Chat-spawned agents are bound UNCONDITIONALLY to their chat's dashboard via system prompt directive — they have NO access to any other dashboard. The --dashboard flag does NOT override this binding.",
-    "Dashboard IDs are 6-character hex strings (crypto.randomBytes(3).toString('hex')) — legacy 'dashboardN' IDs still supported for backward compatibility.",
-    "The 'ide' dashboard is permanently reserved and cannot be deleted or used for swarm execution. It always exists. Never write swarm initialization data there.",
-    "All stats are DERIVED from progress files — counter maintenance was deliberately eliminated. The dashboard counts progress files by status; there is no completed_tasks/failed_tasks counter to update.",
-    "Elapsed timer freezes only when ALL workers have completed_at set — even one in-progress worker keeps the timer running.",
-    "Progress files are EPHEMERAL — they exist only during the active swarm. They're cleared by the master when initializing a new swarm.",
-    "Initialization.json is write-once except for the documented circuit-breaker auto-replan exception — never update it during normal execution.",
-    "The amber permission popup is triggered ONLY by master-written logs at level 'permission' — workers don't write permission logs."
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files.",
+    "Guide description may be narrow: `!guide` remains a command-decision aid, but the app also exposes an in-app markdown Guide modal backed by documentation/guide via GuideService and IPC."
   ],
   "patterns": [
-    "Dashboard merge: initialization.json (plan) + progress/{id}.json (lifecycle) merged client-side to render agent cards.",
-    "Dashboard selection priority: chat-spawned directive > explicit --dashboard flag > ask user (never auto-scan/auto-select).",
-    "Dependency lines drawn via BFS pathfinding through corridor gaps; lines never cross cards or title headers.",
-    "Hover interaction model: hover line → blue glow; hover card → its needs blue, things it blocks red, unrelated lines dim.",
-    "Live update flow: worker writes progress file → server fs.watch detects → SSE 'agent_progress' broadcast → React re-render."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Layout type stored in task.type field of initialization.json: 'Waves' or 'Chains'.",
-    "task.project_root field on initialization.json identifies which project a swarm targets (multi-project support).",
-    "Log levels: info, warn, error, debug, permission, deviation — with permission and deviation triggering distinct UI behaviors."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/core/data_architecture.md"
-    ],
-    "depended_by": [
-      "CLAUDE.md",
-      "agent/instructions/dashboard_resolution.md",
-      "agent/master/dashboard_protocol.md",
-      "agent/master/ui_map.md"
-    ],
-    "related": [
-      "agent/worker/progress_reporting.md",
-      "agent/master/dashboard_writes.md",
-      "src/server/services/WatcherService.js",
-      "src/ui/App.jsx"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "core-conventions",
-    "dashboard-architecture"
+    "agent-protocol",
+    "core"
   ],
   "tags": [
     "markdown",
+    "agent-instructions",
     "core",
     "dashboard",
-    "ui",
-    "sse",
-    "rendering"
-  ]
+    "progress",
+    "initialization-json",
+    "guide",
+    "profile"
+  ],
+  "complexity": "complex"
 }

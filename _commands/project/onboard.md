@@ -20,7 +20,7 @@ Produces a comprehensive orientation of the project — what it does, how it's s
 ### Step 1: Discover the Project
 
 1. List key directories in `{project_root}`
-2. Read `{project_root}/.synapse/toc.md` for the semantic overview (if it exists)
+2. Query `{project_root}/.synapse/knowledge/manifest.json` and related `.synapse/knowledge/*` indexes for semantic orientation (if they exist)
 3. Read the project's `CLAUDE.md` for architecture and conventions
 4. Check for `package.json`, `tsconfig.json`, or similar to identify tech stack
 5. Check for `.env.example` files to understand required configuration

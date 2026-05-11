@@ -99,7 +99,7 @@ export default function DashboardsPage() {
   const task = currentStatus?.active_task ?? null;
   const taskType = task?.type ?? 'Waves';
   const hasTask = !!task?.name;
-  const agents = currentStatus?.agents ?? [];
+  const agents = Array.isArray(currentStatus?.agents) ? currentStatus.agents : [];
 
   function findAgent(id) {
     return agents.find(a => a.id === id) || null;

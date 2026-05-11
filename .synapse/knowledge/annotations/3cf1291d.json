@@ -1,0 +1,50 @@
+{
+  "file": "_commands/Synapse/p_product_research.md",
+  "content_hash": "e31eaa1f",
+  "annotated_at": "2026-05-11T01:54:48Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Command specification for `!p_product_research`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: > ## NON-NEGOTIABLE RULES \u2014 READ BEFORE ANYTHING ELSE > > **1. You are the PIPELINE MASTER.** You orchestrate three stages in strict sequence: `!p_research` \u2192 `!p_synthesize` \u2192 `!p_product_plan`. You do NOT skip stages. You do NOT reorder stages. You do NOT collapse them into a single dashboard. Each stage runs as its own full-tracking swarm with its own dashboard. > > **2. The PROMPT IS PERSISTED FIRST.** Before any worker is dispatched, write ` The file is 475 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!p_product_research",
+      "kind": "command",
+      "signature": "!p_product_research {prompt}"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
+  ],
+  "patterns": [
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "p_track-era planning pattern: plan.json carries shared context and task entries before initialization.json/progress files handle dashboard rendering and lifecycle state.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
+  ],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "command-system",
+    "Synapse"
+  ],
+  "tags": [
+    "markdown",
+    "command-doc",
+    "slash-command",
+    "p-product-research",
+    "swarm-command",
+    "dashboard",
+    "progress",
+    "plan-json"
+  ],
+  "complexity": "complex"
+}

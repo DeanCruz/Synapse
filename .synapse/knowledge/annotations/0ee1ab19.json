@@ -1,45 +1,45 @@
 {
   "file": "_commands/project/contracts.md",
   "content_hash": "426bb281",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !contracts slash command — read-only audit of API contracts between frontend and backend. Greps frontend for fetch/axios/useSWR/useQuery patterns to extract method+endpoint+request shape+expected response, then greps backend for route definitions (Express/Hono/Fastify/Next.js API routes/Firebase onRequest|onCall) to extract handler shapes. Cross-matches each frontend call to its backend handler, comparing request shapes, response shapes, auth requirements, and error handling. Flags orphans (backend with no caller, frontend calls to non-existent endpoints) and drift (key casing, missing fields). Output is a contract-status table plus mismatch details and recommendations. Master runs serially.",
-  "exports": [],
+  "purpose": "Command specification for `!contracts`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: Audits all API contracts between frontend and backend layers within the project. Lists every endpoint the frontend calls, verifies each has a backend handler, checks that request/response shapes match, and flags orphaned or undocumented endpoints. The file is 108 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!contracts",
+      "kind": "command",
+      "signature": "!contracts \u2014 API Contract Audit"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Check actual code, not documentation — documentation lies, code is truth.",
-    "Auth/middleware context is mandatory in flagging: an admin-only endpoint where the frontend doesn't send admin tokens must be flagged even if shapes match.",
-    "Both directions of orphan checking: backend endpoints with no frontend caller (might be external API) AND frontend calls to non-existent endpoints (broken features waiting to happen).",
-    "Key-casing mismatches (avatarUrl vs avatar_url) are real contract drift, not cosmetic — surface them."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Bidirectional matching: frontend calls ↔ backend handlers → compare each pair.",
-    "Five-axis comparison: endpoint exists, request shape, response shape, auth, error handling."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Read-only — never modifies files.",
-    "Serial execution.",
-    "Reports orphans separately from mismatches."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/project/trace.md",
-      "_commands/project/review.md",
-      "_commands/project/health.md"
-    ]
+    "related": []
   },
   "domains": [
-    "auditing",
-    "code-review"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
-    "api-audit",
-    "cross-layer",
-    "read-only"
-  ]
+    "slash-command",
+    "contracts",
+    "project-command"
+  ],
+  "complexity": "moderate"
 }

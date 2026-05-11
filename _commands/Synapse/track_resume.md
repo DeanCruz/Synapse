@@ -69,7 +69,7 @@ Read these **in parallel**:
 
 1. **Resolve `{project_root}`** from `task.project_root` in `initialization.json`. If not present, resolve using the standard resolution order (see `{tracker_root}/CLAUDE.md` — Path Convention section).
 2. **Read `{project_root}/CLAUDE.md`** if it exists — you need project conventions for worker prompts.
-3. If `{project_root}/.synapse/toc.md` exists, read it for orientation.
+3. If `{project_root}/.synapse/knowledge/manifest.json` exists, query the project knowledge graph for orientation.
 
 ### Step 6: Classify every task
 

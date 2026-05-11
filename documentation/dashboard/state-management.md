@@ -84,8 +84,9 @@ const initialState = {
   pendingPermission: null,               // { pid, toolName, toolInput, requestId, toolUseId, timestamp }
 
   // View routing
-  activeView: 'dashboard',              // 'dashboard' | 'home' | 'swarmBuilder' | 'claude' | 'ide' | 'git'
-  activeModal: null,                     // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor'
+  appMode: 'chat',                       // 'chat' | 'code'
+  activeView: 'dashboard',               // Legacy-compatible Code subview state
+  activeModal: null,                     // null | 'commands' | 'guide' | 'project' | 'settings' | 'planning' | 'taskEditor'
   modalDashboardId: null,                // Which dashboard a modal was opened for
 
   // Claude chat state
@@ -111,13 +112,13 @@ const initialState = {
   // Connection state
   connected: false,                      // Whether IPC listeners are active
 
-  // IDE state
-  ideWorkspaces: [],                     // [{ id, path, name, dashboardId? }] persisted to localStorage
-  ideActiveWorkspaceId: null,            // Active workspace ID
-  ideOpenFiles: {},                      // { [workspaceId]: [{ id, path, name, isDirty }] }
-  ideActiveFileId: {},                   // { [workspaceId]: string }
-  ideFileTrees: {},                      // { [workspaceId]: treeData }
-  ideSidebarView: 'explorer',            // Which sidebar panel is shown in IDE
+  // Code Explorer state
+  ideWorkspaces: [],                     // Legacy field; current Code Explorer derives workspace from selected dashboard project
+  ideActiveWorkspaceId: null,            // Legacy field retained for compatibility
+  ideOpenFiles: {},                      // { [projectPath]: [{ id, path, name, isDirty }] }
+  ideActiveFileId: {},                   // { [projectPath]: string }
+  ideFileTrees: {},                      // { [projectPath]: treeData }
+  ideSidebarView: 'explorer',            // Which sidebar panel is shown in Code Explorer
   ideChatOpen: false,                    // Whether IDE inline chat is open
 
   // Debug state
@@ -132,8 +133,8 @@ const initialState = {
   diagnostics: {},                       // { [filePath]: [{ line, column, endLine, endColumn, message, severity, source }] }
 
   // Git Manager state
-  gitRepos: [],                          // [{ id, path, name }] persisted to localStorage
-  gitActiveRepoId: null,                 // Active repo ID
+  gitRepos: [],                          // Repositories discovered under the selected dashboard project
+  gitActiveRepoId: null,                 // Active discovered repo ID/path
   gitStatus: null,                       // { staged: [], unstaged: [], untracked: [] }
   gitBranches: [],                       // [{ name, current, tracking, ahead, behind }]
   gitCurrentBranch: null,                // string — name of current branch
@@ -254,10 +255,10 @@ These actions update chat state for non-active dashboards (e.g., when a worker s
 
 | Action | Payload | Effect |
 |---|---|---|
-| `IDE_OPEN_WORKSPACE` | `{ id?, path, name }` | Opens a workspace (or switches to it if already open). Persists to localStorage. |
-| `IDE_CLOSE_WORKSPACE` | `{ workspaceId }` | Closes a workspace, cleans up open files, file tree, active file. Auto-switches if closing active. |
-| `IDE_SWITCH_WORKSPACE` | `{ workspaceId }` | Switches to a different workspace |
-| `IDE_LINK_WORKSPACE_DASHBOARD` | `{ workspaceId, dashboardId }` | Associates a workspace with a dashboard ID |
+| `IDE_OPEN_WORKSPACE` | `{ id?, path, name }` | Legacy compatibility action. Current Code Explorer normally uses the selected dashboard's project path. |
+| `IDE_CLOSE_WORKSPACE` | `{ workspaceId }` | Legacy compatibility action for cleaning workspace-scoped editor state. |
+| `IDE_SWITCH_WORKSPACE` | `{ workspaceId }` | Legacy compatibility action for switching workspace-scoped editor state. |
+| `IDE_LINK_WORKSPACE_DASHBOARD` | `{ workspaceId, dashboardId }` | Legacy compatibility action; current dashboard-project binding is managed through ProjectModal/dashboard project helpers. |
 | `IDE_SET_FILE_TREE` | `{ workspaceId, tree }` | Sets the file tree for a workspace |
 | `IDE_UPDATE_FILE_TREE_NODE` | `{ workspaceId, nodePath, children }` | Updates children of a specific tree node (lazy loading) |
 | `IDE_OPEN_FILE` | `{ workspaceId, file: { path, name } }` | Opens a file (or switches to it if already open) |
@@ -292,9 +293,9 @@ These actions update chat state for non-active dashboards (e.g., when a worker s
 
 | Action | Payload | Effect |
 |---|---|---|
-| `GIT_OPEN_REPO` | `{ id?, path, name }` | Opens a repo (or switches to it if already open). Persists to localStorage. |
-| `GIT_CLOSE_REPO` | `{ repoId }` | Closes a repo tab, auto-switches if closing active |
-| `GIT_SWITCH_REPO` | `{ repoId }` | Switches to a different repo, resets git data |
+| Git repository registration | `{ id?, path, name }` | Legacy compatibility path. Current Git Manager discovers repositories under the selected dashboard project and selects from those repository tabs. |
+| `GIT_CLOSE_REPO` | `{ repoId }` | Legacy compatibility action for repo-tab cleanup. |
+| `GIT_SWITCH_REPO` | `{ repoId }` | Switches to a discovered repo, resets git data |
 | `GIT_SET_STATUS` | `{ status }` | Sets `gitStatus` (staged/unstaged/untracked) |
 | `GIT_SET_BRANCHES` | `{ branches }` | Sets `gitBranches` array |
 | `GIT_SET_CURRENT_BRANCH` | `{ branch }` | Sets `gitCurrentBranch` |
@@ -333,7 +334,7 @@ Chat messages are persisted to localStorage with debounced writes, now with per-
 - **Tab key format:** `synapse-claude-tabs-{dashboardId}` -- stores the tab list `[{ id, name }]`
 - **Trigger actions:** `CLAUDE_SET_MESSAGES`, `CLAUDE_APPEND_MSG`, `CLAUDE_UPDATE_MESSAGES`
 - **Debounce:** 500ms delay to avoid serializing on every streaming delta
-- **Migration:** Old global key `synapse-claude-messages` is migrated to `dashboard1` default tab on first load
+- **Migration:** Old global key `synapse-claude-messages` is migrated to the active dashboard's default tab on first load
 - **Max messages:** Hard cap of 200 messages per tab. When exceeded, older messages are trimmed and a `[N older messages trimmed]` system notice is inserted.
 
 The persistence layer wraps `appReducerCore` in `appReducer`:
@@ -348,13 +349,13 @@ function appReducer(state, action) {
 }
 ```
 
-### IDE Workspaces
+### Code Explorer Project Binding
 
-Saved to `localStorage.getItem('synapse-ide-workspaces')` as JSON array of `[{ id, path, name }]`. Updated on open/close/link workspace actions.
+Current Code Explorer state is keyed from the selected dashboard's project path. Legacy `synapse-ide-workspaces` state may still be present for compatibility, but users do not open arbitrary workspace tabs in the current UI.
 
 ### Git Repos
 
-Saved to `localStorage.getItem('synapse-git-repos')` as JSON array of `[{ id, path, name }]`. Updated on open/close repo actions.
+Current Git Manager discovers repositories under the selected dashboard project and stores the active repo selection per dashboard. Legacy `synapse-git-repos` state may still exist for compatibility but is no longer the primary repo model.
 
 ### Theme
 

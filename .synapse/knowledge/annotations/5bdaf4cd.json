@@ -1,44 +1,45 @@
 {
   "file": "_commands/project/env_check.md",
   "content_hash": "8f6c44ad",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !env_check slash command — read-only audit verifying that every environment variable referenced in code exists in corresponding .env files, and that config keys are consistent across client/server contexts. Greps for process.env.X (Node), import.meta.env.X (Vite), NEXT_PUBLIC_X (Next.js), Deno.env.get, os.environ/os.getenv (Python), defineString/defineInt (Firebase Functions), and ${VAR} substitution. Locates all .env, .env.local, .env.development, .env.production, .env.example, .env.template, firebase.json files. Cross-references and reports: missing variables, missing-from-template variables, undocumented variables (in .env but not .env.example), and cross-context naming inconsistencies (e.g., NEXT_PUBLIC_API_URL vs API_BASE_URL).",
-  "exports": [],
+  "purpose": "Command specification for `!env_check`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: Verifies that all environment variables referenced in code across the project actually exist in the corresponding `.env` files, and that config values are consistent across different environments. The file is 93 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!env_check",
+      "kind": "command",
+      "signature": "!env_check \u2014 Environment Variable Consistency Audit"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "NEVER output env var VALUES — only key names, existence, and consistency. Outputting values would leak secrets.",
-    "Never modify .env files — report only. The user manages secrets.",
-    "Cross-context naming drift (client uses NEXT_PUBLIC_API_URL, server uses API_BASE_URL) must be flagged as warning even when both technically exist — they may hold mismatched values.",
-    "Undocumented vars (present in .env but not in .env.example) are documentation gaps — surface them."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Multi-language env var pattern detection: Node/Vite/Next.js/Deno/Python/Firebase all checked.",
-    "Three-axis check: code references → .env files → .env.example completeness."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Read-only.",
-    "Serial execution.",
-    "Output keys never values (security)."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/project/health.md",
-      "_commands/project/contracts.md"
-    ]
+    "related": []
   },
   "domains": [
-    "auditing",
-    "env-config"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
-    "env-audit",
-    "security",
-    "read-only"
-  ]
+    "slash-command",
+    "env-check",
+    "project-command"
+  ],
+  "complexity": "simple"
 }

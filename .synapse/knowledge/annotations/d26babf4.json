@@ -1,8 +1,8 @@
 {
   "file": "electron/main.js",
   "content_hash": "d01a1764",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.404Z",
+  "annotated_by": "learn-update",
   "purpose": "Electron main process entry point. Creates the BrowserWindow with persisted dimensions/position from settings, registers a custom 'app://' privileged protocol scheme (synchronously, BEFORE app.whenReady) for production asset loading from the project root / dist/ / public/ subdirectories, attaches preload.js to the renderer with contextIsolation enabled and webviewTag enabled (needed for the Live Preview tab), and wires app lifecycle: on whenReady it initializes settings, sets the macOS dock icon, registers all IPC handlers via registerIPCHandlers, creates the window, and bootstraps AutoUpdateService with a forwarding callback that pushes update events to the renderer. The dev/prod load split is determined by VITE_DEV_SERVER_URL env var: dev mode loads from Vite (HMR), production loads from app://synapse/dist/index.html. On window-all-closed, it stops watchers, disposes the auto-updater, and kills all spawned worker child processes via ClaudeCodeService.killAllWorkers() before app.quit() — without this, orphaned Claude CLI workers would survive past app exit.",
   "exports": [
     {
@@ -87,5 +87,6 @@
     "protocol",
     "lifecycle",
     "auto-update"
-  ]
+  ],
+  "complexity": "moderate"
 }

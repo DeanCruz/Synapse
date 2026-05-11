@@ -1,0 +1,76 @@
+{
+  "file": "src/ui/pages/code/subpages/dashboards/components/WavePipeline.jsx",
+  "content_hash": "eb381797",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "WavePipeline participates in the dashboards subpage. It renders live swarm state by combining initialization plans, worker progress files, queue/output data, dependency lines, and detail panels without mutating dashboard initialization data from the renderer.",
+  "exports": [
+    {
+      "name": "WavePipeline",
+      "kind": "component",
+      "signature": "default function WavePipeline(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/utils/constants": [
+      "STATUS_COLORS",
+      "STATUS_BG_COLORS"
+    ],
+    "src/ui/pages/code/subpages/dashboards/components/AgentCard.jsx": [
+      "AgentCard"
+    ],
+    "src/ui/utils/dependencyLines": [
+      "drawDependencyLines",
+      "drawSiblingLines",
+      "setupCardHoverEffects"
+    ],
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch"
+    ]
+  },
+  "gotchas": [
+    "Dashboard UI consumes merged initialization plus worker progress; lifecycle state comes from progress files, not mutation of initialization.json after planning."
+  ],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/pages/code/subpages/dashboards/components/AgentCard.jsx",
+      "src/ui/utils/constants",
+      "src/ui/utils/dependencyLines"
+    ],
+    "depended_by": [
+      "src/ui/pages/code/subpages/dashboards/DashboardsPage.jsx"
+    ],
+    "related": [
+      "src/server/services/DashboardService.js",
+      "src/ui/hooks/useDashboardData.js"
+    ]
+  },
+  "domains": [
+    "react-ui",
+    "dashboard-control-plane",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "dashboard",
+    "swarm"
+  ],
+  "complexity": "moderate"
+}

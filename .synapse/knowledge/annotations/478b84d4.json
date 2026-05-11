@@ -1,50 +1,47 @@
 {
   "file": "_commands/project/review.md",
   "content_hash": "b6518a29",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !review slash command — code review of recent changes (uncommitted, staged, or specific commits) WITH full project context. Identifies changed files via git diff (no arg = all uncommitted, 'staged' = git diff --staged, range like HEAD~3..HEAD = git diff range, directory = scoped diff). Reads each changed file fully (not just diff) plus project CLAUDE.md, finds consumers of changed shared types/endpoints. Reviews for code quality (CLAUDE.md convention compliance, bugs, edge cases, error handling, security), cross-layer impact (broken contracts, shared types, missing co-changes, env/config), and completeness (related files needing updates, missing tests, doc updates). Outputs Issues (Critical/Warning/Suggestion) + Cross-Layer Impact + Missing Changes + Summary. Read-only.",
-  "exports": [],
+  "purpose": "Command specification for `!review`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: Reviews recent code changes (staged, unstaged, or specific commits) with full project context. Checks for broken contracts, inconsistent types, convention violations, missing updates, and general code quality. The file is 107 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!review",
+      "kind": "command",
+      "signature": "!review \u2014 Code Review"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Use git diff against base/range — do NOT scan full repo. The argument controls the diff range.",
-    "Read the FULL file (not just the diff) for context — diff hunks alone miss surrounding logic.",
-    "Cross-layer impact is the unique value: single-file bugs are easy; contract breakage across frontend/backend/config is what this command catches.",
-    "Be honest, not harsh — flag REAL issues, don't nitpick style preferences not in the project's CLAUDE.md.",
-    "Conventions sourced from project CLAUDE.md — if absent, fall back to obvious code-quality issues."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Diff-scoped reading: identify changed files → read each fully → check consumers of touched types/endpoints.",
-    "Three-axis review: code quality / cross-layer impact / completeness.",
-    "Severity classification: Critical / Warning / Suggestion."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
   ],
   "conventions": [
-    "Read-only.",
-    "Serial execution.",
-    "Argument forms: blank, 'staged', commit range, directory."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "{project_root}/CLAUDE.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/project/contracts.md",
-      "_commands/project/health.md",
-      "_commands/project/scope.md"
-    ]
+    "related": []
   },
   "domains": [
-    "code-review",
-    "auditing"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
+    "slash-command",
     "review",
-    "git-diff",
-    "cross-layer",
-    "read-only"
-  ]
+    "project-command",
+    "claude",
+    "sse",
+    "git"
+  ],
+  "complexity": "moderate"
 }

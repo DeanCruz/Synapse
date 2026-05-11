@@ -1,49 +1,43 @@
 {
   "file": "Synapse.md",
-  "content_hash": "a918d5a0",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "9ecfc196",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The product whitepaper / architectural narrative for Synapse — ~515 lines describing what Synapse is, why context preservation matters, why the developer must stay in the loop, and how every subsystem (Electron main process services, React frontend, SSE server, dispatch engine, dashboard, swarm builder, chat, IDE, git, live preview, PKI, multi-provider support) fits together. Reads as a long-form essay rather than a reference; intended for stakeholders, designers, and anyone trying to understand the philosophy and architecture without diving into code. Includes hand-drawn ASCII architecture diagrams that count exact file totals and line totals for each layer.",
+  "purpose": "Long-form product and architecture explanation for Synapse, covering problem framing, UI areas, dashboard behavior, command categories, and developer workflow. Key content: Synapse is a native desktop application for orchestrating parallel AI agent swarms. It decomposes complex software engineering tasks into independent units, dispatches multiple AI agents simultaneously (Claude Code and Codex), tracks every dependency between them, and gives the developer a live dashboard, chat interface, code explorer, git manager, and live preview to watch, intervene, and steer the entire operation in real time. The file is 515 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "ASCII counts in this file ('17 files, ~7000 lines', '25+ files, ~6000 lines', '12 files, ~2300 lines') are point-in-time snapshots from 2026-04-17 — they are NOT auto-updated and will drift as the codebase grows.",
-    "Calls out specific class/service names (SwarmOrchestrator, ClaudeCodeService, CodexService, PromptBuilder, etc.) — these correspond 1:1 to electron/services/* but renaming a service in code without updating this file produces silent doc rot.",
-    "Mentions Codex models 'GPT-5.4, GPT-5.4-Mini' — these are aspirational/forward-looking model names; verify against electron/services/CodexService.js before quoting.",
-    "States 'No database. No external service.' — this is true today, but the live preview webview and the optional GitHub auto-updater do hit the network, so the claim is about state storage, not network isolation.",
-    "Describes the SSE server as if it were a separate process; it actually runs inside Electron's main process via src/server/index.js (per package.json main = electron/main.js)."
+    "Command-count drift risk: current filesystem has 35 _commands/Synapse markdown commands and 24 _commands/project markdown commands, plus 15 profiles; hard-coded command counts in docs can become stale quickly."
   ],
   "patterns": [
-    "Architecture-as-narrative: each subsystem has a section that opens with a one-paragraph statement of purpose, then bullets the concrete capabilities — designers can read it top-to-bottom without code knowledge.",
-    "Pattern: every claim about agent behavior is anchored to a concrete file (e.g., 'see `electron/services/SwarmOrchestrator.js`') so the doc remains auditable.",
-    "Comparison framing: 'A conductor does not pick up a violin mid-symphony' / 'Air traffic controllers don't fly the planes' — recurring metaphors used to motivate the developer-in-the-loop philosophy."
+    "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Uses Unicode box-drawing characters (├──, └──) for architecture diagrams (unlike CLAUDE.md which uses ASCII).",
-    "Section dividers are `---` between every major topic.",
-    "Em-dashes are Unicode `—`, not `--`.",
-    "All headings sentence-case after the H1 (`## How Context is Preserved and Optimized`)."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
     "related": [
-      "README.md",
-      "AGENTS.md",
-      "CLAUDE.md",
-      "documentation/"
+      "README.md"
     ]
   },
   "domains": [
     "project-docs",
-    "architecture-narrative",
-    "whitepaper"
+    "user-onboarding"
   ],
   "tags": [
     "markdown",
+    "top-level",
     "documentation",
-    "architecture",
-    "philosophy",
-    "design"
-  ]
+    "pki",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "profile"
+  ],
+  "complexity": "complex"
 }

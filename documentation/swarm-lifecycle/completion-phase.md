@@ -11,7 +11,7 @@ All workers returned (completed or failed)
     |
     v
 +----------------------------------+
-| 1. UPDATE MASTER TASK FILE       |
+| 1. READ PLAN/PROGRESS STATE      |
 |    Set overall_status             |
 |    Verify all task summaries      |
 +----------------------------------+
@@ -55,21 +55,22 @@ All workers returned (completed or failed)
 +----------------------------------+
 | 6. POST-SWARM CLEANUP            |
 |    Save to history/               |
-|    Update project TOC if needed   |
+|    Refresh knowledge graph if needed |
 |    Master resumes normal behavior |
 +----------------------------------+
 ```
 
 ---
 
-## Step 1: Update the Master Task File
+## Step 1: Read Plan and Progress State
 
-When all tasks have reached terminal state, the master updates the task file at `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`:
+When all tasks have reached terminal state, the master reads `dashboards/{dashboardId}/plan.json` and every worker progress file to confirm final status:
 
-- Set `<overall_status>` to `completed` (if all tasks succeeded or were repaired) or `failed` (if any tasks failed without recovery)
-- Verify that every task has its `<status>`, `<completed_at>`, and `<summary>` populated from earlier monitoring-phase updates
+- Verify every planned task has a terminal progress file or an explicit blocked/failure explanation.
+- Derive completed, failed, elapsed, and deviation counts from progress files.
+- Optionally update a companion task file at `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` if one was produced for history/CLI compatibility.
 
-The task file is the authoritative long-term record of the swarm. It contains the complete history: descriptions, context, dependency chains, status, summaries, logs, and timing for every task.
+`plan.json` is the canonical task specification for the completed swarm. The progress files are the authoritative lifecycle record. Companion task files are historical records when present.
 
 ---
 
@@ -263,7 +264,7 @@ The master must read ALL of the following data before compiling the report:
 
 1. **`{tracker_root}/dashboards/{dashboardId}/logs.json` in full** -- Analyze all entries for the current task
 2. **Every progress file** in `{tracker_root}/dashboards/{dashboardId}/progress/` -- Extract summaries, deviations, milestones, warnings, and logs from each worker
-3. **The master task file** at `{tracker_root}/tasks/{date}/parallel_{task_name}.json` -- Cross-reference planned vs. actual outcomes
+3. **`dashboards/{dashboardId}/plan.json`** -- Cross-reference planned vs. actual outcomes
 4. **`{tracker_root}/dashboards/{dashboardId}/metrics.json`** -- Include performance data from Step 4
 
 The master then synthesizes all gathered data into a structured final report. Every section marked REQUIRED must appear. Sections marked CONDITIONAL appear only when their trigger condition is met. The report is non-negotiable -- it must be comprehensive enough that a developer who was not present during the swarm can understand what happened, what changed, and what to do next.
@@ -363,7 +364,8 @@ If the task is self-contained: "No immediate follow-up required."}
 
 ### Artifacts
 
-- **Task file:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json`
+- **Plan JSON:** `{tracker_root}/dashboards/{dashboardId}/plan.json`
+- **Companion task file:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` if produced
 - **Plan:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_plan_{task_name}.md`
 - **Dashboard:** `{tracker_root}/dashboards/{dashboardId}/initialization.json`
 - **Logs:** `{tracker_root}/dashboards/{dashboardId}/logs.json`
@@ -404,12 +406,12 @@ After delivering the final report, the master saves a history summary to `{track
 }
 ```
 
-### Project TOC Update
+### Project Knowledge Graph Refresh
 
-If the swarm created, moved, or restructured files in the project, and a project TOC exists at `{project_root}/.synapse/toc.md`, the master updates it to reflect the new file structure.
+If the swarm created, moved, or restructured files in the project, the master refreshes `{project_root}/.synapse/knowledge/` via `!learn_update` so future planning uses current file relationships and annotations.
 
 This update is done only when:
-- A TOC already exists (the master does not create one during completion)
+- A knowledge graph already exists (the master does not bootstrap one during completion)
 - The swarm actually changed the project's file structure (new files, moved files, deleted files)
 
 ### Dashboard Data Preservation

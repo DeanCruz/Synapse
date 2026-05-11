@@ -1,33 +1,60 @@
 {
   "file": "documentation/swarm-lifecycle/planning-phase.md",
-  "content_hash": "5fefbddb",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "68098a8a",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Detailed walk-through of the planning phase: deep-thinking analysis, task decomposition, dependency mapping, layout choice (waves vs chains vs hybrid), shared-file conflict resolution, and final emission of plan.json. Documents the artifacts the planning phase produces and the quality gates the master applies before transitioning to dispatch.",
+  "purpose": "Documentation page for the swarm-lifecycle area: Planning Phase. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The planning phase is the most critical part of the swarm lifecycle. A well-planned swarm executes fast with zero confusion. A poorly-planned swarm produces broken code, conflicting edits, and wasted cycles. The master agent invests heavily in planning and never rushes it. The file is 618 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Skipping plan.json and going straight to initialization.json loses the rationale needed for replanning",
-    "Tasks needing more than 2-3 sentences of description are usually too big and should be split"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Spend more time planning than executing -- planning prevents most swarm failures"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "plan.json captures the why; initialization.json captures the what"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/completion-phase.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md"
+    ],
+    "related": [
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md"
+    ]
   },
   "domains": [
-    "swarm-lifecycle",
-    "planning"
+    "documentation",
+    "swarm-lifecycle"
   ],
   "tags": [
-    "planning",
-    "decomposition",
-    "plan-json"
-  ]
+    "markdown",
+    "documentation",
+    "swarm-lifecycle",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide",
+    "claude"
+  ],
+  "complexity": "complex"
 }

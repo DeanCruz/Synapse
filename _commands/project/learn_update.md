@@ -347,5 +347,5 @@ This ensures the PKI is fresh before agents use it for context gathering. The au
 - **If no changes are detected, exit immediately.** Report "PKI is up to date" and do not dispatch agents or rewrite any files.
 - **Update atomically.** When modifying manifest.json, domains.json, or patterns.json, read the full file, apply all changes in memory, and write the complete file. Never do partial writes or incremental appends.
 - **Include previous annotations in agent prompts for stale files.** When dispatching scan agents for stale files, the old annotation data must be included so the agent can compare and produce a minimal diff rather than regenerating from scratch.
-- **Do not modify files outside the PKI directory.** This command only writes to `{project_root}/.synapse/knowledge/`. It never modifies source code, TOC files, or other Synapse artifacts.
+- **Do not modify files outside the PKI directory.** This command only writes to `{project_root}/.synapse/knowledge/`. It never modifies source code, legacy markdown indexes, or other Synapse artifacts.
 - **Log the auto-trigger decision.** When running as an auto-trigger at swarm start, log whether the update was triggered and how many files were refreshed, so the user has visibility into background PKI maintenance.

@@ -1,33 +1,48 @@
 {
   "file": "documentation/worker-protocol/upstream-results.md",
   "content_hash": "118cfece",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Specifies how a worker with depends_on tasks must read upstream progress files before implementing. Workers extract status, summary, deviations (especially CRITICAL), milestones, and warning logs from each dependency to adapt their approach to what was actually built (vs what was planned). Defines the upstream-reading subroutine that runs during the reading_context stage.",
+  "purpose": "Documentation page for the worker-protocol area: Upstream Results Protocol. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: When a worker task depends on other tasks that ran before it, the worker **must** read those tasks' progress files and adapt to what was actually built. This is NON-NEGOTIABLE for any task with upstream dependencies. The file is 260 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "CRITICAL upstream deviations may invalidate the worker's planned approach -- must adapt before implementing",
-    "Failed upstream tasks may still produce useful partial output; assess whether to proceed"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Read-upstream-then-adapt pattern instead of assuming the plan held"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Worker logs a summary of upstream findings before transitioning to implementing"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/worker-protocol/overview.md",
+      "documentation/worker-protocol/progress-reporting.md"
+    ],
+    "related": [
+      "documentation/worker-protocol/overview.md"
+    ]
   },
   "domains": [
-    "worker-protocol",
-    "dependencies"
+    "documentation",
+    "worker-protocol"
   ],
   "tags": [
-    "upstream",
-    "depends-on",
-    "deviation-propagation"
-  ]
+    "markdown",
+    "documentation",
+    "worker-protocol",
+    "dashboard",
+    "progress",
+    "claude",
+    "sse",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

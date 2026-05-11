@@ -1,57 +1,71 @@
 {
   "file": "documentation/project-integration/pki-overview.md",
-  "content_hash": "4f98d1d1",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "e68270e6",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Reference for the Project Knowledge Index (PKI) -- a persistent, auto-accumulating knowledge layer at {project_root}/.synapse/knowledge/. Covers getting-started bootstrap, lifecycle architecture (BOOTSTRAP/ACCUMULATE/REFRESH/CONSUME), directory structure (manifest.json, annotations/, insights/, domains.json, patterns.json, queries/), five population mechanisms (!learn, worker annotations, staleness hook, !learn_update, post-swarm extraction), retrieval and consumption (worker retrieval + PromptBuilder injection), and master pre-planning integration.",
+  "purpose": "Documentation page for the project-integration area: Project Knowledge Index (PKI). It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Project Knowledge Index (PKI) is a **persistent, auto-accumulating knowledge layer** at `{project_root}/.synapse/knowledge/`. It gives future sessions deep operational understanding of the codebase -- gotchas, patterns, conventions, domain taxonomy, and file relationships -- without redundant exploration. The file is 230 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "PKI is auto-maintained -- workers mark stale via PostToolUse hook on file writes",
-    "Hash key for annotations = first 8 chars of SHA-256 of relative path",
-    "PromptBuilder.readPKIKnowledge() auto-injects into worker prompts during GUI swarms",
-    "Stale annotations remain usable but flagged with caveats",
-    "When >50 files need re-annotation, !learn_update suggests full !learn rebuild",
-    "Post-swarm knowledge extraction runs at Step 17G of completion protocol",
-    "PKI gets smarter every swarm -- feedback loop"
+    "PKI schema drift risk: domain_index, tag_index, and concept_map now live as sibling files beside manifest.json; manifest.json should not be treated as the only index container."
   ],
   "patterns": [
-    "Two-tier knowledge: per-file annotations + swarm-level insights",
-    "Domain/tag/concept indexes route queries to relevant annotations",
-    "Stale-flag-driven incremental refresh",
-    "Master pre-planning injection: gotchas > patterns > relationships > conventions priority on trim",
-    "PKI Quick-Route: !context queries PKI before falling back to grep/glob"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Annotations include: purpose, exports, imports, gotchas, patterns, conventions, relationships, domain, tags, complexity",
-    "Insights labeled by date and slug: {date}_{slug}.json",
-    "PKI items prefixed [PKI] in worker prompts",
-    "queries/ subdirectory is gitignored (regenerated)"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/project-integration/overview.md"
-    ],
-    "depended_by": [],
-    "related": [
-      "documentation/project-integration/toc-system.md",
       "documentation/data-architecture/pki-schemas.md",
       "_commands/project/learn.md",
+      "agent/instructions/tracker_worker_instructions.md",
       "_commands/project/learn_update.md",
+      "agent/_commands/p_track_completion.md",
       "agent/master/pki_integration.md",
-      "electron/services/PromptBuilder.js"
+      "agent/_commands/p_track_planning.md",
+      "agent/master/worker_prompts.md",
+      "_commands/project/context.md",
+      "documentation/project-integration/overview.md",
+      "documentation/project-integration/toc-system.md"
+    ],
+    "depended_by": [
+      "CLAUDE.md",
+      "documentation/project-integration/conventions.md",
+      "documentation/project-integration/overview.md",
+      "documentation/project-integration/project-setup.md",
+      "documentation/project-integration/toc-system.md"
+    ],
+    "related": [
+      "_commands/project/context.md",
+      "_commands/project/learn.md",
+      "_commands/project/learn_update.md",
+      "agent/_commands/p_track_completion.md",
+      "agent/_commands/p_track_planning.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "agent/master/pki_integration.md",
+      "agent/master/worker_prompts.md",
+      "documentation/data-architecture/pki-schemas.md",
+      "documentation/project-integration/overview.md",
+      "documentation/project-integration/toc-system.md"
     ]
   },
   "domains": [
-    "pki-docs",
-    "project-integration-docs"
+    "documentation",
+    "project-integration"
   ],
   "tags": [
     "markdown",
     "documentation",
+    "project-integration",
     "pki",
-    "knowledge",
-    "annotations",
-    "insights"
-  ]
+    "progress",
+    "claude",
+    "electron",
+    "sse"
+  ],
+  "complexity": "moderate"
 }

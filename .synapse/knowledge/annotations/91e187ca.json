@@ -1,8 +1,8 @@
 {
   "file": "electron/services/DebugService.js",
   "content_hash": "d9859152",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.406Z",
+  "annotated_by": "learn-update",
   "purpose": "In-process Node.js debugger via the Chrome DevTools Protocol (CDP). Spawns a child Node process with `--inspect-brk=0` (random port, break on first line), parses the `Debugger listening on ws://...` URL from stderr, opens a WebSocket using Node 22+ built-in global WebSocket, enables Debugger + Runtime domains, calls `Runtime.runIfWaitingForDebugger`, and exposes a high-level API to the renderer (setBreakpoint, removeBreakpoint, resume, pause, stepOver/Into/Out, evaluate, getVariables). Translates CDP events (Debugger.paused, Runtime.consoleAPICalled, Runtime.exceptionThrown) into renderer push events (debug-paused, debug-output, debug-resumed, debug-stopped). Single-session: only one debug process can run at a time.",
   "exports": [
     {
@@ -126,5 +126,6 @@
     "websocket",
     "cdp",
     "node-inspect"
-  ]
+  ],
+  "complexity": "complex"
 }

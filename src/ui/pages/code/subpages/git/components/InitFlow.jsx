@@ -31,6 +31,8 @@ function SpinnerIcon() {
 
 export default function InitFlow({ repoPath, repoName, onInitComplete }) {
   const [initializing, setInitializing] = useState(false);
+  const [cloning, setCloning] = useState(false);
+  const [cloneUrl, setCloneUrl] = useState('');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
 
@@ -58,6 +60,31 @@ export default function InitFlow({ repoPath, repoName, onInitComplete }) {
     }
   }, [repoPath, onInitComplete]);
 
+  const handleClone = useCallback(async () => {
+    const trimmedUrl = cloneUrl.trim();
+    const api = window.electronAPI;
+    if (!trimmedUrl || !api || !api.gitClone) return;
+
+    setCloning(true);
+    setError(null);
+
+    try {
+      const result = await api.gitClone(repoPath, trimmedUrl);
+      if (result && result.success) {
+        setSuccess(true);
+        if (onInitComplete) {
+          setTimeout(() => onInitComplete(), 800);
+        }
+      } else {
+        setError(result?.error || 'Failed to clone repository');
+      }
+    } catch (err) {
+      setError(err.message || 'An unexpected error occurred');
+    } finally {
+      setCloning(false);
+    }
+  }, [cloneUrl, repoPath, onInitComplete]);
+
   return (
     <div className="git-manager-empty">
       <div className="git-manager-empty-icon">
@@ -69,7 +96,7 @@ export default function InitFlow({ repoPath, repoName, onInitComplete }) {
       <div className="git-manager-empty-text">
         {success
           ? `${repoName} is now a git repository. Loading git data...`
-          : `"${repoName}" doesn't have git initialized yet. Would you like to set it up?`
+          : `"${repoName}" doesn't have git initialized yet. Initialize it here or clone a repository into this folder.`
         }
       </div>
       {error && (
@@ -82,7 +109,7 @@ export default function InitFlow({ repoPath, repoName, onInitComplete }) {
           <button
             className="git-manager-action-btn primary"
             onClick={handleInit}
-            disabled={initializing}
+            disabled={initializing || cloning}
           >
             {initializing ? (
               <>
@@ -96,6 +123,31 @@ export default function InitFlow({ repoPath, repoName, onInitComplete }) {
               </>
             )}
           </button>
+
+          <div className="git-manager-clone-form">
+            <input
+              className="git-manager-clone-input"
+              type="text"
+              value={cloneUrl}
+              onChange={(e) => setCloneUrl(e.target.value)}
+              placeholder="Repository URL"
+              disabled={initializing || cloning}
+            />
+            <button
+              className="git-manager-action-btn"
+              onClick={handleClone}
+              disabled={initializing || cloning || !cloneUrl.trim()}
+            >
+              {cloning ? (
+                <>
+                  <span className="git-manager-action-btn-icon"><SpinnerIcon /></span>
+                  Cloning...
+                </>
+              ) : (
+                'Clone Repository'
+              )}
+            </button>
+          </div>
         </div>
       )}
     </div>

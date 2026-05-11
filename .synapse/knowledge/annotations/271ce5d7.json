@@ -1,0 +1,82 @@
+{
+  "file": "src/ui/pages/code/CodePage.jsx",
+  "content_hash": "a7ba4b8b",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "CodePage is the root shell for the code workspace. It keeps the CodeSidebar, dashboard/code-explorer/git/preview subpage routing, and floating Claude panel mounted together so the developer control-plane state survives navigation.",
+  "exports": [
+    {
+      "name": "CodePage",
+      "kind": "component",
+      "signature": "default function CodePage(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/pages/code/components/CodeSidebar": [
+      "CodeSidebar"
+    ],
+    "src/ui/shared/claude/ClaudeFloatingPanel": [
+      "ClaudeFloatingPanel"
+    ],
+    "src/ui/pages/code/subpages/dashboards/components/SwarmBuilder": [
+      "SwarmBuilder"
+    ],
+    "src/ui/pages/code/subpages/dashboards/DashboardsPage": [
+      "DashboardsPage"
+    ],
+    "src/ui/pages/code/subpages/code-explorer/CodeExplorerPage": [
+      "CodeExplorerPage"
+    ],
+    "src/ui/pages/code/subpages/git/GitPage": [
+      "GitPage"
+    ],
+    "src/ui/pages/code/subpages/preview/PreviewPage": [
+      "PreviewPage"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/pages/code/components/CodeSidebar",
+      "src/ui/pages/code/subpages/code-explorer/CodeExplorerPage",
+      "src/ui/pages/code/subpages/dashboards/DashboardsPage",
+      "src/ui/pages/code/subpages/dashboards/components/SwarmBuilder",
+      "src/ui/pages/code/subpages/git/GitPage",
+      "src/ui/pages/code/subpages/preview/PreviewPage",
+      "src/ui/shared/claude/ClaudeFloatingPanel"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-ui",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "swarm"
+  ],
+  "complexity": "simple"
+}

@@ -1,50 +1,58 @@
 {
   "file": "documentation/project-integration/overview.md",
-  "content_hash": "fa68ebc5",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "bd382088",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Conceptual overview of how Synapse integrates with any target project. Explains the standalone, project-agnostic architecture with two-path system ({tracker_root} vs {project_root}), what lives where, integration steps (point Synapse at project, read context, execute in project), three-tier project root resolution priority, what Synapse creates in the project (.synapse/ directory only), multi-project support across 5 dashboards, and portability guarantees (zero npm deps, no hardcoded paths, offline-capable).",
+  "purpose": "Documentation page for the project-integration area: Project Integration Overview. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Synapse is a **standalone, project-agnostic** distributed control system. It does not need to live inside any target project. It coordinates agent swarms from its own location (`{tracker_root}`) while workers do their code work in the target project (`{project_root}`). This separation means Synapse can manage any project regardless of language, framework, or directory structure. The file is 219 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Synapse contains ZERO hardcoded paths -- everything uses placeholders",
-    "Workers receive BOTH paths in dispatch prompts; code goes to {project_root}, progress to {tracker_root}",
-    "Each dashboard can target a different project via task.project_root in initialization.json",
-    "Synapse warns (does not block) if directory lacks .git/ or recognizable project markers"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Two-path separation: orchestration data at {tracker_root}, code work at {project_root}",
-    "Resolution priority chain: --project flag > stored config > CWD",
-    "Per-swarm project tracking via initialization.json task.project_root"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Both paths always absolute",
-    "Only .synapse/ written to project; everything else stays at tracker_root",
-    ".synapse/ should be gitignored"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [
-      "documentation/project-integration/conventions.md",
-      "documentation/project-integration/project-setup.md",
+    "depends_on": [
       "documentation/project-integration/toc-system.md",
+      "documentation/project-integration/project-setup.md",
+      "documentation/project-integration/pki-overview.md",
+      "documentation/project-integration/conventions.md",
+      "documentation/multi-dashboard/overview.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/project-integration/conventions.md",
       "documentation/project-integration/pki-overview.md"
     ],
     "related": [
-      "agent/core/path_convention.md",
-      "_commands/Synapse/project.md",
-      "_commands/project/initialize.md"
+      "documentation/multi-dashboard/overview.md",
+      "documentation/project-integration/conventions.md",
+      "documentation/project-integration/pki-overview.md",
+      "documentation/project-integration/project-setup.md",
+      "documentation/project-integration/toc-system.md"
     ]
   },
   "domains": [
-    "project-integration-docs"
+    "documentation",
+    "project-integration"
   ],
   "tags": [
     "markdown",
     "documentation",
     "project-integration",
-    "overview",
-    "paths",
-    "portability"
-  ]
+    "pki",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide"
+  ],
+  "complexity": "moderate"
 }

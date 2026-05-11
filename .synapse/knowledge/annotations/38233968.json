@@ -1,73 +1,47 @@
 {
   "file": "agent/master/dashboard_writes.md",
   "content_hash": "5911bad4",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The authoritative data-protocol reference for every file the master agent writes to a dashboard. Defines exact schemas, write timings, write rules, and exceptions for initialization.json, logs.json, master_state.json, and metrics.json. Includes the archive-before-clear NON-NEGOTIABLE protocol. This is the single source of truth for master file-write semantics; all other master docs reference it.",
+  "purpose": "Agent protocol/control-plane instruction document: Dashboard Writes \u2014 Master Agent Data Protocol. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: This document defines every file the master agent writes to the dashboard, the exact schema for each, when writes happen, and the rules governing those writes. The file is 349 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "ALL dashboard writes MUST use absolute paths starting with {tracker_root} — relative 'dashboards/' paths resolve to {project_root} when CWD is the project, creating dashboard files inside the target project. The PreToolUse hook enforce-tracker-root-writes.sh blocks this.",
-    "initialization.json is WRITE-ONCE with exactly THREE exceptions: repair task creation, circuit breaker replanning, and !add_task injection. Any other update is a violation.",
-    "Atomic full-file writes are MANDATORY — partial JSON silently stops all dashboard updates until corrected. Always read -> parse -> modify in memory -> stringify (2-space indent) -> write whole file.",
-    "Do NOT modify or remove the '_instructions' key in data files — it is metadata for the master agent and does not affect rendering.",
-    "The 'ide' dashboard is permanent and reserved — master agents must NEVER overwrite ide/initialization.json with swarm plan data.",
-    "task.created is IMMUTABLE — never overwrite once set. If you regenerate it on every write you destroy historical ordering and elapsed-time computation.",
-    "Removed fields (started_at, completed_at, overall_status, completed_tasks, failed_tasks on task; status, assigned_agent, started_at, completed_at, summary on agents; status, completed on waves) are ALL derived by the dashboard from progress files — do NOT write them.",
-    "Server re-reads the full file on every change (~100ms broadcast latency) — invalid JSON freezes the dashboard at last valid state.",
-    "Repair task ID format: '{failed_wave}.{next_index}r' — the 'r' suffix is what marks it as a repair task and what the failure-recovery system uses to detect double failures.",
-    "Use 'deviation' log level (yellow) for plan divergences — not 'warn' — or filtering breaks."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Master writes exactly four files during a swarm: initialization.json, logs.json, master_state.json, metrics.json. Plus plan.json which must exist FIRST (hook-enforced via validate-plan-required.sh).",
-    "logs.json append-only: read full file -> parse -> append entry -> stringify -> write full file.",
-    "Repair task append: new agents[] entry with id '{wave}.{next}r', title 'REPAIR: {original}', same wave/layer/directory, identical depends_on; increment task.total_tasks and waves[].total; rewire all references in other agents' depends_on arrays.",
-    "Archive-before-clear: read initialization.json -> if task!=null copy entire dashboard dir to Archive/{YYYY-MM-DD}_{task_name}/ -> then delete progress files and reset initialization.json/logs.json.",
-    "Dashboard merges initialization.json (static) with progress/{task_id}.json files (dynamic) client-side — all stat counts derive from progress files."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "task object fields: name (kebab-case slug), type ('Waves'|'Chains'), directory, prompt, project, project_root (absolute), created (ISO 8601 immutable), total_tasks, total_waves.",
-    "agents[] fields: id ('{wave}.{index}' or '{wave}.{index}r'), title (~40 char verb phrase), wave (matches waves[].id), layer (optional category), directory (optional), depends_on (string[]).",
-    "waves[] fields: id, name (descriptive — UI prepends 'Wave {id}: '), total (count of agents in wave).",
-    "chains[] required when task.type='Chains': id, name, tasks[] (ordered agent IDs, each agent in exactly one chain).",
-    "logs.json entry fields: timestamp (ISO 8601), task_id ('0.0' for orchestrator else '{wave}.{idx}'), agent ('Orchestrator' or 'Agent N'), level (info|warn|error|debug|permission|deviation), message, task_name.",
-    "Permission popup trigger: write log entry with level='permission' BEFORE asking in terminal."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
-      "agent/master/initialization_blueprint.md",
-      "agent/instructions/dashboard_resolution.md",
-      ".claude/hooks/validate-plan-required.sh",
-      ".claude/hooks/validate-initialization-schema.sh",
-      ".claude/hooks/enforce-tracker-root-writes.sh"
+      "agent/master/initialization_blueprint.md"
     ],
     "depended_by": [
-      "agent/master/dashboard_protocol.md",
-      "agent/master/role.md",
-      "agent/master/compaction_recovery.md",
-      ".claude/skills/master-protocol",
-      ".claude/skills/p-track",
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/p.md"
+      "agent/master/initialization_blueprint.md"
     ],
     "related": [
-      "agent/master/ui_map.md",
-      "agent/core/dashboard_features.md",
-      "src/server/services/WatcherService.js",
-      "src/server/services/DashboardService.js"
+      "agent/master/initialization_blueprint.md"
     ]
   },
   "domains": [
-    "dashboard-protocol",
-    "master-orchestration",
-    "data-architecture"
+    "agent-protocol",
+    "master"
   ],
   "tags": [
     "markdown",
-    "master-agent",
-    "schema",
-    "atomic-writes",
-    "archive",
-    "non-negotiable"
-  ]
+    "agent-instructions",
+    "master",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "initialization-json",
+    "claude"
+  ],
+  "complexity": "complex"
 }

@@ -1,54 +1,49 @@
 {
   "file": "documentation/project-integration/toc-system.md",
-  "content_hash": "0080fc71",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "44103511",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Reference for the Table of Contents (TOC) -- a semantic index at {project_root}/.synapse/toc.md. Covers why the TOC exists, structure (Project Overview + per-directory File Index), entry format (filename, summary, tags, content hash, related, exports), generation via !toc_generate (3-phase: discovery, parallel scan, streaming assembly), incremental update via !toc_update (diff detection with hashes), search via !toc with text/tag/combined modes, content hash usage, monorepo organization, and best practices.",
+  "purpose": "Documentation page for the project-integration area: Project Knowledge Graph. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Synapse now uses the Project Knowledge Index at `{project_root}/.synapse/knowledge/` as the semantic project graph. The file is 27 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Master never reads source files directly -- agents do all file reading during !toc_generate",
-    "!toc verifies candidates by reading actual files (prevents stale-entry false positives)",
-    "Content hash = first 8 chars of SHA-256",
-    "Backward-compatible: legacy TOCs without hash comments treated as unchanged",
-    "Renamed files detected via 'git diff --name-status -M'",
-    "Skipped: node_modules/, .next/, dist/, .git/, *.lock, auto-generated files"
+    "PKI schema drift risk: domain_index, tag_index, and concept_map now live as sibling files beside manifest.json; manifest.json should not be treated as the only index container."
   ],
   "patterns": [
-    "Three-phase generation: discovery -> parallel scan -> streaming assembly",
-    "Streaming assembly protects against context loss from interruption",
-    "Tag-based search: # prefix, multiple tags use AND logic",
-    "Result ranking: exact name > summary > tag > related file",
-    "One-hop related-file traversal in search results"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Entry format: bold filename, em-dash summary, [tags: ...], <!-- hash:xxxxxxxx -->",
-    "Sub-lines for Related and Exports indented",
-    "Tag categories: technology, domain, role, feature",
-    "Directories with 3+ files get own agent, small directories grouped"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/project-integration/overview.md"
+      "documentation/project-integration/pki-overview.md"
     ],
-    "depended_by": [],
-    "related": [
+    "depended_by": [
+      "documentation/README.md",
       "documentation/project-integration/conventions.md",
+      "documentation/project-integration/overview.md",
       "documentation/project-integration/pki-overview.md",
-      "_commands/project/toc.md",
-      "_commands/project/toc_generate.md",
-      "_commands/project/toc_update.md"
+      "documentation/project-integration/project-setup.md"
+    ],
+    "related": [
+      "documentation/project-integration/overview.md",
+      "documentation/project-integration/pki-overview.md"
     ]
   },
   "domains": [
-    "project-integration-docs"
+    "documentation",
+    "project-integration"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "toc",
-    "indexing",
-    "search",
-    "semantic"
-  ]
+    "project-integration",
+    "pki"
+  ],
+  "complexity": "simple"
 }

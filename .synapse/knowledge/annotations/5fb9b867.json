@@ -1,42 +1,48 @@
 {
   "file": "documentation/dashboard/layout-modes.md",
   "content_hash": "89d30313",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Explains the dashboard's view modes (Wave, Chain, IDE, Git) and the visual layout systems behind them. Covers WavePipeline grid rendering, ChainPipeline BFS dependency-line drawing with SVG, the pathway grid overlay, and how SET_VIEW transitions reconfigure the main render tree.",
+  "purpose": "Documentation page for the dashboard area: Layout Modes and Views. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Synapse Dashboard supports multiple views, selected via `activeView` in AppContext. The primary views are: The file is 425 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
-  "imports_from": [],
+  "imports_from": {},
   "gotchas": [
-    "ChainPipeline uses BFS to compute dependency line endpoints — large graphs can be expensive",
-    "SVG overlay must re-measure on resize; depends on ResizeObserver via useResize",
-    "Wave layout assumes wave numbers are 1-indexed contiguous integers"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Visual mode driven by single SET_VIEW reducer action",
-    "Overlay SVG drawn over CSS grid for dependency lines",
-    "Per-mode layout component swap"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Layout CSS lives in src/ui/styles/ next to component CSS"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/dashboard/components.md",
-      "documentation/dashboard/state-management.md"
+      "documentation/dashboard/styling.md"
     ],
-    "depended_by": [],
+    "depended_by": [
+      "documentation/README.md"
+    ],
     "related": [
-      "documentation/dashboard/styling.md",
-      "documentation/dashboard/hooks.md"
+      "documentation/dashboard/overview.md",
+      "documentation/dashboard/styling.md"
     ]
   },
   "domains": [
-    "dashboard-ui"
+    "documentation",
+    "dashboard"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "layout",
-    "svg"
-  ]
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "sse",
+    "git"
+  ],
+  "complexity": "complex"
 }

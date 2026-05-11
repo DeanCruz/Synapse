@@ -91,11 +91,11 @@ Also located at `{tracker_root}/_commands/project/`. Initialize and configure Sy
 
 Key commands: `!initialize`, `!onboard`, `!scaffold`, `!create_claude`, `!instrument`
 
-### Table of Contents Commands
+### Project Knowledge Graph Commands
 
-Located at `{tracker_root}/_commands/project/`. Manage the project's semantic file index.
+Located at `{tracker_root}/_commands/project/`. Manage the project's `.synapse/knowledge/` graph.
 
-Key commands: `!toc`, `!toc_generate`, `!toc_update`
+Key commands: `!learn`, `!learn_update`, `!context`
 
 ### Project Knowledge Index (PKI) Commands
 
@@ -169,6 +169,6 @@ Projects can define their own commands at `{project_root}/_commands/`. These fol
 | **Analysis** | `!context`, `!review`, `!health`, `!scope`, `!trace`, `!contracts`, `!env_check`, `!plan` |
 | **PKI** | `!learn`, `!learn_update` |
 | **Wiki** | `!wiki init`, `!wiki ingest`, `!wiki ingest_batch`, `!wiki query`, `!wiki lint`, `!wiki audit`, `!wiki crystallize`, `!wiki consolidate`, `!wiki decay`, `!wiki graph`, `!wiki export` |
-| **TOC** | `!toc`, `!toc_generate`, `!toc_update` |
+| **Knowledge Graph** | `!learn`, `!learn_update`, `!context` |
 | **Audit** | `!prompt_audit` |
 | **Discovery** | `!commands`, `!profiles`, `!help`, `!guide` |

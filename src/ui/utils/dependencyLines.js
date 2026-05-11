@@ -391,7 +391,7 @@ export function drawDependencyLines(svg, agents, agentMap, cardElements, contain
   // Draw each dependency
   for (var i = 0; i < agents.length; i++) {
     var agent = agents[i];
-    var dependsOn = agent.depends_on || [];
+    var dependsOn = Array.isArray(agent.depends_on) ? agent.depends_on : [];
 
     for (var d = 0; d < dependsOn.length; d++) {
       var depId = dependsOn[d];
@@ -604,6 +604,10 @@ export function setupCardHoverEffects(container, svg) {
   container._depMouseEnter = function (e) {
     var card = e.target.closest('.agent-card[data-agent-id]');
     if (!card) return;
+    // Skip when the cursor is just moving between elements inside the same card —
+    // highlights are already applied and toggling them causes flicker / dropouts
+    // when crossing margin gaps (e.g., over the .agent-card-bottom divider).
+    if (e.relatedTarget && card.contains(e.relatedTarget)) return;
     var agentId = card.getAttribute('data-agent-id');
     var groups = svg.querySelectorAll('.dep-group');
     var hasRelevant = false;
@@ -645,6 +649,9 @@ export function setupCardHoverEffects(container, svg) {
   container._depMouseLeave = function (e) {
     var card = e.target.closest('.agent-card[data-agent-id]');
     if (!card) return;
+    // Cursor still inside the same card (e.g., crossed a margin gap onto the
+    // card's own padding, or moved to a sibling child) — keep highlights on.
+    if (e.relatedTarget && card.contains(e.relatedTarget)) return;
     var groups = svg.querySelectorAll('.dep-group');
     for (var g = 0; g < groups.length; g++) {
       groups[g].classList.remove('dep-highlight-needs', 'dep-highlight-blocks', 'dep-dimmed');

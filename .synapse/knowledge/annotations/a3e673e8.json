@@ -1,0 +1,47 @@
+{
+  "file": "src/ui/pages/code/subpages/dashboards/components/ConnectionIndicator.jsx",
+  "content_hash": "04ef56df",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Tiny one-dot indicator showing the SSE / IPC connection state. Green (--color-completed) when connected, red (--color-failed) otherwise. Title and aria-label switch between 'Connected' and 'Disconnected'. Trivially stateless, used in the header.",
+  "exports": [
+    {
+      "name": "ConnectionIndicator",
+      "kind": "component",
+      "signature": "default function ConnectionIndicator(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Reads `--color-completed` / `--color-failed` from CSS variables — relies on the global theme being loaded; in test harnesses without those vars the dot will be invisible."
+  ],
+  "patterns": [
+    "Pure presentational; computes color string inline from a ternary."
+  ],
+  "conventions": [
+    "Default export; no internal state."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "src/server/services/DashboardService.js",
+      "src/ui/hooks/useDashboardData.js"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "connection-indicator"
+  ],
+  "complexity": "simple"
+}

@@ -1,37 +1,47 @@
 {
   "file": "documentation/multi-dashboard/dashboard-selection.md",
   "content_hash": "703d94fc",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:56:26Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Specifies how Synapse commands choose which dashboard to act on. Defines two mechanisms: claiming (for write ops via priority chain: pre-assigned DASHBOARD ID directive > --dashboard flag > ask user) and detection (for read ops, defaulting to the assigned dashboard). Critically establishes mandatory dashboard isolation -- agents have NO read or write access to dashboards other than their assigned one.",
+  "purpose": "Documentation page for the multi-dashboard area: Dashboard Selection. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: When a Synapse command needs to interact with a dashboard, it must determine which dashboard to use. Synapse employs two distinct selection mechanisms: **claiming** (for write operations like starting a new swarm) and **detection** (for read operations like checking status). The file is 145 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "There is NO auto-selection or scanning -- agents must have an assigned dashboard or ask the user",
-    "When the assigned dashboard already has data, the agent must ASK the user before archiving and reusing -- never proceed silently",
-    "Pre-assigned dashboards (from system prompt DASHBOARD ID directive) are always authoritative; --dashboard flag is secondary",
-    "Each chat view in the Electron app is bound to exactly one dashboard for isolation"
+    "Dashboard isolation is authoritative: assigned dashboard from prompt/SYNAPSE_DASHBOARD_ID beats flags for workers, and agents must not scan unrelated dashboards.",
+    "Dashboard-resolution drift: current assigned-dashboard isolation says use the prompt-bound dashboard or explicit flag, ask if absent, and never auto-scan for an available dashboard."
   ],
   "patterns": [
-    "Strict dashboard isolation per agent/chat",
-    "Priority-chain selection with explicit user prompts on conflict"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "First positional argument matching 6-char hex format is parsed as dashboardId; task IDs use N.N format; flags use --",
-    "Worker dispatch prompts always include {dashboardId} alongside {tracker_root} and {project_root}"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/multi-dashboard/overview.md"
+    ],
+    "related": [
+      "documentation/multi-dashboard/overview.md"
+    ]
   },
   "domains": [
-    "multi-dashboard",
-    "selection"
+    "documentation",
+    "multi-dashboard"
   ],
   "tags": [
-    "dashboard-selection",
-    "isolation",
-    "claiming"
-  ]
+    "markdown",
+    "documentation",
+    "multi-dashboard",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "electron",
+    "sse"
+  ],
+  "complexity": "moderate"
 }

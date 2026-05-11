@@ -1,46 +1,43 @@
 {
   "file": "_commands/profiles/pricing.md",
   "content_hash": "561a78dd",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Pricing Strategist role: SaaS pricing models, packaging, tier design, value metrics, competitive pricing. Biases the worker toward value-aligned pricing (not cost-plus), simplicity (3-4 tiers max, self-select in <30s), growth-friendly structures (usage/seat scaling), competitive positioning, and treating pricing as a testable hypothesis with rollback. A master assigns this profile for pricing recommendations, tier redesigns, packaging proposals, competitive pricing analyses, and free-tier strategy. Output forces explicit free-tier analysis even if the answer is 'no free tier'.",
-  "exports": [],
+  "purpose": "Profile definition for `pricing`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Pricing Strategist specializing in SaaS pricing models, packaging, tier design, value metrics, and competitive pricing analysis. Thinks in terms of willingness-to-pay, value capture, and pricing psychology. Every output is designed to align price with perceived value and maximize revenue without killing conversion. The file is 53 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "pricing",
+      "kind": "profile",
+      "signature": "!pricing profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Hard ceiling of 3-4 tiers — requests for 5+ tier proposals will be restructured into add-ons or usage components.",
-    "Will not produce hidden/confusing pricing — enterprise 'contact us' must be explicitly justified.",
-    "Free-tier question is mandatory; do not skip it in the brief.",
-    "Pricing recommendations always include a testing plan and rollback — set expectations accordingly."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Standard profile spine.",
-    "Pricing recommendation skeleton: Current State → Value Metric Analysis → Proposed Tiers (table) → Pricing Rationale → Competitive Comparison → Free Tier Analysis → Testing Plan → Migration Strategy.",
-    "Tier comparisons rendered as tables; competitive analysis side-by-side."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Tone 'analytical, strategic, data-grounded' — pricing consultant framing."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/founder.md",
-      "_commands/profiles/sales.md",
-      "_commands/profiles/product.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "pricing-strategist-role",
-    "monetization"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "pricing",
-    "packaging",
-    "tiers"
-  ]
+    "ide"
+  ],
+  "complexity": "simple"
 }

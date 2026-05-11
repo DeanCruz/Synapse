@@ -1,8 +1,8 @@
 {
   "file": "src/server/services/ArchiveService.js",
   "content_hash": "016ce40c",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.408Z",
+  "annotated_by": "learn-update",
   "purpose": "Manages archived dashboard snapshots in the top-level Archive/ directory. Provides three operations: listArchives() returns a sorted (newest-first by name) array of archive metadata derived from each archive's initialization.json (task name + agent count); archiveDashboard(id) copies the entire dashboard directory (including progress/, logs.json, initialization.json) into Archive/{YYYY-MM-DD}_{taskName} via a recursive copyDirSync borrowed from DashboardService; deleteArchive(name) recursively removes the named archive folder. The archive name format YYYY-MM-DD_taskName is the de facto identifier and the basis for newest-first sorting via localeCompare.",
   "exports": [
     {
@@ -81,5 +81,6 @@
     "archive",
     "filesystem",
     "snapshot"
-  ]
+  ],
+  "complexity": "simple"
 }

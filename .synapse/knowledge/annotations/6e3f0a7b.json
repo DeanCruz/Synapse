@@ -1,66 +1,53 @@
 {
   "file": "agent/master/pki_integration.md",
-  "content_hash": "4846420a",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "096c2c4c",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The master agent's protocol for using the Project Knowledge Index (PKI) at {project_root}/.synapse/knowledge/ during the planning phase. Defines the 6-step pre-planning flow, manifest extraction, file ranking, annotation reading, knowledge block construction, and decomposition signals. Includes graceful-degradation rules so the master never blocks on a missing or corrupt PKI. Loaded during planning when PKI annotations are available.",
+  "purpose": "Agent protocol/control-plane instruction document: PKI Pre-Planning Integration. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: > **Self-contained module for the master agent's use of the Project Knowledge Index (PKI) during task planning.** This document covers how to read the manifest, extract relevant domains and tags from the user's prompt, look up files via the manifest's reverse indexes, read per-file annotations for gotchas/patterns/conventions, and inject that knowledge into worker dispatch prompts. It also defines fallback behavior when no PKI exists and rules fo The file is 480 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "The PKI NEVER blocks planning — every step has a fallback. Missing manifest, malformed JSON, empty PKI, no matches all proceed with standard CLAUDE.md-only planning.",
-    "Never read the annotations directory directly — always go through manifest.json indexes (domain_index, tag_index, concept_map). Globbing annotations/ is slow, unstructured, and misses file-to-annotation mapping.",
-    "Cap annotation reads at 8-10 files — beyond this the planning phase takes too long and extracted knowledge exceeds prompt budget.",
-    "Stale annotations (stale: true) are still readable but MUST be marked with a staleness caveat in worker prompts. NEVER treat as authoritative.",
-    "Stale exports/imports may be wrong — do NOT use stale export/import data for task decomposition; have the worker read the file fresh.",
-    "Filter PKI knowledge PER-WORKER based on that worker's specific files — never inject the same PKI block into every worker prompt (causes context bloat and irrelevant knowledge).",
-    "PKI knowledge block budget: max ~100 lines (half of CONVENTIONS section's ~200 line budget). Per-file extraction max ~10 lines.",
-    "Gotchas are NEVER cut for budget — they prevent errors. Cut conventions first, then relationships, then patterns. Gotchas always stay.",
-    "PKI knowledge supplements, never replaces, CLAUDE.md — the convention map from CLAUDE.md is primary; PKI provides file-specific knowledge CLAUDE.md cannot capture.",
-    "If >50% of matched files are stale, log warn and suggest the user run !learn_update."
+    "PKI schema drift risk: domain_index, tag_index, and concept_map now live as sibling files beside manifest.json; manifest.json should not be treated as the only index container."
   ],
   "patterns": [
-    "6-step pre-planning flow: (1) check manifest exists -> (2) extract domains/tags/concepts from prompt -> (3) look up files via reverse indexes -> (4) read annotations for matched files (cap 8-10) -> (5) build PKI knowledge block -> (6) inject into worker prompts and inform decomposition.",
-    "Annotation lookup: manifest.files[path].hash -> {project_root}/.synapse/knowledge/annotations/{hash}.json.",
-    "Extraction priority per annotation: gotchas (critical) -> patterns -> conventions -> exports -> imports_from -> relationships -> purpose.",
-    "Knowledge block injection point: appended to CONVENTIONS section after CLAUDE.md-derived conventions, under [PKI] label.",
-    "Ranking signals: complexity:'high' (prioritize), stale:true (deprioritize), domains array length, appears in multiple indexes.",
-    "Decomposition signals: complexity:'high' files get dedicated tasks, 3+ gotchas need narrow scope, serves/consumes relationships imply same wave or explicit dependency, stale files need fresh reads in READ list."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "PKI knowledge block format: GOTCHAS / PATTERNS / CONVENTIONS / STALE sections with [file_path] prefix per entry.",
-    "Skip PKI when: manifest doesn't exist, empty PKI, no domains/tags match, all matched annotations stale, pure CREATE task with no existing files, or CLAUDE.md alone fills the 200-line budget.",
-    "Log every PKI decision: matched domains/tags, file count, annotation reads, staleness warnings — makes augmented planning auditable.",
-    "Broad prompts -> match domains; narrow prompts -> match specific tags; cross-cutting prompts -> start with concept_map."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
-      "agent/master/worker_prompts.md",
       "documentation/data-architecture/pki-schemas.md",
-      "_commands/project/learn.md",
-      "_commands/project/learn_update.md"
+      "agent/master/worker_prompts.md",
+      "_commands/project/learn.md"
     ],
     "depended_by": [
-      ".claude/skills/master-protocol",
-      ".claude/skills/p-track",
-      "_commands/Synapse/p_track.md",
-      "electron/services/PromptBuilder.js"
+      "documentation/project-integration/pki-overview.md"
     ],
     "related": [
-      "documentation/project-integration/pki-overview.md",
-      "agent/master/role.md"
+      "_commands/project/learn.md",
+      "agent/master/worker_prompts.md",
+      "documentation/data-architecture/pki-schemas.md"
     ]
   },
   "domains": [
-    "pki-integration",
-    "master-orchestration",
-    "planning"
+    "agent-protocol",
+    "master"
   ],
   "tags": [
     "markdown",
-    "master-agent",
-    "knowledge-injection",
-    "manifest",
-    "annotations",
-    "graceful-degradation"
-  ]
+    "agent-instructions",
+    "master",
+    "pki",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "claude"
+  ],
+  "complexity": "complex"
 }

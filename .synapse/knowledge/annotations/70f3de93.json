@@ -1,22 +1,11 @@
 {
   "file": "electron/preload.js",
-  "content_hash": "b459963d",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "364c0231",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "Context isolation bridge — runs in the renderer process before any web content loads and uses contextBridge.exposeInMainWorld to expose window.electronAPI with a strict surface area: a PUSH_CHANNELS whitelist (26 channels) that gates 'on'/'off' subscriptions for main->renderer events, plus ~140 'pull' methods that wrap ipcRenderer.invoke() for renderer->main RPC. The push-channel whitelist prevents the renderer from listening to unrelated/sensitive IPC traffic. Each pull method returns the invoke promise directly so the renderer can await results. The 'on' wrapper returns an unsubscribe function (so React useEffect cleanup is one-liner: const off = electronAPI.on(...); return off;). The methods are organized by domain — Dashboards, Overview, Archives, History, Queue, Settings, Project, Task Editor, Commands, Chat, Attachments, Workers, Terminals, Orchestration, Conversations, IDE filesystem, IDE search, Debug, Git, Preview — and each method maps 1:1 to an ipcMain.handle channel registered in ipc-handlers.js.",
-  "exports": [
-    {
-      "name": "electronAPI",
-      "kind": "constant",
-      "signature": "exposed via contextBridge.exposeInMainWorld('electronAPI', { ... })"
-    }
-  ],
-  "imports_from": {
-    "electron": [
-      "contextBridge",
-      "ipcRenderer"
-    ]
-  },
+  "exports": [],
+  "imports_from": {},
   "gotchas": [
     "PUSH_CHANNELS is a whitelist — channels NOT in this list cause electronAPI.on(channel) to silently return a no-op unsubscribe and the renderer never receives events. Adding a new push event in ipc-handlers.js requires adding the name here too",
     "Channel name strings here MUST exactly match the names used in ipcMain.handle and webContents.send in ipc-handlers.js — there is no shared constant, so typos cause silent failures",
@@ -41,12 +30,7 @@
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [
-      "electron/main.js (referenced via webPreferences.preload)",
-      "src/ui/hooks/useElectronAPI.js",
-      "src/ui/main.jsx",
-      "src/ui/components/* (all renderer components consuming window.electronAPI)"
-    ],
+    "depended_by": [],
     "related": [
       "electron/ipc-handlers.js"
     ]
@@ -62,5 +46,6 @@
     "contextbridge",
     "ipc",
     "whitelist"
-  ]
+  ],
+  "complexity": "moderate"
 }

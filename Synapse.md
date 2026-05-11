@@ -143,9 +143,9 @@ Not every piece of context is equally expensive to produce or equally useful to 
 1. **Glob/Grep** — Zero-token, always current. The primary tool for finding files and patterns. Used extensively during planning.
 2. **Project CLAUDE.md** — Architecture overview, conventions, constraints. Read once, excerpted into worker prompts.
 3. **Project profile** — Auto-generated quick facts (tech stack, key directories, git info). Instant orientation on revisits.
-4. **Table of Contents** — Opt-in semantic map for large projects. Only generated when the project is too large for Glob/Grep to navigate efficiently.
+4. **Project knowledge graph** — `.synapse/knowledge/` semantic map and operational memory for large projects.
 
-Each tier is used only when the previous tier is insufficient. A 50-file project never needs a TOC. A 5,000-file monorepo does. The system adapts to the scale of the project without imposing overhead on smaller ones.
+Each tier is used only when the previous tier is insufficient. A 50-file project can often work from Glob/Grep and CLAUDE.md. A 5,000-file monorepo benefits from `!learn` and `!learn_update`. The system adapts to the scale of the project without imposing overhead on smaller ones.
 
 ---
 
@@ -392,25 +392,25 @@ The system degrades gracefully — no PKI, empty PKI, partial PKI, fully stale P
 
 ---
 
-## Table of Contents (TOC) System
+## Project Knowledge Graph
 
-For large projects (500+ files) where file names alone do not reveal purpose, Synapse can generate a semantic Table of Contents.
+For large projects (500+ files) where file names alone do not reveal purpose, Synapse can generate a semantic project knowledge graph.
 
-The TOC system produces three artifacts at `{project_root}/.synapse/`:
+The knowledge graph produces structured artifacts at `{project_root}/.synapse/knowledge/`:
 
-- **`toc.md`** — The semantic index itself, organized by directory with file purpose annotations
-- **`fingerprints.json`** — File content fingerprints for detecting semantic shifts (not just modification times)
-- **`dep_graph.json`** — File-level dependency graph from import analysis
+- **`manifest.json`** — Per-file routing index with hashes, staleness, and insight references
+- **`domain_index.json`**, **`tag_index.json`**, **`concept_map.json`** — Query indexes for fast file routing
+- **`annotations/*.json`** — Per-file operational knowledge, gotchas, patterns, conventions, exports, and relationships
 
 ### Commands
 
 | Command | Purpose |
 |---|---|
-| `!toc {query}` | Search the TOC by topic, keyword, or object name. Sub-commands: `depends-on`, `depended-by`, `cluster`, `changes-since`. |
-| `!toc_generate` | Full generation via parallel agent swarm. Scans every directory. |
-| `!toc_update` | Incremental update. Detects new/deleted/moved/changed files using fingerprints. |
+| `!learn` | Full knowledge graph generation via parallel agent swarm. Scans every significant file. |
+| `!learn_update` | Incremental refresh. Detects stale, new, deleted, and changed files. |
+| `!context {query}` | Queries the knowledge graph and supplements with grep/glob. |
 
-The TOC is opt-in — Synapse works without it. For smaller projects, Glob and Grep provide sufficient file discovery.
+The knowledge graph is optional — Synapse works without it. For smaller projects, Glob and Grep provide sufficient file discovery.
 
 ---
 

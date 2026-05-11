@@ -1,63 +1,40 @@
 {
   "file": "agent/core/parallel_principles.md",
   "content_hash": "0e9a1d57",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The foundational doctrine for the master orchestrator — twelve principles governing how parallel work is planned, dispatched, and recovered. Covers: (1) always parallelize independent work, (2) dependency-driven not wave-driven dispatch, (3) continuous pipeline flow with immediate dispatch on dep-satisfaction, (4) no artificial concurrency cap (batch tool calls if >8-10), (5) errors don't stop swarm + automatic circuit breaker thresholds (3+ wave failures, single failure blocks 3+ downstream, single failure blocks >50% remaining) → automatic inline replanning with modified/added/removed/retry categories, (6) plan deep execute fast, (7) atomic task design (self-contained/small/verifiable/non-overlapping), (8) statusing split between master (event log + task file) and workers (full lifecycle + progress + logs), (9) right-size 1-5 minutes per task, (10) shared file accumulation patterns C>B>A, (11) feed upstream results to downstream prompts, (12) post-swarm verification step.",
+  "purpose": "Agent protocol/control-plane instruction document: Core Principles for Efficient Parallelization. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: These principles govern how the master agent should plan and execute parallel work. They apply universally regardless of the project being worked on. The file is 165 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "Waves are a VISUAL grouping for humans — the dispatch engine looks ONLY at individual task dependencies. Never wait for a full wave to complete before dispatching dependents.",
-    "Circuit breaker thresholds are triggered by WHICHEVER condition hits first: (a) 3+ tasks fail in same wave, (b) one failure blocks 3+ downstream, (c) one failure blocks >50% remaining tasks. All three are independent triggers.",
-    "Automatic replanning is the ONLY documented exception to initialization.json's write-once rule. Modifying it for any other reason is an architectural violation.",
-    "If replanning analysis fails to produce a valid revision, the swarm PAUSES for manual intervention — the orchestrator does not push through blind.",
-    "Task tool can only dispatch ~8-10 simultaneous tool calls per message — for larger waves batch into back-to-back rounds, but NEVER wait for the first batch to complete before sending the second.",
-    "Master MUST NOT update initialization.json after planning (except circuit-breaker replan), MUST NOT output terminal status tables, and MUST NOT maintain task counters — all deliberately delegated to workers/dashboard.",
-    "Pattern A (single owner of shared file) creates a sequential bottleneck — always prefer Pattern C (no shared file) > Pattern B (integration task) > Pattern A.",
-    "Right-sized tasks: 1-5 min. Reading 2-3 files + modifying 1-2 files is typical right-size; reading 10+ or modifying 5+ files needs decomposition."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Dependency-driven dispatch (not wave-driven): scan ALL pending tasks for newly-satisfied dependencies on every completion event, dispatch every unblocked task immediately.",
-    "Circuit breaker → inline replan loop: pause dispatches → read all progress files → analyze root cause → emit modified/added/removed/retry revision → apply to initialization.json → resume.",
-    "Repair task IDs use 'r' suffix to distinguish from original task IDs.",
-    "Statusing split: master owns event log + task file updates; workers own full lifecycle + progress + detailed logs.",
-    "Shared file pattern preference: C (no shared file) > B (integration task) > A (owner task).",
-    "Upstream-to-downstream context propagation: master MUST inject upstream summary, files, exports, and deviations into downstream worker prompts at dispatch time.",
-    "Optional verification agent post-swarm receives ALL files changed across the swarm and runs project's standard validation."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Worker prompt budget target: ~8000 tokens or less.",
-    "Concurrent dispatch limit: ~8-10 simultaneous tool calls per message (Task tool constraint).",
-    "Deviation severity tiers (CRITICAL/MODERATE/MINOR) drive replanning decisions.",
-    "Verification dispatch decision rule: multi-file modifications → verify; purely additive → optional; any deviations → strongly recommended."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [
-      "CLAUDE.md",
-      "agent/instructions/tracker_master_instructions.md",
-      ".claude/agents/master-orchestrator.md",
-      ".claude/skills/master-protocol",
-      ".claude/skills/p-track"
-    ],
-    "related": [
-      "agent/core/data_architecture.md",
-      "agent/master/failure_recovery.md",
-      "agent/master/eager_dispatch.md",
-      "agent/master/worker_prompts.md",
-      "electron/services/SwarmOrchestrator.js"
-    ]
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "core-conventions",
-    "orchestration-principles",
-    "circuit-breaker"
+    "agent-protocol",
+    "core"
   ],
   "tags": [
     "markdown",
+    "agent-instructions",
     "core",
-    "doctrine",
-    "master-agent",
-    "non-negotiable"
-  ]
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "sse",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

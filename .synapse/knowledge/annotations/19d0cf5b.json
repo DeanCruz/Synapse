@@ -1,47 +1,47 @@
 {
   "file": "_commands/profiles/technical-writer.md",
   "content_hash": "aac9ddb8",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Senior Technical Writer role: API docs, developer guides, user help docs, tutorials, changelogs, KB articles. Biases the worker toward task orientation (every doc answers 'how do I do X?'), accuracy verified against the actual codebase (not memory), progressive disclosure, findability (descriptive headings, TOCs), and maintainability. A master assigns this profile for API reference docs, tutorial writing, changelog generation, README/onboarding doc production, and developer guide authoring. Forces verification of every code example against running code and prohibits mixing conceptual/tutorial/reference content in the same document.",
-  "exports": [],
+  "purpose": "Profile definition for `technical-writer`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Senior Technical Writer specializing in API documentation, developer guides, user-facing help docs, tutorials, changelogs, and knowledge base articles. Makes complex systems understandable. Writes for the reader who needs to accomplish a task, not impress a peer. The file is 53 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "technical-writer",
+      "kind": "profile",
+      "signature": "!technical-writer profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Workers will read source code and verify endpoints/parameters before writing — adds context-gathering time.",
-    "Refuses to mix conceptual, tutorial, and reference content — large doc requests get split into multiple files.",
-    "Bans internal jargon without definition — outputs may include glossary additions you didn't ask for.",
-    "Code examples must be syntactically correct and use current APIs — workers may flag deprecated endpoints in the codebase."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Standard profile spine.",
-    "API doc skeleton: Endpoint → Method → Description → Parameters (table) → Request Example → Response Example → Error Codes.",
-    "Procedures rendered as numbered steps; warnings/notes as callout blocks; code blocks always tagged with language."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Tone 'clear, helpful, neutral' — not chatty, not cold; README-style.",
-    "Tutorials sized to need; API reference concise per endpoint; changelog one line per change grouped by type."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/product.md",
-      "_commands/profiles/architect.md",
-      "_commands/profiles/devops.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "technical-writer-role",
-    "developer-documentation"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "technical-writer",
-    "documentation",
-    "api-docs"
-  ]
+    "progress",
+    "guide",
+    "sse",
+    "chat",
+    "ide"
+  ],
+  "complexity": "simple"
 }

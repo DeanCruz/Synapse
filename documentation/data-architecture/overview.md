@@ -51,6 +51,7 @@ Each dashboard instance (identified by a 6-character hex ID, e.g., `71894a`, `54
 
 ```
 {tracker_root}/dashboards/{dashboardId}/
+  plan.json               -- Canonical task spec and shared context
   initialization.json     -- Static plan data (master-owned, write-once)
   logs.json               -- Event log (master-owned, append-only)
   progress/               -- Worker progress files (worker-owned)
@@ -66,10 +67,11 @@ Synapse enforces strict file ownership. Each file has exactly one writer:
 
 | File | Writer | Read By |
 |---|---|---|
+| `plan.json` | Master agent / Orchestrator | Workers, master/orchestrator, dashboard-aware tooling |
 | `initialization.json` | Master agent (write-once during planning) | Dashboard, master (for dispatch scans), workers (optional) |
 | `logs.json` | Master agent (append via read-modify-write) | Dashboard (log panel) |
 | `progress/{task_id}.json` | The worker assigned to that task (sole writer) | Dashboard (agent cards, stats), master (for dispatch scans) |
-| `tasks/{date}/parallel_{name}.json` | Master agent | Workers (for context), master (for status tracking) |
+| `tasks/{date}/parallel_{name}.json` | Master agent | Humans/history/CLI compatibility when produced |
 | `tasks/{date}/parallel_plan_{name}.md` | Master agent | Users (for plan review) |
 
 Workers never write to `initialization.json` or `logs.json`. The master never writes to `progress/` files. This eliminates all write conflicts.
@@ -103,6 +105,7 @@ const DEFAULT_LOGS = { entries: [] };
 
 ```
 1. Master plans the swarm
+   |-> Writes plan.json (canonical task spec and shared context)
    |-> Writes initialization.json (full plan, write-once)
    |-> Writes logs.json (initialization entry)
    |-> Clears progress/ directory
@@ -118,11 +121,11 @@ const DEFAULT_LOGS = { entries: [] };
 4. Master monitors completions
    |-> Reads progress/ files to build completed/in-progress sets
    |-> Appends completion/failure/deviation entries to logs.json
-   |-> Updates task file with summaries
+   |-> Optionally updates companion task file with summaries
 
 5. Swarm completes
    |-> Master appends final summary to logs.json
-   |-> Master updates task file with final status
+   |-> Master writes metrics.json and optionally updates companion task file with final status
 ```
 
 ### Read Flow (Dashboard)
@@ -363,6 +366,7 @@ Synapse supports multiple concurrent dashboards, each identified by a 6-characte
 ```
 dashboards/
   2d84ac/
+    plan.json
     initialization.json
     logs.json
     progress/
@@ -385,4 +389,4 @@ The server watches all dashboards independently, broadcasting SSE events tagged 
 - [initialization.json Schema](./initialization-json.md) -- Complete schema, field-to-UI mapping, write rules
 - [logs.json Schema](./logs-json.md) -- Event log format, levels, entry structure
 - [Progress Files Schema](./progress-files.md) -- Worker progress lifecycle, stages, rendering
-- [Task Files](./xml-task-files.md) -- Authoritative task record format and structure
+- [Task Files](./xml-task-files.md) -- Legacy/companion task records; `plan.json` is the current canonical task spec

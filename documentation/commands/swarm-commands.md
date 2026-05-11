@@ -29,6 +29,7 @@ All swarm commands are located at `{tracker_root}/_commands/Synapse/`. They mana
 - Includes circuit breaker logic: if 3+ tasks fail in the same wave or a failure blocks half of remaining tasks, automatic replanning is triggered
 
 **Produces:**
+- `{tracker_root}/dashboards/{dashboardId}/plan.json` -- Canonical task spec and shared context
 - `{tracker_root}/tasks/{date}/parallel_{name}.json` -- Master task record
 - `{tracker_root}/tasks/{date}/parallel_plan_{name}.md` -- Strategy rationale
 - `{tracker_root}/dashboards/{dashboardId}/initialization.json` -- Dashboard plan data
@@ -78,7 +79,7 @@ All swarm commands are located at `{tracker_root}/_commands/Synapse/`. They mana
 **Natural workflow:** `!plan {task}` --> review and refine --> `!p_track_plan {plan_path}` to execute
 
 **Produces:**
-- Same output files as `!p_track` (master task file, rationale, initialization.json, logs.json, progress files)
+- Same output files as `!p_track` (`plan.json`, companion task file if produced, rationale, initialization.json, logs.json, progress files)
 
 ---
 
@@ -153,7 +154,7 @@ WORKER AGENTS (many per stream)
 
 **Key Behavior:**
 - Validates that the task exists, is pending, and all dependencies are completed
-- Reads the master task file to extract full task context for the worker prompt
+- Reads `dashboards/{dashboardId}/plan.json` to extract full task context for the worker prompt
 - Dispatches a worker agent with a complete, self-contained prompt
 - Logs the dispatch to `logs.json`
 - Does not create a progress file -- the worker creates its own when it starts
@@ -236,12 +237,12 @@ WORKER AGENTS (many per stream)
 
 **Key Behavior:**
 - Requires an active swarm on the target dashboard
-- Reads the full swarm state (initialization.json, all progress files, master_state.json, master task file) and project context before planning
+- Reads the full swarm state (`plan.json`, initialization.json, all progress files, master_state.json, companion task file if present) and project context before planning
 - Decomposes the prompt into 1 or more right-sized subtasks following the same quality standards as `!p_track` planning
 - Resolves dependencies in both directions: new tasks may depend on existing tasks, and existing pending tasks may have new dependencies added
 - Validates no circular dependencies and warns about file conflicts with in-progress tasks
 - Assigns wave numbers and task IDs following existing conventions
-- Updates initialization.json, the master task file, logs.json, and master_state.json atomically
+- Updates initialization.json, `plan.json` when task specs change, logs.json, master_state.json, and companion task files when present atomically
 - Runs eager dispatch for any new tasks whose dependencies are already satisfied
 - Never modifies completed or in-progress tasks -- only pending tasks can have their dependencies updated
 
@@ -258,7 +259,7 @@ WORKER AGENTS (many per stream)
 ```
 
 **Key Behavior:**
-- Reads initialization.json, all progress files, master_state.json, and the master task file
+- Reads `plan.json`, initialization.json, all progress files, master_state.json, and any companion task file
 - Builds completed/in-progress/failed sets from progress files
 - Identifies every task where ALL `depends_on` are completed and the task is not yet dispatched
 - Presents a dispatch summary and waits for user approval before dispatching
@@ -284,7 +285,7 @@ WORKER AGENTS (many per stream)
 **Syntax:**
 ```
 !export                                     -- Export your assigned dashboard as markdown
-!export dashboard3                          -- Export a specific dashboard
+!export c3d4e5                          -- Export a specific dashboard
 !export --format json                       -- Export as raw JSON
 !export --format markdown                   -- Export as formatted markdown (default)
 ```
@@ -312,7 +313,7 @@ WORKER AGENTS (many per stream)
 **Key Behavior:**
 - Reads all master instruction documents before taking any action (7 required files including master instructions, dashboard writes, eager dispatch, worker prompts, compaction recovery, and failure recovery)
 - Reconstructs full swarm state from initialization.json, all progress files, logs.json, and master_state.json
-- Locates and reads the master task file and project CLAUDE.md for worker prompt construction
+- Locates and reads `plan.json`, any companion task file, and project CLAUDE.md for worker prompt construction
 - Rebuilds the upstream result cache from progress files and master_state.json
 - Assesses agent health for in-progress tasks: checks progress file recency (milestones/logs within last 10 minutes) to determine if workers are likely alive or stale
 - Classifies every task as: completed, failed, likely alive, stale in-progress, pending ready, or pending blocked
@@ -450,7 +451,7 @@ WORKER AGENTS (many per stream)
 ```
 
 **Key Behavior:**
-- Reads from `initialization.json`, the task's progress file, the master task file, and `logs.json`
+- Reads from `plan.json`, `initialization.json`, the task's progress file, any companion task file, and `logs.json`
 - Displays: status, wave, timeline (created/dispatched/completed/duration), agent info, milestones, deviations, upstream dependencies with their statuses, downstream blocks, task context and critical details, file lists, worker logs, and dashboard logs
 
 ---
@@ -803,6 +804,6 @@ The research pipeline is a multi-stage system for deep, breadth-first research t
 ```
 
 **Key Behavior:**
-- Displays a visual decision tree flowchart organized by task type: project setup, parallel work, monitoring, task actions, history, server control, project analysis, TOC management, and housekeeping
+- Displays a visual decision tree flowchart organized by task type: project setup, parallel work, monitoring, task actions, history, server control, project analysis, knowledge graph management, and housekeeping
 - Includes a complete command reference table grouped by category
 - Provides quick-pick tips for common scenarios
