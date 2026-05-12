@@ -80,7 +80,7 @@ WatcherService detects file changes --> broadcast bridge
 
 ### Full Dashboard Tracking — Mandatory Thresholds
 
-When a swarm has **3+ parallel agents** or **more than 1 wave**, the master MUST populate its designated dashboard with full tracking. This is non-negotiable for multi-wave swarms. Workers must be instructed to read `tracker_worker_instructions.md` and write progress files to the dashboard. The only exception is explicit `!p` invocation (lightweight by design, though escalation is recommended at these thresholds).
+When a swarm has **3+ parallel agents** or **more than 1 wave**, the master MUST populate its designated dashboard with full tracking. This is non-negotiable for multi-wave swarms. Workers must be instructed to read `tracker_worker_instructions.md` and write progress files to the dashboard. Exceptions are limited to command specs that explicitly define reduced tracking, such as `!p` and the `!q_*` quick research/product flows, which still write the dashboard artifacts required by their command files.
 
 ## Planning Guidance
 
@@ -149,18 +149,21 @@ Synapse/                              <-- {tracker_root}
 |       +-- failure-protocol/         <-- Auto-loaded failure recovery protocol
 |
 |-- _commands/
-|   |-- Synapse/                      <-- 35 swarm orchestration commands
+|   |-- Synapse/                      <-- Swarm, dashboard, research, and server commands
 |   |   |-- p_track.md, p_track_plan.md, p.md, master_plan_track.md,
+|   |   |-- p_research.md, p_synthesize.md, p_product_research.md,
+|   |   |-- p_product_plan.md, q_research.md, q_synthesize.md,
+|   |   |-- q_product_research.md, q_product_plan.md,
 |   |   |-- add_task.md, dispatch.md, eager_dispatch.md, retry.md,
 |   |   |-- resume.md, p_track_resume.md, track_resume.md,
 |   |   |-- update_dashboard.md, export.md, cancel.md, cancel-safe.md,
 |   |   |-- status.md, logs.md, inspect.md, deps.md, history.md,
 |   |   |-- start.md, stop.md, reset.md, guide.md, project.md
-|   |-- project/                      <-- 24 project analysis commands
+|   |-- project/                      <-- Project analysis and management commands
 |   |   |-- initialize.md, onboard.md, scaffold.md, create_claude.md,
 |   |   |-- context.md, review.md, health.md, scope.md, trace.md,
 |   |   |-- contracts.md, env_check.md, plan.md, prompt_audit.md,
-|   |   |-- learn.md, learn_update.md, instrument.md,
+|   |   |-- product_plan.md, learn.md, learn_update.md, instrument.md,
 |   |   |-- commands.md, profiles.md, help.md
 |   +-- profiles/                     <-- 15 agent role profiles
 |       |-- analyst.md, architect.md, copywriter.md, customer-success.md,
@@ -328,6 +331,12 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | **Swarm** | `!p_track {prompt}` | **Primary.** Full parallel swarm with live dashboard |
 | | `!p_track_plan {plan_path}` | Plan-driven swarm — reads a `.md` plan, populates dashboard, awaits approval |
 | | `!p {prompt}` | Lightweight parallel dispatch |
+| | `!p_research {topic}` | Full tracked research swarm with cited research artifacts |
+| | `!p_product_research {prompt}` | Full research → synthesis → product-plan pipeline |
+| | `!p_product_plan [focus]` | Generate and rate product plan candidates from synthesis |
+| | `!q_research {topic}` | Lightweight research with wave-level tracking |
+| | `!q_product_research {prompt}` | Lightweight single-dashboard product research pipeline |
+| | `!q_product_plan [focus]` | Lightweight product-plan generation and evaluation |
 | | `!master_plan_track` | Multi-stream orchestration across dashboards |
 | | `!add_task {prompt}` | Add tasks to an active swarm mid-flight |
 | | `!dispatch {id}` | Manually dispatch pending tasks |
@@ -353,6 +362,7 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | | `!contracts` | API contract audit |
 | | `!env_check` | Environment variable audit |
 | | `!plan {task}` | Implementation planning |
+| | `!product_plan {prompt}` | Deep product spec sheet generator |
 | | `!prompt_audit` | Post-swarm prompt quality audit |
 | **Knowledge Graph** | `!learn` | Generate the `.synapse/knowledge/` graph |
 | | `!learn_update` | Incrementally refresh stale or missing knowledge graph annotations |

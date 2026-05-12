@@ -121,14 +121,19 @@ function scanDirectory(dirPath, maxDepth) {
 }
 
 function detectCliBinary(binaryName, commonPaths) {
-  var { execSync } = require('child_process');
+  var { execFileSync } = require('child_process');
+  var lookupCommand = process.platform === 'win32' ? 'where.exe' : 'which';
+
   try {
-    var result = execSync('which ' + binaryName, { encoding: 'utf-8', timeout: 5000 }).trim();
-    if (result && fs.existsSync(result)) return result;
+    var result = execFileSync(lookupCommand, [binaryName], { encoding: 'utf-8', timeout: 5000 }).trim();
+    var lines = result.split(/\r?\n/).map(function (line) { return line.trim(); }).filter(Boolean);
+    for (var i = 0; i < lines.length; i++) {
+      if (fs.existsSync(lines[i])) return lines[i];
+    }
   } catch (e) { /* not found */ }
 
-  for (var i = 0; i < commonPaths.length; i++) {
-    if (fs.existsSync(commonPaths[i])) return commonPaths[i];
+  for (var j = 0; j < commonPaths.length; j++) {
+    if (fs.existsSync(commonPaths[j])) return commonPaths[j];
   }
   return null;
 }
@@ -140,6 +145,9 @@ function detectCliBinary(binaryName, commonPaths) {
  */
 function detectClaudeCLI() {
   return detectCliBinary('claude', [
+    path.join(process.env.APPDATA || '', 'npm', 'claude.cmd'),
+    path.join(process.env.APPDATA || '', 'npm', 'claude.exe'),
+    path.join(process.env.USERPROFILE || '', 'AppData', 'Roaming', 'npm', 'claude.cmd'),
     '/usr/local/bin/claude',
     path.join(process.env.HOME || '', '.claude', 'bin', 'claude'),
     path.join(process.env.HOME || '', '.local', 'bin', 'claude'),
@@ -153,6 +161,9 @@ function detectClaudeCLI() {
  */
 function detectCodexCLI() {
   return detectCliBinary('codex', [
+    path.join(process.env.APPDATA || '', 'npm', 'codex.cmd'),
+    path.join(process.env.APPDATA || '', 'npm', 'codex.exe'),
+    path.join(process.env.USERPROFILE || '', 'AppData', 'Roaming', 'npm', 'codex.cmd'),
     '/opt/homebrew/bin/codex',
     '/usr/local/bin/codex',
     path.join(process.env.HOME || '', '.local', 'bin', 'codex'),

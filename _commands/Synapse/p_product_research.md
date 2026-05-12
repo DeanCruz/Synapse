@@ -435,7 +435,7 @@ If the user wants to RE-RUN a completed stage with different parameters (e.g., r
 
 15. **Full dashboard tracking always at every stage.** Three swarms, three dashboards.
 16. **Cycle protection.** If `!p_product_research` is invoked from a hook chain, propagate `--triggered-by` and `--depth` per the wiki cycle guard. Reject `depth > 2` (this command is itself a 3-stage pipeline; a hook-triggered pipeline-of-pipelines is not safe).
-17. **Wiki crystallization is opt-in across all three stages.** The unified pipeline report SUGGESTS `!wiki ingest_batch documentation/research/synthesis/topics/` and `!wiki ingest_batch documentation/research/plans/` as next steps for durable wiki memory. The pipeline does not auto-fire these.
+17. **Wiki crystallization is opt-in across all three stages.** The unified pipeline report SUGGESTS `!wiki ingest_batch documentation/research/synthesis/topics/` for synthesized topic knowledge and `!wiki plan documentation/research/plans/final_plans.md` / `!wiki plan_batch documentation/research/plans/candidates/*.md` for plan-specific wiki capsules. The pipeline does not auto-fire these.
 
 ### Standard Inheritance from `!p_track`
 

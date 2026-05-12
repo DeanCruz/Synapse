@@ -20,13 +20,13 @@ function init(broadcast) {
  * @param {string} [opts.cwd] — working directory (defaults to process.cwd())
  * @param {number} [opts.cols] — terminal columns (default 80)
  * @param {number} [opts.rows] — terminal rows (default 24)
- * @param {string} [opts.shell] — shell to use (defaults to SHELL env or /bin/zsh)
+ * @param {string} [opts.shell] — shell to use (defaults to Windows shell on win32, otherwise SHELL env or /bin/zsh)
  * @returns {{ id, pid, shell, cwd, cols, rows }}
  */
 function spawnTerminal(opts) {
   opts = opts || {};
 
-  var shell = opts.shell || process.env.SHELL || '/bin/zsh';
+  var shell = opts.shell || getDefaultShell();
   var cols = opts.cols || 80;
   var rows = opts.rows || 24;
   var cwd = opts.cwd || process.cwd();
@@ -83,6 +83,13 @@ function spawnTerminal(opts) {
   console.log('[TerminalService] Terminal spawned, id:', id, 'pid:', proc.pid);
 
   return { id: id, pid: proc.pid, shell: shell, cwd: cwd, cols: cols, rows: rows };
+}
+
+function getDefaultShell() {
+  if (process.platform === 'win32') {
+    return process.env.SHELL || process.env.ComSpec || process.env.COMSPEC || 'powershell.exe';
+  }
+  return process.env.SHELL || '/bin/zsh';
 }
 
 /**

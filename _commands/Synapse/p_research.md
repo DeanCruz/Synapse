@@ -155,7 +155,9 @@ Every research worker prompt MUST include:
 - **Identity:** task ID, wave number, angle slug, agent label.
 - **Topic context:** the topic + the specific angle this worker owns + the out-of-scope list.
 - **Output target:** exactly one file path under `raw/` — `{project_root}/documentation/research/{topic-slug}/raw/w{wave}-{agent_id}-{angle-slug}.md`. The worker writes this and only this raw file (plus its progress JSON and any successful source fetches under `sources/`).
-- **Source-fetch protocol:** for each external source the worker accesses successfully, compute SHA-256 of body, write `sources/{hash}.{ext}` and `sources/{hash}.meta.json` (origin URL, fetched_at, redactions applied, accessor agent ID). For inaccessible sources, log them under the `inaccessible_sources` section of the raw findings file (see schema below).
+- **Source-fetch protocol:** for each external source the worker accesses successfully, compute SHA-256 of body, write `sources/{hash}.{ext}` and `sources/{hash}.meta.json` (origin URL, fetched_at, source date, redactions applied, accessor agent ID). Before marking a source inaccessible, workers MUST attempt the fallback ladder below. For inaccessible sources, log them under the `inaccessible_sources` section of the raw findings file (see schema below).
+- **Inaccessible-source fallback ladder:** if the canonical URL cannot be accessed, the worker MUST attempt, in order: (1) Internet Archive / Wayback Machine snapshot, (2) discoverable cached or mirrored copies, (3) title / DOI / quoted-excerpt search for alternate copies, and (4) manual-access assessment (paywall, login, private repo, institutional access, or user-provided source likely needed). If a fallback succeeds, cite and persist the fallback source just like any other source, and note the original URL in provenance. If the fallback is an Internet Archive / Wayback snapshot, provenance MUST include `archive_url` and `archive_snapshot_at` (the snapshot date/time, parsed from the archive timestamp when possible). If all fallbacks fail, record every attempted route.
+- **Outdated-information risk:** workers MUST flag sources whose information may be stale. Treat archived snapshots, undated pages, sources older than the topic's relevant change window, fast-moving domains (APIs, pricing, model capabilities, security, legal/compliance, benchmarks), or pages contradicted by newer sources as stale-risk candidates. Claims based on stale-risk sources MUST include a note explaining what may be outdated and what fresher evidence would change.
 - **Redaction sweep:** before persisting any fetched body, run a redaction pass for API keys, tokens, auth headers, emails, anything matched by the active wiki schema's `privacy_filters:` if a wiki exists, otherwise default filters. If redaction can't strip cleanly, route the source body to `sources/_quarantine/` and stop using that source.
 - **Upstream results (Wave ≥ 2):** the master injects a UPSTREAM RESULTS block summarizing relevant Wave-(N-1) findings — entity names already discovered, contradictions to chase, sources known-inaccessible-but-valuable.
 - **Sibling awareness:** the angles being researched in parallel by other workers in the same wave (so they don't duplicate fetches).
@@ -194,6 +196,7 @@ For each claim, structured as:
 - **Citations:** `sources/{hash}.{ext}` (or external URL if not fetched)
 - **Authority signal:** {primary | secondary | tertiary | anecdotal}
 - **Recency:** ISO date of source
+- **Outdated risk:** {low | medium | high} — explain if source age, archive snapshot age, fast-moving domain, or newer contradictory evidence may make the claim stale
 - **Notes:** caveats, scope limits, where this claim might fail
 
 ## Discovered Entities
@@ -213,7 +216,10 @@ For EVERY source the worker wanted to read but could not, append a record (used 
 - **Why this looked valuable:** 1-2 sentences
 - **Estimated unique-info contribution:** {high | medium | low}
 - **Estimated authority:** {primary | secondary | tertiary | anecdotal}
-- **Suggested fallback:** alternate access route if the worker thought of one (web archive, cached version, mirror, asking the user)
+- **Fallbacks attempted:** canonical URL, Wayback, cache/mirror search, title/DOI/excerpt search, manual-access assessment
+- **Best fallback found:** alternate URL or locator if one exists; otherwise `none`
+- **Archive snapshot date:** ISO date/time of the Wayback snapshot if an archive fallback was found or used; otherwise `n/a`
+- **Manual access needed:** {yes | no | unknown} — e.g., paywall, login, private repo, institutional access, user-provided file
 
 ## Open Questions
 Sub-questions this angle surfaced that warrant a follow-up wave.
@@ -265,7 +271,7 @@ authority_weight   = { primary: 1.0, secondary: 0.7, tertiary: 0.4, anecdotal: 0
 mention_factor     = log(distinct_workers_who_referenced_this_source + 1) / log(2)
                      # 1 mention → 0, 2 → 1.0, 3 → ~1.6, 4 → 2.0
 recency_factor     = 1.0 if source dated within 2y, 0.7 if 2-5y, 0.4 if older, 0.5 if undated
-fetchability_hint  = 1.0 if fallback route suggested, 0.5 if no fallback
+fetchability_hint  = 1.0 if a concrete fallback or manual-access path exists, 0.5 if no path found
 
 value_score = (unique_info_weight × 0.4
             +  authority_weight × 0.3
@@ -291,7 +297,10 @@ The integration worker:
    - **Score:** 1.83
    - **Reason inaccessible:** paywall (4 workers hit this)
    - **Why valuable:** {merged synthesis of why-valuable notes}
-   - **Suggested fallback:** {merged fallback suggestions; e.g., "Internet Archive snapshot from 2024-08", "ask user for institutional access", "GitHub mirror at ..."}
+   - **Fallbacks attempted:** {merged fallback attempts; e.g., "canonical URL failed, Wayback snapshot unavailable, title search found abstract only"}
+   - **Best fallback found:** {best alternate URL/locator, or "none"}
+   - **Archive snapshot date:** {ISO date/time if Wayback fallback found or used, otherwise "n/a"}
+   - **Manual access needed:** {yes | no | unknown} — {reason, e.g., "institutional access likely required"}
    - **Referenced by:** w1-t3-comparative, w2-t1-deep, w3-t2-adversarial
 
    ## High
@@ -405,7 +414,9 @@ The top 3-5 entries from `_missing_sources.md` and **for each, what specifically
         "source_authority_max": 1.0,
         "contradiction_count": 0,
         "primary_source_count": 2,
-        "last_confirmed": "ISO-8601"
+        "last_confirmed": "ISO-8601",
+        "stale_risk": "low | medium | high",
+        "stale_risk_reason": "why the evidence may be outdated, or null"
       },
       "citations": ["sources/{hash}.pdf", "https://..."],
       "confidence_band": "high",
@@ -421,6 +432,7 @@ The top 3-5 entries from `_missing_sources.md` and **for each, what specifically
 `confidence_band` is computed by the same rule-based composer as the wiki:
 - `disputed` if `contradiction_count > 0`
 - `low` if `source_count == 1` AND `last_confirmed` older than 90 days
+- `low` if `stale_risk == "high"` and no fresher corroborating source exists
 - `high` if `source_count >= 3` AND mean source authority ≥ secondary
 - `medium` otherwise
 
@@ -508,7 +520,7 @@ After the synthesis worker completes, the master compiles the standard `!p_track
 
 6. **Every claim cites at least one source.** Claims with empty `citations` are quarantined (move to `_attention.md` for review) — they don't make it into `_synthesis.md` or `_claims.json`.
 7. **Confidence is computed, never asserted.** Workers populate the support components; the master/synthesis worker runs the composer. A worker who writes a literal `confidence: 0.85` triggers a deviation flag.
-8. **Inaccessible sources are first-class outputs.** Silently dropping inaccessible sources is forbidden. Every worker MUST surface every source they wanted but couldn't reach. The source-weighting phase is part of the swarm, not optional.
+8. **Inaccessible sources are first-class outputs.** Silently dropping inaccessible sources is forbidden. Every worker MUST surface every source they wanted but couldn't reach. Workers MUST attempt the inaccessible-source fallback ladder before marking a source unavailable, including Internet Archive / Wayback Machine. The source-weighting phase is part of the swarm, not optional.
 9. **Critical missing sources MUST be reflected in `_synthesis.md` Critical Gaps.** Synthesis must state, for each critical-bucket missing source, what about the synthesis would change if the source were available.
 10. **No emojis in research output** unless the user's prompt explicitly opts in or the project's CLAUDE.md does.
 
@@ -516,7 +528,8 @@ After the synthesis worker completes, the master compiles the standard `!p_track
 
 11. **Redact before persisting.** Workers run a redaction sweep before writing any fetched body to `sources/`. Failed redaction → `sources/_quarantine/`, never a silent drop.
 12. **Source bodies are immutable.** Once `sources/{hash}.{ext}` is written, never rewrite. Re-fetch produces a new hash.
-13. **Provenance is mandatory.** Every `sources/{hash}.meta.json` records origin URL, fetched_at, redactions applied, accessor agent ID. Every claim citation points to a `sources/{hash}` OR an external URL (when fetch failed).
+13. **Provenance is mandatory.** Every `sources/{hash}.meta.json` records origin URL, fetched_at, source date when knowable, redactions applied, accessor agent ID. For Internet Archive / Wayback sources, metadata MUST also record `archive_url` and `archive_snapshot_at` (the snapshot date/time). Every claim citation points to a `sources/{hash}` OR an external URL (when fetch failed).
+14. **Staleness risk is mandatory.** Workers and synthesis MUST flag claims that may be outdated because the source is old, archived, undated, contradicted by fresher evidence, or about a fast-moving domain. Do not bury stale-risk caveats in generic notes — include the risk level and what fresher evidence would change.
 
 ### Synapse Integration
 

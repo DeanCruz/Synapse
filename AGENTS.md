@@ -126,16 +126,19 @@ A conductor does not pick up a violin mid-symphony. The master agent does not pi
 
 ### The Only Files the Master Agent Writes
 
-During a swarm, the master agent writes to exactly these files at `{tracker_root}` and **no others**:
+During a swarm, the master agent writes only tracker-owned orchestration artifacts at `{tracker_root}`. The exact set depends on the command mode; the command file is the source of truth for that mode.
 
 | File | Purpose |
 |---|---|
+| `dashboards/{dashboardId}/plan.json` | Canonical planning artifact with shared context and per-task `approach`; required before `initialization.json` for full tracked swarms |
 | `dashboards/{dashboardId}/initialization.json` | Static plan data (written ONCE during planning) |
 | `dashboards/{dashboardId}/logs.json` | Timestamped event log for the dashboard |
+| `dashboards/{dashboardId}/master_state.json` | Master checkpoint for compaction/recovery when required by the command |
+| `dashboards/{dashboardId}/metrics.json` | Post-swarm performance metrics written at completion when required by the command |
 | `tasks/{date}/parallel_{name}.json` | Master task record (plan, status, summaries) |
 | `tasks/{date}/parallel_plan_{name}.md` | Strategy rationale document |
 
-Everything else is a worker's job. The master agent writes **nothing** into `{project_root}`.
+Everything else is a worker's job unless the active command explicitly says otherwise. The master agent writes **nothing** into `{project_root}` during active swarm orchestration.
 
 ### After a Swarm Completes
 
@@ -326,7 +329,7 @@ Skills are defined in `.claude/skills/*/SKILL.md` and provide specialized capabi
 | **p-track-resume** | `!p_track_resume` | fork, model: opus | Resume stalled/interrupted swarm |
 | **eager-dispatch** | `!eager_dispatch` | fork, model: opus | Standalone eager dispatch round |
 | **dashboard-ops** | `!status`, `!logs`, `!inspect`, `!deps`, `!history`, `!cancel`, `!reset`, `!start`, `!stop`, `!guide`, `!update_dashboard` | default | Routes to dashboard operation commands |
-| **project-workflow** | `!initialize`, `!onboard`, `!scaffold`, `!create_claude`, `!context`, `!review`, `!health`, `!scope`, `!trace`, `!contracts`, `!env_check`, `!plan`, `!prompt_audit`, `!learn`, `!learn_update`, `!instrument`, `!commands`, `!profiles`, `!help` | default | Routes to project setup, discovery, and analysis commands |
+| **project-workflow** | `!initialize`, `!onboard`, `!scaffold`, `!create_claude`, `!context`, `!review`, `!health`, `!scope`, `!trace`, `!contracts`, `!env_check`, `!plan`, `!product_plan`, `!prompt_audit`, `!learn`, `!learn_update`, `!instrument`, `!commands`, `!profiles`, `!help` | default | Routes to project setup, discovery, and analysis commands |
 
 ### Auto-Loaded Protocol Skills
 
@@ -336,7 +339,7 @@ Skills are defined in `.claude/skills/*/SKILL.md` and provide specialized capabi
 | **worker-protocol** | Worker agents | Worker progress reporting, deviation tracking, stage progression, structured returns |
 | **failure-protocol** | Master agents | Failure recovery — repair tasks, dependency rewiring, circuit breaker, double failure escalation |
 
-Skills that spawn swarm orchestrators (`p-track`, `p`, `master-plan-track`, `p-track-resume`, `eager-dispatch`) use `context: fork` and `model: opus` — they need their own agent thread and the strongest model. Protocol skills are loaded automatically when an agent operates in master or worker mode.
+Skills that spawn swarm orchestrators (`p-track`, `p`, `master-plan-track`, `p-track-resume`, `eager-dispatch`) use `context: fork` and `model: opus` — they need their own agent thread and the strongest model. Product and quick research commands (`!p_product_*`, `!q_*`) are command-file driven orchestration flows even when they are not listed as standalone skill folders. Protocol skills are loaded automatically when an agent operates in master or worker mode.
 
 ---
 
@@ -409,11 +412,11 @@ For tasks that decompose into multiple independent work streams, **parallel exec
 
 **When the master agent determines that parallel mode is more efficient, it SHOULD proactively enter swarm mode.** The agent must use its judgment — if the task would be done in half the time with 4 agents working in parallel, doing it serially is a waste of the user's time.
 
-### Forced Parallel Mode — `!p` Commands (NON-NEGOTIABLE)
+### Forced Orchestration Mode — Swarm Commands (NON-NEGOTIABLE)
 
-Any command prefixed with `!p` **forces the agent into master dispatch mode.** This is absolute and non-negotiable.
+Any swarm or pipeline command **forces the agent into master dispatch mode**. This includes `!p`, `!p_track`, `!p_track_plan`, `!p_product_*`, `!q_*`, `!master_plan_track`, resume/retry/dispatch helpers, and any command file that explicitly defines a master-orchestrated flow. This is absolute and non-negotiable.
 
-When any `!p` command is invoked, the following happens unconditionally:
+When any forced orchestration command is invoked, the following happens unconditionally:
 
 1. **The agent enters master dispatch mode.** It becomes the orchestrator. It does NOT write code. Its only responsibilities are: gather context, plan, dispatch, status, and report.
 2. **Reading this file (`{tracker_root}/AGENTS.md`) is NON-NEGOTIABLE.** This must be done before any planning or dispatch begins.
@@ -614,9 +617,13 @@ Synapse/                            ← {tracker_root}
 │   └── hooks/                      ← Validation hooks
 │       ├── validate-master-write.sh ← Prevents master from writing project files
 │       └── validate-progress-file.sh ← Validates worker progress file writes
-├── _commands/                      ← Synapse commands (46 total)
-│   ├── Synapse/                    ← Swarm and dashboard commands (24)
+├── _commands/                      ← Synapse command specs (run `!commands` for current inventory)
+│   ├── Synapse/                    ← Swarm, dashboard, research, and server commands
 │   │   ├── p_track.md, p.md, master_plan_track.md, add_task.md
+│   │   ├── p_track_plan.md, p_research.md, p_synthesize.md
+│   │   ├── p_product_research.md, p_product_plan.md
+│   │   ├── q_research.md, q_synthesize.md
+│   │   ├── q_product_research.md, q_product_plan.md
 │   │   ├── dispatch.md, eager_dispatch.md, retry.md
 │   │   ├── resume.md, p_track_resume.md, track_resume.md
 │   │   ├── status.md, logs.md, inspect.md, deps.md, history.md
@@ -624,7 +631,7 @@ Synapse/                            ← {tracker_root}
 │   │   ├── cancel.md, cancel-safe.md
 │   │   ├── start.md, stop.md, reset.md, guide.md, project.md
 │   │   └── ...
-│   ├── project/                    ← Project analysis & management commands (22)
+│   ├── project/                    ← Project analysis & management commands
 │   │   ├── initialize.md, onboard.md, scaffold.md, create_claude.md
 │   │   ├── learn.md, learn_update.md, instrument.md
 │   │   ├── context.md, review.md, health.md, scope.md, trace.md
@@ -678,6 +685,7 @@ Synapse/                            ← {tracker_root}
 ├── dashboards/                     ← Multi-dashboard support (dynamic hex IDs)
 │   └── {hex_id}/
 │       ├── initialization.json     ← Static plan (written once during planning)
+│       ├── plan.json               ← Canonical planning artifact (required before initialization in tracked swarms)
 │       ├── logs.json               ← Timestamped event log
 │       ├── metrics.json            ← Post-swarm performance metrics
 │       └── progress/
@@ -775,9 +783,9 @@ When the user types a command prefixed with `!`, resolve it using the command re
 | Command | Description |
 |---|---|
 | `!project` | Show, set, or clear the target project path. |
-| `!initialize` | Initialize Synapse for a target project — create `.synapse/`, detect tech stack, optionally scaffold `AGENTS.md`. |
-| `!onboard` | Project walkthrough — read AGENTS.md, the `.synapse/knowledge/` graph, key files and present a structured orientation. |
-| `!scaffold` | Generate a `AGENTS.md` for a project that doesn't have one. |
+| `!initialize` | Initialize Synapse for a target project — create `.synapse/`, detect tech stack, optionally scaffold `CLAUDE.md`. |
+| `!onboard` | Project walkthrough — read project instructions, the `.synapse/knowledge/` graph, key files and present a structured orientation. |
+| `!scaffold` | Generate a `CLAUDE.md` for a project that doesn't have one. |
 | `!create_claude` | Create or update an opinionated CLAUDE.md for a project. Sets rules for how the project should be built. |
 | `!learn` | Bootstrap the Project Knowledge Index (PKI) from scratch via parallel swarm. |
 | `!learn_update` | Incrementally refresh the PKI — re-scans only stale/new files. |
@@ -788,7 +796,14 @@ When the user types a command prefixed with `!`, resolve it using the command re
 | Command | Description |
 |---|---|
 | `!p_track {prompt}` | **Primary command.** Plan, dispatch, track, and report a full parallel agent swarm with live dashboard updates. |
+| `!p_track_plan {plan_path}` | Convert a markdown implementation plan into a tracked swarm with dashboard approval. |
 | `!p {prompt}` | Lightweight parallel dispatch — no progress files, minimal dashboard overhead. |
+| `!p_research {topic}` | Full tracked research swarm that produces a cited research corpus. |
+| `!p_product_research {prompt}` | Full three-stage research → synthesis → product-plan pipeline. |
+| `!p_product_plan [focus]` | Generate and honestly rate product plan candidates from the synthesis layer. |
+| `!q_research {topic}` | Lightweight research with wave-level tracking and the same artifacts as `!p_research`. |
+| `!q_product_research {prompt}` | Lightweight three-stage product research pipeline using one dashboard. |
+| `!q_product_plan [focus]` | Lightweight product-plan generation with reduced tracking overhead. |
 | `!master_plan_track {prompt}` | Multi-stream orchestration — decompose into independent swarms across dashboards. |
 | `!add_task {prompt}` | Inject new tasks into an active swarm mid-flight. Resolves dependencies bidirectionally. |
 | `!dispatch {id}` | Manually dispatch a specific pending task. `!dispatch --ready` dispatches all unblocked tasks. |
@@ -824,6 +839,7 @@ When the user types a command prefixed with `!`, resolve it using the command re
 | `!contracts` | API contract audit — consistency between interfaces and implementations. |
 | `!env_check` | Environment variable audit — consistency across configs. |
 | `!plan {task}` | Implementation planning based on project context. |
+| `!product_plan {prompt}` | Deep product spec sheet generator for a loose product idea. |
 | `!prompt_audit` | Post-swarm prompt quality audit. Analyzes worker performance and prompt quality indicators. |
 
 ### Project Knowledge Graph

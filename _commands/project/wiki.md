@@ -11,6 +11,8 @@
 !wiki status                          # Stats, health, recent activity        [free]
 !wiki ingest <source>                 # Ingest one source                     [cheap]
 !wiki ingest_batch <dir|glob>         # Parallel ingest swarm                 [swarm]
+!wiki plan <plan_file>                # Build a plan-specific wiki capsule    [cheap]
+!wiki plan_batch <dir|glob>           # Build capsules for multiple plans     [swarm]
 !wiki query <question>                # Hybrid search → answer                [cheap]
 !wiki lint                            # Structural quality sweep              [swarm]
 !wiki audit                           # Epistemic contradiction sweep         [swarm]
@@ -33,6 +35,7 @@
 - `{wiki_root}/schema/current` — Pointer to active schema version. Versions live at `schema/v{N}.md`. Auto-bootstrapped by `!wiki init`.
 - `{wiki_root}/schema/_proposed/` — Pending schema patches awaiting accept/rollback.
 - `{wiki_root}/sources/` — Raw ingested sources (immutable originals + provenance).
+- `{wiki_root}/plans/{plan_slug}/` — Plan-specific capsule: immutable source copy, manifest, index, and staged proposed pages/edges.
 - `{wiki_root}/pages/{slug}.md` — Wiki pages (frontmatter + body, wikilinks); materialized from history.
 - `{wiki_root}/pages/{slug}.history.jsonl` — Append-only edit log per page (mesh-safe merge source of truth).
 - `{wiki_root}/embeddings/{slug}.bin` + `.meta.json` — Per-page vector + body-hash metadata for skip-re-embed gating.
@@ -61,6 +64,13 @@
 │   └── _proposed/v00X.md           # Pending schema patches
 ├── sources/{hash}.{ext}            # Immutable raw sources
 ├── sources/{hash}.meta.json        # Provenance: origin, ingested_at, checksum, redactions
+├── plans/
+│   └── {plan_slug}/
+│       ├── source.md               # Immutable copy of the original plan file
+│       ├── manifest.json           # Plan provenance + generated wiki object index
+│       ├── index.md                # Human entry point for this plan capsule
+│       ├── proposed_pages.json     # Worker-staged page proposals before global merge
+│       └── proposed_edges.json     # Worker-staged graph edge proposals before global merge
 ├── pages/
 │   ├── {slug}.md                   # Materialized current state (regenerable from history)
 │   └── {slug}.history.jsonl        # Append-only edit log: {ts, actor, op, frontmatter_patch, body_diff}
@@ -121,6 +131,38 @@ schema_version: v007                             # Schema active when this page 
 
 Body: prose with `[[wikilinks]]` to other slugs and `(@entity_id)` references for graph nodes. **`confidence` and `support_count` are NOT written by workers** — the `support:` block holds the components; the master computes ranking score and display band on the fly. See **Lifecycle Protocol**.
 
+### Plan capsule manifest schema
+
+Each `!wiki plan` / `!wiki plan_batch` run creates one capsule at `{wiki_root}/plans/{plan_slug}/manifest.json`:
+
+```json
+{
+  "plan_slug": "kebab-case-id",
+  "title": "Human-readable plan title",
+  "source_path": "{project_root}/documentation/research/plans/candidates/example.md",
+  "source_sha256": "...",
+  "source_type": "final_plans | final_ratings | candidate | implementation_plan | product_spec | unknown",
+  "plan_status": "proposed | selected | rejected | superseded | unknown",
+  "created_at": "ISO-8601",
+  "updated_at": "ISO-8601",
+  "source_copy": "source.md",
+  "generated_pages": ["page-slug-a", "page-slug-b"],
+  "generated_entities": ["entity-id-a"],
+  "generated_edges": ["edge-id-a"],
+  "extracted": {
+    "decisions": [],
+    "assumptions": [],
+    "risks": [],
+    "required_evidence": [],
+    "next_actions": [],
+    "open_questions": []
+  },
+  "schema_version": "v007"
+}
+```
+
+`source.md` is immutable once written for a given `source_sha256`. If the source plan changes, re-run `!wiki plan` to create a new capsule version or update `manifest.json` with a new source hash; do not silently overwrite old provenance. The capsule is a curated view and provenance bundle. Global reusable knowledge still lives in `pages/`, `graph/`, `sources/`, and `audit.jsonl`.
+
 ---
 
 ## Subcommand Phases
@@ -171,6 +213,52 @@ Workers do NOT write graph/page files — only raw `sources/` artifacts and thei
 **Phase 4 — Index rebuild (Wave 3).** Rebuild `index.json` and `index.md`. Optional parallel re-embedding for changed pages.
 
 **Phase 5 — Auto-lint trigger.** If new contradictions or orphan pages introduced, automatically dispatch `!wiki lint` as a follow-up swarm.
+
+### `!wiki plan <plan_file>` — plan-specific capsule
+
+Build a durable wiki capsule for one plan while reusing the normal wiki source/page/graph/audit machinery. Use this for `documentation/research/plans/final_plans.md`, `final_ratings.md`, `candidates/{plan-slug}.md`, implementation plan documents, or product spec sheets.
+
+1. **Resolve the plan file.** Resolve `{project_root}` and the plan path. Accept absolute paths or paths relative to `{project_root}`. Refuse missing files, directories, or binary files. Read the active wiki schema first.
+2. **Compute `plan_slug`.** Prefer frontmatter `plan_slug`, then first H1, then filename. Kebab-case and cap at 80 chars. If the slug already exists with a different source hash, create a versioned slug (`{plan_slug}-{short_hash}`) rather than overwriting old provenance.
+3. **Create the capsule.** Create `{wiki_root}/plans/{plan_slug}/`. Copy the plan verbatim to `source.md`. Compute SHA-256 of the source and write `manifest.json` with source path, source hash, inferred source type, `plan_status: unknown`, and empty generated object lists.
+4. **Persist raw source.** Also persist the plan under `sources/{hash}.md` with `sources/{hash}.meta.json` (`origin`, `source_type: plan`, `plan_slug`, `ingested_at`, checksum, redactions applied). This lets generated pages cite the plan through normal `sources[]` provenance.
+5. **Dispatch one plan-wiki worker.** Worker reads the active schema and `source.md`, then writes only these staging files inside the capsule:
+   - `proposed_pages.json`
+   - `proposed_edges.json`
+   - optional `proposed_entities.json`
+
+   Worker extracts: decisions, assumptions, risks, required evidence, entities, implementation steps, open questions, alternatives, contradictions, and next actions. It must preserve the plan's original wording in quotations where exact wording matters.
+6. **Master assembly.** Master applies staged output using the same rules as `ingest`: create/update global pages, update entities and edges, run contradiction/supersession checks, rebuild `index.json` and `index.md`, and append `audit.jsonl` entries. Workers never write global `pages/` or `graph/` directly.
+7. **Write capsule index.** Write `{wiki_root}/plans/{plan_slug}/index.md` with:
+   - link to `source.md`
+   - generated pages and entities
+   - extracted decisions, assumptions, risks, required evidence, next actions, and open questions
+   - contradictions or supersession notes
+   - audit run ID and schema version
+8. **Report.** Return the capsule path, generated page count, generated edge count, contradictions found, and most important next action.
+
+**Plan page mapping guidance:**
+- Overall plan summary → `type: brief`
+- Chosen direction or architectural/product choice → `type: decision`
+- Non-obvious lesson from the plan/evaluation → `type: lesson`
+- Reusable workflow or implementation pattern → `type: pattern`
+- Major unresolved risk or contradiction → `type: finding`
+
+For `final_plans.md`, create one brief for the top-N comparison plus decision/lesson/finding pages for the recommendation, strategic forks, convergent risks, and load-bearing assumptions. For a single `candidates/{plan-slug}.md`, center the capsule on that candidate and cross-link to any alternatives named in the text.
+
+### `!wiki plan_batch <dir|glob>` — parallel plan capsules
+
+Build plan capsules for multiple plan files while serializing global wiki writes.
+
+1. **Discover plan files.** Resolve `<dir|glob>` relative to `{project_root}` unless absolute. Include markdown files only. Ignore generated capsule files under `{wiki_root}/plans/**` to avoid self-ingestion loops.
+2. **Preflight.** If zero files match, stop with a clear message. If one file matches, recommend `!wiki plan <file>` but allow continuing. If 3+ files match, use full dashboard tracking.
+3. **Create isolated capsules first.** For every plan file, compute `plan_slug`, create `{wiki_root}/plans/{plan_slug}/`, copy `source.md`, and initialize `manifest.json`. This makes partial progress resumable.
+4. **Parallel extraction wave.** Dispatch workers in parallel, one plan per worker unless there are many small plans; then group 3-5 related plans per worker. Each worker writes only inside assigned capsule directories (`proposed_pages.json`, `proposed_edges.json`, `proposed_entities.json`). Workers do not write global pages, graph, index, or audit.
+5. **Single global merge.** Dispatch one integration worker OR have the master assemble if the volume is small. It reads all capsule staging files and applies global page/entity/edge writes using the same rules as `ingest_batch`: Pattern B, contradiction checks, supersession, index rebuild, audit entries.
+6. **Cross-plan linking.** When plans are alternatives, mutually exclusive, or share assumptions, create explicit graph edges (`contradicts`, `supersedes`, `depends_on`, `mentions`, or schema-specific alternatives edges). Do not silently merge conflicting plans into one page.
+7. **Finalize capsules.** Update each `manifest.json` with generated pages/entities/edges and write each `index.md`. Print a batch summary sorted by plan slug with generated objects and conflicts.
+
+`plan_batch` is the preferred path for `documentation/research/plans/candidates/*.md` because candidates are independent during extraction but need one serialized merge into the global wiki.
 
 ### `!wiki query <question>` — hybrid search + answer
 
@@ -503,10 +591,13 @@ You don't need everything on day one. The command supports a tiered rollout:
 - **Audit every mutation.** Every page/graph/index/schema write appends to `audit.jsonl` with the current `schema_version`, `run_id`, and `--depth`. No exceptions, including auto-fixes.
 - **Embedding writes are content-hash gated.** The page-write hook MUST check `sha256(body)` against the embedding sidecar's `body_sha256` before re-embedding. Frontmatter-only edits never trigger re-embed.
 - **Schema changes go through propose/accept/rollback.** Never edit `schema/current` directly. Never edit a promoted `schema/v{N}.md` — versions are immutable once accepted. Use `!wiki schema_propose` → review → `!wiki schema_accept`.
+- **Plan capsules preserve provenance.** `!wiki plan` and `!wiki plan_batch` never rewrite the original plan. They copy it into `source.md`, preserve source hash/path metadata, and stage extracted knowledge before the global merge.
+- **Plan alternatives stay distinct.** Multiple candidate plans may contradict each other by design. Cross-link alternatives and contradictions with graph edges; do not collapse competing plans into one blended recommendation.
+- **Plan status is explicit.** Plan-derived pages and manifests must record whether the plan is proposed, selected, rejected, superseded, or unknown when that status is knowable.
 
 ### Synapse Integration Rules
 
-- **Wiki ops use Synapse dashboards.** `ingest_batch`, `lint`, `audit`, `crystallize`, `consolidate` all spin up real dashboards (or attach to an existing one when chained). Track them like any other swarm.
+- **Wiki ops use Synapse dashboards.** `ingest_batch`, `plan_batch`, `lint`, `audit`, `crystallize`, `consolidate` all spin up real dashboards (or attach to an existing one when chained). Track them like any other swarm.
 - **Workers report progress per `tracker_worker_instructions.md`.** Wiki workers are normal Synapse workers with normal progress files.
 
 #### Wiki ↔ PKI Exchange Contract
@@ -530,6 +621,7 @@ The wiki and PKI feed each other. The mapping is explicit:
 - **Slugs are kebab-case and stable.** Renaming a page requires a redirect entry: leave a stub page with `superseded_by: <new_slug>`.
 - **Wikilinks resolve at write time.** Every `[[link]]` is verified during page write; broken links flagged immediately.
 - **Sources are immutable.** Never edit `sources/{hash}.{ext}` after write. Re-ingest creates a new hash.
+- **Plan source copies are immutable.** Never edit `plans/{plan_slug}/source.md` after write. Re-running against changed plan content creates a new source hash and either updates the capsule manifest with a new version or creates a versioned capsule slug.
 - **Materialized files are derived state.** Don't hand-edit `pages/{slug}.md`, `graph/*.json`, or `index.json`. Always go through `!wiki` subcommands so the per-page / collection edit logs stay authoritative and the audit log stays consistent.
 - **Schema evolves; the LLM proposes, the human accepts.** Lint and audit surface schema patches; `!wiki schema_accept <ver>` is the only way to promote them.
 - **Findings are append-only.** `findings/{hash}.history.jsonl` is never rewritten — even resolution is recorded as a new entry. Recurring findings are how the wiki notices its own unresolved problems.

@@ -50,6 +50,19 @@ function resolveModel(provider, savedModel) {
   return options[0].value;
 }
 
+function formatWorkerErrorMessage(data) {
+  const error = data?.error || '';
+  const provider = data?.provider === 'codex' ? 'Codex' : 'Claude';
+  const executable = data?.provider === 'codex' ? 'codex' : 'claude';
+  const missingExecutable = /\bENOENT\b|not found|could not find/i.test(error);
+
+  if (missingExecutable) {
+    return `⚠ Connection lost — ${provider} CLI was not found. Install the ${executable} CLI or set its full path in Project Configuration, then try again.${error ? ` Details: ${error}` : ''}`;
+  }
+
+  return '⚠ Connection lost — the agent process ended unexpectedly' + (error ? ': ' + error : '.');
+}
+
 function inferSessionProvider(messages) {
   if (!Array.isArray(messages)) return null;
   for (const msg of messages) {
@@ -1630,11 +1643,11 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
           dispatch({
             type: 'CLAUDE_APPEND_MSG',
             surface,
-            msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly' + (data.error ? ': ' + data.error : '.'), isError: true }
+            msg: { type: 'system', text: formatWorkerErrorMessage(data), isError: true }
           });
           if (finishRef.current) finishRef.current(data.taskId);
         } else {
-          dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: taskTab, msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly.', isError: true } });
+          dispatch({ type: 'CLAUDE_TAB_STASH_APPEND_MSG', surface, tabId: taskTab, msg: { type: 'system', text: formatWorkerErrorMessage(data), isError: true } });
           activeTaskIdsRef.current.delete(data.taskId);
           delete taskDashboardMapRef.current[data.taskId];
           delete taskTabMapRef.current[data.taskId];
@@ -1648,7 +1661,7 @@ export default function ClaudeView({ onClose, hideHeader, viewMode, tab = 'code'
       } else {
         const targetDash = getStashedDashboard(data.taskId);
         if (targetDash) {
-          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'system', text: '⚠ Connection lost — the agent process ended unexpectedly.', isError: true } });
+          dispatch({ type: 'CLAUDE_STASH_APPEND_MSG', surface, dashboardId: targetDash, msg: { type: 'system', text: formatWorkerErrorMessage(data), isError: true } });
           const stashedSet = activeTaskStashRef.current[targetDash];
           if (stashedSet) {
             stashedSet.delete(data.taskId);

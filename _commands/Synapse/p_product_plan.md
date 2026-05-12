@@ -660,6 +660,8 @@ Master compiles the standard `!p_track` final report (NON-NEGOTIABLE):
    - **Honesty audit:** how many plans have `evidence_quality: thin` in 2+ categories (flag for follow-up `!p_research`); whether the Wave 6 worker committed to a recommendation; whether any plan was suspiciously inflated.
    - **Concrete next steps:**
      - If the recommendation is a specific plan: `!p_track {plan title}` to begin execution.
+     - If the user wants durable wiki memory for the chosen plan: `!wiki plan documentation/research/plans/final_plans.md`.
+     - If the user wants durable wiki memory for all candidate plans: `!wiki plan_batch documentation/research/plans/candidates/*.md`.
      - If the recommendation is "close open issues first": named `!p_research` follow-ups.
      - If the recommendation is "do nothing": explicit acknowledgment + alternative use of resources.
 3. Write `metrics.json` with product-plan-specific fields: `lens_count`, `category_count`, `category_rejections`, `candidate_count`, `evaluation_count`, `top_n`, `mean_score_top_n`, `evidence_thin_evaluation_count`, `recommendation_type`.
@@ -708,7 +710,7 @@ Master compiles the standard `!p_track` final report (NON-NEGOTIABLE):
 19. **Full dashboard tracking always.** Never `!p` lightweight.
 20. **Cycle protection.** Reject `depth > 3` if invoked from a hook chain.
 21. **Resume-safe.** Like `!p_research` and `!p_synthesize`, resumable via `!p_track_resume`. Plan files with valid frontmatter are considered complete on resume; missing or malformed plan files are re-dispatched.
-22. **Wiki crystallization is opt-in.** The final report SUGGESTS `!wiki ingest_batch documentation/research/plans/` if the user wants the chosen plan and its reasoning to land in durable wiki memory.
+22. **Wiki crystallization is opt-in.** The final report SUGGESTS `!wiki plan documentation/research/plans/final_plans.md` for the chosen/top-N plan comparison and `!wiki plan_batch documentation/research/plans/candidates/*.md` for all candidate plans. Use generic `!wiki ingest_batch documentation/research/plans/` only when the user wants the entire plans directory ingested without plan-specific capsules.
 
 ### Dispatch & Tracking (inherited from `!p_track`)
 
