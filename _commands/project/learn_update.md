@@ -4,7 +4,25 @@
 
 **Syntax:** `!learn_update`
 
-**Produces:** An updated `{project_root}/.synapse/knowledge/` directory with refreshed annotations for changed files, updated manifest.json stats and hashes, rebuilt domain and pattern indexes, and cleaned-up entries for deleted files.
+**Produces:** An updated `{project_root}/.synapse/knowledge/` directory with refreshed annotations for changed files, updated `manifest.json` stats and hashes, rebuilt sibling indices (`domain_index.json`, `tag_index.json`, `concept_map.json`), refreshed `domains.json` / `patterns.json`, possibly new entries under `rules/`, and cleaned-up entries for deleted files.
+
+**Output structure (recap):**
+
+```
+{project_root}/.synapse/knowledge/
+├── manifest.json          # version, last_updated, stats, files, insights_index
+├── domain_index.json      # sibling — domain → files reverse index (split out of manifest)
+├── tag_index.json         # sibling — tag → files reverse index (split out of manifest)
+├── concept_map.json       # sibling — high-level concepts (split out of manifest)
+├── annotations/{hash}.json  # per-file deep knowledge
+├── insights/{date}_{slug}.json  # post-swarm lessons
+├── rules/{rule_id}.json   # cross-cutting gotchas promoted from recurring annotation gotchas (auto-populated post-swarm starting Tier 2 #4)
+├── domains.json           # auto-discovered domain taxonomy
+├── patterns.json          # cross-cutting patterns and conventions
+└── queries/               # cached domain bundles (gitignored)
+```
+
+> **MANIFEST SPLIT (as of 2026-05-06):** `domain_index`, `tag_index`, and `concept_map` no longer live inside `manifest.json`. They are now SIBLING FILES under `.synapse/knowledge/` (`domain_index.json`, `tag_index.json`, `concept_map.json`). Writers must (a) build each index in memory exactly as before, then (b) write each one to its own sibling file (top-level shape: `{ "_metadata": { "version": 1, "moved_from": "manifest.json", "moved_from_field": "<field>", "moved_at": "<ISO 8601>", "entry_count": N }, ...index entries verbatim... }`), and (c) write `manifest.json` containing ONLY `{ version, last_updated, stats, files, insights_index }`. Atomic writes apply per file. Readers (e.g., `PromptBuilder`, task 2.2) must fall back to reading these sections out of `manifest.json` if the sibling files are missing — backward-compatibility constraint per `plan.json` `shared_constraints`.
 
 **When to use:**
 - After a swarm completes (files were modified, PostToolUse hook marked them stale)
@@ -181,9 +199,9 @@ As agents return, collect all annotation data. Validate that:
 
 ## Phase 4: Merge
 
-### Step 10: Update manifest.json
+### Step 10: Update manifest.json (and sibling indices)
 
-Read `{project_root}/.synapse/knowledge/manifest.json` (re-read in case of context compaction).
+Read `{project_root}/.synapse/knowledge/manifest.json` (re-read in case of context compaction). Also read `domain_index.json`, `tag_index.json`, and `concept_map.json` if they exist (they live as siblings of `manifest.json` since the manifest split — fall back to `manifest.<field>` if a sibling is missing).
 
 Apply the following changes:
 
@@ -213,7 +231,13 @@ Recompute:
 - `annotated`: count of entries where an annotation file exists
 - `stale`: count of entries where `stale: true` (should be 0 after a successful update)
 
-Write the updated manifest back to `{project_root}/.synapse/knowledge/manifest.json`.
+Write the updated manifest back to `{project_root}/.synapse/knowledge/manifest.json` (carrying only `{ version, last_updated, stats, files, insights_index }`). Then write each rebuilt reverse index to its own sibling file:
+
+- `{project_root}/.synapse/knowledge/domain_index.json`
+- `{project_root}/.synapse/knowledge/tag_index.json`
+- `{project_root}/.synapse/knowledge/concept_map.json`
+
+Each sibling carries a `_metadata` header (`{ version, moved_from, moved_from_field, moved_at, entry_count }`) followed by the index entries verbatim. Use atomic writes for every file.
 
 ### Step 11: Write annotation files
 
@@ -323,5 +347,5 @@ This ensures the PKI is fresh before agents use it for context gathering. The au
 - **If no changes are detected, exit immediately.** Report "PKI is up to date" and do not dispatch agents or rewrite any files.
 - **Update atomically.** When modifying manifest.json, domains.json, or patterns.json, read the full file, apply all changes in memory, and write the complete file. Never do partial writes or incremental appends.
 - **Include previous annotations in agent prompts for stale files.** When dispatching scan agents for stale files, the old annotation data must be included so the agent can compare and produce a minimal diff rather than regenerating from scratch.
-- **Do not modify files outside the PKI directory.** This command only writes to `{project_root}/.synapse/knowledge/`. It never modifies source code, TOC files, or other Synapse artifacts.
+- **Do not modify files outside the PKI directory.** This command only writes to `{project_root}/.synapse/knowledge/`. It never modifies source code, legacy markdown indexes, or other Synapse artifacts.
 - **Log the auto-trigger decision.** When running as an auto-trigger at swarm start, log whether the update was triggered and how many files were refreshed, so the user has visibility into background PKI maintenance.

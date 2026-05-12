@@ -1,57 +1,51 @@
 {
   "file": "_commands/Synapse/track_resume.md",
-  "content_hash": "24dfd0e2",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "b17646b9",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!track_resume [dashboardId]` command — lighter resume of a stalled !p_track swarm than !p_track_resume. Phase 1 reads core instructions (CLAUDE.md + tracker_master_instructions.md), resolves dashboard (auto-detects first resumable dashboard if not specified), reads init+all progress+logs+plan+project context, and CLASSIFIES every task into Completed/Failed/Stale In-Progress/Pending(ready)/Pending(blocked). For !track_resume purposes, treats ALL in_progress as stale (assumes previous master and its workers are dead). Phase 2 cleans stale progress files, builds full p_track-quality worker prompts with RESUME CONTEXT and PREVIOUS ATTEMPT sections, dispatches all ready. Phase 3 runs the standard execution loop with circuit breaker and final report.",
-  "exports": [],
+  "purpose": "Command specification for `!track_resume`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: > ## NON-NEGOTIABLE RULES \u2014 READ BEFORE ANYTHING ELSE > > **1. You are the MASTER AGENT. You do NOT write code. You do NOT implement anything. You ONLY analyze state and dispatch worker agents. No exceptions.** > > **2. You MUST read `{tracker_root}/agent/instructions/tracker_master_instructions.md` before dispatching any agents. Do not skip this. Do not work from memory. Read it.** > > **3. You MUST read the master task file to understand the fu The file is 415 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!track_resume",
+      "kind": "command",
+      "signature": "!track_resume [dashboardId]"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Treats ALL in_progress as stale — does NOT do the alive/uncertain/stale 3-way classification that !p_track_resume does (simpler but more aggressive)",
-    "Reads only 2 instruction files in Phase 1 (CLAUDE.md + tracker_master_instructions.md) vs !p_track_resume's 7 — lighter on instruction reading",
-    "If plan.json is missing, the master MUST regenerate it (redo deep-thinking pass) before re-dispatching — hooks block dispatch otherwise",
-    "Auto-detect logic: scan listDashboards() in order; first dashboard with non-null task and any incomplete/missing progress = resumable",
-    "Worker prompt template still uses the same p_track sections — TASK/DESCRIPTION/CONTEXT/PROJECT+TRACKER ROOT/CONVENTIONS/REFERENCE/UPSTREAM/CRITICAL/FILES/DIRECTORY/RESUME CONTEXT/PREVIOUS ATTEMPT (if retry)/PREPARATION/PROGRESS REPORTING/DEVIATION REPORTING/EXECUTION RULES/RETURN FORMAT",
-    "Final report is lighter than !p_track_resume — just summary table + log entry, no NON-NEGOTIABLE Resume Details section",
-    "Self-assessment 4-question gate is included verbatim in the worker prompt"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Three phases: Phase 1 Assess Current State (Steps 1-7) → Phase 2 Dispatch (Steps 8-10) → Phase 3 Monitor+Standard Execution Loop (Steps 11-13)",
-    "5-row task classification (Completed, Failed, Stale In-Progress, Pending ready, Pending blocked)",
-    "Stale detection signals: no active worker process, started_at >15-min old with no recent milestones, master session restarted",
-    "Dispatch sequence: launch agent FIRST → log AFTER → one-line confirmation",
-    "Worker prompt RESUME CONTEXT sections: NOTE about resumed state → optional PREVIOUS ATTEMPT block (status/stage/summary/logs/deviations/ROOT CAUSE/REMEDIATION)"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "p_track-era planning pattern: plan.json carries shared context and task entries before initialization.json/progress files handle dashboard rendering and lifecycle state.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Top-of-file NON-NEGOTIABLE RULES (4 numbered rules — fewer than !p_track_resume's 7)",
-    "Quick Reference table comparing !track_resume vs !dispatch --ready vs !retry",
-    "Embedded full worker prompt template (same as !p_track Step 14 with RESUME CONTEXT additions)"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [
-      "CLAUDE.md",
-      "agent/instructions/tracker_master_instructions.md",
-      "agent/instructions/tracker_worker_instructions.md",
-      "agent/instructions/dashboard_resolution.md",
-      "_commands/Synapse/p_track.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/p_track_resume.md",
-      "_commands/Synapse/dispatch.md",
-      "_commands/Synapse/retry.md"
-    ]
+    "related": []
   },
   "domains": [
-    "swarm-command",
-    "failure-recovery",
-    "stall-recovery"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "resume",
-    "lighter-variant"
-  ]
+    "track-resume",
+    "swarm-command",
+    "dashboard",
+    "progress",
+    "plan-json"
+  ],
+  "complexity": "complex"
 }

@@ -113,7 +113,7 @@ The PKI results are a **head start**, not a replacement. Always proceed to Step 
 Run these searches **in parallel**:
 
 1. **Grep for each search term** across the project (filenames and content)
-2. **Check `{project_root}/.synapse/toc.md`** tags and descriptions for matching entries
+2. **Check `{project_root}/.synapse/knowledge/`** indexes and annotations for matching domains, tags, concepts, and relationships
 3. **Glob for likely file patterns** (e.g., for `auth` → `**/auth/**`, `**/login/**`, `**/*auth*`)
 
 Deduplicate results into a single list of relevant files, grouped by directory/module. Merge with any files already found by the PKI in Step 1.5.

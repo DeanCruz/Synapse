@@ -1,70 +1,42 @@
 {
   "file": "agent/master/role.md",
-  "content_hash": "1d212f03",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "b265b91d",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the master agent's ABSOLUTE NON-NEGOTIABLE constraints: never write code, all implementation dispatched to workers, dashboard is mandatory, long prompts mean MORE planning not direct execution, read the command file every time. Specifies the five responsibilities (gather context, plan, dispatch, status, report), the exhaustive list of forbidden actions, and the post-swarm transition checklist. The foundational doc — re-read after compaction (Step 0 of recovery).",
+  "purpose": "Agent protocol/control-plane instruction document: Master Agent Role. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: > ## ABSOLUTE, NON-NEGOTIABLE CONSTRAINTS > > **You are the MASTER AGENT. These rules override everything else. They cannot be relaxed, ignored, or worked around under any circumstances.** > > **1. THE MASTER AGENT NEVER WRITES CODE.** Not a single line. Not a \"quick fix.\" Not \"just this one file because it's faster.\" Not a small tweak, a helper function, a config change, or a test. If it belongs to the application codebase, a WORKER AGENT writes The file is 142 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "ABSOLUTE rule: master NEVER writes code. Not one line, not a quick fix, not a config edit, not a test, not 'just this one file'. Every code change is dispatched via Task tool to a worker.",
-    "The single-task trap — when only one task remains, do NOT execute it directly. Dispatch a worker even for the last task.",
-    "Long or complex prompts are NOT an excuse to bypass dispatch — longer prompt = MORE planning and MORE agents needed, not direct execution.",
-    "Master writes EXACTLY 5 files at {tracker_root}: plan.json, initialization.json, logs.json, master_state.json, metrics.json. Anything in {project_root} is a worker's job.",
-    "plan.json MUST be written BEFORE initialization.json — hook-enforced via validate-plan-required.sh.",
-    "Archive before clear is NON-NEGOTIABLE — copy entire dashboard dir to Archive/{YYYY-MM-DD}_{task_name}/ before resetting state. After clear, VERIFY progress/ is empty before writing new initialization.json.",
-    "Read _commands/Synapse/p_track.md (or p.md) IN FULL on every invocation — do not work from memory. The legacy paths tasks/{date}/parallel_*.json|.md are deprecated.",
-    "The master does NOT update initialization.json after planning (workers own all lifecycle data). Do not maintain counters — dashboard derives all stats from progress files.",
-    "Do NOT output terminal status tables during execution — dashboard is the primary reporting channel. Terminal gets one-line confirmations only. Status tables only on !status.",
-    "If additional context directories are configured (.synapse/project.json or Electron app), read their CLAUDE.md files alongside project CLAUDE.md and include their conventions in worker prompts.",
-    "Post-swarm exit requires ALL 5 conditions: terminal state for all tasks, final report written, metrics recorded, dashboard archived (if user requested), user explicitly acknowledged. 'Almost done' is not done.",
-    "The validate-master-write hook (.claude/hooks/validate-master-write.sh) blocks the master from writing project source files."
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Five responsibilities: (1) gather context — read CLAUDE.md, project CLAUDE.md, TOC, additional context dirs, source files; (2) plan — decompose, map dependencies, write self-contained worker prompts including {tracker_root} and {project_root} paths; (3) dispatch — Task tool with complete prompts, parallel for independent tasks, immediate scan on completions; (4) status — append to logs.json, do not update initialization.json; (5) report — final summary, update TOC if files moved, move to history.",
-    "Master conductor metaphor: 'A conductor does not pick up a violin mid-symphony.' The master's power is its elevated perspective — losing it to implementation tunnel-vision causes dispatch errors and conflicts.",
-    "Every worker prompt MUST include {tracker_root} (for progress reporting) AND {project_root} (for code work) — workers cannot auto-detect these."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Forbidden master actions: edit application source (.ts/.tsx/.js/.jsx/.py/.go/.rs/.java/.css/.html/.json — except dashboard files), create application files, run application commands (npm run build, npm test, etc.), 'help' a worker by doing part of its task, implement 'just one thing' for speed.",
-    "Dashboard files allowed for master: plan.json, initialization.json, logs.json, master_state.json, metrics.json — all under {tracker_root}/dashboards/{id}/.",
-    "Five responsibilities are the exhaustive job description — nothing more.",
-    "Planning is where the master earns value — invest heavily, never rush."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      ".claude/hooks/validate-master-write.sh",
-      ".claude/hooks/validate-plan-required.sh"
-    ],
-    "depended_by": [
-      ".claude/skills/master-protocol",
-      ".claude/skills/p-track",
-      ".claude/skills/p",
-      ".claude/skills/master-plan-track",
-      "agent/master/compaction_recovery.md",
-      "agent/master/eager_dispatch.md",
-      "agent/master/failure_recovery.md",
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/p.md",
-      ".claude/agents/master-orchestrator.md"
-    ],
-    "related": [
-      "agent/master/dashboard_writes.md",
-      "agent/master/worker_prompts.md",
-      "agent/instructions/tracker_master_instructions.md",
-      "CLAUDE.md"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "master-orchestration",
-    "role-constraints",
-    "non-negotiable-protocol"
+    "agent-protocol",
+    "master"
   ],
   "tags": [
     "markdown",
-    "master-agent",
-    "constitution",
-    "no-code-rule",
-    "responsibilities"
-  ]
+    "agent-instructions",
+    "master",
+    "dashboard",
+    "progress",
+    "plan-json",
+    "initialization-json",
+    "claude"
+  ],
+  "complexity": "moderate"
 }

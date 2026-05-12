@@ -1,47 +1,45 @@
 {
   "file": ".claude/skills/project-workflow/SKILL.md",
   "content_hash": "e8f13423",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "User-invocable router skill for project setup, discovery, auditing, and analysis commands. Maps 22 project commands across 5 categories: Setup (!project, !initialize, !onboard, !scaffold, !create_claude), Analysis & Auditing (!context, !review, !health, !scope, !trace, !contracts, !env_check, !plan, !prompt_audit), PKI & Instrumentation (!learn, !learn_update, !instrument), TOC Management (!toc, !toc_generate, !toc_update), Discovery (!commands, !profiles, !help). Each routes to a _commands/{Synapse|project}/*.md spec file. Includes shell preprocessing to inject PROJECT_ROOT into the prompt at load time.",
-  "exports": [],
-  "imports_from": {
-    "commands": [
-      "_commands/Synapse/project.md",
-      "_commands/project/*.md (22 files)"
-    ]
-  },
-  "gotchas": [
-    "Dispatcher only — does NOT contain command logic; routes to _commands/{Synapse,project}/*.md",
-    "Mixes _commands/Synapse/project.md (the !project command) with _commands/project/*.md (analysis commands)",
-    "argument-hint is `<command> [args]` — user types the command name as argument"
+  "purpose": "Claude Code skill definition for `project-workflow`. It describes trigger conditions, workflow, constraints, and referenced protocol files for that skill. Key content: --- name: project-workflow description: > Run Synapse project setup, discovery, auditing, and analysis workflows. Handles project configuration, onboarding, code review, health checks, TOC management, scaffolding, implementation planning, PKI management, and instrumentation. Use when the user invokes !project, !initialize, !onboard, !context, !review, !health, !scaffold, !plan, !scope, !trace, !contracts, !env_check, !toc, !toc_generate, !toc_upd The file is 75 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "project-workflow",
+      "kind": "skill",
+      "signature": "project-workflow SKILL.md instructions"
+    }
   ],
+  "imports_from": {},
+  "gotchas": [],
   "patterns": [
-    "Router skill pattern: routing tables grouped by category + 'read the spec file' instruction"
+    "Skill-definition pattern: trigger guidance first, then workflow steps and referenced protocol files; these files are loaded on demand by Claude Code.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Category grouping: Setup / Analysis / PKI / TOC / Discovery"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "_commands/Synapse/project.md",
-      "_commands/project/*.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      ".claude/skills/dashboard-ops/SKILL.md (sibling router)"
-    ]
+    "related": []
   },
   "domains": [
-    "skill-definition",
-    "command-router",
+    "claude-skills",
     "project-workflow"
   ],
   "tags": [
+    "markdown",
     "skill",
-    "yaml-frontmatter",
-    "router",
-    "project",
-    "user-invocable"
-  ]
+    "project-workflow",
+    "pki",
+    "guide",
+    "profile",
+    "claude",
+    "ide"
+  ],
+  "complexity": "simple"
 }

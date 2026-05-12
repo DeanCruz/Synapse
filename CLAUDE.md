@@ -9,7 +9,38 @@ Synapse coordinates autonomous agent swarms for parallel software development. I
 !project set /path/to/your/project    # Point Synapse at your project
 npm start                              # Launch the Electron app (server starts automatically)
 !p_track {your prompt here}            # Run a parallel swarm
+```
 
+## Command System — Non-Negotiable
+
+Any user input prefixed with `!` (e.g., `!p_track`, `!context`, `!q_product_research`) is a **command directive**. Commands map to instruction files in the `_commands/` directory hierarchy. When a `!command` is invoked, the agent **MUST**:
+
+1. **Resolve** — Search for the command file using the resolution order below
+2. **Read** — Read the entire command file from start to finish
+3. **Execute** — Follow every step exactly as written, in order, with no improvisation, no skipping, and no partial execution
+
+This is **non-negotiable**. Command files are complete specifications — they define exactly what the agent must do. The agent does not interpret, summarize, or selectively execute commands. A `!command` overrides normal agent behavior for the duration of its execution.
+
+### Resolution Order
+
+```
+1. {tracker_root}/_commands/Synapse/{command}.md   <- Swarm commands (highest priority)
+2. {tracker_root}/_commands/project/{command}.md   <- Project commands
+3. {tracker_root}/_commands/user/{command}.md       <- User commands (local, git-ignored)
+4. {project_root}/_commands/{command}.md           <- Project-specific commands
+```
+
+### Rules
+
+- **Read first, execute second.** Always read the full command file before taking any action.
+- **No deviation.** Every instruction in the command file must be followed in the order written.
+- **No improvisation.** Do not add steps, skip steps, or substitute alternative approaches unless the command file explicitly allows it.
+- **Arguments pass through.** If the user provides arguments after the command (e.g., `!p_track build the auth system`), pass them as context to the command's execution flow.
+- **Not found.** If the command file doesn't exist in any location, inform the user and list available commands via `!commands`.
+
+### Enforcement
+
+A PostToolUse hook (`enforce-command-compliance.sh`) fires whenever the agent reads a `_commands/` file, injecting a reminder that the command must be followed exactly. This is a backstop — the agent should already treat `!commands` as non-negotiable directives.
 
 ## Path Convention
 
@@ -99,7 +130,12 @@ Synapse/                              <-- {tracker_root}
 |   |-- hooks/                        <-- Pre/Post tool-use validation hooks
 |   |   |-- validate-master-write.sh  <-- Prevents master from writing project files
 |   |   |-- validate-progress-file.sh <-- Validates worker progress file writes
-|   |   +-- ... (13 hooks total)
+|   |   |-- enforce-tracker-root-writes.sh <-- Restricts file writes to tracker root
+|   |   |-- enforce-dashboard-isolation.sh <-- Dashboard isolation enforcement
+|   |   |-- validate-initialization-schema.sh <-- Schema validation for initialization.json
+|   |   |-- validate-plan-required.sh <-- Ensures plan.json exists before initialization
+|   |   |-- validate-chat-dashboard.sh <-- Chat dashboard validation
+|   |   +-- ... (21 hooks total)
 |   +-- skills/                       <-- Skill definitions (loaded on demand)
 |       |-- p-track/                  <-- Full parallel swarm (fork, opus)
 |       |-- p/                        <-- Lightweight parallel (fork, opus)
@@ -113,19 +149,19 @@ Synapse/                              <-- {tracker_root}
 |       +-- failure-protocol/         <-- Auto-loaded failure recovery protocol
 |
 |-- _commands/
-|   |-- Synapse/                      <-- 25 swarm orchestration commands
+|   |-- Synapse/                      <-- 35 swarm orchestration commands
 |   |   |-- p_track.md, p_track_plan.md, p.md, master_plan_track.md,
 |   |   |-- add_task.md, dispatch.md, eager_dispatch.md, retry.md,
 |   |   |-- resume.md, p_track_resume.md, track_resume.md,
 |   |   |-- update_dashboard.md, export.md, cancel.md, cancel-safe.md,
 |   |   |-- status.md, logs.md, inspect.md, deps.md, history.md,
 |   |   |-- start.md, stop.md, reset.md, guide.md, project.md
-|   |-- project/                      <-- 22 project analysis commands
+|   |-- project/                      <-- 24 project analysis commands
 |   |   |-- initialize.md, onboard.md, scaffold.md, create_claude.md,
 |   |   |-- context.md, review.md, health.md, scope.md, trace.md,
 |   |   |-- contracts.md, env_check.md, plan.md, prompt_audit.md,
-|   |   |-- learn.md, learn_update.md, instrument.md, toc.md,
-|   |   |-- toc_generate.md, toc_update.md, commands.md, profiles.md, help.md
+|   |   |-- learn.md, learn_update.md, instrument.md,
+|   |   |-- commands.md, profiles.md, help.md
 |   +-- profiles/                     <-- 15 agent role profiles
 |       |-- analyst.md, architect.md, copywriter.md, customer-success.md,
 |       |-- devops.md, founder.md, growth.md, legal.md, marketing.md,
@@ -156,10 +192,10 @@ Synapse/                              <-- {tracker_root}
 |
 |-- electron/                         <-- Electron desktop app
 |   |-- main.js                       <-- App lifecycle, window creation, app:// protocol
-|   |-- preload.js                    <-- IPC bridge (26 push channels, ~140 pull methods)
+|   |-- preload.js                    <-- IPC bridge (27 push channels, ~140 pull methods)
 |   |-- ipc-handlers.js              <-- Central IPC registration (~2925 lines)
 |   |-- settings.js                   <-- Persistent settings store (JSON file)
-|   +-- services/
+|   +-- services/                     <-- 15 Electron services
 |       |-- AutoUpdateService.js      <-- Electron auto-update state machine
 |       |-- ClaudeCodeService.js      <-- Claude CLI process spawning/management
 |       |-- CodexService.js           <-- Codex CLI process spawning/management
@@ -173,7 +209,8 @@ Synapse/                              <-- {tracker_root}
 |       |-- DebugService.js           <-- Node.js debugger (Chrome DevTools Protocol)
 |       |-- InstrumentService.js      <-- data-synapse-label instrumentation
 |       |-- PreviewService.js         <-- Label-to-source file mapper
-|       +-- PreviewTextWriter.js      <-- Text update writer + dev server detection
+|       |-- PreviewTextWriter.js      <-- Text update writer + dev server detection
+|       +-- GuideService.js           <-- documentation/guide markdown loader for GuideModal
 |
 |-- src/server/                       <-- SSE server (no framework, pure http)
 |   |-- index.js                      <-- HTTP server, SSE endpoint, startup/shutdown
@@ -192,45 +229,67 @@ Synapse/                              <-- {tracker_root}
 |       |-- json.js                   <-- JSON I/O, retry logic, schema validators
 |       +-- validation.js             <-- Dependency graph validation (Kahn's algorithm)
 |
-|-- src/ui/                           <-- React 18 dashboard (functional components, useReducer)
+|-- src/ui/                           <-- React 19 dashboard (functional components, useReducer)
 |   |-- main.jsx                      <-- Entry point, IPC fetch shim, CSS imports
-|   |-- App.jsx                       <-- Root component, view router
+|   |-- App.jsx                       <-- Root PageRouter (mounts ChatPage + CodePage shells)
 |   |-- context/
 |   |   +-- AppContext.jsx            <-- Global state (AppContext + DispatchContext)
 |   |-- hooks/
 |   |   |-- useDashboardData.js       <-- Dashboard data fetching/subscriptions
 |   |   |-- useElectronAPI.js         <-- Electron IPC bridge hook
 |   |   +-- useResize.js              <-- Resize observer hook
-|   |-- components/
-|   |   |-- Header.jsx, Sidebar.jsx, ProgressBar.jsx, StatsBar.jsx
-|   |   |-- HomeView.jsx, SwarmBuilder.jsx, TerminalView.jsx
-|   |   |-- AgentCard.jsx, WavePipeline.jsx, ChainPipeline.jsx
-|   |   |-- LogPanel.jsx, MetricsPanel.jsx, TimelinePanel.jsx
-|   |   |-- BottomPanel.jsx, EmptyState.jsx, ConnectionIndicator.jsx
-|   |   |-- ClaudeView.jsx, QueuePopup.jsx
-|   |   |-- git/                      <-- Git Manager (12 components)
-|   |   |   |-- GitManagerView.jsx, BranchPanel.jsx, ChangesPanel.jsx,
-|   |   |   |-- CommitPanel.jsx, DiffViewer.jsx, HistoryPanel.jsx,
-|   |   |   |-- RemotePanel.jsx, RepoTabs.jsx, GitWelcome.jsx,
-|   |   |   +-- InitFlow.jsx, QuickActions.jsx, SafetyDialogs.jsx
-|   |   |-- ide/                      <-- Code Explorer (12 components)
-|   |   |   |-- IDEView.jsx, IDEWelcome.jsx, CodeEditor.jsx,
-|   |   |   |-- FileExplorer.jsx, EditorTabs.jsx, WorkspaceTabs.jsx,
-|   |   |   |-- SearchPanel.jsx, SearchResults.jsx, DebugPanels.jsx,
-|   |   |   +-- DebugToolbar.jsx, DebugConsolePanel.jsx, ProblemsPanel.jsx
-|   |   |-- preview/
-|   |   |   +-- PreviewView.jsx       <-- Live Preview tab
-|   |   +-- modals/                   <-- Modal dialogs (15 components)
+|   |-- shared/                       <-- Shared components (cross-page)
+|   |   |-- Header.jsx               <-- App header with mode switching
+|   |   |-- ModeMenu.jsx             <-- Chat/Code mode toggle
+|   |   |-- claude/                   <-- Agent chat components
+|   |   |   |-- ClaudeView.jsx       <-- Full agent chat (streaming, tool calls, history)
+|   |   |   +-- ClaudeFloatingPanel.jsx <-- Floating chat panel in Code mode
+|   |   +-- modals/                   <-- Shared modal files (17 files)
 |   |       |-- Modal.jsx, CommandsModal.jsx, ProjectModal.jsx,
 |   |       |-- SettingsModal.jsx, PlanningModal.jsx, TaskEditorModal.jsx,
 |   |       |-- ArchiveModal.jsx, ConfirmModal.jsx, ErrorModal.jsx,
 |   |       |-- HistoryModal.jsx, LogsModal.jsx, PermissionModal.jsx,
-|   |       +-- AgentDetails.jsx, TaskDetails.jsx, WorkerTerminal.jsx
-|   |-- preview/
-|   |   +-- inject-overlay.js        <-- Webview injection script for Live Preview
+|   |       +-- AgentDetails.jsx, TaskDetails.jsx, WorkerTerminal.jsx, GuideModal.jsx
+|   |-- pages/
+|   |   |-- chat/                     <-- Chat mode (full-page agent conversations)
+|   |   |   |-- ChatPage.jsx         <-- Chat shell (sidebar + content area + tab bar)
+|   |   |   +-- components/
+|   |   |       |-- ChatSidebar.jsx   <-- Project tabs, conversation list, new chat
+|   |   |       |-- ChatInstanceView.jsx <-- Active agent chat (wraps ClaudeView)
+|   |   |       |-- ChatDashboardView.jsx <-- Dashboard agent cards for chat agents
+|   |   |       +-- ChatMakePage.jsx  <-- Make tab (placeholder)
+|   |   +-- code/                     <-- Code mode (dashboards, IDE, git, preview)
+|   |       |-- CodePage.jsx          <-- Code shell (sidebar + content + floating panel)
+|   |       |-- components/
+|   |       |   +-- CodeSidebar.jsx   <-- Dashboard selector with status dots, DnD reorder
+|   |       +-- subpages/
+|   |           |-- dashboards/       <-- Swarm dashboards
+|   |           |   |-- DashboardsPage.jsx
+|   |           |   +-- components/
+|   |           |       |-- AgentCard.jsx, WavePipeline.jsx, ChainPipeline.jsx
+|   |           |       |-- SwarmBuilder.jsx, TerminalView.jsx, BottomPanel.jsx
+|   |           |       |-- LogPanel.jsx, MetricsPanel.jsx, TimelinePanel.jsx
+|   |           |       |-- StatsBar.jsx, ProgressBar.jsx, EmptyState.jsx
+|   |           |       +-- ConnectionIndicator.jsx, QueuePopup.jsx
+|   |           |-- code-explorer/    <-- IDE / Code Explorer
+|   |           |   |-- CodeExplorerPage.jsx
+|   |           |   +-- components/
+|   |           |       |-- CodeEditor.jsx, FileExplorer.jsx, EditorTabs.jsx
+|   |           |       |-- SearchPanel.jsx, SearchResults.jsx
+|   |           |       |-- DebugPanels.jsx, DebugToolbar.jsx, DebugConsolePanel.jsx
+|   |           |       +-- ProblemsPanel.jsx
+|   |           |-- git/              <-- Git Manager
+|   |           |   |-- GitPage.jsx
+|   |           |   +-- components/
+|   |           |       |-- BranchPanel.jsx, ChangesPanel.jsx, CommitPanel.jsx
+|   |           |       |-- DiffViewer.jsx, HistoryPanel.jsx, RemotePanel.jsx
+|   |           |       +-- QuickActions.jsx, InitFlow.jsx, SafetyDialogs.jsx
+|   |           +-- preview/          <-- Live Preview
+|   |               |-- PreviewPage.jsx
+|   |               +-- inject-overlay.js <-- Webview injection script
 |   |-- utils/                        <-- Utility modules
 |   |   |-- constants.js, format.js, markdown.js, dependencyLines.js,
-|   |   +-- ideWorkspaceManager.js, dashboardProjects.js, monacoWorkerSetup.js
+|   |   +-- dashboardProjects.js, monacoWorkerSetup.js
 |   +-- styles/                       <-- CSS stylesheets
 |
 |-- dashboards/{id}/                  <-- Live dashboard data (one dir per dashboard)
@@ -295,9 +354,9 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | | `!env_check` | Environment variable audit |
 | | `!plan {task}` | Implementation planning |
 | | `!prompt_audit` | Post-swarm prompt quality audit |
-| **TOC** | `!toc {query}` | Search the project TOC |
-| | `!toc_generate` | Generate a full project TOC |
-| | `!toc_update` | Incrementally update the TOC |
+| **Knowledge Graph** | `!learn` | Generate the `.synapse/knowledge/` graph |
+| | `!learn_update` | Incrementally refresh stale or missing knowledge graph annotations |
+| | `!context {query}` | Query the knowledge graph and supplement with grep/glob |
 | **Discovery** | `!profiles` | List available profiles |
 | | `!commands` | List all available commands |
 | | `!help` | Master agent guide |
@@ -305,6 +364,44 @@ The PKI is a persistent knowledge layer at `{project_root}/.synapse/knowledge/` 
 | **Server** | `!start` | Start the dashboard server |
 | | `!stop` | Stop the dashboard server |
 | | `!reset` | Clear all tracker data |
+
+## Chat System
+
+The Electron app has two primary modes: **Chat** and **Code**, toggled via the ModeMenu in the header. Both shells are always mounted (CSS-hidden when inactive) so IPC listeners stay alive during background agent runs.
+
+### Chat Mode (`ChatPage`)
+
+A full-page conversational interface for interacting with Claude/Codex agents:
+
+- **ChatSidebar** — Project tabs with conversation management (create, rename, delete), collapsible, unread indicators
+- **ChatInstanceView** — Active agent chat (wraps `ClaudeView`); each project tab can have multiple sub-tabs (independent agent instances identified by `chat-agent-{hex}`)
+- **ChatDashboardView** — Visualizes swarm progress for chat-spawned agents using AgentCards
+- **ChatMakePage** — Placeholder "Make" tab (coming soon)
+- **ChatTabBar** — Sub-tab management within a project tab (create/switch/delete agent instances)
+
+Each chat agent gets its own dashboard directory (`dashboards/chat-agent-{hex}/`) for tracking spawned tasks. Conversations are persisted via `ConversationService` to `conversations/`.
+
+### Code Mode (`CodePage`)
+
+The workspace for swarm dashboards, code exploration, git management, and live preview:
+
+- **CodeSidebar** — Dashboard selector with status dots, drag-and-drop reorder, inline rename, queue section
+- **DashboardsPage** — Swarm visualization (AgentCards, WavePipeline, ChainPipeline, logs, metrics, timeline)
+- **CodeExplorerPage** — Built-in IDE with file explorer, Monaco editor, search, debug panels
+- **GitPage** — Git manager (branches, changes, commits, diff viewer, history, remotes)
+- **PreviewPage** — Live Preview with webview embedding
+- **ClaudeFloatingPanel** — Floating chat panel that stays alive while browsing dashboards/IDE
+
+### ClaudeView (Shared Agent Chat)
+
+The core agent interaction component (`src/ui/shared/claude/ClaudeView.jsx`) powers both Chat mode and the floating panel in Code mode:
+
+- Streams Claude/Codex output in real-time with tool call rendering
+- Supports multiple AI providers (Claude Opus/Sonnet/Haiku, GPT-5.x via Codex)
+- Persists conversation state in AppContext across view switches
+- Reads Synapse CLAUDE.md + project CLAUDE.md on each agent spawn
+- Permission modal for tool-use approval
+- Markdown rendering with file path linkification
 
 ## Live Preview
 

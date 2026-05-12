@@ -1,0 +1,56 @@
+{
+  "file": "src/ui/shared/modals/ConfirmModal.jsx",
+  "content_hash": "64979c1c",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Generic two-button confirmation dialog. Receives a title, message, onConfirm, and onCancel callback. Backed by Modal base — onClose maps to onCancel so ESC key and backdrop click also cancel. Renders <p class='modal-message'> + a row of buttons (.modal-btn-cancel / .modal-btn-confirm). Used app-wide whenever destructive or branching user intent must be captured outside of native confirm().",
+  "exports": [
+    {
+      "name": "ConfirmModal",
+      "kind": "component",
+      "signature": "default function ConfirmModal(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/shared/modals/Modal.jsx": [
+      "Modal"
+    ]
+  },
+  "gotchas": [
+    "ESC and backdrop-click both fire onCancel because onClose is wired to onCancel — there is no way to wire ESC to onConfirm or to disable cancel via dismissal.",
+    "Message is a single string rendered in a <p> — passing JSX or multi-paragraph content will render inside one paragraph and may need styling tweaks.",
+    "There is no busy/loading state — once Confirm is clicked, the modal closes immediately (handlers are responsibility of the parent). For async confirms, parent must show its own progress indicator."
+  ],
+  "patterns": [
+    "Buttons follow naming convention .modal-btn + variant suffix (.modal-btn-cancel, .modal-btn-confirm, .modal-btn-close).",
+    "Companion to ErrorModal — both are minimal wrappers over Modal with stylized actions."
+  ],
+  "conventions": [
+    "Default export is the component named like the file."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/shared/modals/Modal.jsx"
+    ],
+    "depended_by": [],
+    "related": [
+      "src/ui/shared/modals/ErrorModal.jsx"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "confirmation-flow"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "confirm",
+    "dialog"
+  ],
+  "complexity": "simple"
+}

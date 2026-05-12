@@ -1,33 +1,61 @@
 {
   "file": "documentation/swarm-lifecycle/circuit-breaker.md",
   "content_hash": "b0f5a63d",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Describes Synapse's circuit-breaker mechanism that pauses an in-flight swarm and triggers replanning when failure patterns indicate a planning error. Triggers include 3+ related failures in the same wave, cascading failures from a blocking task, or worker deviations that invalidate plan assumptions. The breaker prevents cascading damage and forces the master to reassess.",
+  "purpose": "Documentation page for the swarm-lifecycle area: Circuit Breaker. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The circuit breaker is Synapse's automatic replanning mechanism for cascading failures. When failures propagate through the dependency graph -- indicating a systemic problem rather than isolated task errors -- the circuit breaker halts new dispatches, analyzes the root cause, and produces a revised plan that addresses the underlying issue. This prevents the swarm from wasting cycles on doomed tasks while routing around the failure. The file is 487 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Don't pause for isolated failures -- retry or route around them; circuit breaker is for systemic problems",
-    "Resumption after circuit break requires fresh planning, not just retrying the same dispatch"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Circuit-breaker pattern guarding swarm-wide coordination"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Master logs the breaker trip with the triggering condition before pausing"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md",
+      "documentation/troubleshooting/common-issues.md"
+    ],
+    "related": [
+      "documentation/swarm-lifecycle/completion-phase.md",
+      "documentation/swarm-lifecycle/dispatch-phase.md",
+      "documentation/swarm-lifecycle/monitoring-phase.md",
+      "documentation/swarm-lifecycle/overview.md",
+      "documentation/swarm-lifecycle/planning-phase.md"
+    ]
   },
   "domains": [
-    "swarm-lifecycle",
-    "failure-recovery"
+    "documentation",
+    "swarm-lifecycle"
   ],
   "tags": [
-    "circuit-breaker",
-    "replanning",
-    "failure"
-  ]
+    "markdown",
+    "documentation",
+    "swarm-lifecycle",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "sse"
+  ],
+  "complexity": "complex"
 }

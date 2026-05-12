@@ -1,0 +1,97 @@
+{
+  "file": "src/ui/pages/code/subpages/git/GitPage.jsx",
+  "content_hash": "f8ad3007",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "GitPage participates in the Git workspace. It presents repository status, branch/history/diff/commit/remote operations through the Electron git IPC API so the renderer never shells out directly or assumes one fixed repository.",
+  "exports": [
+    {
+      "name": "GitPage",
+      "kind": "component",
+      "signature": "default function GitPage(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/pages/code/subpages/git/components/InitFlow.jsx": [
+      "InitFlow"
+    ],
+    "src/ui/pages/code/subpages/git/components/ChangesPanel.jsx": [
+      "ChangesPanel"
+    ],
+    "src/ui/pages/code/subpages/git/components/DiffViewer.jsx": [
+      "DiffViewer"
+    ],
+    "src/ui/pages/code/subpages/git/components/CommitPanel.jsx": [
+      "CommitPanel"
+    ],
+    "src/ui/pages/code/subpages/git/components/RemotePanel.jsx": [
+      "RemotePanel"
+    ],
+    "src/ui/pages/code/subpages/git/components/BranchPanel.jsx": [
+      "BranchPanel"
+    ],
+    "src/ui/pages/code/subpages/git/components/HistoryPanel.jsx": [
+      "HistoryPanel"
+    ],
+    "src/ui/pages/code/subpages/git/components/QuickActions.jsx": [
+      "QuickActions"
+    ],
+    "src/ui/utils/dashboardProjects": [
+      "getDashboardProject",
+      "saveDashboardProject",
+      "getDashboardActiveRepo",
+      "saveDashboardActiveRepo"
+    ]
+  },
+  "gotchas": [
+    "Git operations route through Electron IPC and are scoped to selected repository paths; UI components should not call git directly."
+  ],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/pages/code/subpages/git/components/BranchPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/ChangesPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/CommitPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/DiffViewer.jsx",
+      "src/ui/pages/code/subpages/git/components/HistoryPanel.jsx",
+      "src/ui/pages/code/subpages/git/components/InitFlow.jsx",
+      "src/ui/pages/code/subpages/git/components/QuickActions.jsx",
+      "src/ui/pages/code/subpages/git/components/RemotePanel.jsx",
+      "src/ui/utils/dashboardProjects"
+    ],
+    "depended_by": [
+      "src/ui/pages/code/CodePage.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-ui",
+    "git-workspace",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "git",
+    "swarm"
+  ],
+  "complexity": "complex"
+}

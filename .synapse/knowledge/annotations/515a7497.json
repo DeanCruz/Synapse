@@ -1,0 +1,59 @@
+{
+  "file": "src/ui/pages/code/subpages/code-explorer/components/EditorTabs.jsx",
+  "content_hash": "5b48d350",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "EditorTabs participates in the code explorer subpage. It supports the IDE-style workspace with file tree, Monaco editor tabs, search, debug panels, diagnostics, and Electron-backed file/debug IPC while preserving page-level state under CodeExplorerPage.",
+  "exports": [
+    {
+      "name": "EditorTabs",
+      "kind": "component",
+      "signature": "default function EditorTabs(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext"
+    ],
+    "depended_by": [
+      "src/ui/pages/code/subpages/code-explorer/CodeExplorerPage.jsx"
+    ],
+    "related": [
+      "electron/services/DebugService.js",
+      "src/ui/utils/monacoWorkerSetup.js"
+    ]
+  },
+  "domains": [
+    "react-ui",
+    "code-explorer",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "ide",
+    "swarm"
+  ],
+  "complexity": "simple"
+}

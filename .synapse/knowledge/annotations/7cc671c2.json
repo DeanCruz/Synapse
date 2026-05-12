@@ -1,0 +1,43 @@
+{
+  "file": "documentation/guide/1.0-intro.md",
+  "content_hash": "20119036",
+  "annotated_at": "2026-05-11T01:54:48Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Documentation page for the guide area: 1.0 Intro. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Synapse is a desktop control system for working with AI agents across real software projects. You use it to chat with an agent, plan parallel work, watch workers complete tasks, inspect code, manage git changes, and preview web apps from one place. The file is 45 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
+  ],
+  "patterns": [
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses markdown tables for compact command, file, or option matrices."
+  ],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Guide pages use numeric filename prefixes so the in-app Guide modal can display them in a stable reading order.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/guide/1.1-table-of-contents.md"
+    ],
+    "related": []
+  },
+  "domains": [
+    "documentation",
+    "guide"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "guide",
+    "dashboard",
+    "progress",
+    "sse",
+    "git",
+    "chat"
+  ],
+  "complexity": "simple"
+}

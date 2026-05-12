@@ -1,6 +1,6 @@
 # CSS Design System
 
-The Synapse Dashboard uses a custom CSS design system built on CSS custom properties, with no CSS-in-JS libraries or utility frameworks. Styles are split across **10 CSS files** in `/src/ui/styles/` totaling **13,778 lines**. JavaScript reads status colors from CSS via `getComputedStyle` at runtime so that theme changes propagate to both CSS and JS rendering.
+The Synapse Dashboard uses a custom CSS design system built on CSS custom properties, with no CSS-in-JS libraries or utility frameworks. Current styles are split between global shared styles in `/src/ui/styles/` and colocated page/subpage styles under `src/ui/pages/**/styles/`. JavaScript reads status colors from CSS via `getComputedStyle` at runtime so that theme changes propagate to both CSS and JS rendering.
 
 ---
 
@@ -8,19 +8,15 @@ The Synapse Dashboard uses a custom CSS design system built on CSS custom proper
 
 | File | Lines | Scope | Imported By |
 |---|---|---|---|
-| `index.css` | 8,073 | Core design system, dashboard components, pipelines, modals, themes, animations | `main.jsx` |
-| `git-manager.css` | 2,401 | Full Git Manager view — repo tabs, changes, commits, diffs, branches, history, quick actions, dialogs | `GitManagerView.jsx` + all git sub-components |
-| `ide-debug.css` | 1,124 | IDE debug toolbar, status indicators, button styles, launch config | `IDEView.jsx`, `DebugToolbar.jsx`, `DebugPanels.jsx`, `ProblemsPanel.jsx` |
-| `ide-debug-panels.css` | 525 | Debug side panels — variables, call stack, breakpoints, watch expressions | `IDEView.jsx` |
-| `ide-explorer.css` | 345 | File tree browser, welcome screen, tree node indent levels, loading states | `FileExplorer.jsx`, `IDEWelcome.jsx`, `main.jsx` |
-| `ide-editor.css` | 297 | Editor tabs, Monaco host, breakpoint glyphs, diagnostic decorations, saving indicator | `EditorTabs.jsx`, `CodeEditor.jsx`, `main.jsx` |
-| `ide-debug-console.css` | 288 | Debug console REPL — output display, expression input, entry types | `IDEView.jsx` |
-| `ide-layout.css` | 270 | IDE container layout, workspace tabs, resizable divider, editor area, debug sidebar | `IDEView.jsx`, `main.jsx` |
-| `ide-problems.css` | 233 | Problems panel — diagnostics list, severity icons, file groups, filter bar | Standalone (used by `ProblemsPanel.jsx`) |
-| `ide-sidebar.css` | 222 | Sidebar tab bar (Code Explorer / Dashboards), dashboard item styling, drag-and-drop, rename input | `Sidebar.jsx`, `main.jsx` |
-| **Total** | **13,778** | | |
+| `src/ui/styles/index.css` | Global | Core design system, dashboard components, shared modals, themes, status colors, animations | `main.jsx` |
+| `src/ui/pages/code/components/styles/` | Code shell | Code sidebar, dashboard list, subpage navigation, dashboard management controls | `CodePage.jsx` / `CodeSidebar.jsx` |
+| `src/ui/pages/code/subpages/dashboards/styles/` | Dashboards | Pipeline layouts, agent cards, stats, logs, terminal, metrics, timeline | `DashboardsPage.jsx` and dashboard sub-components |
+| `src/ui/pages/code/subpages/code-explorer/styles/` | Code Explorer | File tree, editor tabs, Monaco host, search panel, debug toolbar/panels, problems/debug console | `CodeExplorerPage.jsx` and code-explorer sub-components |
+| `src/ui/pages/code/subpages/git/styles/git-manager.css` | Git Manager | Discovered repo tabs, changes, commits, diffs, branches, history, quick actions, dialogs | `GitPage.jsx` and git sub-components |
+| `src/ui/pages/code/subpages/preview/styles/preview-view.css` | Preview | Embedded webview, preview controls, inline edit overlay states | `PreviewPage.jsx` |
+| `src/ui/pages/chat/styles/` | Chat | Chat page layout, sidebar, conversation list, dashboard chat views | `ChatPage.jsx` and chat sub-components |
 
-**Loading strategy:** Core CSS files (`index.css`, `ide-sidebar.css`, `ide-explorer.css`, `ide-editor.css`, `ide-layout.css`) are imported globally in `main.jsx`. Component-specific CSS files are imported by their respective components.
+**Loading strategy:** `index.css` is imported globally in `main.jsx`. Page and subpage CSS is imported by the components that own those surfaces.
 
 ---
 

@@ -1,0 +1,63 @@
+{
+  "file": "src/ui/shared/modals/ArchiveModal.jsx",
+  "content_hash": "e5252d4a",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "ArchiveModal is a shared modal component opened by App-level modal routing. It presents one focused control-plane workflow and relies on Electron IPC/AppContext inputs plus the shared Modal shell rather than owning global application routing.",
+  "exports": [
+    {
+      "name": "ArchiveModal",
+      "kind": "component",
+      "signature": "default function ArchiveModal(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/shared/modals/Modal.jsx": [
+      "Modal"
+    ],
+    "src/ui/context/AppContext": [
+      "useDispatch"
+    ],
+    "src/ui/hooks/useDashboardData": [
+      "mergeState"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Modal components compose the shared Modal shell and close via an onClose callback from App-level modal routing."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/hooks/useDashboardData",
+      "src/ui/shared/modals/Modal.jsx"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-ui",
+    "modal-system",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "modal",
+    "swarm"
+  ],
+  "complexity": "moderate"
+}

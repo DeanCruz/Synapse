@@ -1,45 +1,49 @@
 {
   "file": "_commands/project/commands.md",
-  "content_hash": "fcf0a603",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "f1ec5881",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !commands slash command, which dynamically discovers and lists every ! command available to the user by scanning three command directories: {tracker_root}/_commands/ (Synapse core), {tracker_root}/_commands/project/ (project-level), and {project_root}/_commands/ (project-specific). For each .md file found, the master extracts the command name from the filename (stripping .md) and a one-line description from the first heading or Overview section, then renders a grouped markdown table. Master agent runs serially; this command does no swarm dispatch. Output must be generated dynamically from the filesystem on every invocation — the embedded table in the doc is illustrative only and should never be hardcoded.",
-  "exports": [],
+  "purpose": "Command specification for `!commands`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: Discovers and lists every `!` command available for the project and Synapse, grouped by source location, with one-line descriptions. The file is 99 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!commands",
+      "kind": "command",
+      "signature": "!commands \u2014 List All Available Commands"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "The big table in this doc is a TEMPLATE/example only — master MUST regenerate output by scanning the filesystem live, never copy the table verbatim.",
-    "If new commands are added to ANY _commands/ directory, they must surface automatically — do not maintain a hardcoded allowlist.",
-    "Three sources are scanned, not two: tracker core commands, project-level commands at {tracker_root}/_commands/project/, AND project-specific overrides at {project_root}/_commands/. Skipping the third silently loses project customization."
+    "Guide description may be narrow: `!guide` remains a command-decision aid, but the app also exposes an in-app markdown Guide modal backed by documentation/guide via GuideService and IPC.",
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Filesystem-driven discovery: scan directories → extract name from filename → extract description from first heading.",
-    "Group-by-source rendering: separate tables per origin so users know where commands live."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Markdown command spec structure: # title → ## Overview → ## Execution Steps → ## Rules.",
-    "Serial execution explicitly declared in Rules section — no swarm dispatch."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "_commands/Synapse/",
-      "_commands/project/",
-      "_commands/profiles/"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/project/help.md",
-      "_commands/project/profiles.md"
-    ]
+    "related": []
   },
   "domains": [
-    "command-discovery",
-    "project-context"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
-    "discovery",
-    "filesystem-scan"
-  ]
+    "slash-command",
+    "commands",
+    "project-command",
+    "pki",
+    "dashboard",
+    "progress"
+  ],
+  "complexity": "simple"
 }

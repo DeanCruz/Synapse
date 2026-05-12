@@ -41,9 +41,9 @@ function ChainWaveHeader({ wave }) {
 export default function ChainPipeline({ status, activeStatFilter, onAgentClick }) {
   if (!status) return null;
 
-  const agents = status.agents || [];
-  const waves = status.waves || [];
-  const chains = status.chains || [];
+  const agents = Array.isArray(status.agents) ? status.agents : [];
+  const waves = Array.isArray(status.waves) ? status.waves : [];
+  const chains = Array.isArray(status.chains) ? status.chains : [];
 
   // Build agent lookup map: id -> agent
   const agentMap = {};
@@ -73,7 +73,7 @@ export default function ChainPipeline({ status, activeStatFilter, onAgentClick }
 
       {/* Chain rows */}
       {chains.map((chain) => {
-        const chainTasks = chain.tasks || [];
+        const chainTasks = Array.isArray(chain.tasks) ? chain.tasks : [];
 
         // When filtering, skip chains with no visible agents
         if (activeStatFilter) {

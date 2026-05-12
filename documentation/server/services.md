@@ -18,13 +18,13 @@ Returns the absolute path to a dashboard directory.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `id` | `string` | Dashboard identifier (e.g., `"dashboard1"`) |
+| `id` | `string` | Dashboard identifier (e.g., `"a1b2c3"`) |
 
 **Returns:** `string` -- Absolute path to `dashboards/{id}/`
 
 ```javascript
-getDashboardDir('dashboard1')
-// => '/path/to/Synapse/dashboards/dashboard1'
+getDashboardDir('a1b2c3')
+// => '/path/to/Synapse/dashboards/a1b2c3'
 ```
 
 ---
@@ -116,7 +116,7 @@ Reads all progress files from a dashboard's `progress/` directory synchronously.
 **Returns:** `Object` -- Map of `task_id` to progress data. Empty object `{}` if the directory is missing or empty.
 
 ```javascript
-readDashboardProgress('dashboard1')
+readDashboardProgress('a1b2c3')
 // => { "1.1": { task_id: "1.1", status: "completed", ... }, "1.2": { ... } }
 ```
 
@@ -148,13 +148,13 @@ Deletes all `.json` files from a dashboard's `progress/` directory.
 
 #### `listDashboards()`
 
-Lists all valid dashboard IDs. A dashboard is valid if it is a directory containing an `initialization.json` file. Returns a sorted array with numeric ordering (e.g., `dashboard1` before `dashboard2`).
+Lists all valid dashboard IDs. A dashboard is valid if it is a directory containing an `initialization.json` file. Returns a sorted array with numeric ordering (e.g., `a1b2c3` before `b2c3d4`).
 
 **Returns:** `string[]` -- Sorted array of dashboard ID strings.
 
 ```javascript
 listDashboards()
-// => ['dashboard1', 'dashboard2', 'dashboard3']
+// => ['a1b2c3', 'b2c3d4', 'c3d4e5']
 ```
 
 ---
@@ -414,7 +414,7 @@ Returns all tasks that are ready to be dispatched. A task is dispatchable when:
 **Returns:** `Array<Object>` -- Array of dispatchable agent objects, each augmented with a `dependency_status` object mapping each dependency ID to its current status.
 
 ```javascript
-getDispatchableTasks('dashboard1')
+getDispatchableTasks('a1b2c3')
 // => [
 //   {
 //     id: "2.1", title: "Create API", wave: 2, depends_on: ["1.1"],
@@ -567,7 +567,7 @@ Builds a comprehensive history summary from a dashboard's current data. Derives 
   completed_at: "2026-03-20T14:15:00Z", // Latest worker completed_at
   duration: "15m 0s",                   // Human-readable duration
   cleared_at: "2026-03-20T14:16:00Z",   // When the summary was generated
-  dashboard_id: "dashboard1",
+  dashboard_id: "a1b2c3",
   agents: [                              // Per-agent summary array
     {
       id: "1.1",

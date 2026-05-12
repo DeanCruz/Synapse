@@ -133,13 +133,52 @@ The `PromptBuilder.readPKIKnowledge()` function (`electron/services/PromptBuilde
 
 This is transparent to workers — they receive PKI knowledge as part of their prompt without needing to query it themselves. Workers can still query the PKI directly for additional context.
 
+### Planning-Time Insight Consumption
+
+`PromptBuilder.readPKIKnowledge` runs **per-worker at dispatch time** — its output is per-task, embedded in worker prompts. The complementary function `PromptBuilder.readRelevantInsightsForPlanning` runs **once per swarm at master planning time** — its output is structured suggestions the master uses to adjust the plan **before** the user is asked to approve it.
+
+This is the master-side complement to the worker-side `readRelevantInsights` injection. Both consume the same `insights/` directory; they differ in when they run and what they emit:
+
+| Aspect | `readRelevantInsights` (worker-side) | `readRelevantInsightsForPlanning` (master-side) |
+|---|---|---|
+| When | Per-worker, at dispatch time | Once per swarm, during master planning (before approval) |
+| Input | Project path + per-task search text | Project path + user prompt |
+| Output | Markdown `### INSIGHTS` block appended to a worker's prompt | Structured `{ warnings, suggested_dependencies, suggested_wave_split, ... }` object |
+| Effect | Worker reads past lessons relevant to its task | Master surfaces past lessons in plan presentation; may add a dependency or split a wave |
+
+**How it works:**
+
+1. Insights are consulted before plan finalization (during decomposition, after the convention map is built).
+2. The 5 most recent insight files are read via `manifest.insights_index`.
+3. Each item is scored against the user prompt with two relevance signals: description token overlap (lowercase, stopwords stripped, length ≥ 4) AND affected_files overlap (full path or basename mention in the prompt).
+4. **HIGH-confidence matches** (both signals fire) can adjust task structure — `complexity_surprises` flips `suggested_wave_split = true`; `failure_patterns` and `dependency_insights` emit a `suggested_dependency` when 2+ affected files form a chain.
+5. **MEDIUM-confidence matches** (one signal fires) are surfaced as user-visible warnings only — never trigger plan edits.
+6. **LOW-confidence matches** (neither signal fires) are discarded.
+7. Warnings are capped at 5 (HIGH first, then most-recent first) and surfaced under a `## Past Insights` block above the wave tables in the user-facing plan presentation.
+
+**Why two signals?** Single-signal matches produce too many false positives — every sufficiently long insight description shares a few words with any sufficiently long prompt. Requiring both token overlap and file overlap raises the bar to "this past lesson is genuinely about something we're touching now."
+
+**Master use:**
+
+```js
+const { readRelevantInsightsForPlanning } = require('electron/services/PromptBuilder');
+const suggestions = readRelevantInsightsForPlanning(projectPath, userPrompt);
+// suggestions.warnings           — array of { category, description, swarm, affected_files, confidence }
+// suggestions.suggested_dependencies — array of { from_task_pattern, to_task_pattern, reason }
+// suggestions.suggested_wave_split   — boolean
+```
+
+The master does **not** auto-apply suggestions — they are advisory. Suggested dependencies and wave splits are surfaced in the plan presentation alongside the warnings; the user confirms or rejects them at the approval gate. Past lessons must be clearly attributed ("Past insights from swarm `X` suggest...") rather than presented as the master's own conclusions.
+
+Full protocol: [`agent/master/pki_integration.md`](../../agent/master/pki_integration.md) (Step 7) and [`agent/_commands/p_track_planning.md`](../../agent/_commands/p_track_planning.md) (Step 5B).
+
 ---
 
 ## Planning Integration
 
-### Master Pre-Planning (6 Steps)
+### Master Pre-Planning (7 Steps)
 
-When a master begins planning, it checks for PKI data and injects relevant knowledge into worker prompts. Full protocol: [`agent/master/pki_integration.md`](../../agent/master/pki_integration.md).
+When a master begins planning, it checks for PKI data, injects relevant knowledge into worker prompts, and consults past insights for plan-level adjustments. Full protocol: [`agent/master/pki_integration.md`](../../agent/master/pki_integration.md).
 
 1. Check if `manifest.json` exists (skip gracefully if not)
 2. Extract domains, tags, concepts from user prompt
@@ -147,6 +186,7 @@ When a master begins planning, it checks for PKI data and injects relevant knowl
 4. Read annotations for matched files (max 8-10 reads)
 5. Extract gotchas, patterns, conventions
 6. Inject into worker prompts' CONVENTIONS section
+7. Consult planning-time insights via `readRelevantInsightsForPlanning` — surface warnings, evaluate suggested dependencies, honor suggested wave splits
 
 **Key behaviors:**
 - No PKI = no error, just standard planning
@@ -187,4 +227,4 @@ Details: [`_commands/project/context.md`](../../_commands/project/context.md)
 
 - [PKI Schemas](../data-architecture/pki-schemas.md) -- Full JSON schema reference
 - [Project Integration Overview](./overview.md) -- How Synapse integrates with target projects
-- [TOC System](./toc-system.md) -- The complementary Table of Contents system
+- [Project Knowledge Graph](./toc-system.md) -- Legacy discovery workflows now route through `.synapse/knowledge/`

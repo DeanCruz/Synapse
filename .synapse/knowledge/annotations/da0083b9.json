@@ -1,70 +1,49 @@
 {
   "file": "documentation/server/configuration.md",
   "content_hash": "b50d0eae",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Server configuration reference: PORT env var, directory constants (DASHBOARDS_DIR, QUEUE_DIR, ARCHIVE_DIR, HISTORY_DIR, CONVERSATIONS_DIR), timing constants (INIT_POLL_MS, PROGRESS_RETRY_MS, RECONCILE_INTERVAL_MS, HEARTBEAT_MS, etc.), MIME map, default JSON shapes, and json.js read/write/atomic/validation helpers.",
-  "exports": [
-    "ROOT",
-    "DASHBOARDS_DIR",
-    "QUEUE_DIR",
-    "ARCHIVE_DIR",
-    "HISTORY_DIR",
-    "CONVERSATIONS_DIR",
-    "PORT",
-    "INIT_POLL_MS",
-    "PROGRESS_RETRY_MS",
-    "PROGRESS_READ_DELAY_MS",
-    "RECONCILE_DEBOUNCE_MS",
-    "RECONCILE_INTERVAL_MS",
-    "HEARTBEAT_MS",
-    "DEPENDENCY_CHECK_DELAY_MS",
-    "DEFAULT_INITIALIZATION",
-    "DEFAULT_LOGS",
-    "MIME_TYPES",
-    "readJSON",
-    "readJSONAsync",
-    "readJSONWithRetry",
-    "writeAtomic",
-    "writeAtomicAsync",
-    "isValidInitialization",
-    "isValidProgress",
-    "isValidLogs"
-  ],
-  "imports_from": [],
+  "purpose": "Documentation page for the server area: Server Configuration Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: All server configuration constants are defined in `src/server/utils/constants.js`. The server is designed to work with zero external configuration, but the port can be overridden via environment variable. The file is 342 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [],
+  "imports_from": {},
   "gotchas": [
-    "ROOT is computed three levels up from constants.js — moving the file breaks all paths",
-    "writeAtomic uses .tmp+rename — readers always see complete files",
-    "readJSONWithRetry is essential for progress files (mid-write race)",
-    "isValidProgress can hard-reject task_id/dashboard_id mismatches"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Atomic write via tempfile + rename",
-    "Retry-once read for in-progress writes",
-    "Schema validators are lenient on optional fields"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Constants UPPER_SNAKE_CASE in src/server/utils/constants.js",
-    "Default port 3456"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/server/overview.md"
+      "documentation/server/services.md"
     ],
     "depended_by": [
-      "documentation/server/services.md",
-      "documentation/server/api-reference.md",
-      "documentation/server/sse-events.md"
+      "documentation/README.md"
     ],
-    "related": []
+    "related": [
+      "documentation/server/overview.md",
+      "documentation/server/services.md"
+    ]
   },
   "domains": [
+    "documentation",
     "server"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "configuration",
-    "constants"
-  ]
+    "server",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "sse",
+    "ide"
+  ],
+  "complexity": "complex"
 }

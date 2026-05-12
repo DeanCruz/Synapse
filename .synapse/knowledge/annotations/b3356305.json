@@ -1,53 +1,48 @@
 {
   "file": "README.md",
-  "content_hash": "1c869c80",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "61c11a6d",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Public-facing landing document for the Synapse repository on GitHub. Targets human developers (not agents) — sells the product, lists prerequisites (Node 18+, npm, Claude Code CLI, macOS), walks through clone/install/launch, explains how to point a dashboard at a project, demonstrates `!p_track` usage, and enumerates every feature (live dashboard, chat, IDE, git manager, live preview, PKI, TOC). Roughly 800 lines and uses centered HTML/badges for marketing presentation. This is where new contributors and users start; CLAUDE.md and AGENTS.md are where agents start.",
+  "purpose": "Public-facing repository README for onboarding users to Synapse, explaining installation, launch, command usage, major features, and best practices. Key content: [![Electron](https://img.shields.io/badge/Electron-desktop%20app-47848F?logo=electron&logoColor=white)]() [![React](https://img.shields.io/badge/React%2019-UI-61DAFB?logo=react&logoColor=black)]() [![Claude Code](https://img.shields.io/badge/Claude%20Code-compatible-blueviolet?logo=anthropic&logoColor=white)]() [![License: Source Available](https://img.shields.io/badge/license-Source%20Available-orange.svg)](LICENSE) The file is 796 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Claims `npm start` builds the React UI with Vite into `dist/` and launches Electron — verified accurate against package.json (`vite build && unset ELECTRON_RUN_AS_NODE && electron .`), but the `unset ELECTRON_RUN_AS_NODE` step is undocumented in the README and matters when launching from environments that set this var.",
-    "States 'No separate server process needed -- everything runs inside Electron.' This is true for the bundled flow but contradicts start.sh / launch.sh which still check port 3456 — that port is used by the SSE server hosted INSIDE Electron, not a separate process.",
-    "README references 47 commands across two categories — keep this count in sync with _commands/Synapse/ (25) and _commands/project/ (22) when commands are added/removed.",
-    "Says Synapse 'currently targets macOS' — the .command launchers and `electron-builder --mac` script confirm this; Linux/Windows users will hit unsupported paths.",
-    "Marketing badges link to anonymized URLs (`[![Electron]()...]`) — the empty parens are intentional placeholders, not broken links to fix."
+    "Command-count drift risk: current filesystem has 35 _commands/Synapse markdown commands and 24 _commands/project markdown commands, plus 15 profiles; hard-coded command counts in docs can become stale quickly.",
+    "Guide description may be narrow: `!guide` remains a command-decision aid, but the app also exposes an in-app markdown Guide modal backed by documentation/guide via GuideService and IPC.",
+    "README is user-facing marketing/onboarding; keep it accurate but concise, and verify feature claims against package.json and electron/src files rather than copying older documentation counts."
   ],
   "patterns": [
-    "Pattern: 'What changes with Synapse' before/after table appears immediately after the badges to set value framing in <100 words.",
-    "Section ordering: Getting Started → Usage Guide → Features → Commands → Best Practices → How It Works (decision-tree first, deep-dive last).",
-    "Comparison tables (`!p_track` vs `!p` vs `!master_plan_track`) appear at every decision point so users don't have to memorize differences.",
-    "Every prerequisite is paired with a verification command (`node --version`, `npm --version`)."
+    "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Uses HTML `<div align=\"center\">` blocks for hero/branding sections that GitHub renders but plain markdown tooling ignores gracefully.",
-    "Code fences distinguish shell commands (```bash) from chat input (no language tag) — chat examples use `!command` syntax without a `$` prompt.",
-    "Em-dashes `--` (double hyphen) used throughout instead of Unicode em-dash, matching the rest of the repo.",
-    "Headings follow GitHub-flavored anchor convention — `## Getting Started` matches the `[Getting Started](#getting-started)` TOC link."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [
-      "package.json",
-      "LICENSE"
-    ],
+    "depends_on": [],
     "depended_by": [],
     "related": [
-      "CLAUDE.md",
       "AGENTS.md",
-      "Synapse.md",
-      "documentation/"
+      "CLAUDE.md",
+      "Synapse.md"
     ]
   },
   "domains": [
     "project-docs",
-    "user-onboarding",
-    "marketing"
+    "user-onboarding"
   ],
   "tags": [
     "markdown",
-    "readme",
+    "top-level",
     "documentation",
-    "github",
-    "user-guide"
-  ]
+    "pki",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide"
+  ],
+  "complexity": "complex"
 }

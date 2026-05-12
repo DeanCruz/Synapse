@@ -4,7 +4,7 @@ This document provides a complete reference for every directory and file in the 
 
 ---
 
-## Table of Contents
+## Contents
 
 - [Root Layout](#root-layout)
 - [Electron Desktop App](#electron-desktop-app)
@@ -39,7 +39,7 @@ Synapse/                                 <- {tracker_root}
 +-- _commands/                           Command system (markdown specs)
 +-- agent/                               Agent instruction files
 +-- dashboards/                          Live dashboard data (hex ID directories)
-+-- tasks/                               Generated task files per swarm
++-- tasks/                               Legacy/companion task records per swarm
 +-- Archive/                             Full dashboard snapshots (archived swarms)
 +-- history/                             Lightweight summary JSON files
 +-- queue/                               Overflow queue for pending swarms
@@ -168,6 +168,8 @@ src/server/
 
 ## React Dashboard UI
 
+The UI follows a pages-based architecture with two top-level pages (Chat and Code), shared components, and colocated styles.
+
 ```
 src/ui/
 +-- main.jsx                             Entry point + Electron fetch shim (80 lines)
@@ -178,66 +180,106 @@ src/ui/
 |   +-- useDashboardData.js              IPC/SSE event subscription + state merge (407 lines)
 |   +-- useElectronAPI.js                API access hook (10 lines)
 |   +-- useResize.js                     Resizable panel hook (155 lines)
-+-- components/                          54 React components across 4 directories
++-- shared/                              Shared components used across pages
 |   +-- Header.jsx                       Top navigation bar
-|   +-- Sidebar.jsx                      Dashboard list with status indicators
-|   +-- WavePipeline.jsx                 Wave layout (vertical columns)
-|   +-- ChainPipeline.jsx               Chain layout (horizontal rows)
-|   +-- AgentCard.jsx                    Individual task card
-|   +-- StatsBar.jsx                     Stat counter cards
-|   +-- LogPanel.jsx                     Collapsible event log drawer
-|   +-- SwarmBuilder.jsx                Visual swarm creation tool
-|   +-- ClaudeView.jsx                  In-app agent chat interface
-|   +-- HomeView.jsx                    Overview/home dashboard
-|   +-- EmptyState.jsx                  Placeholder for empty dashboards
-|   +-- ConnectionIndicator.jsx         Connection status indicator
-|   +-- TerminalView.jsx               Integrated terminal emulator (xterm.js)
-|   +-- BottomPanel.jsx                Resizable bottom panel container
-|   +-- MetricsPanel.jsx               Swarm performance metrics
-|   +-- TimelinePanel.jsx              Task timeline visualization
-|   +-- ProgressBar.jsx                Progress bar component
-|   +-- QueuePopup.jsx                 Queue overflow popup
+|   +-- ModeMenu.jsx                     Mode/page switcher menu
+|   +-- claude/                          Agent chat (shared between Chat page and Code page)
+|   |   +-- ClaudeView.jsx               In-app agent chat interface
+|   |   +-- ClaudeFloatingPanel.jsx      Floating panel wrapper with resize support
 |   +-- modals/                          14 modal components
-|   |   +-- Modal.jsx                    Base modal component
-|   |   +-- AgentDetails.jsx             Agent detail popup with log viewer
-|   |   +-- TaskDetails.jsx              Task detail information
-|   |   +-- CommandsModal.jsx           Command browser and editor
-|   |   +-- ProjectModal.jsx            Project selection and explorer
-|   |   +-- SettingsModal.jsx           Application settings
-|   |   +-- TaskEditorModal.jsx         Visual swarm plan editor
-|   |   +-- PlanningModal.jsx           Planning interface
-|   |   +-- ArchiveModal.jsx            Archive browser
-|   |   +-- HistoryModal.jsx            Swarm history browser
-|   |   +-- ConfirmModal.jsx            Confirmation dialog
-|   |   +-- ErrorModal.jsx              Error display dialog
-|   |   +-- PermissionModal.jsx         Permission request dialog
-|   |   +-- WorkerTerminal.jsx          Worker output terminal
-|   +-- ide/                             10 IDE components
-|   |   +-- IDEView.jsx                  IDE layout container
-|   |   +-- CodeEditor.jsx              Monaco-based code editor
-|   |   +-- FileExplorer.jsx            File tree browser
-|   |   +-- DebugToolbar.jsx            Debug controls toolbar
-|   |   +-- DebugPanels.jsx             Debug variable/callstack panels
-|   |   +-- DebugConsolePanel.jsx       Debug console output
-|   |   +-- ProblemsPanel.jsx           Problems/diagnostics panel
-|   |   +-- EditorTabs.jsx              Open file tab bar
-|   |   +-- WorkspaceTabs.jsx           Workspace tab bar
-|   |   +-- IDEWelcome.jsx              IDE welcome screen
-|   +-- preview/                         Live Preview components
-|   |   +-- PreviewView.jsx              Embedded webview with inline text editing
-|   +-- git/                             12 Git management components
-|       +-- GitManagerView.jsx           Git manager layout container
-|       +-- BranchPanel.jsx             Branch management
-|       +-- ChangesPanel.jsx            Staged/unstaged changes
-|       +-- CommitPanel.jsx             Commit creation
-|       +-- DiffViewer.jsx              File diff display
-|       +-- HistoryPanel.jsx            Commit history
-|       +-- RemotePanel.jsx             Remote repository management
-|       +-- QuickActions.jsx            Quick Git action buttons
-|       +-- RepoTabs.jsx               Repository tab bar
-|       +-- InitFlow.jsx               Git init wizard
-|       +-- SafetyDialogs.jsx          Destructive action confirmations
-|       +-- GitWelcome.jsx             Git welcome screen
+|       +-- index.js                     Modal barrel exports
+|       +-- Modal.jsx                    Base modal component
+|       +-- AgentDetails.jsx             Agent detail popup with log viewer
+|       +-- TaskDetails.jsx              Task detail information
+|       +-- CommandsModal.jsx           Command browser and editor
+|       +-- ProjectModal.jsx            Project selection and explorer
+|       +-- SettingsModal.jsx           Application settings
+|       +-- TaskEditorModal.jsx         Visual swarm plan editor
+|       +-- PlanningModal.jsx           Planning interface
+|       +-- ArchiveModal.jsx            Archive browser
+|       +-- HistoryModal.jsx            Swarm history browser
+|       +-- ConfirmModal.jsx            Confirmation dialog
+|       +-- ErrorModal.jsx              Error display dialog
+|       +-- LogsModal.jsx              Full-screen log viewer
+|       +-- PermissionModal.jsx         Permission request dialog
+|       +-- WorkerTerminal.jsx          Worker output terminal
++-- pages/                               Page-level components (top-level routes)
+|   +-- chat/                            Chat page (dedicated chat experience)
+|   |   +-- index.js                     Chat page barrel export
+|   |   +-- ChatPage.jsx                 Root chat page with sidebar + content layout
+|   |   +-- components/
+|   |   |   +-- ChatSidebar.jsx          Conversation list and navigation
+|   |   |   +-- ChatDashboardView.jsx    Per-dashboard chat context view
+|   |   |   +-- ChatInstanceView.jsx     Individual chat instance management
+|   |   |   +-- ChatMakePage.jsx         Chat creation/setup page
+|   |   +-- styles/                      Chat page styles (colocated)
+|   +-- code/                            Code page (dashboards, IDE, git, preview)
+|       +-- CodePage.jsx                 Root code page with subpage routing
+|       +-- components/
+|       |   +-- CodeSidebar.jsx          Code page sidebar (dashboard list, status)
+|       +-- subpages/
+|           +-- dashboards/              Dashboard/swarm visualization subpage
+|           |   +-- index.js
+|           |   +-- DashboardsPage.jsx   Dashboard pipeline view
+|           |   +-- components/
+|           |       +-- WavePipeline.jsx      Wave layout (vertical columns)
+|           |       +-- ChainPipeline.jsx     Chain layout (horizontal rows)
+|           |       +-- AgentCard.jsx         Individual task card
+|           |       +-- StatsBar.jsx          Stat counter cards
+|           |       +-- LogPanel.jsx          Collapsible event log drawer
+|           |       +-- SwarmBuilder.jsx      Visual swarm creation tool
+|           |       +-- BottomPanel.jsx       Resizable bottom panel container
+|           |       +-- TerminalView.jsx      Integrated terminal (xterm.js)
+|           |       +-- EmptyState.jsx        Placeholder for empty dashboards
+|           |       +-- ConnectionIndicator.jsx  Connection status
+|           |       +-- MetricsPanel.jsx      Swarm performance metrics
+|           |       +-- TimelinePanel.jsx     Task timeline visualization
+|           |       +-- ProgressBar.jsx       Progress bar component
+|           |       +-- QueuePopup.jsx        Queue overflow popup
+|           +-- code-explorer/           IDE/Code Explorer subpage
+|           |   +-- index.js
+|           |   +-- CodeExplorerPage.jsx IDE layout container
+|           |   +-- components/
+|           |   |   +-- CodeEditor.jsx       Monaco-based code editor
+|           |   |   +-- FileExplorer.jsx     File tree browser
+|           |   |   +-- EditorTabs.jsx       Open file tab bar
+|           |   |   +-- SearchPanel.jsx      IDE search sidebar
+|           |   |   +-- SearchResults.jsx    Grouped search results
+|           |   |   +-- DebugToolbar.jsx     Debug controls toolbar
+|           |   |   +-- DebugPanels.jsx      Debug variable/callstack panels
+|           |   |   +-- DebugConsolePanel.jsx Debug console output
+|           |   |   +-- ProblemsPanel.jsx    Problems/diagnostics panel
+|           |   +-- styles/                  IDE styles (colocated)
+|           |       +-- ide-layout.css
+|           |       +-- ide-editor.css
+|           |       +-- ide-explorer.css
+|           |       +-- ide-sidebar.css
+|           |       +-- ide-debug.css
+|           |       +-- ide-debug-panels.css
+|           |       +-- ide-debug-console.css
+|           |       +-- ide-problems.css
+|           |       +-- ide-search.css
+|           +-- git/                     Git Manager subpage
+|           |   +-- index.js
+|           |   +-- GitPage.jsx          Git manager layout container
+|           |   +-- components/
+|           |   |   +-- BranchPanel.jsx      Branch management
+|           |   |   +-- ChangesPanel.jsx     Staged/unstaged changes
+|           |   |   +-- CommitPanel.jsx      Commit creation
+|           |   |   +-- DiffViewer.jsx       File diff display
+|           |   |   +-- HistoryPanel.jsx     Commit history
+|           |   |   +-- RemotePanel.jsx      Remote management
+|           |   |   +-- QuickActions.jsx     Quick Git action buttons
+|           |   |   +-- InitFlow.jsx         Git init wizard
+|           |   |   +-- SafetyDialogs.jsx    Destructive action confirmations
+|           |   +-- styles/
+|           |       +-- git-manager.css      Git manager styles
+|           +-- preview/                 Live Preview subpage
+|               +-- index.js
+|               +-- PreviewPage.jsx      Embedded webview with inline text editing
+|               +-- inject-overlay.js    Webview injection script
+|               +-- styles/
+|                   +-- preview-view.css Preview styles
 +-- utils/
 |   +-- constants.js                     UI constants (colors, labels) (114 lines)
 |   +-- format.js                        Formatting helpers (dates, durations) (22 lines)
@@ -246,41 +288,45 @@ src/ui/
 |   +-- dashboardProjects.js            Dashboard-project association helpers (61 lines)
 |   +-- ideWorkspaceManager.js          IDE workspace state management (142 lines)
 |   +-- monacoWorkerSetup.js            Monaco editor web worker setup (35 lines)
-+-- styles/                              10 CSS files totaling ~13,776 lines
-|   +-- index.css                        Main stylesheet (8,071 lines)
-|   +-- git-manager.css                  Git manager styles (2,401 lines)
-|   +-- ide-debug.css                    IDE debug styles (1,124 lines)
-|   +-- ide-debug-panels.css            Debug panel styles (525 lines)
-|   +-- ide-editor.css                   Editor styles (297 lines)
-|   +-- ide-explorer.css                File explorer styles (345 lines)
-|   +-- ide-layout.css                   IDE layout styles (270 lines)
-|   +-- ide-debug-console.css           Debug console styles (288 lines)
-|   +-- ide-problems.css                Problems panel styles (233 lines)
-|   +-- ide-sidebar.css                  IDE sidebar styles (222 lines)
++-- styles/                              Global CSS (shared styles)
+|   +-- index.css                        Main stylesheet
 +-- assets/
     +-- synapse-logo-mark.svg            Synapse logo
 ```
+
+> **Documentation references:**
+> - [Chat System](../chat/overview.md) -- Full Chat page architecture, components, and IPC
+> - [Configuration](../configuration/overview.md) -- Hooks, skills, and settings reference
 
 ### Key UI Files
 
 | File | Description |
 |---|---|
 | `main.jsx` | The application entry point. In Electron mode, patches `window.fetch` to intercept `/api/*` calls and route them through IPC using `window.electronAPI`. This shim returns fetch-compatible response objects so components work identically in both browser and Electron modes. Creates the React root and renders `AppProvider` wrapping `App`. |
-| `App.jsx` | Root component that calls `useDashboardData()` to initialize data subscriptions, then renders the layout: Header, Sidebar, main content area (switching between HomeView, dashboard pipeline, SwarmBuilder, ClaudeView based on `activeView`), LogPanel, and modals. |
+| `App.jsx` | Root component that calls `useDashboardData()` to initialize data subscriptions, then renders the page-level route: Chat page or Code page based on `activeView`, plus shared modals. |
 | `AppContext.jsx` | Central state management using React's `useReducer`. Defines the global state shape (current dashboard, init/progress/logs data, dashboard list, view state, Claude chat state, modal state), the action types (30+ action types), and the reducer function. Provides `useAppState()` and `useDispatch()` hooks. Includes debounced localStorage persistence for Claude chat messages. |
 | `useDashboardData.js` | The data engine of the dashboard. Exports `mergeState()` which combines static plan data with dynamic progress data into a renderable state. The `useDashboardData()` hook subscribes to IPC push events, maintains a progress cache via refs, fetches data on dashboard switch, derives dashboard statuses for sidebar indicators, and triggers state merges when init or progress changes. Also includes connection health monitoring (30s check, 60s stale threshold). |
 
+### Page Components
+
+| File | Description |
+|---|---|
+| `pages/chat/ChatPage.jsx` | Dedicated Chat page with its own sidebar (`ChatSidebar`), dashboard chat views, and instance management. Provides a full-page chat experience. See [Chat System docs](../chat/overview.md). |
+| `pages/code/CodePage.jsx` | Code page that hosts all developer-focused subpages: Dashboards (swarm visualization), Code Explorer (IDE), Git Manager, and Live Preview. Includes its own sidebar (`CodeSidebar`) for navigation. |
+| `shared/claude/ClaudeView.jsx` | The core agent chat interface component, shared between the Chat page and the Code page's floating panel. |
+
 ### UI Component Highlights
 
-| Component | Description |
-|---|---|
-| `WavePipeline` | Renders tasks in vertical columns grouped by wave (dependency level). Each column represents a wave, and cards within a column are independent peers that can run in parallel. Draws dependency lines between cards using the `dependencyLines.js` canvas utility. |
-| `ChainPipeline` | Alternative layout that renders tasks in horizontal rows grouped by dependency chain. Cards flow left-to-right through dependency levels. Best for narrow, deep pipelines. |
-| `AgentCard` | Renders an individual task card showing: title, status badge (color-coded), stage badge (during execution), elapsed time (live counter), current message, deviation count badge, and dependency indicators. Clicking opens the `AgentDetails` modal. |
-| `StatsBar` | Six stat cards showing aggregate swarm metrics: Total tasks, Completed, In Progress, Failed, Pending, and Elapsed time. All values are derived from the merged state (not stored in any file). |
-| `LogPanel` | Collapsible bottom drawer showing all log entries from `logs.json`. Supports filtering by level (All, Info, Warn, Error, Deviation). Auto-scrolls to newest entries. |
-| `ClaudeView` | In-app agent chat interface. Supports full conversations with Claude, image attachments, markdown rendering, and per-dashboard chat isolation. Messages are persisted to localStorage with debounced saves. |
-| `SwarmBuilder` | Visual tool for creating swarm plans from the UI. Allows adding tasks, defining dependencies, setting wave assignments, and generating `initialization.json` without using the CLI. |
+| Component | Location | Description |
+|---|---|---|
+| `WavePipeline` | `pages/code/subpages/dashboards/` | Renders tasks in vertical columns grouped by wave (dependency level). Each column represents a wave, and cards within a column are independent peers that can run in parallel. Draws dependency lines between cards using the `dependencyLines.js` canvas utility. |
+| `ChainPipeline` | `pages/code/subpages/dashboards/` | Alternative layout that renders tasks in horizontal rows grouped by dependency chain. Cards flow left-to-right through dependency levels. Best for narrow, deep pipelines. |
+| `AgentCard` | `pages/code/subpages/dashboards/` | Renders an individual task card showing: title, status badge (color-coded), stage badge (during execution), elapsed time (live counter), current message, deviation count badge, and dependency indicators. Clicking opens the `AgentDetails` modal. |
+| `StatsBar` | `pages/code/subpages/dashboards/` | Six stat cards showing aggregate swarm metrics: Total tasks, Completed, In Progress, Failed, Pending, and Elapsed time. All values are derived from the merged state (not stored in any file). |
+| `LogPanel` | `pages/code/subpages/dashboards/` | Collapsible bottom drawer showing all log entries from `logs.json`. Supports filtering by level (All, Info, Warn, Error, Deviation). Auto-scrolls to newest entries. |
+| `ClaudeView` | `shared/claude/` | In-app agent chat interface. Supports full conversations with Claude, image attachments, markdown rendering, and per-dashboard chat isolation. Messages are persisted to localStorage with debounced saves. Used by both the Chat page and the Code page floating panel. |
+| `SwarmBuilder` | `pages/code/subpages/dashboards/` | Visual tool for creating swarm plans from the UI. Allows adding tasks, defining dependencies, setting wave assignments, and generating `initialization.json` without using the CLI. |
+| `ChatPage` | `pages/chat/` | Dedicated full-page chat experience with sidebar navigation, dashboard-linked conversations, and multi-instance management. See [Chat System docs](../chat/overview.md). |
 
 ---
 
@@ -320,9 +366,8 @@ _commands/
 |   +-- trace.md                         End-to-end code tracing
 |   +-- contracts.md                     API contract audit
 |   +-- env_check.md                     Environment variable audit
-|   +-- toc.md                           Search project TOC
-|   +-- toc_generate.md                 Generate project TOC
-|   +-- toc_update.md                   Update project TOC
+|   +-- learn.md                         Generate project knowledge graph
+|   +-- learn_update.md                  Refresh project knowledge graph
 |   +-- commands.md                      List all available commands
 |   +-- help.md                          Master agent guide
 |   +-- profiles.md                      List available profiles
@@ -444,7 +489,7 @@ tasks/
 
 | File | Description |
 |---|---|
-| `parallel_{name}.json` | The authoritative task record for the swarm. Contains task descriptions, context, critical details, file lists, dependencies, completion status, summaries, and error logs. Updated by the master after each task completion. |
+| `parallel_{name}.json` | Legacy/companion task record for the swarm. Contains task descriptions, context, critical details, file lists, dependencies, completion status, summaries, and error logs when produced. Current worker task specs are canonical in `dashboards/{dashboardId}/plan.json`. |
 | `parallel_plan_{name}.md` | The strategy rationale document. Explains the decomposition approach, dependency reasoning, wave grouping logic, risk assessment, and verification strategy. Written during planning for the user's review. |
 
 ---
@@ -508,6 +553,11 @@ The overflow queue holds swarm plans waiting to be promoted to an active dashboa
 
 The settings file for window state and preferences is stored at `{userData}/synapse-settings.json` (the OS-specific user data directory, outside the repository).
 
+Additional configuration is managed through:
+- **Claude hooks** (`.claude/hooks/`) -- Pre/PostToolUse validation hooks. See [Hooks Reference](../configuration/hooks.md).
+- **Claude skills** (`.claude/skills/`) -- Skill definitions loaded on demand. See [Skills Reference](../configuration/skills.md).
+- **Claude settings** (`.claude/settings.json`) -- Agent settings and permissions. See [Settings Reference](../configuration/settings.md).
+
 ---
 
 ## Target Project Structure
@@ -517,8 +567,8 @@ When Synapse is initialized for a target project (via `!initialize`), it creates
 ```
 {project_root}/
 +-- .synapse/                            Synapse project metadata (add to .gitignore)
-|   +-- toc.md                           Project Table of Contents (semantic file index)
 |   +-- config.json                      Project-Synapse configuration
+|   +-- knowledge/                       Project knowledge graph
 +-- CLAUDE.md                            Project conventions (may already exist)
 +-- _commands/                           Project-specific commands (optional)
     +-- {command}.md
@@ -526,7 +576,7 @@ When Synapse is initialized for a target project (via `!initialize`), it creates
 
 | File | Description |
 |---|---|
-| `.synapse/toc.md` | A semantic index of the project's files and directories. Generated by `!toc_generate` using a parallel agent swarm. Provides quick orientation for agents without scanning the full file tree. |
+| `.synapse/knowledge/` | A semantic graph of the project's files, domains, tags, relationships, gotchas, and conventions. Generated by `!learn` and refreshed by `!learn_update`. |
 | `.synapse/config.json` | Project-Synapse configuration: project name, detected tech stack, initialization timestamp. |
 | `CLAUDE.md` | Project conventions, architecture overview, coding standards. May pre-exist. Synapse reads this for context when planning swarms. Can be generated via `!scaffold`. |
 | `_commands/*.md` | Project-specific commands. Checked last in the command resolution hierarchy. Allows projects to define custom workflows. |

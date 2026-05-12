@@ -94,9 +94,248 @@ function buildSystemPrompt(opts) {
   return parts.join('\n');
 }
 
+// ---- PKI retrieval: module-level cache ----
+// Per-projectPath cache for the PKI corpus (manifest + split indices + rules + annotations).
+// 60-second TTL means a long-running master-planning pass stays warm without permanent
+// staleness risk. Keys are absolute projectPath strings so multi-project mode does not
+// corrupt across projects.
+var _PKI_CACHE_TTL_MS = 60 * 1000;
+var _pkiCache = Object.create(null);
+
+// Stopwords for token extraction. Anything <4 chars is also dropped, so very short
+// commons ("a", "an", "is") are redundant here but listed for readability.
+var _STOPWORDS = {
+  the: 1, and: 1, a: 1, of: 1, to: 1, for: 1, with: 1, in: 1, on: 1, this: 1,
+  that: 1, is: 1, are: 1, by: 1, from: 1, as: 1, an: 1, it: 1, be: 1, or: 1,
+};
+
 /**
- * Read PKI knowledge relevant to a task's files from the project's knowledge index.
- * Returns a formatted knowledge block for injection into worker prompts, or empty string if no PKI.
+ * Strip the _metadata key from a sibling-index object so iteration only walks
+ * real entries. Manifest fallback path also passes through here harmlessly
+ * (legacy manifests had no _metadata sentinel).
+ */
+function _stripMetadata(obj) {
+  if (!obj || typeof obj !== 'object') return {};
+  if (!obj._metadata) return obj;
+  var out = {};
+  for (var k in obj) {
+    if (k !== '_metadata' && Object.prototype.hasOwnProperty.call(obj, k)) {
+      out[k] = obj[k];
+    }
+  }
+  return out;
+}
+
+/**
+ * Read a sibling index file. On miss/parse-error, fall back to the named
+ * manifest field (legacy shape). On second miss, return {}.
+ */
+function _readIndex(projectPath, fileName, manifestField, manifest) {
+  var siblingPath = path.join(projectPath, '.synapse', 'knowledge', fileName);
+  try {
+    var parsed = JSON.parse(fs.readFileSync(siblingPath, 'utf-8'));
+    return _stripMetadata(parsed);
+  } catch (e) {
+    if (manifest && manifest[manifestField]) {
+      return _stripMetadata(manifest[manifestField]);
+    }
+    return {};
+  }
+}
+
+/**
+ * Read all rule JSON files in .synapse/knowledge/rules/. Fail-open: missing
+ * directory or unreadable files return [].
+ */
+function _readRules(projectPath) {
+  var rulesDir = path.join(projectPath, '.synapse', 'knowledge', 'rules');
+  var rules = [];
+  var entries;
+  try {
+    entries = fs.readdirSync(rulesDir);
+  } catch (e) {
+    return rules;
+  }
+  for (var i = 0; i < entries.length; i++) {
+    if (!/\.json$/i.test(entries[i])) continue;
+    try {
+      var rule = JSON.parse(fs.readFileSync(path.join(rulesDir, entries[i]), 'utf-8'));
+      if (rule && rule.binding) rules.push(rule);
+    } catch (e) {
+      // skip unparseable rule files (fail-open)
+    }
+  }
+  return rules;
+}
+
+/**
+ * Load the full PKI corpus for a project, with per-projectPath caching at 60s TTL.
+ * Returns { manifest, domain_index, tag_index, concept_map, rules, annotations: Map }.
+ * Fail-open: any layer that errors returns its empty equivalent.
+ */
+function _loadPKI(projectPath) {
+  var key = path.resolve(projectPath);
+  var now = Date.now();
+  var cached = _pkiCache[key];
+  if (cached && (now - cached.loadedAt) < _PKI_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  var manifest = null;
+  try {
+    manifest = JSON.parse(fs.readFileSync(path.join(projectPath, '.synapse', 'knowledge', 'manifest.json'), 'utf-8'));
+  } catch (e) {
+    manifest = null;
+  }
+
+  var data = {
+    manifest: manifest,
+    domain_index: _readIndex(projectPath, 'domain_index.json', 'domain_index', manifest),
+    tag_index: _readIndex(projectPath, 'tag_index.json', 'tag_index', manifest),
+    concept_map: _readIndex(projectPath, 'concept_map.json', 'concept_map', manifest),
+    rules: _readRules(projectPath),
+    annotations: new Map(),
+  };
+
+  _pkiCache[key] = { loadedAt: now, data: data };
+  return data;
+}
+
+/**
+ * Tokenize task text: lowercase, split on non-alnum, drop stopwords, require length >= 4.
+ */
+function _tokenize(text) {
+  if (!text) return [];
+  var raw = String(text).toLowerCase().split(/[^a-z0-9]+/);
+  var seen = Object.create(null);
+  var tokens = [];
+  for (var i = 0; i < raw.length; i++) {
+    var t = raw[i];
+    if (!t || t.length < 4) continue;
+    if (_STOPWORDS[t]) continue;
+    if (seen[t]) continue;
+    seen[t] = 1;
+    tokens.push(t);
+  }
+  return tokens;
+}
+
+/**
+ * Read a single annotation file (with intra-call memoization on the loaded PKI bag).
+ */
+function _readAnnotation(projectPath, hash, pki) {
+  if (!hash) return null;
+  if (pki.annotations.has(hash)) return pki.annotations.get(hash);
+  var annPath = path.join(projectPath, '.synapse', 'knowledge', 'annotations', hash + '.json');
+  var ann = null;
+  try {
+    ann = JSON.parse(fs.readFileSync(annPath, 'utf-8'));
+  } catch (e) {
+    ann = null;
+  }
+  pki.annotations.set(hash, ann);
+  return ann;
+}
+
+/**
+ * Match rules against the matched-file set (via binding.globs) OR the token set
+ * (via binding.symbols). Return up to `cap` rules, severity-ordered.
+ */
+function _matchRules(rules, matchedFiles, tokens, cap) {
+  if (!rules || rules.length === 0) return [];
+
+  var fileSet = matchedFiles || [];
+  var tokenSet = Object.create(null);
+  for (var t = 0; t < (tokens || []).length; t++) tokenSet[tokens[t]] = 1;
+
+  var matched = [];
+  for (var i = 0; i < rules.length; i++) {
+    var rule = rules[i];
+    var binding = rule.binding || {};
+    var globs = binding.globs || [];
+    var symbols = binding.symbols || [];
+    var hit = false;
+
+    // Glob match against matched-file set
+    for (var g = 0; g < globs.length && !hit; g++) {
+      var rx = _globToRegex(globs[g]);
+      for (var f = 0; f < fileSet.length; f++) {
+        if (rx.test(fileSet[f])) { hit = true; break; }
+      }
+    }
+
+    // Symbol match against task tokens (case-insensitive prefix-aware match)
+    if (!hit) {
+      for (var s = 0; s < symbols.length && !hit; s++) {
+        var sym = String(symbols[s] || '').toLowerCase();
+        if (!sym) continue;
+        if (tokenSet[sym]) { hit = true; break; }
+        // Also match if any token is contained in the symbol or vice-versa,
+        // for camelCase symbols that won't tokenize verbatim (e.g. writeAtomic).
+        for (var tk in tokenSet) {
+          if (sym.indexOf(tk) !== -1) { hit = true; break; }
+        }
+      }
+    }
+
+    if (hit) matched.push(rule);
+  }
+
+  // Severity order: error > warn > info; stable on insertion order otherwise.
+  var sevRank = { error: 0, warn: 1, info: 2 };
+  matched.sort(function (a, b) {
+    var ra = sevRank[a.severity] != null ? sevRank[a.severity] : 3;
+    var rb = sevRank[b.severity] != null ? sevRank[b.severity] : 3;
+    return ra - rb;
+  });
+
+  return matched.slice(0, cap || 5);
+}
+
+/**
+ * Convert a simple glob (** and *) to a regex. Conservative: anchored, supports
+ * "**" (any path including separators) and "*" (any non-separator chars).
+ */
+function _globToRegex(glob) {
+  var src = '';
+  var i = 0;
+  while (i < glob.length) {
+    var c = glob[i];
+    if (c === '*') {
+      if (glob[i + 1] === '*') {
+        src += '.*';
+        i += 2;
+        if (glob[i] === '/') i += 1; // consume optional '/' after '**'
+      } else {
+        src += '[^/]*';
+        i += 1;
+      }
+    } else if (c === '?') {
+      src += '[^/]';
+      i += 1;
+    } else if ('.+^$()|{}[]\\'.indexOf(c) !== -1) {
+      src += '\\' + c;
+      i += 1;
+    } else {
+      src += c;
+      i += 1;
+    }
+  }
+  return new RegExp('^' + src + '$');
+}
+
+/**
+ * Read PKI knowledge relevant to a task from the project's knowledge index.
+ *
+ * Reads slim manifest + sibling indices (domain_index.json, tag_index.json,
+ * concept_map.json) lazily; falls back to legacy manifest.<field> for backward
+ * compatibility. Tokenizes task text (stopwords + len>=4), scores matches with
+ * BM25-style rarity weighting, boosts concept_map exact hits 5x, expands
+ * 1-hop via annotation.relationships.depends_on/related, and surfaces matching
+ * rules from .synapse/knowledge/rules/. Output preserves the existing markdown
+ * block contract and adds a new ### RULES section.
+ *
+ * Cached per absolute projectPath at 60s TTL (module-level _pkiCache).
  *
  * @param {string} projectPath — target project directory
  * @param {object} task — the agent entry from initialization.json (has title, description, id)
@@ -105,152 +344,215 @@ function buildSystemPrompt(opts) {
 function readPKIKnowledge(projectPath, task) {
   if (!projectPath) return '';
 
-  var manifestPath = path.join(projectPath, '.synapse', 'knowledge', 'manifest.json');
-  var manifest;
-  try {
-    manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-  } catch (e) {
+  var pki = _loadPKI(projectPath);
+  var manifest = pki.manifest;
+  if (!manifest || !manifest.files) return '';
+
+  var totalFiles = 0;
+  for (var fk in manifest.files) {
+    if (Object.prototype.hasOwnProperty.call(manifest.files, fk)) totalFiles += 1;
+  }
+  if (totalFiles === 0) return '';
+
+  var searchText = ((task.title || '') + ' ' + (task.description || '')).toLowerCase();
+  var tokens = _tokenize(searchText);
+  if (tokens.length === 0) {
+    // Nothing to match against — bail early rather than emitting an empty block.
     return '';
   }
 
-  if (!manifest || !manifest.files) return '';
+  // BM25-style rarity weight: log(N_total / N_files_in_entry). Floor at a small
+  // positive epsilon so a domain/tag covering every file still contributes a
+  // tiny amount instead of zero (avoids -Infinity if N_files == N_total).
+  function rarity(nFiles) {
+    if (!nFiles || nFiles <= 0) return 0;
+    var w = Math.log(totalFiles / nFiles);
+    return w > 0 ? w : 0.01;
+  }
 
-  // Extract keywords from task title and description for domain/tag matching
-  var searchText = ((task.title || '') + ' ' + (task.description || '')).toLowerCase();
-  var relevantFiles = {};
+  var fileScores = Object.create(null); // filePath -> aggregate score
 
-  // Match via domain_index
-  if (manifest.domain_index) {
-    for (var domain in manifest.domain_index) {
-      if (searchText.indexOf(domain.toLowerCase()) !== -1) {
-        var domainFiles = manifest.domain_index[domain];
-        for (var di = 0; di < domainFiles.length; di++) {
-          relevantFiles[domainFiles[di]] = (relevantFiles[domainFiles[di]] || 0) + 1;
-        }
+  function addFile(filePath, weight) {
+    if (!filePath) return;
+    fileScores[filePath] = (fileScores[filePath] || 0) + weight;
+  }
+
+  // 1) Domain matches (exact: token === domain key)
+  for (var dKey in pki.domain_index) {
+    if (!Object.prototype.hasOwnProperty.call(pki.domain_index, dKey)) continue;
+    var dKeyLower = dKey.toLowerCase();
+    for (var ti = 0; ti < tokens.length; ti++) {
+      if (tokens[ti] === dKeyLower) {
+        var dFiles = pki.domain_index[dKey] || [];
+        var dW = rarity(dFiles.length);
+        for (var dfi = 0; dfi < dFiles.length; dfi++) addFile(dFiles[dfi], dW);
+        break;
       }
     }
   }
 
-  // Match via tag_index
-  if (manifest.tag_index) {
-    for (var tag in manifest.tag_index) {
-      if (searchText.indexOf(tag.toLowerCase()) !== -1) {
-        var tagFiles = manifest.tag_index[tag];
-        for (var ti = 0; ti < tagFiles.length; ti++) {
-          relevantFiles[tagFiles[ti]] = (relevantFiles[tagFiles[ti]] || 0) + 1;
-        }
+  // 2) Tag matches (exact: token === tag key)
+  for (var tKey in pki.tag_index) {
+    if (!Object.prototype.hasOwnProperty.call(pki.tag_index, tKey)) continue;
+    var tKeyLower = tKey.toLowerCase();
+    for (var tti = 0; tti < tokens.length; tti++) {
+      if (tokens[tti] === tKeyLower) {
+        var tFiles = pki.tag_index[tKey] || [];
+        var tW = rarity(tFiles.length);
+        for (var tfi = 0; tfi < tFiles.length; tfi++) addFile(tFiles[tfi], tW);
+        break;
       }
     }
   }
 
-  // Match via concept_map
-  if (manifest.concept_map) {
-    for (var concept in manifest.concept_map) {
-      var conceptWords = concept.toLowerCase().split(/[\s-_]+/);
-      var conceptMatch = false;
-      for (var cw = 0; cw < conceptWords.length; cw++) {
-        if (conceptWords[cw].length > 3 && searchText.indexOf(conceptWords[cw]) !== -1) {
-          conceptMatch = true;
-          break;
-        }
-      }
-      if (conceptMatch && manifest.concept_map[concept].files) {
-        var conceptFiles = manifest.concept_map[concept].files;
-        for (var cf = 0; cf < conceptFiles.length; cf++) {
-          relevantFiles[conceptFiles[cf]] = (relevantFiles[conceptFiles[cf]] || 0) + 2;
-        }
-      }
+  // 3) Concept matches (token contained in concept_map key) — 5x bonus over tag rarity
+  for (var cKey in pki.concept_map) {
+    if (!Object.prototype.hasOwnProperty.call(pki.concept_map, cKey)) continue;
+    var cKeyLower = cKey.toLowerCase();
+    var cHit = false;
+    for (var cti = 0; cti < tokens.length; cti++) {
+      if (cKeyLower.indexOf(tokens[cti]) !== -1) { cHit = true; break; }
     }
+    if (!cHit) continue;
+    var cEntry = pki.concept_map[cKey];
+    var cFiles = (cEntry && cEntry.files) || [];
+    // 5x of the tag-equivalent rarity for these files.
+    var cW = 5 * rarity(cFiles.length);
+    for (var cfi = 0; cfi < cFiles.length; cfi++) addFile(cFiles[cfi], cW);
   }
 
-  // Rank files by match count and complexity, cap at 8
-  var ranked = Object.keys(relevantFiles).map(function (f) {
-    var entry = manifest.files[f];
-    var score = relevantFiles[f];
-    if (entry && entry.complexity === 'high') score += 2;
-    if (entry && entry.stale) score -= 1;
-    return { file: f, score: score, entry: entry };
-  }).filter(function (r) { return r.entry; });
-
+  // Convert to ranked list with manifest entry + complexity/stale boosts.
+  var ranked = [];
+  for (var fp in fileScores) {
+    var entry = manifest.files[fp];
+    if (!entry) continue;
+    var score = fileScores[fp];
+    if (entry.complexity === 'high') score += 2;
+    if (entry.stale) score -= 1;
+    ranked.push({ file: fp, score: score, entry: entry });
+  }
   ranked.sort(function (a, b) { return b.score - a.score; });
-  ranked = ranked.slice(0, 8);
 
-  if (ranked.length === 0) return '';
+  // Cap primary matches at 8 (annotation read budget).
+  var primary = ranked.slice(0, 8);
+  if (primary.length === 0) return '';
 
-  // Read annotations and build knowledge block
+  var primarySet = Object.create(null);
+  for (var pp = 0; pp < primary.length; pp++) primarySet[primary[pp].file] = 1;
+
+  // 1-hop expansion: walk depends_on + related from primary annotations.
+  // Score expansion candidates by how often they appear (so files referenced
+  // by multiple primaries float to the top). Cap +4 extras.
+  var expansionScore = Object.create(null);
+  for (var rpi = 0; rpi < primary.length; rpi++) {
+    var pEntry = primary[rpi].entry;
+    var pAnn = _readAnnotation(projectPath, pEntry && pEntry.hash, pki);
+    if (!pAnn || !pAnn.relationships) continue;
+    var rel = pAnn.relationships;
+    var deps = (rel.depends_on || []).concat(rel.related || []);
+    for (var dep = 0; dep < deps.length; dep++) {
+      var depPath = deps[dep];
+      if (!depPath || primarySet[depPath]) continue;
+      if (!manifest.files[depPath]) continue; // skip unindexed neighbors (e.g., narrative refs)
+      expansionScore[depPath] = (expansionScore[depPath] || 0) + 1;
+    }
+  }
+  var expansionList = Object.keys(expansionScore).map(function (f) {
+    return { file: f, score: expansionScore[f], entry: manifest.files[f] };
+  });
+  expansionList.sort(function (a, b) { return b.score - a.score; });
+  var expansion = expansionList.slice(0, 4);
+
+  // Build the union of files we'll harvest annotations from.
+  var harvestList = primary.concat(expansion);
+  var matchedFilePaths = harvestList.map(function (h) { return h.file; });
+
+  // Harvest gotchas / patterns / conventions / stale, tagging by file label.
   var gotchas = [];
   var patterns = [];
   var conventions = [];
   var staleWarnings = [];
-  var knowledgeDir = path.join(projectPath, '.synapse', 'knowledge', 'annotations');
 
-  for (var ri = 0; ri < ranked.length; ri++) {
-    var r = ranked[ri];
-    var annotationPath = path.join(knowledgeDir, r.entry.hash + '.json');
-    var annotation;
-    try {
-      annotation = JSON.parse(fs.readFileSync(annotationPath, 'utf-8'));
-    } catch (e) {
-      continue;
-    }
-
-    var fileLabel = r.file;
-    var isStale = r.entry.stale;
-
-    if (annotation.gotchas) {
-      for (var gi = 0; gi < annotation.gotchas.length; gi++) {
-        gotchas.push('[' + fileLabel + '] ' + annotation.gotchas[gi]);
+  for (var hi = 0; hi < harvestList.length; hi++) {
+    var h = harvestList[hi];
+    var ann = _readAnnotation(projectPath, h.entry && h.entry.hash, pki);
+    if (!ann) continue;
+    var fileLabel = h.file;
+    if (ann.gotchas && Array.isArray(ann.gotchas)) {
+      for (var ag = 0; ag < ann.gotchas.length; ag++) {
+        gotchas.push('[' + fileLabel + '] ' + ann.gotchas[ag]);
       }
     }
-    if (annotation.patterns) {
-      for (var pi = 0; pi < annotation.patterns.length; pi++) {
-        patterns.push('[' + fileLabel + '] ' + annotation.patterns[pi]);
+    if (ann.patterns && Array.isArray(ann.patterns)) {
+      for (var ap = 0; ap < ann.patterns.length; ap++) {
+        patterns.push('[' + fileLabel + '] ' + ann.patterns[ap]);
       }
     }
-    if (annotation.conventions) {
-      for (var ci = 0; ci < annotation.conventions.length; ci++) {
-        conventions.push('[' + fileLabel + '] ' + annotation.conventions[ci]);
+    if (ann.conventions && Array.isArray(ann.conventions)) {
+      for (var ac = 0; ac < ann.conventions.length; ac++) {
+        conventions.push('[' + fileLabel + '] ' + ann.conventions[ac]);
       }
     }
-    if (isStale) {
+    if (h.entry.stale) {
       staleWarnings.push('[' + fileLabel + '] Modified since last annotation — verify before relying');
     }
   }
 
-  if (gotchas.length === 0 && patterns.length === 0 && conventions.length === 0) return '';
+  // Match rules against the matched-file set + tokens (top 5 severity-ordered).
+  var matchedRules = _matchRules(pki.rules, matchedFilePaths, tokens, 5);
 
-  // Build the block, respecting ~100 line budget
+  if (
+    gotchas.length === 0 &&
+    patterns.length === 0 &&
+    conventions.length === 0 &&
+    matchedRules.length === 0
+  ) return '';
+
+  // Build the block, respecting the existing ~100-line target. Priority order
+  // for trimming if we overshoot: keep gotchas > patterns > conventions > stale > rules.
   var block = [];
   block.push('## PKI Knowledge (from project knowledge index)');
   block.push('');
 
   if (gotchas.length > 0) {
     block.push('### GOTCHAS (respect these — discovered by previous agents):');
-    for (var g = 0; g < gotchas.length; g++) block.push('- ' + gotchas[g]);
+    var gBudget = Math.min(gotchas.length, 20);
+    for (var gi2 = 0; gi2 < gBudget; gi2++) block.push('- ' + gotchas[gi2]);
     block.push('');
   }
 
   if (patterns.length > 0) {
     block.push('### PATTERNS (follow established patterns):');
-    var patternBudget = Math.min(patterns.length, 15);
-    for (var p = 0; p < patternBudget; p++) block.push('- ' + patterns[p]);
+    var pBudget = Math.min(patterns.length, 15);
+    for (var pi2 = 0; pi2 < pBudget; pi2++) block.push('- ' + patterns[pi2]);
     block.push('');
   }
 
   if (conventions.length > 0) {
     block.push('### CONVENTIONS (maintain consistency):');
-    var conventionBudget = Math.min(conventions.length, 10);
-    for (var c = 0; c < conventionBudget; c++) block.push('- ' + conventions[c]);
+    var cBudget = Math.min(conventions.length, 10);
+    for (var ci2 = 0; ci2 < cBudget; ci2++) block.push('- ' + conventions[ci2]);
     block.push('');
   }
 
   if (staleWarnings.length > 0) {
     block.push('### STALE (verify before relying):');
-    for (var s = 0; s < staleWarnings.length; s++) block.push('- ' + staleWarnings[s]);
+    for (var si = 0; si < staleWarnings.length; si++) block.push('- ' + staleWarnings[si]);
     block.push('');
   }
 
-  // Read recent insights for this task area
+  if (matchedRules.length > 0) {
+    block.push('### RULES (cross-cutting, severity-ranked):');
+    for (var rri = 0; rri < matchedRules.length; rri++) {
+      var rule = matchedRules[rri];
+      var sev = (rule.severity || 'info').toUpperCase();
+      var concept = rule.concept || rule.id || 'rule';
+      block.push('- [' + sev + '] (' + concept + ') ' + (rule.gotcha || '').replace(/\s+/g, ' ').trim());
+    }
+    block.push('');
+  }
+
+  // Read recent insights for this task area (legacy helper, untouched).
   var insightsBlock = readRelevantInsights(projectPath, manifest, searchText);
   if (insightsBlock) {
     block.push(insightsBlock);
@@ -337,6 +639,246 @@ function readRelevantInsights(projectPath, manifest, searchText) {
   lines.push('');
 
   return lines.join('\n');
+}
+
+/**
+ * Master-side complement to readRelevantInsights. Reads the 5 most recent
+ * insights files from the PKI and emits a STRUCTURED suggestion object the
+ * master can surface during plan presentation and (optionally) act on.
+ *
+ * Confidence model:
+ *   - For each insight item, compute up to 2 relevance signals against the
+ *     master's user prompt:
+ *       (a) token overlap — count of overlapping non-stopword tokens (len >= 4)
+ *           between the item's description and the prompt
+ *       (b) file overlap — does the prompt mention any of the item's
+ *           affected_files (substring match against the prompt text)?
+ *   - HIGH confidence  = both signal types fire
+ *   - MEDIUM confidence = exactly one signal type fires
+ *   - LOW (skipped)    = neither fires
+ *
+ * Surfacing rules (warnings capped at 5 — most recent / highest-confidence first):
+ *   - HIGH failure_patterns       -> warnings + (if description names tasks/files
+ *                                    forming a chain) suggested_dependencies
+ *   - HIGH complexity_surprises   -> warnings + suggested_wave_split = true
+ *   - HIGH dependency_insights    -> warnings + suggested_dependencies
+ *   - HIGH architecture_notes     -> warnings (info severity)
+ *   - MEDIUM (any category)       -> warnings only (description, no plan edits)
+ *
+ * Output shape (always returned — fail-open empty shape on miss):
+ *   {
+ *     warnings: [{ category, description, swarm, affected_files, confidence }],
+ *     suggested_dependencies: [{ from_task_pattern, to_task_pattern, reason }],
+ *     suggested_wave_split: boolean,
+ *     total_insights_consulted: number,
+ *     high_confidence_count: number
+ *   }
+ *
+ * The master MUST NOT auto-apply suggestions. They are advisories; the user
+ * approves any structural changes during the plan-approval gate.
+ *
+ * @param {string} projectPath — absolute path to the target project
+ * @param {string} prompt — the master's user prompt (verbatim)
+ * @returns {object} structured suggestion object (see shape above)
+ */
+function readRelevantInsightsForPlanning(projectPath, prompt) {
+  var EMPTY = {
+    warnings: [],
+    suggested_dependencies: [],
+    suggested_wave_split: false,
+    total_insights_consulted: 0,
+    high_confidence_count: 0,
+  };
+
+  if (!projectPath || !prompt) return EMPTY;
+
+  // Read manifest directly (do not load the full PKI corpus — planning-time
+  // consultation only needs insights_index, not the full bag of indices).
+  var manifest = null;
+  try {
+    manifest = JSON.parse(fs.readFileSync(
+      path.join(projectPath, '.synapse', 'knowledge', 'manifest.json'), 'utf-8'
+    ));
+  } catch (e) {
+    return EMPTY;
+  }
+  if (!manifest || !manifest.insights_index || manifest.insights_index.length === 0) {
+    return EMPTY;
+  }
+
+  // Tokenize the user prompt (reuse the private _tokenize helper above —
+  // same lowercase + stopword + len>=4 rules as readPKIKnowledge).
+  var promptText = String(prompt || '');
+  var promptLower = promptText.toLowerCase();
+  var promptTokens = _tokenize(promptText);
+  var promptTokenSet = Object.create(null);
+  for (var pti = 0; pti < promptTokens.length; pti++) promptTokenSet[promptTokens[pti]] = 1;
+
+  // Walk the 5 most recent insights files.
+  var recent = manifest.insights_index.slice(-5);
+  var consulted = 0;
+
+  // Buckets accumulate raw matches before the cap-and-emit step at the end.
+  // Each entry: { category, description, swarm, affected_files, confidence,
+  //              recency, signals: { tokenOverlap, fileOverlap } }
+  var rawMatches = [];
+  // Suggested dependencies — gathered separately so we can dedupe by reason.
+  var suggestedDeps = [];
+  var suggestSplit = false;
+
+  // Categories iterated per insight file. Same set as readRelevantInsights
+  // plus effective_patterns (per the pki-overview.md spec — earlier helper
+  // skipped it; we include it here for completeness).
+  var CATEGORIES = [
+    'dependency_insights',
+    'complexity_surprises',
+    'failure_patterns',
+    'effective_patterns',
+    'architecture_notes',
+  ];
+
+  for (var ri = 0; ri < recent.length; ri++) {
+    var entry = recent[ri];
+    if (!entry || !entry.file) continue;
+    var insightPath = path.join(projectPath, '.synapse', 'knowledge', entry.file);
+    var insight;
+    try {
+      insight = JSON.parse(fs.readFileSync(insightPath, 'utf-8'));
+    } catch (e) {
+      continue; // fail-open: skip unreadable insight files
+    }
+    if (!insight || !insight.insights) continue;
+
+    for (var ci = 0; ci < CATEGORIES.length; ci++) {
+      var cat = CATEGORIES[ci];
+      var items = insight.insights[cat];
+      if (!Array.isArray(items)) continue;
+
+      for (var ii = 0; ii < items.length; ii++) {
+        consulted += 1;
+        var item = items[ii];
+        var desc = String(item.description || '');
+        var descLower = desc.toLowerCase();
+        var affectedFiles = Array.isArray(item.affected_files) ? item.affected_files : [];
+
+        // Signal A — description token overlap.
+        // Count distinct non-stopword tokens (len>=4) appearing in BOTH
+        // the description and the prompt.
+        var descTokens = _tokenize(desc);
+        var tokenOverlap = 0;
+        for (var dti = 0; dti < descTokens.length; dti++) {
+          if (promptTokenSet[descTokens[dti]]) tokenOverlap += 1;
+        }
+
+        // Signal B — affected_files overlap with prompt text. Match on
+        // either the full path OR the basename so prompts mentioning
+        // "PromptBuilder.js" still hit "electron/services/PromptBuilder.js".
+        var fileOverlap = false;
+        for (var afi = 0; afi < affectedFiles.length; afi++) {
+          var f = String(affectedFiles[afi] || '').toLowerCase();
+          if (!f) continue;
+          if (promptLower.indexOf(f) !== -1) { fileOverlap = true; break; }
+          var base = f.split('/').pop();
+          if (base && base.length >= 4 && promptLower.indexOf(base) !== -1) {
+            fileOverlap = true; break;
+          }
+        }
+
+        // Confidence classification.
+        var hasTokenSignal = tokenOverlap > 0;
+        var hasFileSignal = fileOverlap;
+        var signalCount = (hasTokenSignal ? 1 : 0) + (hasFileSignal ? 1 : 0);
+        if (signalCount === 0) continue; // LOW — discard
+
+        var confidence = signalCount >= 2 ? 'high' : 'medium';
+
+        rawMatches.push({
+          category: cat,
+          description: desc,
+          swarm: insight.swarm_name || (entry.swarm_name || 'unknown'),
+          affected_files: affectedFiles,
+          confidence: confidence,
+          recency: ri, // larger = more recent (we slice(-5) so index correlates)
+          signals: { tokenOverlap: tokenOverlap, fileOverlap: hasFileSignal },
+          item: item,
+        });
+
+        // Plan-adjustment rules — HIGH confidence only.
+        if (confidence === 'high') {
+          if (cat === 'complexity_surprises') {
+            suggestSplit = true;
+          }
+          if (cat === 'failure_patterns' || cat === 'dependency_insights') {
+            // Try to extract a from->to chain hint from the description.
+            // Heuristic: look for two affected_files (or two task IDs in
+            // the description) and emit a soft suggested_dependency.
+            if (affectedFiles.length >= 2) {
+              suggestedDeps.push({
+                from_task_pattern: 'modifies ' + affectedFiles[0],
+                to_task_pattern: 'modifies ' + affectedFiles[1],
+                reason: 'Past ' + cat.replace(/_/g, ' ') + ' from swarm "' +
+                        (insight.swarm_name || 'unknown') + '": ' + desc,
+              });
+            } else if (item.discovered_by && item.task_id && item.discovered_by !== item.task_id) {
+              suggestedDeps.push({
+                from_task_pattern: 'task ' + item.discovered_by,
+                to_task_pattern: 'task ' + item.task_id,
+                reason: 'Past ' + cat.replace(/_/g, ' ') + ' from swarm "' +
+                        (insight.swarm_name || 'unknown') + '": ' + desc,
+              });
+            }
+          }
+          // architecture_notes -> warnings only (info severity), no plan edits.
+        }
+      }
+    }
+  }
+
+  // Sort warnings: HIGH first, then by recency (newer first).
+  rawMatches.sort(function (a, b) {
+    if (a.confidence !== b.confidence) {
+      return a.confidence === 'high' ? -1 : 1;
+    }
+    return b.recency - a.recency;
+  });
+
+  // Cap at 5 most recent / highest-confidence.
+  var capped = rawMatches.slice(0, 5);
+
+  // Strip the internal-only fields from the public warning shape.
+  var warnings = capped.map(function (m) {
+    return {
+      category: m.category,
+      description: m.description,
+      swarm: m.swarm,
+      affected_files: m.affected_files,
+      confidence: m.confidence,
+    };
+  });
+
+  // Dedupe suggested_dependencies by reason text (defensive — same insight
+  // could otherwise emit twice if the master re-runs planning during a session).
+  var seenDepReasons = Object.create(null);
+  var dedupedDeps = [];
+  for (var sdi = 0; sdi < suggestedDeps.length; sdi++) {
+    var dep = suggestedDeps[sdi];
+    if (seenDepReasons[dep.reason]) continue;
+    seenDepReasons[dep.reason] = 1;
+    dedupedDeps.push(dep);
+  }
+
+  var highCount = 0;
+  for (var hci = 0; hci < rawMatches.length; hci++) {
+    if (rawMatches[hci].confidence === 'high') highCount += 1;
+  }
+
+  return {
+    warnings: warnings,
+    suggested_dependencies: dedupedDeps,
+    suggested_wave_split: suggestSplit,
+    total_insights_consulted: consulted,
+    high_confidence_count: highCount,
+  };
 }
 
 /**
@@ -659,4 +1201,4 @@ function findAgentInInit(init, taskId) {
   return null;
 }
 
-module.exports = { buildSystemPrompt, buildTaskPrompt, readUpstreamResults, readPKIKnowledge, buildReplanPrompt, buildReplanSystemPrompt };
+module.exports = { buildSystemPrompt, buildTaskPrompt, readUpstreamResults, readPKIKnowledge, readRelevantInsightsForPlanning, buildReplanPrompt, buildReplanSystemPrompt };

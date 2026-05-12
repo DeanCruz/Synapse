@@ -1,36 +1,52 @@
 {
   "file": "documentation/worker-protocol/overview.md",
   "content_hash": "bb75c0c2",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Worker agent lifecycle and responsibilities. Defines the fixed stage sequence (reading_context -> planning -> implementing -> testing -> finalizing -> completed/failed), the two critical paths ({tracker_root} vs {project_root}), the eight non-negotiable rules every worker follows, and the structured return format (STATUS, SUMMARY, FILES CHANGED, EXPORTS, ANNOTATIONS, DIVERGENT ACTIONS, WARNINGS, ERRORS).",
+  "purpose": "Documentation page for the worker-protocol area: Worker Protocol Overview. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Worker Protocol defines how worker agents operate within a Synapse swarm. Worker agents are dispatched by the master agent during `!p_track` (or `!p`) swarms to execute individual tasks in parallel. Each worker is an autonomous agent that reads context, implements its assigned task, and reports progress back to the live dashboard. The file is 246 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Each worker is the SOLE writer of its progress file -- no other agent reads or modifies it",
-    "Partial completion (>=80% done with a blocker) uses status:'completed' with a clear summary, NOT 'failed'",
-    "Workers must always include dashboard_id in every progress write or the server rejects it"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Sole-writer-per-file ownership eliminating write conflicts",
-    "Self-contained dispatch prompts so workers need no master callbacks"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Progress writes use the Write tool (atomic temp-rename), never echo/cat shell redirects",
-    "Live timestamps via date -u +'%Y-%m-%dT%H:%M:%SZ' -- never reconstructed from memory"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/worker-protocol/progress-reporting.md",
+      "documentation/worker-protocol/upstream-results.md",
+      "documentation/worker-protocol/deviations.md"
+    ],
+    "depended_by": [
+      "documentation/README.md"
+    ],
+    "related": [
+      "documentation/worker-protocol/deviations.md",
+      "documentation/worker-protocol/progress-reporting.md",
+      "documentation/worker-protocol/upstream-results.md"
+    ]
   },
   "domains": [
+    "documentation",
     "worker-protocol"
   ],
   "tags": [
-    "lifecycle",
-    "stages",
-    "return-format",
-    "rules"
-  ]
+    "markdown",
+    "documentation",
+    "worker-protocol",
+    "pki",
+    "dashboard",
+    "progress",
+    "profile",
+    "claude"
+  ],
+  "complexity": "moderate"
 }

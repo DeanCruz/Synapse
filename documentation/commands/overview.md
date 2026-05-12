@@ -55,11 +55,17 @@ Located at `{tracker_root}/_commands/Synapse/`. These commands manage the full l
 
 Key commands: `!p_track`, `!p_track_plan`, `!p`, `!master_plan_track`, `!dispatch`, `!eager_dispatch`, `!add_task`, `!retry`, `!resume`, `!track_resume`, `!p_track_resume`, `!cancel`, `!cancel-safe`
 
+### Research Pipeline Commands
+
+Located at `{tracker_root}/_commands/Synapse/`. These commands run deep, multi-wave research swarms that gather external and internal knowledge, synthesize it across topics, and produce ranked product plans. See [Swarm Commands](swarm-commands.md) for full documentation.
+
+Key commands: `!p_research`, `!p_synthesize`, `!p_product_plan`, `!p_product_research`, `!p_product_research_resume`
+
 ### Monitoring Commands
 
 Also located at `{tracker_root}/_commands/Synapse/`. These commands provide visibility into active and past swarms. See [Swarm Commands](swarm-commands.md) for full documentation.
 
-Key commands: `!status`, `!logs`, `!inspect`, `!deps`, `!history`, `!update_dashboard`, `!export`
+Key commands: `!status`, `!p_status`, `!logs`, `!inspect`, `!deps`, `!history`, `!update_dashboard`, `!export`
 
 ### Server Control Commands
 
@@ -85,17 +91,23 @@ Also located at `{tracker_root}/_commands/project/`. Initialize and configure Sy
 
 Key commands: `!initialize`, `!onboard`, `!scaffold`, `!create_claude`, `!instrument`
 
-### Table of Contents Commands
+### Project Knowledge Graph Commands
 
-Located at `{tracker_root}/_commands/project/`. Manage the project's semantic file index.
+Located at `{tracker_root}/_commands/project/`. Manage the project's `.synapse/knowledge/` graph.
 
-Key commands: `!toc`, `!toc_generate`, `!toc_update`
+Key commands: `!learn`, `!learn_update`, `!context`
 
 ### Project Knowledge Index (PKI) Commands
 
 Located at `{tracker_root}/_commands/project/`. Bootstrap and maintain the deep operational knowledge layer for the target project.
 
 Key commands: `!learn`, `!learn_update`
+
+### Wiki Commands
+
+Located at `{tracker_root}/_commands/project/`. Build and maintain a living personal knowledge base -- an LLM-curated wiki for durable knowledge across sessions, projects, and topics.
+
+Key commands: `!wiki init`, `!wiki ingest`, `!wiki query`, `!wiki lint`, `!wiki audit`, `!wiki crystallize`, `!wiki export`
 
 ### Audit Commands
 
@@ -149,12 +161,14 @@ Projects can define their own commands at `{project_root}/_commands/`. These fol
 | Category | Commands |
 |----------|----------|
 | **Swarm Lifecycle** | `!p_track`, `!p_track_plan`, `!p`, `!master_plan_track`, `!dispatch`, `!eager_dispatch`, `!add_task`, `!retry`, `!resume`, `!track_resume`, `!p_track_resume`, `!cancel`, `!cancel-safe` |
-| **Monitoring** | `!status`, `!logs`, `!inspect`, `!deps`, `!history`, `!update_dashboard`, `!export` |
+| **Research Pipeline** | `!p_research`, `!p_synthesize`, `!p_product_plan`, `!p_product_research`, `!p_product_research_resume` |
+| **Monitoring** | `!status`, `!p_status`, `!logs`, `!inspect`, `!deps`, `!history`, `!update_dashboard`, `!export` |
 | **Server** | `!start`, `!stop`, `!reset` |
 | **Project Mgmt** | `!project` |
 | **Setup** | `!initialize`, `!onboard`, `!scaffold`, `!create_claude`, `!instrument` |
 | **Analysis** | `!context`, `!review`, `!health`, `!scope`, `!trace`, `!contracts`, `!env_check`, `!plan` |
 | **PKI** | `!learn`, `!learn_update` |
-| **TOC** | `!toc`, `!toc_generate`, `!toc_update` |
+| **Wiki** | `!wiki init`, `!wiki ingest`, `!wiki ingest_batch`, `!wiki query`, `!wiki lint`, `!wiki audit`, `!wiki crystallize`, `!wiki consolidate`, `!wiki decay`, `!wiki graph`, `!wiki export` |
+| **Knowledge Graph** | `!learn`, `!learn_update`, `!context` |
 | **Audit** | `!prompt_audit` |
 | **Discovery** | `!commands`, `!profiles`, `!help`, `!guide` |

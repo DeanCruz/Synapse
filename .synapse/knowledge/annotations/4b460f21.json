@@ -1,56 +1,60 @@
 {
   "file": "documentation/troubleshooting/common-issues.md",
   "content_hash": "a0cf803e",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Comprehensive troubleshooting guide for Synapse errors and failure modes. Covers dependency graph validation errors (self-reference, dangling, circular, orphan), progress file validation errors (task_id/dashboard_id mismatch, missing fields, invalid status/stage/timestamps), dashboard isolation violations, initialization schema errors (task.name format, type, count mismatches, agent IDs, immutability), circuit breaker triggers, JSON/file I/O issues, path confusion (tracker_root vs project_root), worker context exhaustion, stale ghost agents, and shared file conflicts. Each entry includes exact error message, cause, and fix.",
+  "purpose": "Documentation page for the troubleshooting area: Troubleshooting -- Common Issues. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: This guide covers common errors, warnings, and failure modes in Synapse. Each entry includes the actual error message, what causes it, and how to fix it. Entries are grouped by system component. The file is 360 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "task_id field must EXACTLY match filename (without .json) -- hard rejection",
-    "dashboard_id must match dashboard directory name -- hard rejection",
-    "Master cannot write to {project_root} during active swarm (validate-master-write hook)",
-    "Dashboard files MUST be under {tracker_root}/dashboards/ -- enforced by hook",
-    "task.name is write-once after planning (immutable except for repair/replan/!add_task)",
-    "Invalid stages: must be reading_context|planning|implementing|testing|finalizing|completed|failed",
-    "Hooks fail open by default -- if jq missing or script errors, tool call allowed",
-    "SYNAPSE_SKIP_SCHEMA=1 bypass available only for validate-initialization-schema.sh",
-    "completed_at must be null when status is in_progress"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Validation via Kahn's topological sort algorithm in src/server/utils/validation.js",
-    "Two-tier validation: hooks (block) + watcher service (broadcast filter)",
-    "Hard rejection vs warning distinction (REJECTED prefix vs Warning)",
-    "Circuit breaker thresholds: 3+ wave failures OR blast radius > 50%"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers."
   ],
   "conventions": [
-    "Agent IDs: '{wave}.{index}' format, repair tasks use 'r' suffix",
-    "Status values: in_progress, completed, failed (exact strings)",
-    "Atomic writes via tmp-then-rename to avoid partial reads",
-    "ISO 8601 string timestamps or null"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
+    "depends_on": [
+      "agent/instructions/common_pitfalls.md",
+      "documentation/troubleshooting/faq.md",
+      "documentation/data-architecture/progress-files.md",
+      "agent/instructions/tracker_worker_instructions.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "CLAUDE.md"
+    ],
     "depended_by": [
+      "documentation/README.md",
       "documentation/troubleshooting/faq.md"
     ],
     "related": [
-      "src/server/utils/validation.js",
-      "src/server/services/WatcherService.js",
-      ".claude/hooks/",
+      "CLAUDE.md",
       "agent/instructions/common_pitfalls.md",
-      "documentation/data-architecture/"
+      "agent/instructions/tracker_worker_instructions.md",
+      "documentation/data-architecture/initialization-json.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/swarm-lifecycle/circuit-breaker.md",
+      "documentation/troubleshooting/faq.md"
     ]
   },
   "domains": [
-    "troubleshooting-docs"
+    "documentation",
+    "troubleshooting"
   ],
   "tags": [
     "markdown",
     "documentation",
     "troubleshooting",
-    "errors",
-    "validation",
-    "hooks"
-  ]
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide",
+    "claude"
+  ],
+  "complexity": "complex"
 }

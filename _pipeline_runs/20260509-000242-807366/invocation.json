@@ -1,0 +1,80 @@
+{
+  "pipeline_run_id": "20260509-000242-807366",
+  "command": "!q_product_research",
+  "resolved_command": "!q_product_research",
+  "resolved_command_note": "User confirmed the QUICK variant after a clarifying exchange — earlier interim answer (full !p_*) was overridden by their later message. Pipeline runs the q_* sub-commands: q_research, q_synthesize, q_product_plan.",
+  "execution_mode": "quick",
+  "depth_per_stage": {
+    "stage_1_research": "standard (3 waves, ~8/6/2 workers)",
+    "stage_2_synthesis": "lightweight (~5-8 workers)",
+    "stage_3_product_plan": "lightweight (~5-8 workers)"
+  },
+  "worker_budget": {
+    "stage_1_research": "16-20",
+    "stage_2_synthesis": "5-8",
+    "stage_3_product_plan": "5-8",
+    "total_estimated": "26-36"
+  },
+  "user_prompt": "!q_product_research — Build a complete mortgage operations and origination platform (Nate Mortgage OS V5) tailored for Nate's solo mortgage broker workflow. Research the mortgage origination market, regulatory landscape (RESPA, TRID, ECOA, state licensing), competitive products (Encompass, Calyx Point, BNTouch, Velocify, LendingPad, BluePoint), broker-specific pain points, integration requirements (LOS, AUS, credit bureaus, MISMO, e-sign, doc management), pricing models, GTM strategy, and produce an actionable product plan that supersedes or refines the existing scope-recommendation document at documentation/nate-mortgage-os-scope-recommendation.html.",
+  "target_project": {
+    "root": "/Users/dean/Desktop/Projects/Nate-Mortage-Tool",
+    "name": "Nate Mortgage OS V5",
+    "domain": "mortgage origination / broker operations software",
+    "stakeholder": "Nate (solo mortgage broker)"
+  },
+  "synapse_root": "/Users/dean/Desktop/Synapse",
+  "primary_dashboard_id": "94608d",
+  "dashboard_path": "/Users/dean/Desktop/Synapse/dashboards/94608d",
+  "pipeline_run_path": "/Users/dean/Desktop/Synapse/_pipeline_runs/20260509-000242-807366",
+  "research_root": "/Users/dean/Desktop/Projects/Nate-Mortage-Tool/documentation/research/nate-mortgage-os-v5",
+  "topic_slug": "nate-mortgage-os-v5",
+  "stages": [
+    {
+      "stage": 1,
+      "name": "research",
+      "command": "!q_research",
+      "command_file": "/Users/dean/Desktop/Synapse/_commands/Synapse/q_research.md",
+      "dashboard_id": "94608d",
+      "status": "planned_awaiting_approval",
+      "approval_required": true,
+      "depth": "standard",
+      "scope": "both"
+    },
+    {
+      "stage": 2,
+      "name": "synthesis",
+      "command": "!q_synthesize",
+      "command_file": "/Users/dean/Desktop/Synapse/_commands/Synapse/q_synthesize.md",
+      "dashboard_id": null,
+      "status": "pending",
+      "approval_required": true,
+      "depends_on": "stage_1_research"
+    },
+    {
+      "stage": 3,
+      "name": "product_plan",
+      "command": "!q_product_plan",
+      "command_file": "/Users/dean/Desktop/Synapse/_commands/Synapse/q_product_plan.md",
+      "dashboard_id": null,
+      "status": "pending",
+      "approval_required": true,
+      "depends_on": "stage_2_synthesis"
+    }
+  ],
+  "context": {
+    "existing_artifact": "/Users/dean/Desktop/Projects/Nate-Mortage-Tool/documentation/nate-mortgage-os-scope-recommendation.html",
+    "existing_artifact_note": "Prior scope-recommendation HTML doc from earlier on 2026-05-08. The pipeline treats this as PRIOR ART — to validate, deepen, or supersede — not as ground truth.",
+    "user_decisions": [
+      {"at": "2026-05-09T00:02Z", "decision": "Initially indicated full pipeline (~155-200 workers)"},
+      {"at": "2026-05-09T00:04Z", "decision": "Corrected to quick variant — final binding answer"}
+    ],
+    "archive_pre_run": "Archive/94608d-pre-q_product_research-20260509-000549/"
+  },
+  "created_at": "2026-05-09T00:02:42Z",
+  "updated_at": "2026-05-09T00:06:30Z",
+  "created_by": "Synapse master orchestrator",
+  "git_head": "(not a git repo at synapse_root — confirmed earlier)",
+  "status": "planned_awaiting_approval",
+  "current_stage": 1,
+  "current_phase": "stage_1_phase_1_planning_complete"
+}

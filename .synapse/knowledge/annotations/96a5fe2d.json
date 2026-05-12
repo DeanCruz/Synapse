@@ -1,8 +1,8 @@
 {
   "file": "electron/services/PreviewTextWriter.js",
   "content_hash": "941489aa",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.406Z",
+  "annotated_by": "learn-update",
   "purpose": "The write side of Live Preview: when the user double-clicks and edits text in the Preview tab, this service finds the source file containing the matching `data-synapse-label` UUID and surgically replaces ONLY the text content while preserving JSX expressions, child elements, and whitespace structure. Also detects running dev servers (Vite, Next, CRA, Nuxt, Svelte, Angular) by checking for framework config files / package.json scripts and probing common ports (3000, 3001, 5173, 5174, 8080) — used to suggest a default Preview URL.",
   "exports": [
     {
@@ -91,5 +91,6 @@
     "text-replacement",
     "framework-detection",
     "tcp-probe"
-  ]
+  ],
+  "complexity": "complex"
 }

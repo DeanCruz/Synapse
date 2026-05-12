@@ -1,52 +1,50 @@
 {
   "file": "_commands/project/context.md",
-  "content_hash": "2ec02bd9",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "4a23fec9",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !context {topic} slash command — performs a deep, read-only context gather about a feature/domain in the target project. Has dual-mode execution: when {project_root}/.synapse/knowledge/manifest.json exists (PKI bootstrapped), it queries domain_index, tag_index, and concept_map for instant routing then reads matched annotations; otherwise falls back to grep/glob search. PKI data is additive — it never replaces grep, only enriches it. Outputs a structured Files-by-Area / Architecture / Connections / Key Observations summary, with an extra PKI Context section (Gotchas, Patterns, Relationships) when annotations contributed. Always verifies candidates and flags stale annotations.",
-  "exports": [],
+  "purpose": "Command specification for `!context`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: Performs a comprehensive context gather for a specific topic, feature, or domain within the project. When a Project Knowledge Index (PKI) exists, queries it for instant file routing and deep annotations, then supplements with grep/glob for files not covered by the PKI. Produces a concise, enriched summary the user (or a follow-up task) can act on. The file is 253 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!context",
+      "kind": "command",
+      "signature": "!context {topic} \u2014 Deep Project Context Gathering"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "PKI is additive, NOT required — command must work identically when no PKI exists. Always proceed to Step 2 (grep/glob) even after PKI hits.",
-    "Stale annotations (stale: true in manifest) must be flagged AND the actual file must be re-read — annotation may be outdated.",
-    "PKI tags/domains feed back into Step 2 search terms — annotations may surface terms you wouldn't have guessed.",
-    "Coverage gaps: files found by grep/glob but NOT in PKI must be flagged as unannotated (new/recent files).",
-    "If PKI coverage <50% on relevant files, suggest !learn_update; if PKI absent entirely, suggest !learn at the bottom of the output.",
-    "Output must fit ~50-150 lines — extract facts, do not dump file contents."
+    "PKI schema drift risk: domain_index, tag_index, and concept_map now live as sibling files beside manifest.json; manifest.json should not be treated as the only index container.",
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Dual-mode workflow: PKI-fast-path → grep/glob fallback → merge → enriched summary.",
-    "Term expansion: original topic → synonyms → likely identifiers → cast wide net before filtering.",
-    "Annotation-driven traversal: use relationships array (serves/consumes/mirrors/extends) to trace connections without re-reading files."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
   ],
   "conventions": [
-    "Read-only command — never modifies files.",
-    "Output structure differs based on PKI availability (with-PKI version has extra PKI Context section).",
-    "Section structure: # title → Overview → Usage → Execution Steps → Rules."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      ".synapse/knowledge/manifest.json",
-      ".synapse/knowledge/annotations/",
-      ".synapse/toc.md"
+    "depends_on": [],
+    "depended_by": [
+      "documentation/project-integration/pki-overview.md"
     ],
-    "depended_by": [],
-    "related": [
-      "_commands/project/learn.md",
-      "_commands/project/learn_update.md",
-      "_commands/project/toc.md"
-    ]
+    "related": []
   },
   "domains": [
-    "project-context",
-    "pki-query"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
+    "slash-command",
+    "context",
+    "project-command",
     "pki",
-    "context-gathering",
-    "read-only"
-  ]
+    "dashboard",
+    "progress"
+  ],
+  "complexity": "moderate"
 }

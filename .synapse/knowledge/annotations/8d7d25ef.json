@@ -1,50 +1,47 @@
 {
   "file": "_commands/project/plan.md",
-  "content_hash": "88003ca8",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "8ac7c334",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !plan {task} slash command — produces a detailed implementation plan WITHOUT writing any code. Reads context (TOC, CLAUDE.md, grep/glob, key files), designs the plan (per-change file/what/why/dependencies/risks), determines execution mode (Serial if ≤3 changes with deps, Parallel if 3+ independent changes), presents the plan with Context Summary / Execution Mode / Changes / Dependency Order ASCII tree / Cross-Layer Impact / Risks & Mitigations / Testing Strategy / Estimated Scope sections, then WAITS FOR USER APPROVAL (Proceed/Modify/Abort) before any execution. Read-only analysis.",
-  "exports": [],
+  "purpose": "Command specification for `!plan`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: Produces a detailed implementation plan for a task without writing any code. Reads all relevant context, identifies every file to create or modify, maps dependencies, determines the right execution mode (serial vs. parallel), and presents the full plan for user approval. The file is 115 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!plan",
+      "kind": "command",
+      "signature": "!plan {task} \u2014 Implementation Plan (No Execution)"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Do NOT write any code — this command produces a plan only. Approval-gated.",
-    "Be SPECIFIC: 'Update the file' is not a plan; 'Add a phone?: string field to UserProfile interface at line 15' is a plan.",
-    "Every plan must include a verification/testing strategy.",
-    "Do NOT begin execution until user explicitly approves — Proceed/Modify/Abort prompt is mandatory.",
-    "Mode determination is concrete: ≤3 changes with deps = Serial; 3+ independent = Parallel."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Plan-first development: gather → design → mode-decide → present → approve → (then execute).",
-    "Approval gate before execution.",
-    "Dependency tree visualization in ASCII."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
   ],
   "conventions": [
-    "Read-only.",
-    "Serial mode for analysis itself.",
-    "Per-change template: File / What / Why / Depends on."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "{project_root}/.synapse/toc.md",
-      "{project_root}/CLAUDE.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/project/scope.md",
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/p_track_plan.md"
-    ]
+    "related": []
   },
   "domains": [
-    "planning",
-    "project-context"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
-    "planning",
-    "approval-gated",
-    "read-only"
-  ]
+    "slash-command",
+    "plan",
+    "project-command",
+    "profile",
+    "claude",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

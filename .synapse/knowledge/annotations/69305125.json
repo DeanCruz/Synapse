@@ -1,8 +1,8 @@
 {
   "file": "src/ui/hooks/useResize.js",
   "content_hash": "c4d31b36",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.410Z",
+  "annotated_by": "learn-update",
   "purpose": "Custom resize hook for the bottom-right-anchored Claude floating panel. Uses pointer events (NOT mouse events), pointer capture, and requestAnimationFrame to drive 60fps resize via direct element.style mutations — never re-renders. Listens for pointerdown on elements with data-resize-edge attribute inside a panel ref, then tracks pointermove/pointerup on document. Supports three edges: 'left' (width), 'top' (height), 'top-left' (both). Honors minWidth/minHeight/maxHeight options.",
   "exports": [
     {
@@ -55,5 +55,6 @@
     "pointer-events",
     "raf",
     "floating-panel"
-  ]
+  ],
+  "complexity": "moderate"
 }

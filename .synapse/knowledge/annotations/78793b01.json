@@ -1,0 +1,50 @@
+{
+  "file": "src/ui/pages/code/subpages/dashboards/components/EmptyState.jsx",
+  "content_hash": "69467003",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Static placeholder section shown in the dashboard main area when no active task exists for the current dashboard. Two-line copy: 'No active agents' / 'Waiting for !p_track to dispatch agents...'. No props, no state.",
+  "exports": [
+    {
+      "name": "EmptyState",
+      "kind": "component",
+      "signature": "default function EmptyState(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Hard-coded copy mentions !p_track specifically — if the primary swarm command is renamed, update this string."
+  ],
+  "patterns": [
+    "Dumb component, zero logic."
+  ],
+  "conventions": [
+    "Default export."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/pages/code/subpages/dashboards/DashboardsPage.jsx"
+    ],
+    "related": [
+      "src/server/services/DashboardService.js",
+      "src/ui/hooks/useDashboardData.js",
+      "src/ui/shared/HomeView.jsx"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "empty-state"
+  ],
+  "complexity": "simple"
+}

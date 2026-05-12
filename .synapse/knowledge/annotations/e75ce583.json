@@ -1,44 +1,44 @@
 {
   "file": "electron/services/ClaudeCodeService.js",
-  "content_hash": "e909ba76",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "7fc2dcb8",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "Spawns and manages Claude Code CLI worker processes for swarm tasks. Builds the args list (--print, --output-format stream-json, --verbose, --add-dir for Synapse + project dirs, --append-system-prompt, --dangerously-skip-permissions or --permission-prompt-tool stdio + --input-format stream-json), feeds the prompt via stdin, parses NDJSON output line-by-line and rebroadcasts each parsed event to the renderer over `worker-output`. Tracks every spawned process in `activeWorkers` keyed by PID for kill/dispatch/inspect. Forwards stderr verbatim as a separate worker-output frame so the UI can display tool activity. Emits `worker-complete` with full output + exit code on close, and `worker-error` on spawn failures.",
   "exports": [
     {
       "name": "init",
       "kind": "function",
-      "signature": "(broadcast) => void"
+      "signature": "init(...)"
     },
     {
       "name": "spawnWorker",
       "kind": "function",
-      "signature": "(opts) => {pid, taskId, dashboardId}"
+      "signature": "spawnWorker(...)"
     },
     {
       "name": "killWorker",
       "kind": "function",
-      "signature": "(pid) => boolean"
+      "signature": "killWorker(...)"
     },
     {
       "name": "killAllWorkers",
       "kind": "function",
-      "signature": "() => count"
+      "signature": "killAllWorkers(...)"
     },
     {
       "name": "getActiveWorkers",
       "kind": "function",
-      "signature": "() => Worker[]"
+      "signature": "getActiveWorkers(...)"
     },
     {
       "name": "getActiveCountForDashboard",
       "kind": "function",
-      "signature": "(dashboardId) => number"
+      "signature": "getActiveCountForDashboard(...)"
     },
     {
       "name": "writeToWorker",
       "kind": "function",
-      "signature": "(pid, data) => boolean"
+      "signature": "writeToWorker(...)"
     }
   ],
   "imports_from": {},
@@ -64,13 +64,11 @@
     "Return shape from spawnWorker is intentionally minimal `{pid, taskId, dashboardId}` — full state lives in the activeWorkers map and is fetched via getActiveWorkers()."
   ],
   "relationships": {
-    "depends_on": [
-      "child_process.spawn",
-      "node:path"
-    ],
+    "depends_on": [],
     "depended_by": [
-      "electron/services/SwarmOrchestrator.js",
-      "electron/ipc-handlers.js"
+      "electron/ipc-handlers.js",
+      "electron/main.js",
+      "electron/services/SwarmOrchestrator.js"
     ],
     "related": [
       "electron/services/CodexService.js",
@@ -91,5 +89,6 @@
     "ndjson-streaming",
     "ipc-broadcast",
     "permission-relay"
-  ]
+  ],
+  "complexity": "complex"
 }

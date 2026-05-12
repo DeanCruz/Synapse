@@ -136,7 +136,7 @@ When a worker returns, the master stores its results in working memory:
 - New interfaces, types, exports, or APIs introduced (from the EXPORTS section).
 - Any deviations or warnings.
 
-This cache feeds downstream prompts. After context compaction, reconstruct the cache from prior conversation output or by re-reading the task file summaries.
+This cache feeds downstream prompts. After context compaction, reconstruct the cache from prior conversation output, `dashboards/{dashboardId}/plan.json`, progress file summaries, and companion task-file summaries if one exists.
 
 ### Upstream Result Summary Format
 
@@ -188,7 +188,7 @@ When the server detects newly dispatchable tasks, it broadcasts:
 
 ```json
 {
-  "dashboardId": "dashboard1",
+  "dashboardId": "71894a",
   "completedTaskId": "1.1",
   "unblocked": [
     {

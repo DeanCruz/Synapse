@@ -1,35 +1,53 @@
 {
   "file": "documentation/worker-protocol/progress-reporting.md",
   "content_hash": "0bcb3085",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Detailed protocol for how workers populate their progress files: when to write (mandatory points: stage transitions, deviations, errors, completion), what to include (status, stage, message, milestones, deviations, logs, files_changed, annotations), and how the dashboard renders each field. Complements the schema reference in data-architecture/progress-files.md with operational guidance.",
+  "purpose": "Documentation page for the worker-protocol area: Progress Reporting. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Workers report their own live progress directly to the dashboard via individual progress files. This document is the complete reference for the progress file schema, write triggers, stages, and log formats. The file is 429 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Logs should narrate the worker's reasoning, not just announce 'starting' / 'done'",
-    "files_changed must be populated incrementally as files are touched, not just at the end"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Full-file overwrite per write (no partial JSON updates)",
-    "Append-only arrays for milestones/deviations/logs"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "summary field is descriptive on completion (e.g. 'Created auth middleware with rate limiting -- 3 endpoints')"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/worker-protocol/deviations.md",
+      "documentation/worker-protocol/upstream-results.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/worker-protocol/overview.md"
+    ],
+    "related": [
+      "documentation/worker-protocol/deviations.md",
+      "documentation/worker-protocol/overview.md",
+      "documentation/worker-protocol/upstream-results.md"
+    ]
   },
   "domains": [
-    "worker-protocol",
-    "progress"
+    "documentation",
+    "worker-protocol"
   ],
   "tags": [
-    "progress-file",
-    "reporting",
-    "logs",
-    "milestones"
-  ]
+    "markdown",
+    "documentation",
+    "worker-protocol",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "sse"
+  ],
+  "complexity": "complex"
 }

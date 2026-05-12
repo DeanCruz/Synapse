@@ -11,7 +11,7 @@ Commands are resolved from four locations, listed in priority order:
 | Priority | Location | Category | Description |
 |---|---|---|---|
 | 1 (highest) | `{tracker_root}/_commands/Synapse/` | Swarm commands | Orchestration, dispatch, monitoring, lifecycle |
-| 2 | `{tracker_root}/_commands/project/` | Project commands | Analysis, context, scaffolding, TOC, PKI |
+| 2 | `{tracker_root}/_commands/project/` | Project commands | Analysis, context, scaffolding, PKI |
 | 3 | `{tracker_root}/_commands/profiles/` | Agent profiles | Persona-based behavioral presets (analyst, architect, etc.) |
 | 4 (lowest) | `{project_root}/_commands/` | Custom commands | **Your project-specific commands** |
 
@@ -186,7 +186,7 @@ Commands that interact with dashboards include a resolution note:
 
 ## Naming Conventions
 
-- **Use underscores** for multi-word command names: `p_track`, `eager_dispatch`, `learn_update`, `toc_generate`
+- **Use underscores** for multi-word command names: `p_track`, `eager_dispatch`, `learn_update`
 - **Hyphens** are rare and reserved for variants: `cancel-safe` (a variant of `cancel`)
 - **Keep names short and descriptive:** `!audit_api` is better than `!check`. Names should hint at what the command does
 - **File name matches command name:** The command `!eager_dispatch` lives in `eager_dispatch.md`

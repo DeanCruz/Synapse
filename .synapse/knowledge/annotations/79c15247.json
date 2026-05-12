@@ -1,33 +1,59 @@
 {
   "file": "documentation/data-architecture/initialization-json.md",
   "content_hash": "8f83a2cc",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Authoritative schema reference for initialization.json -- the static plan file written once by the master containing task metadata, agent definitions, wave structure, chain layout, and history. Documents every field, its UI mapping, write rules (write-once except for repair task appends), and validation expectations.",
+  "purpose": "Documentation page for the data-architecture area: initialization.json -- Schema Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: `initialization.json` is the **static plan store** for each dashboard. It is written once during the planning phase and contains all the structural data needed to render the dashboard: task metadata, agent definitions, wave groupings, and chain layout. All lifecycle data (status, timing, summaries) lives exclusively in worker progress files. The file is 384 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Write-once rule has ONE exception: repair tasks may be appended after worker failures",
-    "Lifecycle fields (status, started_at, etc.) live in progress files, NOT in initialization.json"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Static-plan-vs-dynamic-progress separation"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Agent IDs use 'wave.index' format (e.g. '1.1', '2.3')"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/xml-task-files.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/pki-schemas.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/xml-task-files.md",
+      "documentation/troubleshooting/common-issues.md"
+    ],
+    "related": [
+      "documentation/data-architecture/logs-json.md",
+      "documentation/data-architecture/overview.md",
+      "documentation/data-architecture/progress-files.md",
+      "documentation/data-architecture/xml-task-files.md"
+    ]
   },
   "domains": [
-    "data-architecture",
-    "schema"
+    "documentation",
+    "data-architecture"
   ],
   "tags": [
-    "initialization",
-    "plan",
-    "schema"
-  ]
+    "markdown",
+    "documentation",
+    "data-architecture",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "profile",
+    "sse"
+  ],
+  "complexity": "complex"
 }

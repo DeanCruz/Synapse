@@ -1,54 +1,54 @@
 {
   "file": "documentation/configuration/electron-config.md",
   "content_hash": "450da9a2",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Comprehensive reference for Electron app configuration via electron/settings.js. Documents the JSON-backed settings store (get/set/getAll/reset/init API), default settings (window geometry, behavior, performance polling, theme, project management), settings file location (OS-specific {userData}/synapse-settings.json), window state persistence with 500ms debounce, BrowserWindow configuration, custom app:// protocol with three-step path resolution, dev vs production loading modes, and Electron build/packaging configuration in package.json.",
+  "purpose": "Documentation page for the configuration area: Electron Configuration. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Synapse desktop application is built on Electron. Its configuration is managed by a JSON-backed settings store defined in: The file is 283 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Settings file location is OS-specific via app.getPath('userData')",
-    "Unknown keys are accepted with console warning -- store is not strictly schema-locked",
-    "Window state persistence is debounced 500ms; skipped when maximized",
-    "Build target is macOS DMG only",
-    "node_modules excluded from package -- bundled by build process",
-    "unset ELECTRON_RUN_AS_NODE in npm start ensures GUI mode",
-    "dangerouslySkipPermissions setting bypasses ALL safety confirmations -- use with caution"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Cache-first read with DEFAULTS fallback for get()",
-    "Atomic write of full cache on every set()",
-    "Custom protocol resolution: direct path -> dist/ -> public/",
-    "Window restore: load geometry from settings, undefined for null x/y"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "All settings have defined defaults in DEFAULTS object",
-    "backgroundColor #0a0a0c matches CSS --bg to prevent white flash",
-    "contextIsolation true + nodeIntegration false for renderer security",
-    "preload.js exposes safe APIs via contextBridge"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/configuration/overview.md"
-    ],
-    "depended_by": [],
-    "related": [
+      "documentation/configuration/overview.md",
       "documentation/configuration/server-config.md",
-      "documentation/configuration/theming.md",
-      "electron/settings.js",
-      "electron/main.js",
-      "electron/preload.js"
+      "documentation/configuration/theming.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/configuration/overview.md",
+      "documentation/configuration/server-config.md",
+      "documentation/configuration/theming.md"
+    ],
+    "related": [
+      "documentation/configuration/overview.md",
+      "documentation/configuration/server-config.md",
+      "documentation/configuration/theming.md"
     ]
   },
   "domains": [
-    "configuration-docs"
+    "documentation",
+    "configuration"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "electron",
-    "settings",
     "configuration",
-    "ipc"
-  ]
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "codex",
+    "claude"
+  ],
+  "complexity": "moderate"
 }

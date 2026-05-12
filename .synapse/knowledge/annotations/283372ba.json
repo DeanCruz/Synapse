@@ -1,59 +1,49 @@
 {
   "file": "_commands/Synapse/p.md",
-  "content_hash": "5386107e",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "2505f16e",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the LIGHTWEIGHT swarm command `!p {prompt}` — deep planning and high-quality worker prompts with minimal dashboard overhead. Master writes initialization.json once (plan snapshot) and logs.json entries at init/dispatch/completion. Workers do NOT write progress files, do NOT receive tracker_root/dashboardId/progress paths, do NOT read tracker_worker_instructions.md. Workers return structured results via Task tool only. No master_state.json, no metrics.json. Use for <3 tasks, single wave. Master should RECOMMEND escalation to !p_track when 3+ agents or >1 wave detected (escalation gate prompt shown to user).",
-  "exports": [],
+  "purpose": "Command specification for `!p`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Lightweight parallel dispatch \u2014 deep planning and high-quality worker prompts with minimal dashboard overhead. The master agent plans, decomposes, and dispatches worker agents with self-contained, context-rich prompts. No task files, no progress files, no live tracking. Dashboard receives a plan snapshot before dispatch and final results after completion. The file is 380 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!p",
+      "kind": "command",
+      "signature": "!p {prompt}"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Workers in !p mode do NOT read tracker_worker_instructions.md and do NOT write progress files — fundamentally different from !p_track",
-    "Worker prompts use a DIFFERENT template (TEMPLATE_VERSION: p_worker_v1) than !p_track (TEMPLATE_VERSION: p_track_v2)",
-    "If plan results in 3+ agents or >1 wave, master SHOULD recommend escalation to !p_track but the user may explicitly choose !p — proceed if they confirm",
-    "initialization.json plan snapshot is ALWAYS written even in lightweight mode (it's the dashboard plan visualization)",
-    "If dashboard has previous data, master MUST ASK user before archiving and clearing — never proceed without approval",
-    "Pre-assigned dashboard from system prompt is authoritative — master has NO access to any other dashboard",
-    "Circuit breaker still applies in !p mode (3+ failures in same wave or >50% remaining blocked)",
-    "Master must STAY IN MASTER MODE until all tasks complete — do not exit to serial mode mid-swarm",
-    "No master_state.json or metrics.json is written in !p mode"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Two phases: Phase 1 Context+Planning (Steps 1-6) → Phase 2 Execution (Steps 7-12)",
-    "Worker prompt template (Step 8): What To Do → Context → Conventions → Reference Code → Files (READ/MODIFY/CREATE) → Dependencies → Sibling Tasks (optional) → Critical Details → Success Criteria → Rules → return format (STATUS/SUMMARY/FILES CHANGED/EXPORTS/WARNINGS/ERRORS)",
-    "Decomposition principles: no file overlaps within a wave, minimize dependencies, self-contained tasks, right-sized (1-5 min)",
-    "Dashboard updates: write initialization.json snapshot before dispatch, log dispatch/completion/failure events during execution, write final summary log entry on completion",
-    "Escalation gate prompt (verbatim shown to user): 'This swarm has {N} agents across {W} waves. For full live tracking, consider using !p_track instead. Proceed with lightweight !p mode?'",
-    "Post-swarm verification (Step 12) is conditional: modified existing code in multiple files OR any deviations → dispatch verification agent; purely additive OR all-success-no-warnings → optional"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "When-to-use comparison block contrasting !p vs !p_track on speed vs visualization",
-    "Escalation recommendation callout with verbatim user prompt",
-    "Dashboard Updates section enumerating every write point",
-    "What Workers Do NOT Do bulleted list explicitly contrasting !p with !p_track worker behavior",
-    "8 Non-Negotiable Rules at the bottom"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/instructions/dashboard_resolution.md",
-      "agent/master/dashboard_protocol.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/master_plan_track.md",
-      ".claude/skills/p/"
-    ]
+    "related": []
   },
   "domains": [
-    "swarm-command",
-    "lightweight-dispatch",
-    "parallel-dispatch"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "lightweight",
-    "no-progress-files"
-  ]
+    "p",
+    "swarm-command",
+    "dashboard",
+    "progress",
+    "initialization-json"
+  ],
+  "complexity": "complex"
 }

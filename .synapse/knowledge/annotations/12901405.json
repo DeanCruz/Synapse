@@ -1,54 +1,41 @@
 {
   "file": "agent/core/path_convention.md",
-  "content_hash": "89398e2e",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "26e6cfcf",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the path placeholder convention used throughout Synapse: {tracker_root} = absolute path to Synapse repo, {project_root} = absolute path to target project. Always absolute, always distinct. Specifies the three-tier {project_root} resolution order (--project flag > {tracker_root}/.synapse/project.json > agent CWD), the integration model with arbitrary projects (Synapse can live anywhere; .synapse/ goes inside the target; all Synapse data stays in {tracker_root}), the multi-project support via per-dashboard task.project_root, the portability checklist (zero npm deps for server, no hardcoded paths, etc.), and the timestamp protocol (always live via `date -u +\"%Y-%m-%dT%H:%M:%SZ\"`).",
+  "purpose": "Agent protocol/control-plane instruction document: Path Convention & Project Integration. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: This module defines how Synapse resolves paths, integrates with target projects, supports multi-project workflows, and handles timestamps. Every path in Synapse uses one of two placeholders that are always absolute paths. The file is 104 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "{tracker_root} and {project_root} are ALWAYS DIFFERENT locations — workers do code work in {project_root} and write progress files to {tracker_root}. Confusing them is the canonical worker failure.",
-    "{project_root} resolution order is strict: --project flag overrides everything, then stored config, then CWD. Never assume CWD without checking the higher-priority sources first.",
-    "Only the {project_root}/.synapse/ directory is written into the target project — everything else (dashboards/, tasks/, history/, logs.json) stays at {tracker_root}. Add .synapse/ to project's .gitignore.",
-    "Timestamps must always be live via `date -u +\"%Y-%m-%dT%H:%M:%SZ\"` — guessed/estimated/hardcoded timestamps break the elapsed timer (which derives durations from these values).",
-    "Multi-project support: each dashboard's task.project_root identifies its target project; commands like !status/!logs use the agent's assigned dashboard, not a globally-active project."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Three-tier {project_root} resolution: --project flag > {tracker_root}/.synapse/project.json > agent CWD.",
-    "Workers receive BOTH {tracker_root} and {project_root} explicitly in their dispatch prompts.",
-    "Synapse-anywhere: tools dir, home folder, or anywhere on disk — the only constraint is that paths are absolute.",
-    "Per-dashboard project binding: task.project_root in initialization.json identifies which project a swarm targets.",
-    "Portability invariants: zero npm deps for server, no hardcoded paths, no project-specific assumptions, server configurable via PORT env var, works offline."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "ISO 8601 UTC timestamps: `date -u +\"%Y-%m-%dT%H:%M:%SZ\"`.",
-    "Project metadata location inside target: {project_root}/.synapse/ (gitignored).",
-    "All paths use {tracker_root}/{project_root} placeholders in docs — never hardcoded actual paths."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [
-      "CLAUDE.md",
-      "agent/core/project_discovery.md",
-      "agent/worker/progress_reporting.md",
-      "_commands/Synapse/project.md"
-    ],
-    "related": [
-      "agent/core/data_architecture.md",
-      "agent/core/dashboard_features.md",
-      "electron/services/ProjectService.js"
-    ]
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "core-conventions",
-    "path-resolution",
-    "project-integration"
+    "agent-protocol",
+    "core"
   ],
   "tags": [
     "markdown",
+    "agent-instructions",
     "core",
-    "paths",
-    "convention",
-    "portability"
-  ]
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "sse"
+  ],
+  "complexity": "moderate"
 }

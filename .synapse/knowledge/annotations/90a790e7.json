@@ -1,51 +1,41 @@
 {
   "file": "agent/worker/upstream_deps.md",
   "content_hash": "d327e158",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The mandatory protocol for worker agents whose tasks have upstream dependencies. Before starting implementation, dependent workers MUST read every upstream task's progress file at {tracker_root}/dashboards/{dashboardId}/progress/{dep_id}.json — these files contain the GROUND TRUTH about what actually happened (vs the master's planning-time dispatch prompt which is a stale snapshot). Specifies the four-step protocol: (1) parallel read of all upstream progress files, (2) extraction of status/summary/deviations[]/milestones[]/logs[]/message, (3) approach adaptation based on what was found (especially CRITICAL deviations and upstream failures), (4) logging what was learned plus deviation entries for any adaptations made.",
+  "purpose": "Agent protocol/control-plane instruction document: Worker Guide \u2014 Reading Upstream Dependency Results. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: **Who this is for:** Worker agents dispatched during a `!p_track` swarm whose tasks have upstream dependencies. This document is your complete reference for reading, interpreting, and adapting to upstream task results before you begin your own implementation. The file is 74 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "Reading upstream progress files is NON-NEGOTIABLE for dependent tasks — the master's dispatch prompt is a stale snapshot from planning time, NOT the actual state of the world after upstream workers ran.",
-    "Upstream task with status 'failed' may not block your task — assess whether you can proceed (e.g., the missing artifact wasn't actually critical) and log a 'warn' explaining how you adapted, OR fail your own task with a clear explanation.",
-    "CRITICAL severity deviations on upstream tasks ALWAYS require adaptation — your dispatch prompt's assumptions about interfaces/files/APIs may be invalid. Log every adaptation as a deviation in YOUR progress file.",
-    "Even 'completed' upstream tasks may have 'error' or 'warn' log entries indicating partial issues — scan logs[] not just status.",
-    "Upstream progress files must be read in PARALLEL — they have no dependency on each other and sequential reads waste time."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Four-step protocol: parallel read → extract critical info → adapt approach → log what you learned (with deviation entries for adaptations).",
-    "Field-extraction priority: status (gate), summary (one-line truth), deviations[] with focus on CRITICAL severity, milestones[] for what was actually built, logs[] scanned for error/warn, message for final state.",
-    "Adaptation logging convention: log at 'info' level summarizing all upstream reads in one entry, then log each required adaptation as a separate 'deviation' level entry."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Upstream progress file path schema: {tracker_root}/dashboards/{dashboardId}/progress/{dep_task_id}.json (identical to own progress file path schema).",
-    "Multi-dep summary log message format: 'Read upstream dependencies: 1.1 (completed, no deviations), 1.3 (completed, 1 MODERATE deviation — used alternative API pattern)'."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/worker/progress_reporting.md",
-      "agent/worker/deviations.md"
-    ],
-    "depended_by": [
-      "agent/instructions/tracker_worker_instructions.md",
-      ".claude/agents/swarm-worker.md"
-    ],
-    "related": [
-      "agent/worker/sibling_comms.md",
-      "agent/core/parallel_principles.md",
-      "agent/master/worker_prompts.md"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "worker-protocol",
-    "dependency-management"
+    "agent-protocol",
+    "worker"
   ],
   "tags": [
     "markdown",
-    "worker-agent",
-    "protocol",
-    "non-negotiable",
-    "upstream"
-  ]
+    "agent-instructions",
+    "worker",
+    "dashboard",
+    "progress",
+    "guide",
+    "sse",
+    "ide"
+  ],
+  "complexity": "simple"
 }

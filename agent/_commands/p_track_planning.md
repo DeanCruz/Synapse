@@ -11,7 +11,7 @@
 
 Resolve `{project_root}` using the standard resolution order (see `{tracker_root}/CLAUDE.md` — Path Convention section): explicit `--project` flag → stored config at `{tracker_root}/.synapse/project.json` → agent's CWD.
 
-Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/toc.md` exists, read it for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If additional context directories are configured (in `.synapse/project.json`), read their `CLAUDE.md` files as well — these are read-only supplemental context whose conventions should be merged into worker prompts. If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
+Read `{project_root}/CLAUDE.md` (if one exists). If `{project_root}/.synapse/knowledge/manifest.json` exists, query the project knowledge graph for semantic orientation. Identify which directories or sub-projects are affected. If those directories have their own `CLAUDE.md` files, read them **in parallel**. If additional context directories are configured (in `.synapse/project.json`), read their `CLAUDE.md` files as well — these are read-only supplemental context whose conventions should be merged into worker prompts. If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
 
 ### Step 2: Read the tracker master instructions
 
@@ -90,6 +90,57 @@ After reading `{project_root}/CLAUDE.md`, categorize its conventions into a **co
 ```
 
 The master does not need to write this to a file — it is a planning artifact held in working memory. The categories are used during prompt construction (Step 14) to select which conventions to inject into each worker's prompt.
+
+#### 5B. Consult Past Insights (Planning-Time Insight Consultation)
+
+After building the convention map and **before** finalizing the task decomposition (the cost-benefit check in Step 6), consult the PKI's `insights/` directory for relevant lessons from past swarms. Insights are written automatically after every swarm completion (see `agent/_commands/p_track_completion.md` Step 17G and `electron/services/SwarmOrchestrator.js::extractSwarmKnowledge`) — but until this step they were never consumed at planning time.
+
+**Call site:**
+
+```js
+const { readRelevantInsightsForPlanning } = require('electron/services/PromptBuilder');
+const insightSuggestions = readRelevantInsightsForPlanning(projectPath, userPrompt);
+```
+
+The function reads the 5 most recent insight files via `manifest.insights_index`, scores each item against the user's prompt with two relevance signals (description token overlap + affected_files overlap), and emits a structured suggestion:
+
+```js
+{
+  warnings: [{ category, description, swarm, affected_files, confidence: 'high' | 'medium' }, ...],
+  suggested_dependencies: [{ from_task_pattern, to_task_pattern, reason }, ...],
+  suggested_wave_split: boolean,
+  total_insights_consulted: number,
+  high_confidence_count: number
+}
+```
+
+**Confidence model:** HIGH = both signal types fire (token overlap **and** file overlap). MEDIUM = exactly one fires. LOW = neither fires (discarded). Only HIGH triggers plan-adjustment suggestions; MEDIUM is surfaced as a user-visible warning only. See `agent/master/pki_integration.md` Step 7 for the full rule table.
+
+**What the master must do with the output:**
+
+1. **Inject into `plan.json`** — capture the warnings under `context.past_insights` (new optional field) so the artifact is auditable. If you'd rather keep the context schema slim, append a single-line summary into `context.edge_cases`.
+
+2. **Apply `suggested_dependencies` selectively** — for each suggestion, check whether the draft task list contains tasks matching `from_task_pattern` and `to_task_pattern`. Add the dependency only when it makes sense for the current plan. **Do NOT auto-apply.** Mark applied edits in the plan presentation so the user can confirm during the approval gate.
+
+3. **Honor `suggested_wave_split`** — when `true`, review the affected wave one more time during Step 6's cost-benefit check. If a wave already has 5+ tasks AND the suggestion fires, consider splitting along the seam the insight points at.
+
+4. **Surface a "Past Insights" block in the plan presentation (Step 11D)** — render this block **above** the wave tables when ANY of these hold:
+   - `suggested_wave_split === true`, OR
+   - `high_confidence_count >= 2`, OR
+   - any warnings are present (recommended — past lessons cost nothing to display).
+
+   Use the existing PKI block heading style. Each warning becomes a bullet attributed to the source swarm:
+
+   ```
+   ## Past Insights
+   ### Warnings (from previous swarms — review before approving)
+   - [HIGH | failure_patterns] Past insights from swarm "previous-rate-limit-swarm" suggest: <description> (affected files: <list>)
+   - [MEDIUM | architecture_notes] Past insights from swarm "...": <description>
+   ```
+
+   Phrasing rule: past insights must be clearly attributed ("Past insights from swarm X suggest...") — never as the master's own conclusions ("I recommend..."). This keeps provenance transparent.
+
+**Fail-open:** the function returns the empty suggestion shape (`{ warnings: [], suggested_dependencies: [], suggested_wave_split: false, total_insights_consulted: 0, high_confidence_count: 0 }`) when no manifest exists, no `insights_index` is present, the directory is empty, the prompt is empty, or the project path is missing. Planning proceeds normally in all of those cases — past insight consultation is an enhancement, never a requirement.
 
 ### Step 6: Decompose into tasks
 

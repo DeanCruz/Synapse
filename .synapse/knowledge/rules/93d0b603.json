@@ -1,0 +1,31 @@
+{
+  "id": "93d0b603",
+  "concept": "dashboard-id-isolation",
+  "binding": {
+    "globs": [
+      "dashboards/**/progress/*.json",
+      ".claude/hooks/enforce-dashboard-isolation*.sh",
+      "src/server/services/WatcherService.js",
+      "src/server/utils/json.js",
+      "agent/worker/progress_reporting.md",
+      "agent/instructions/dashboard_resolution.md"
+    ],
+    "symbols": [
+      "isValidProgress",
+      "validateAndBroadcast",
+      "SYNAPSE_DASHBOARD_ID"
+    ]
+  },
+  "gotcha": "Every progress write must carry a dashboard_id that matches the dashboard directory, and a task_id that matches the filename. The server hard-rejects mismatches as 'write_rejected' SSE events / CROSS-WORKER WRITE VIOLATION errors. Workers MUST resolve their dashboard via SYNAPSE_DASHBOARD_ID env var or the system-prompt 'DASHBOARD ID:' directive — never auto-select, never scan, never construct dashboard paths from CWD. The 'ide' dashboard is reserved for the IDE agent and swarm agents must never use it.",
+  "severity": "error",
+  "source_annotations": [
+    "e7242712",
+    "cb3ed7b7",
+    "207e2d52",
+    "87ee438a",
+    "93f89a72",
+    "4b460f21",
+    "8169a6b6"
+  ],
+  "created_at": "2026-05-06T03:36:48Z"
+}

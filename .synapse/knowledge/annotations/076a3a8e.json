@@ -1,8 +1,8 @@
 {
   "file": "src/ui/hooks/useElectronAPI.js",
   "content_hash": "b19f8cc7",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.410Z",
+  "annotated_by": "learn-update",
   "purpose": "Tiny convenience accessor for window.electronAPI. Provides a memoized hook so components can read the IPC bridge without sprinkling window.electronAPI direct accesses, plus useIsElectron() for feature-detection branching.",
   "exports": [
     {
@@ -49,5 +49,6 @@
     "hook",
     "ipc",
     "electron-bridge"
-  ]
+  ],
+  "complexity": "simple"
 }

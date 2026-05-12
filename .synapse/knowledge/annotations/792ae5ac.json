@@ -1,47 +1,48 @@
 {
   "file": "_commands/Synapse/status.md",
   "content_hash": "8752678c",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!status [dashboardId]` command for displaying a quick swarm summary in the terminal. Reads initialization.json + all progress files, merges them per the standard merge pattern (for each agent in init, look up progress; missing = pending), computes status counts + overall_status (via deriveOverallStatus()) + elapsed time (earliest started_at to latest completed_at or now). Renders Swarm header + Agents table + Wave Summary table + history hint. Read-only.",
-  "exports": [],
+  "purpose": "Command specification for `!status`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Display a quick summary of the current swarm state from dashboard data without opening the browser. The file is 56 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!status",
+      "kind": "command",
+      "signature": "!status [dashboardId]"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Uses the same merge pattern as !export and !inspect — for each agent in initialization.json, look up its progress file; if no file, status='pending'",
-    "Elapsed time computation: earliest started_at to NOW if any in-progress, else to latest completed_at",
-    "deriveOverallStatus() is the canonical function (defined elsewhere) for swarm-level status — do not reimplement",
-    "Argument disambiguation: dashboard ID vs anything else — accepts 6-char hex, `ide`, and legacy dashboardN"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "6-step procedure: parse → read init → read progress → merge+derive stats → display → history hint",
-    "Two output tables: Agents (id/title/wave/status/agent/summary) and Wave Summary (id/name/status/progress)",
-    "Status emojis: completed=✅, in_progress=🔵, failed=🔴, pending=⚪"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Compact command doc — single-section Steps with embedded markdown render template",
-    "Status emojis enumerated in a bulleted list",
-    "Trailing history note pointing to !history command"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/instructions/dashboard_resolution.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/inspect.md",
-      "_commands/Synapse/deps.md",
-      "_commands/Synapse/update_dashboard.md",
-      "_commands/Synapse/export.md"
-    ]
+    "related": []
   },
   "domains": [
-    "dashboard-monitoring",
-    "swarm-summary"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "read-only"
-  ]
+    "status",
+    "swarm-command",
+    "dashboard",
+    "progress",
+    "initialization-json"
+  ],
+  "complexity": "simple"
 }

@@ -29,6 +29,7 @@ All swarm commands are located at `{tracker_root}/_commands/Synapse/`. They mana
 - Includes circuit breaker logic: if 3+ tasks fail in the same wave or a failure blocks half of remaining tasks, automatic replanning is triggered
 
 **Produces:**
+- `{tracker_root}/dashboards/{dashboardId}/plan.json` -- Canonical task spec and shared context
 - `{tracker_root}/tasks/{date}/parallel_{name}.json` -- Master task record
 - `{tracker_root}/tasks/{date}/parallel_plan_{name}.md` -- Strategy rationale
 - `{tracker_root}/dashboards/{dashboardId}/initialization.json` -- Dashboard plan data
@@ -78,7 +79,7 @@ All swarm commands are located at `{tracker_root}/_commands/Synapse/`. They mana
 **Natural workflow:** `!plan {task}` --> review and refine --> `!p_track_plan {plan_path}` to execute
 
 **Produces:**
-- Same output files as `!p_track` (master task file, rationale, initialization.json, logs.json, progress files)
+- Same output files as `!p_track` (`plan.json`, companion task file if produced, rationale, initialization.json, logs.json, progress files)
 
 ---
 
@@ -153,7 +154,7 @@ WORKER AGENTS (many per stream)
 
 **Key Behavior:**
 - Validates that the task exists, is pending, and all dependencies are completed
-- Reads the master task file to extract full task context for the worker prompt
+- Reads `dashboards/{dashboardId}/plan.json` to extract full task context for the worker prompt
 - Dispatches a worker agent with a complete, self-contained prompt
 - Logs the dispatch to `logs.json`
 - Does not create a progress file -- the worker creates its own when it starts
@@ -236,12 +237,12 @@ WORKER AGENTS (many per stream)
 
 **Key Behavior:**
 - Requires an active swarm on the target dashboard
-- Reads the full swarm state (initialization.json, all progress files, master_state.json, master task file) and project context before planning
+- Reads the full swarm state (`plan.json`, initialization.json, all progress files, master_state.json, companion task file if present) and project context before planning
 - Decomposes the prompt into 1 or more right-sized subtasks following the same quality standards as `!p_track` planning
 - Resolves dependencies in both directions: new tasks may depend on existing tasks, and existing pending tasks may have new dependencies added
 - Validates no circular dependencies and warns about file conflicts with in-progress tasks
 - Assigns wave numbers and task IDs following existing conventions
-- Updates initialization.json, the master task file, logs.json, and master_state.json atomically
+- Updates initialization.json, `plan.json` when task specs change, logs.json, master_state.json, and companion task files when present atomically
 - Runs eager dispatch for any new tasks whose dependencies are already satisfied
 - Never modifies completed or in-progress tasks -- only pending tasks can have their dependencies updated
 
@@ -258,7 +259,7 @@ WORKER AGENTS (many per stream)
 ```
 
 **Key Behavior:**
-- Reads initialization.json, all progress files, master_state.json, and the master task file
+- Reads `plan.json`, initialization.json, all progress files, master_state.json, and any companion task file
 - Builds completed/in-progress/failed sets from progress files
 - Identifies every task where ALL `depends_on` are completed and the task is not yet dispatched
 - Presents a dispatch summary and waits for user approval before dispatching
@@ -284,7 +285,7 @@ WORKER AGENTS (many per stream)
 **Syntax:**
 ```
 !export                                     -- Export your assigned dashboard as markdown
-!export dashboard3                          -- Export a specific dashboard
+!export c3d4e5                          -- Export a specific dashboard
 !export --format json                       -- Export as raw JSON
 !export --format markdown                   -- Export as formatted markdown (default)
 ```
@@ -312,7 +313,7 @@ WORKER AGENTS (many per stream)
 **Key Behavior:**
 - Reads all master instruction documents before taking any action (7 required files including master instructions, dashboard writes, eager dispatch, worker prompts, compaction recovery, and failure recovery)
 - Reconstructs full swarm state from initialization.json, all progress files, logs.json, and master_state.json
-- Locates and reads the master task file and project CLAUDE.md for worker prompt construction
+- Locates and reads `plan.json`, any companion task file, and project CLAUDE.md for worker prompt construction
 - Rebuilds the upstream result cache from progress files and master_state.json
 - Assesses agent health for in-progress tasks: checks progress file recency (milestones/logs within last 10 minutes) to determine if workers are likely alive or stale
 - Classifies every task as: completed, failed, likely alive, stale in-progress, pending ready, or pending blocked
@@ -376,7 +377,7 @@ WORKER AGENTS (many per stream)
 
 ### `!status`
 
-**Purpose:** Quick terminal summary of the current swarm state.
+**Purpose:** Quick terminal summary of the current swarm state. Read-only, no dispatch, no log writes.
 
 **Syntax:**
 ```
@@ -388,6 +389,37 @@ WORKER AGENTS (many per stream)
 - Derives all stats: completed, failed, in_progress, pending counts, overall status, elapsed time
 - Displays a formatted agent table with status, wave, and summary for each task
 - Includes wave summary table
+
+---
+
+### `!p_status`
+
+**Purpose:** Mid-swarm health check that also takes action. Statuses all currently dispatched workers, surfaces stalls and failures, and re-saturates the pipeline by dispatching newly-ready tasks and re-dispatching cleanly failed ones -- without interrupting any actively running worker.
+
+**Syntax:**
+```
+!p_status [dashboardId]
+```
+
+**Key Behavior:**
+- Non-disruptive: never interrupts, kills, or overwrites an active worker's progress file
+- Never double-dispatches: re-reads progress files immediately before dispatch
+- Classifies every task into: active, stale, completed, failed, pending, or blocked
+- Staleness detection: flags `in_progress` tasks with no activity for 10+ minutes (does NOT auto-kill; warns user and suggests `!retry`)
+- Eager dispatch: dispatches all pending tasks whose dependencies are now satisfied (with full worker prompts including upstream results)
+- Failure re-dispatch: retries cleanly failed tasks with root-cause analysis context (applies circuit breaker if 3+ cluster failures)
+- Safe to re-run: idempotent -- running twice with no worker activity in between produces no new dispatches
+- Never marks a swarm complete or writes metrics.json -- it is a checkpoint, not a terminator
+
+**Comparison with related commands:**
+
+| Command | Scope |
+|---------|-------|
+| `!p_status` | Live health check + dispatch of ready tasks + retry of failures. Non-disruptive to active workers |
+| `!status` | Print-only summary, no dispatch, no log writes |
+| `!p_track_resume` | Full state reconstruction when the entire swarm is dead |
+| `!eager_dispatch` | Dispatch-only; does not status active workers or handle failures |
+| `!dispatch --ready` | Dispatch ready tasks; does not retry failures or surface stalls |
 
 ---
 
@@ -419,7 +451,7 @@ WORKER AGENTS (many per stream)
 ```
 
 **Key Behavior:**
-- Reads from `initialization.json`, the task's progress file, the master task file, and `logs.json`
+- Reads from `plan.json`, `initialization.json`, the task's progress file, any companion task file, and `logs.json`
 - Displays: status, wave, timeline (created/dispatched/completed/duration), agent info, milestones, deviations, upstream dependencies with their statuses, downstream blocks, task context and critical details, file lists, worker logs, and dashboard logs
 
 ---
@@ -475,6 +507,215 @@ WORKER AGENTS (many per stream)
 - Computes swarm stats from progress files
 - Shows a progress bar, wave summary table, details of the most recently completed task, a table of all completed tasks, any deviations across the swarm, and remaining pending/in-progress work
 - Useful for getting a quick terminal snapshot of swarm progress
+
+---
+
+## Research Pipeline Commands
+
+The research pipeline is a multi-stage system for deep, breadth-first research that produces a synthesized knowledge layer and ranked product plans. The pipeline stages are: `!p_research` (gather) -> `!p_synthesize` (merge) -> `!p_product_plan` (plan and rank). The `!p_product_research` command orchestrates all three as a single pipeline.
+
+### `!p_research`
+
+**Purpose:** Run a deep, breadth-first research pipeline as a parallel Synapse swarm. Decomposes a topic into many independent angles, dispatches waves of parallel research workers (saturating parallelism), and stitches returns into a coherent synthesis. Inaccessible sources are catalogued with weighted value scores.
+
+**Syntax:**
+```
+!p_research {topic}
+!p_research --depth {shallow|standard|deep|exhaustive} {topic}
+!p_research --scope {internal|external|both} {topic}
+!p_research --max-waves N {topic}
+!p_research --dashboard {id} {topic}
+```
+
+**Arguments:**
+- `{topic}` -- The research question (technical topic, decision to investigate, domain to map, or comparison)
+- `--depth` -- (Optional, default `deep`) Controls wave count and workers per wave
+- `--scope` -- (Optional, default `both`) `internal` = project repo + PKI + wiki. `external` = web/docs/papers. `both` = both pools
+- `--max-waves` -- (Optional) Hard cap on wave count
+- `--dashboard {id}` -- (Optional) Force a specific dashboard
+
+**Depth Tiers:**
+
+| Tier | Waves | Workers/wave | When to use |
+|------|-------|--------------|-------------|
+| `shallow` | 2 | 4-6 | Quick survey before committing to deeper dive |
+| `standard` | 3 | 6-10 | Default for most research questions |
+| `deep` | 4-5 | 8-12 | Multi-discipline topics or known controversy |
+| `exhaustive` | 5-7 | 10-15 | Pre-decision research where missing a perspective is expensive |
+
+**Key Behavior:**
+- The invoking agent becomes the master. Master never fetches external sources -- workers do all source-gathering
+- Decomposes topics into angles: definitional, historical, technical, comparative, practitioner, failure modes, adversarial, adjacent, empirical, tooling, regulatory, future, project-internal
+- Wave 1 = broad discovery. Wave 2 = deep dive into high-value sources. Wave 3 = gap fill and cross-validation. Wave 4 (deep/exhaustive) = adversarial. Final wave = single integration worker for synthesis
+- All raw findings persist to `{project_root}/documentation/research/{topic-slug}/raw/` before synthesis
+- Source weighting phase computes value scores for inaccessible sources, producing `_missing_sources.md`
+- Full dashboard tracking always (never lightweight mode)
+
+**Produces:**
+```
+{project_root}/documentation/research/{topic-slug}/
+  _index.md                    -- Entry point
+  _synthesis.md                -- Primary deliverable (coherent narrative)
+  _claims.json                 -- Structured claims with citations + confidence bands
+  _missing_sources.md          -- Weighted catalogue of inaccessible sources
+  _confidence.md               -- Per-claim confidence rationale
+  _graph.json                  -- Entities + typed edges
+  raw/                         -- Per-agent raw findings (immutable)
+  sources/                     -- Cached source bodies + provenance metadata
+```
+
+---
+
+### `!p_synthesize`
+
+**Purpose:** Merge per-topic research produced by `!p_research` into a single project-wide synthesis layer. Workers detect duplicate claims across topics, stitch complementary information into unified subject pages, and extract contradictions and unanswered questions into a living `_open_issues.md` document. A final verification pass confirms no contradictions slipped through.
+
+**Syntax:**
+```
+!p_synthesize
+!p_synthesize --mode {full|incremental|verify-only}
+!p_synthesize --topics "slug1,slug2,..."
+!p_synthesize --depth {standard|deep}
+!p_synthesize --dashboard {id}
+!p_synthesize [topic-filter]
+```
+
+**Arguments:**
+- `--mode` -- (Optional, default `full`) `full` = re-synthesis from scratch. `incremental` = merge only topics newer than current synthesis. `verify-only` = skip merge, run only verification pass
+- `--topics` -- (Optional) Comma-separated topic slugs to include
+- `--depth` -- (Optional, default `standard`) `deep` doubles parallelism for wide catalogues (20+ topics)
+- `[topic-filter]` -- (Optional) Free-text filter on topic frontmatter
+
+**Key Behavior:**
+- Per-topic research is immutable input -- synthesis never modifies `documentation/research/{topic-slug}/`
+- Clusters topics by entity/domain overlap using union-find on shared entities/tags
+- Wave 1 = dedup detection (one worker per cluster). Wave 2 = cluster stitching (per-cluster pages). Wave 3 = cross-cluster integration. Wave 4 = issues consolidation (single writer). Wave 5 = master synthesis assembly (single writer). Wave 6 = verification (mandatory, always last)
+- `_open_issues.md` is a living document with append-only history (`_open_issues.history.jsonl`). Issues get memory across runs -- never silently lost
+- Stable hash-based IDs for all contradictions and open questions enable cross-run continuity
+- Confidence bands are rule-based (computed from components), never asserted as scalars
+
+**Produces:**
+```
+{project_root}/documentation/research/synthesis/
+  _index.md                    -- Entry point
+  _master_synthesis.md         -- Project-wide unified narrative
+  _open_issues.md              -- Living contradictions + open questions
+  _open_issues.history.jsonl   -- Append-only state-change history
+  _verification_report.md      -- Verifier's independent report
+  _claims.json                 -- Merged structured claims
+  _graph.json                  -- Merged entity + edge graph
+  _coverage.md                 -- Topics merged/skipped/stale
+  topics/                      -- Per-cluster unified subject pages
+```
+
+---
+
+### `!p_product_plan`
+
+**Purpose:** Generate candidate product plans from a project's research synthesis, evaluate each across context-specific dimensions, then produce final ratings and a top-N deep-dive comparison. Outputs honest, citation-backed recommendations.
+
+**Syntax:**
+```
+!p_product_plan
+!p_product_plan --breadth {standard|wide|exhaustive}
+!p_product_plan --lenses "lens1,lens2,..."
+!p_product_plan --categories "cat1,cat2,..."
+!p_product_plan --top-n N
+!p_product_plan --dashboard {id}
+!p_product_plan [focus]
+```
+
+**Arguments:**
+- `[focus]` -- (Optional) Free-text framing. Empty = derived from synthesis
+- `--breadth` -- (Optional, default `wide`) `standard` ~6-9 plans, `wide` ~10-15 plans, `exhaustive` ~16-24 plans
+- `--lenses` -- (Optional) Override lens selection (comma-separated)
+- `--categories` -- (Optional) Force specific evaluation categories
+- `--top-n` -- (Optional, default 4) How many plans in the final deep-dive (range: 3-5)
+- `--dashboard {id}` -- (Optional) Force a specific dashboard
+
+**Key Behavior:**
+- Reads the synthesis layer (`_master_synthesis.md`, `_open_issues.md`, topics) as primary input
+- Master picks strategic lenses for plan generation (scale/ambition, distribution/GTM, positioning, capital/risk, AI-era, adversarial axes)
+- Master picks evaluation categories per topic -- categories that actually discriminate among plans, not a fixed list
+- Wave 1 = plan generation (one worker per lens, independent). Wave 2 = multi-dimensional evaluation (one worker per plan-category pair, massive fan-out). Wave 3 = comparison angles (head-to-head, risk-adjusted, capital-efficiency, time-to-revenue). Wave 4 = adversarial review of top-N. Wave 5 = comparison matrix assembly. Wave 6 = final synthesis (single worker writes deliverables)
+- Honesty is mandatory: workers must surface weaknesses, fatal flaws, and load-bearing unknowns. Anti-inflation rules enforce calibrated scoring
+- Plans are immutable once written; stable plan IDs enable cross-run comparison
+
+**Produces:**
+```
+{project_root}/documentation/research/plans/
+  final_plans.md               -- USER DELIVERABLE: top-N deep-dive comparison
+  final_ratings.md             -- USER DELIVERABLE: honest ratings of every plan
+  _evaluation_framework.md     -- Chosen categories + reasoning
+  _comparison_matrix.md        -- Cross-plan score matrix
+  candidates/                  -- One file per plan candidate
+  evaluations/                 -- Per-plan, per-category evaluation files
+  comparisons/                 -- Ranking angle outputs
+```
+
+**Cost Discipline:**
+- `standard` (~60 workers), `wide` (~105 workers), `exhaustive` (~190 workers)
+- Projected count surfaced before dispatch; user approval required
+
+---
+
+### `!p_product_research`
+
+**Purpose:** One-command end-to-end product research pipeline. Persists the user's research prompt, then runs three pipeline stages consecutively: `!p_research` -> `!p_synthesize` -> `!p_product_plan`. Each stage runs as its own full Synapse swarm with its own dashboard.
+
+**Syntax:**
+```
+!p_product_research {prompt}
+!p_product_research --research-depth {shallow|standard|deep|exhaustive} {prompt}
+!p_product_research --research-scope {internal|external|both} {prompt}
+!p_product_research --synthesize-mode {full|incremental} {prompt}
+!p_product_research --plan-breadth {standard|wide|exhaustive} {prompt}
+!p_product_research --plan-top-n N {prompt}
+```
+
+**Key Behavior:**
+- The invoking agent becomes the pipeline master, orchestrating three stages in strict sequence
+- Phase 0: Persists the prompt to `documentation/research/prompt.md` before any dispatch
+- Stage 1 (`!p_research`): Produces research corpus in `documentation/research/{topic-slug}/`
+- Stage 2 (`!p_synthesize`): Produces synthesized knowledge layer in `documentation/research/synthesis/`
+- Stage 3 (`!p_product_plan`): Produces ranked plans in `documentation/research/plans/`
+- Each stage requires its own user approval -- the pipeline does not auto-approve
+- Stage failure halts the pipeline (no silent fall-through)
+- Pipeline-level state tracked in `_pipeline_runs/{pipeline_run_id}/` for resume capability
+- Unified `pipeline_report.md` ties all stages together at completion
+
+**Cost Discipline:**
+- All defaults (~155-200 total workers across 3 stages)
+- Cost-conscious config (~75-110 workers)
+- Maximum config (~280-370 workers)
+- Three approval gates (one per stage) for cost control
+
+---
+
+### `!p_product_research_resume`
+
+**Purpose:** Resume a stalled, interrupted, or partially-completed `!p_product_research` pipeline. Reconciles filesystem state against dashboard progress, repairs orphaned/stuck progress files, re-dispatches incomplete tasks, and continues the pipeline through remaining stages.
+
+**Syntax:**
+```
+!p_product_research_resume
+!p_product_research_resume --dashboard {id}
+!p_product_research_resume --pipeline-run {pipeline_run_id}
+```
+
+**Key Behavior:**
+- Identifies the active stage by reading `_pipeline_runs/{id}/invocation.json`
+- Performs filesystem reconciliation: detects orphan completions (file exists but progress lost), false completions (progress claims done but file missing), stranded artifacts, and stale workers
+- Re-dispatches all ready tasks with full worker context including resume-specific notes
+- After recovering the active stage, continues the pipeline through remaining stages (with approval gates)
+- Completed stages are never re-run
+- Surfaces all repairs transparently to the user
+
+**When to use:**
+- Pipeline interrupted (chat closed, network drop, master compaction)
+- Tasks stuck in `dispatched`/`in_progress` for >5 minutes with no progress
+- Files appeared in `documentation/research/` but dashboard didn't register completion
+- Pipeline halted at a stage transition gate
 
 ---
 
@@ -563,6 +804,6 @@ WORKER AGENTS (many per stream)
 ```
 
 **Key Behavior:**
-- Displays a visual decision tree flowchart organized by task type: project setup, parallel work, monitoring, task actions, history, server control, project analysis, TOC management, and housekeeping
+- Displays a visual decision tree flowchart organized by task type: project setup, parallel work, monitoring, task actions, history, server control, project analysis, knowledge graph management, and housekeeping
 - Includes a complete command reference table grouped by category
 - Provides quick-pick tips for common scenarios

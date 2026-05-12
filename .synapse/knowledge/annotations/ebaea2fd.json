@@ -1,66 +1,39 @@
 {
   "file": "agent/master/failure_recovery.md",
   "content_hash": "ed8cba8f",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The master agent's failure handling protocol: single-task failure recovery via repair tasks (Steps 0-7), double-failure escalation, the circuit breaker for cascading failures with automatic inline replanning, worker return validation, and the error-resilience principle. Loaded automatically (failure-protocol skill) when a worker returns failed, repair is needed, or circuit breaker thresholds approach.",
+  "purpose": "Agent protocol/control-plane instruction document: Failure Recovery & Circuit Breaker. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: > **Self-contained module for the master agent's failure handling and recovery procedures.** This document covers single-task failure recovery via repair tasks, double failure handling, the circuit breaker for cascading failures with automatic replanning, worker return validation, and the core error resilience principle that governs swarm behavior during failures. The file is 242 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "When a worker fails, do NOT fix the failed task yourself — fixing code is a code-writing violation. The ONLY acceptable actions are: log the failure, create a repair task, dispatch a worker. No exceptions.",
-    "The 'temptation warning' patterns (one-line fix, see exactly what's wrong, faster if I do it, silly mistake, just edit this config) are ALL forbidden — every one means dispatch a repair worker.",
-    "Step 0 — check if the failed task ID ends with 'r'. If yes, do NOT create another repair task (would create infinite repair loop). Log permanent failure, write 'permission' entry, escalate to user.",
-    "Failed tasks NEVER satisfy dependencies — downstream tasks remain blocked until the repair task completes. But OTHER unrelated chains may have been freed concurrently — still run the eager dispatch scan.",
-    "Repair task depends_on is IDENTICAL to the failed task's depends_on — these are already satisfied since the original was dispatched. Do not invent new dependencies.",
-    "Rewire depends_on for ALL tasks pointing at the failed ID — to the repair task ID. Missing this causes downstream tasks to wait forever.",
-    "Circuit breaker thresholds (3+ same-wave failures, single failure blocking 3+ downstream, single failure blocking >50% of remaining) trigger AUTOMATIC replanning — the documented exception to write-once.",
-    "If replanning analysis fails (cannot determine root cause / all remaining tasks blocked), PAUSE for manual intervention — never push through cascading failures blind.",
-    "Worker return validation: missing STATUS = treat as failure (create repair). Generic SUMMARY ('Done', 'Completed') = log warn but accept. Missing FILES CHANGED on file-modifying task = log warn.",
-    "STATUS: PARTIAL is treated as completed but logged at 'warn' level — include incomplete items in final report."
-  ],
+  "gotchas": [],
   "patterns": [
-    "7-step single-task failure recovery: (0) check double-failure -> (1) log error -> (2) append repair task to initialization.json -> (3) rewire depends_on chains -> (4) update chains[] if applicable -> (5) dispatch repair worker with failed_task.md protocol -> (6) log dispatch -> (7) run eager dispatch scan.",
-    "Circuit breaker 7-step replanning: pause dispatches -> gather failure context (read all progress files) -> analyze root cause -> produce revision plan with 4 categories (modified, added, removed, retry) -> apply revision to initialization.json -> log replanning outcome -> resume dispatch.",
-    "Revision categories: modified (update existing pending tasks), added (new repair tasks with 'r'-suffixed IDs), removed (no longer viable, clean from depends_on arrays), retry (delete progress files for re-dispatch as-is).",
-    "Worker return validation order: parse -> validate STATUS -> validate SUMMARY -> validate FILES CHANGED -> process DIVERGENT ACTIONS -> handle PARTIAL -> proceed to eager dispatch."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Repair task title prefix: 'REPAIR: {original task title}' — recognizable on dashboard.",
-    "Repair worker dispatch prompt MUST include: failed task's original prompt, failed progress file contents, error description, repair ID and progress file path, instruction to follow failed_task.md (planning-first protocol).",
-    "Major-deviation gate: if repair worker discovers fundamental plan error / missing dependency / scope change, it reports back and master writes 'permission' log entry asking user before continuing.",
-    "Principle 5 — Errors don't stop the swarm. A failed task blocks only its direct dependents; everything else continues.",
-    "Replanning log format: 'Replanning complete — modified: {N}, added: {N}, removed: {N}, retry: {N}. Resuming dispatch.'"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/master/role.md",
-      "agent/master/dashboard_writes.md",
-      "agent/master/eager_dispatch.md",
-      "agent/instructions/failed_task.md"
-    ],
-    "depended_by": [
-      ".claude/skills/failure-protocol",
-      ".claude/skills/master-protocol",
-      ".claude/skills/p-track",
-      "_commands/Synapse/retry.md",
-      "_commands/Synapse/p_track.md"
-    ],
-    "related": [
-      "agent/master/worker_prompts.md",
-      "agent/instructions/common_pitfalls.md"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "failure-recovery",
-    "master-orchestration",
-    "circuit-breaker"
+    "agent-protocol",
+    "master"
   ],
   "tags": [
     "markdown",
-    "master-agent",
-    "protocol",
-    "repair-tasks",
-    "replanning",
-    "non-negotiable"
-  ]
+    "agent-instructions",
+    "master",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

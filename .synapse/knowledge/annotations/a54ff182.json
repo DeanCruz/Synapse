@@ -1,63 +1,49 @@
 {
   "file": "AGENTS.md",
-  "content_hash": "a9674e22",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "53f2ea4c",
+  "annotated_at": "2026-05-11T01:56:26Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The full master-protocol specification for any agent operating on Synapse. ~1190 lines. Defines (1) the path convention with resolution order, (2) the master agent role with five responsibilities and an exhaustive 'NEVER does' list, (3) project discovery and context efficiency principles, (4) the .synapse/ directory schema including PKI manifest/annotations/domains/patterns, (5) command resolution priority order across _commands/Synapse, _commands/project, _commands/user, and {project_root}/_commands, (6) the profile system as a modifier-on-top-of-commands, (7) agent definitions for master-orchestrator and swarm-worker including hooks, (8) the 10-skill catalog, (9) the 15 profiles, (10) dashboard features, (11) the timestamp protocol, and (12) multi-project portability rules. This is the document that resolves any ambiguity in CLAUDE.md.",
+  "purpose": "Full agent protocol specification for Synapse master and worker behavior, command resolution, PKI usage, profiles, dashboard rules, and swarm constraints. Key content: Synapse is a standalone distributed control system for coordinating autonomous agent swarms. It optimizes context usage, parallelizes execution, and provides a centralized control plane for complex software development tasks. The file is 1185 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "AGENTS.md and CLAUDE.md cover much of the same ground — drift is a real risk; treat AGENTS.md as the authoritative deep spec and CLAUDE.md as the orientation summary.",
-    "Lists the 'only files the master writes' as `dashboards/{id}/initialization.json`, `logs.json`, `tasks/{date}/parallel_{name}.json`, `tasks/{date}/parallel_plan_{name}.md` — but CLAUDE.md says `tasks/` is legacy and planning lives in `dashboards/{id}/plan.json`. AGENTS.md is older on this point.",
-    "States the master agent must read `{project_root}/AGENTS.md` for project conventions — but for many projects there is no AGENTS.md (only CLAUDE.md). The instruction degrades silently when the file is absent.",
-    "PostToolUse hooks documented here (`validate-master-write.sh` for master, `validate-progress-file.sh` for worker) only run when Claude Code's harness is configured to load these agent definitions; running a master via plain CLI bypasses them.",
-    "Date stamp: file has not been modified since 2026-04-17 — newer concepts like the 'plan.json' deep-thinking artifact mentioned in CLAUDE.md are NOT yet reflected here."
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files.",
+    "Guide description may be narrow: `!guide` remains a command-decision aid, but the app also exposes an in-app markdown Guide modal backed by documentation/guide via GuideService and IPC.",
+    "AGENTS.md is a deep protocol document and can lag CLAUDE.md; verify canonical p_track details against _commands/Synapse/p_track.md and agent/_commands/p_track_*.md before relying on older task-file language.",
+    "Dashboard-resolution drift: current assigned-dashboard isolation says use the prompt-bound dashboard or explicit flag, ask if absent, and never auto-scan for an available dashboard."
   ],
   "patterns": [
-    "Pattern: 'NON-NEGOTIABLE' / 'absolute, inviolable constraint' rhetorical framing for the master no-code rule — repeated three times within the same section to maximize agent compliance.",
-    "Pattern: every protocol section ends with a positive list and a negative list (what to do / what NEVER to do).",
-    "Pattern: 'Resolution order' lists are numbered 1..N and explicitly say 'Once found, read the command file in full and follow it exactly.' to discourage improvisation.",
-    "Pattern: timestamp protocol uses `date -u +\"%Y-%m-%dT%H:%M:%SZ\"` everywhere — UTC ISO-8601 with seconds precision, no fractional seconds."
+    "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Tables use a single bar style with explicit headers; placeholders are written `{name}` with curly braces.",
-    "All section titles are H2 (`##`) except sub-sections which are H3 — H1 (`#`) is reserved for the document title alone.",
-    "Skills are documented in two tables: 'User-Invocable' and 'Auto-Loaded Protocol Skills'.",
-    "Hook references use the relative path `.claude/hooks/{name}.sh`."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
-    "depends_on": [
-      ".claude/agents/master-orchestrator.md",
-      ".claude/agents/swarm-worker.md",
-      ".claude/skills/master-protocol/",
-      ".claude/skills/worker-protocol/",
-      ".claude/skills/failure-protocol/"
-    ],
-    "depended_by": [
-      "agent/instructions/tracker_master_instructions.md",
-      "agent/instructions/tracker_worker_instructions.md",
-      "_commands/Synapse/p_track.md",
-      "_commands/Synapse/master_plan_track.md"
-    ],
+    "depends_on": [],
+    "depended_by": [],
     "related": [
-      "CLAUDE.md",
-      "Synapse.md",
-      "agent/master/role.md",
-      "agent/master/dashboard_writes.md"
+      "README.md"
     ]
   },
   "domains": [
     "project-docs",
-    "agent-instructions",
-    "master-protocol"
+    "agent-instructions"
   ],
   "tags": [
     "markdown",
-    "agent-protocol",
-    "swarm",
-    "master-rules",
+    "top-level",
     "documentation",
-    "skills",
-    "profiles"
-  ]
+    "pki",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide"
+  ],
+  "complexity": "complex"
 }

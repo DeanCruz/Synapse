@@ -30,6 +30,23 @@ const DEFAULT_PANEL_HEIGHT = 300;
 const MIN_PANEL_HEIGHT = 120;
 const HEADER_HEIGHT = 35;
 
+function normalizeTermDashboardState(value) {
+  const fallback = { tabs: [{ id: 1, label: 'Terminal 1' }], activeTab: 1, nextId: 2 };
+  if (!value || typeof value !== 'object') return fallback;
+  const tabs = Array.isArray(value.tabs) && value.tabs.length > 0
+    ? value.tabs.filter(tab => tab && typeof tab === 'object' && tab.id !== undefined)
+    : fallback.tabs;
+  const safeTabs = tabs.length > 0 ? tabs : fallback.tabs;
+  const activeTab = safeTabs.some(tab => tab.id === value.activeTab)
+    ? value.activeTab
+    : safeTabs[0].id;
+  const numericIds = safeTabs.map(tab => Number(tab.id)).filter(Number.isFinite);
+  const nextId = Number.isFinite(Number(value.nextId))
+    ? Number(value.nextId)
+    : (numericIds.length > 0 ? Math.max(...numericIds) + 1 : 2);
+  return { tabs: safeTabs, activeTab, nextId };
+}
+
 /**
  * @param {object}   props.logs          - logs payload { entries: [...] }
  * @param {string}   props.activeFilter  - current filter level ('all' | level string)
@@ -63,7 +80,11 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
   // Per-dashboard terminal state: { [dashboardId]: { tabs, activeTab, nextId } }
   const DEFAULT_TERM = { tabs: [{ id: 1, label: 'Terminal 1' }], activeTab: 1, nextId: 2 };
   const [termState, setTermState] = useState(() => {
-    if (cachedTermState) return cachedTermState;
+    if (cachedTermState && typeof cachedTermState === 'object') {
+      return Object.fromEntries(
+        Object.entries(cachedTermState).map(([id, value]) => [id, normalizeTermDashboardState(value)])
+      );
+    }
     if (!dashboardId) return {};
     return { [dashboardId]: { ...DEFAULT_TERM } };
   });
@@ -84,7 +105,7 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
 
   // Derived state for current dashboard's terminal tabs
   const currentTermState = termState[dashboardId] || DEFAULT_TERM;
-  const termTabs = currentTermState.tabs;
+  const termTabs = Array.isArray(currentTermState.tabs) ? currentTermState.tabs : DEFAULT_TERM.tabs;
   const activeTermTab = currentTermState.activeTab;
 
   // Drag resize refs (avoid re-renders during drag)
@@ -98,6 +119,7 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
     if (!dashboardId) return;
     setTermState(prev => {
       const ds = prev[dashboardId] || { tabs: [], activeTab: 1, nextId: 1 };
+      if (!Array.isArray(ds.tabs)) return { ...prev, [dashboardId]: normalizeTermDashboardState(ds) };
       if (ds.tabs.length >= MAX_TERMINAL_TABS) return prev;
       const id = ds.nextId;
       return { ...prev, [dashboardId]: { tabs: [...ds.tabs, { id, label: `Terminal ${id}` }], activeTab: id, nextId: id + 1 } };
@@ -108,7 +130,7 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
     if (!dashboardId) return;
     setTermState(prev => {
       const ds = prev[dashboardId];
-      if (!ds || ds.tabs.length <= 1) return prev;
+      if (!ds || !Array.isArray(ds.tabs) || ds.tabs.length <= 1) return prev;
       const idx = ds.tabs.findIndex(t => t.id === tabId);
       const remaining = ds.tabs.filter(t => t.id !== tabId);
       const newActive = ds.activeTab !== tabId ? ds.activeTab : remaining[Math.min(idx, remaining.length - 1)].id;
@@ -290,11 +312,11 @@ export default function BottomPanel({ logs, activeFilter, onFilterChange, projec
           </div>
           {/* Render ALL dashboards' terminals — hidden when not current. Keeps PTY + xterm alive across switches. */}
           {Object.entries(termState).map(([dbId, ds]) =>
-            ds.tabs.map(tab => (
+            normalizeTermDashboardState(ds).tabs.map(tab => (
               <div
                 key={`${dbId}-${tab.id}`}
                 className="terminal-tab-body"
-                style={{ display: dbId === dashboardId && ds.activeTab === tab.id ? 'flex' : 'none' }}
+                style={{ display: dbId === dashboardId && normalizeTermDashboardState(ds).activeTab === tab.id ? 'flex' : 'none' }}
               >
                 <TerminalView
                   projectDir={dbId === dashboardId ? projectDir : getDashboardProject(dbId)}

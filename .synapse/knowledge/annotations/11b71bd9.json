@@ -1,32 +1,54 @@
 {
   "file": "documentation/master-agent/overview.md",
-  "content_hash": "4da3489b",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "11387562",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Introduces the master agent's role: planning, dispatching workers, monitoring, and finalizing swarms. Enumerates what the master may write (initialization.json, logs.json, master_state.json, metrics.json, plan.json) and what it must never touch (progress files, project source code). Establishes the master's invariants that hooks enforce at runtime.",
+  "purpose": "Documentation page for the master-agent area: Master Agent \u2014 Overview. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The master agent is the orchestrator at the heart of every Synapse swarm. When a swarm is active, one agent assumes the master role and becomes responsible for planning, dispatching, monitoring, and reporting on all work performed by worker agents. The master agent never writes application code itself. Its value comes from maintaining an elevated perspective over the entire dependency graph, the full project context, and the state of every worker The file is 176 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "validate-master-write hook will block any attempt by the master to edit files in {project_root}",
-    "Master must populate initialization.json before any worker is dispatched"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files."
   ],
   "patterns": [
-    "Coordinator pattern with strict write-ownership boundaries"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Master uses Task tool to spawn workers; never invokes implementation tools directly"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/statusing.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/statusing.md"
+    ],
+    "related": [
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/planning.md",
+      "documentation/master-agent/statusing.md"
+    ]
   },
   "domains": [
+    "documentation",
     "master-agent"
   ],
   "tags": [
-    "overview",
-    "role",
-    "ownership"
-  ]
+    "markdown",
+    "documentation",
+    "master-agent",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "sse"
+  ],
+  "complexity": "moderate"
 }

@@ -1,0 +1,56 @@
+{
+  "file": "src/ui/pages/code/subpages/git/components/BranchPanel.jsx",
+  "content_hash": "4ccfb688",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "BranchPanel participates in the Git workspace. It presents repository status, branch/history/diff/commit/remote operations through the Electron git IPC API so the renderer never shells out directly or assumes one fixed repository.",
+  "exports": [
+    {
+      "name": "BranchPanel",
+      "kind": "component",
+      "signature": "default function BranchPanel(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch"
+    ]
+  },
+  "gotchas": [
+    "Git operations route through Electron IPC and are scoped to selected repository paths; UI components should not call git directly."
+  ],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext"
+    ],
+    "depended_by": [
+      "src/ui/pages/code/subpages/git/GitPage.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-ui",
+    "git-workspace"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "git"
+  ],
+  "complexity": "complex"
+}

@@ -25,10 +25,10 @@ The master agent is the central intelligence of a swarm. It runs within a Claude
 
 | Responsibility | Description |
 |---|---|
-| **Gather Context** | Reads project files, CLAUDE.md, TOC, and source code to build a complete understanding of the task |
+| **Gather Context** | Reads project files, CLAUDE.md, the knowledge graph, and source code to build a complete understanding of the task |
 | **Plan** | Decomposes tasks into atomic units, maps dependencies, writes self-contained agent prompts |
 | **Dispatch** | Spawns worker agents via the Task tool, sends all independent tasks in parallel |
-| **Status** | Logs events to `logs.json`, updates the task record |
+| **Status** | Logs events to `logs.json`, reads worker progress, and optionally updates companion task records |
 | **Report** | Compiles final summary when all agents complete or fail |
 
 The master agent writes only to Synapse's own files (`initialization.json`, `logs.json`, task files, plan rationale). It never writes code, edits application files, or runs application commands.
@@ -110,16 +110,19 @@ A React frontend that provides real-time visualization of swarm progress. It can
 | **Client-Side Merge** | `mergeState()` function combines static `initialization.json` data with dynamic progress file data to produce the renderable view |
 | **Electron Fetch Shim** | `main.jsx` patches `window.fetch` to intercept `/api/*` calls and route them to IPC in Electron mode |
 
-**Major UI components (54 total across 4 directories):**
+**Major UI surfaces:**
 
 | Component | Purpose |
 |---|---|
+| `ChatPage` | Full-page chat mode with conversations, dashboard-linked context, and multi-instance management |
+| `CodePage` | Code mode shell that hosts Dashboards, Code Explorer, Git Manager, and Preview subpages |
+| `DashboardsPage` | Swarm visualization surface for live tracked dashboards |
 | `WavePipeline` | Vertical column layout grouped by dependency waves |
 | `ChainPipeline` | Horizontal row layout grouped by dependency chains |
 | `AgentCard` | Individual task card showing status, stage, elapsed time, deviations |
 | `StatsBar` | Six stat cards: Total, Completed, In Progress, Failed, Pending, Elapsed |
 | `LogPanel` | Collapsible log drawer with level filtering |
-| `Sidebar` | Multi-dashboard navigator with status indicators |
+| `CodeSidebar` | Code-mode navigator with dashboard management and subpage selection |
 | `ClaudeView` | In-app agent chat interface |
 | `SwarmBuilder` | Visual swarm plan creation tool |
 | `Header` | Top navigation bar with view switching |
@@ -128,15 +131,15 @@ A React frontend that provides real-time visualization of swarm progress. It can
 | `BottomPanel` | Resizable bottom panel container (terminal, metrics, timeline) |
 | `MetricsPanel` | Swarm performance metrics display |
 | `TimelinePanel` | Task timeline visualization |
-| `HomeView` | Overview/home dashboard |
+| `GuideModal` | In-app markdown guide browser backed by `documentation/guide` via Electron IPC |
 
-**IDE components** (`components/ide/`, 10 files): Full code editor and debugger — `IDEView`, `CodeEditor` (Monaco-based), `FileExplorer`, `DebugToolbar`, `DebugPanels`, `DebugConsolePanel`, `ProblemsPanel`, `EditorTabs`, `WorkspaceTabs`, `IDEWelcome`.
+**Code Explorer components** (`src/ui/pages/code/subpages/code-explorer/`): Dashboard-project-keyed file editor and debugger -- `CodeExplorerPage`, `CodeEditor` (Monaco-based), `FileExplorer`, `SearchPanel`, `SearchResults`, `DebugToolbar`, `DebugPanels`, `DebugConsolePanel`, `ProblemsPanel`, `EditorTabs`.
 
-**Git components** (`components/git/`, 12 files): Integrated Git management — `GitManagerView`, `BranchPanel`, `ChangesPanel`, `CommitPanel`, `DiffViewer`, `HistoryPanel`, `RemotePanel`, `QuickActions`, `RepoTabs`, `InitFlow`, `SafetyDialogs`, `GitWelcome`.
+**Git components** (`src/ui/pages/code/subpages/git/`): Integrated Git management for repositories discovered under the selected dashboard project -- `GitPage`, `BranchPanel`, `ChangesPanel`, `CommitPanel`, `DiffViewer`, `HistoryPanel`, `RemotePanel`, `QuickActions`, `InitFlow`, `SafetyDialogs`.
 
-**Preview components** (`components/preview/`, 1 file): Live Preview -- `PreviewView` (embedded webview with inline text editing overlay).
+**Preview components** (`src/ui/pages/code/subpages/preview/`): Live Preview -- `PreviewPage` (embedded webview with inline text editing overlay).
 
-**Modal components** (`components/modals/`, 14 files): `AgentDetails`, `ArchiveModal`, `CommandsModal`, `ConfirmModal`, `ErrorModal`, `HistoryModal`, `Modal`, `PermissionModal`, `PlanningModal`, `ProjectModal`, `SettingsModal`, `TaskDetails`, `TaskEditorModal`, `WorkerTerminal`.
+**Modal components** (`src/ui/shared/modals/`, 17 shared modal files): includes agent details, archive/history, Commands, Guide, Project, Planning, Settings, task editing, permissions, confirmation/error, and worker terminal surfaces.
 
 ---
 
@@ -222,7 +225,7 @@ Each dashboard is fully independent:
 - Has its own set of file watchers
 - Has its own chat conversation context in the Claude view
 
-Dashboard IDs are generated as 6-character hexadecimal strings (e.g., `71894a`, `da7091`), replacing the previous sequential `dashboard1`-`dashboard5` scheme. There is no fixed upper limit on the number of concurrent dashboards.
+Dashboard IDs are generated as 6-character hexadecimal strings (e.g., `71894a`, `da7091`), replacing the previous fixed sequential slot scheme. There is no fixed upper limit on the number of concurrent dashboards.
 
 The sidebar in the dashboard UI shows all active dashboards with status indicators. Users can switch between dashboards to monitor different swarms simultaneously.
 
@@ -289,8 +292,8 @@ Synapse follows Electron security best practices:
 |---|---|---|
 | Desktop Shell | Electron | Custom protocol, IPC bridge, native dialogs |
 | Build Tool | Vite | Fast HMR in development, optimized production builds |
-| Frontend | React 18 | Functional components, hooks, useReducer for state |
-| Styling | CSS | 10 CSS files totaling ~13,778 lines, no CSS framework |
+| Frontend | React 19 | Functional components, hooks, useReducer for state |
+| Styling | CSS | Global design tokens plus colocated page/subpage styles, no CSS framework |
 | Code Editor | Monaco Editor | Integrated IDE with syntax highlighting, IntelliSense |
 | Terminal | xterm.js + node-pty | Integrated terminal emulator with PTY support |
 | Backend | Node.js | Zero npm dependencies for the server |

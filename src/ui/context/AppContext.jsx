@@ -92,12 +92,37 @@ function loadSavedMessages(dashboardId, tabId) {
   return null;
 }
 
+function migrateFlatTabToProject(tab) {
+  const subId = 'sub-' + Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0');
+  const projectName = tab.projectPath
+    ? tab.projectPath.replace(/\/+$/, '').split('/').pop() || 'Project'
+    : tab.name || 'Chat';
+  return {
+    id: tab.id,
+    name: projectName,
+    projectPath: tab.projectPath || null,
+    subtabs: [{
+      id: subId,
+      name: tab.name || 'Chat 1',
+      agentHex: tab.agentHex || null,
+      chatNumber: tab.chatNumber || null,
+    }],
+    activeSubTabId: subId,
+  };
+}
+
 function loadSavedChatTabs() {
   try {
     const raw = localStorage.getItem(CHAT_TABS_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
+      if (!Array.isArray(parsed)) return [];
+      if (parsed.length > 0 && !parsed[0].subtabs) {
+        const migrated = parsed.map(migrateFlatTabToProject);
+        saveChatTabs(migrated);
+        return migrated;
+      }
+      return parsed;
     }
   } catch (e) { /* corrupt or unavailable */ }
   return [];
@@ -111,12 +136,15 @@ function chatTabMessagesKey(tabId) {
   return CHAT_TAB_MESSAGES_KEY_PREFIX + tabId;
 }
 
-// A chat tab's "context id" is the pseudo-dashboard-id ClaudeView uses for
-// per-context state (messages, sub-tabs, sessions). Mirrors the resolution
-// in ClaudeView so claudeMessages persistence keys line up between the two.
+function activeSubTab(tab) {
+  if (!tab || !tab.subtabs) return null;
+  return tab.subtabs.find(s => s.id === tab.activeSubTabId) || tab.subtabs[0] || null;
+}
+
 function chatTabContextId(tab) {
   if (!tab) return null;
-  return tab.agentHex ? 'chat-agent-' + tab.agentHex : tab.id;
+  const sub = activeSubTab(tab);
+  return sub?.agentHex ? 'chat-agent-' + sub.agentHex : tab.id;
 }
 
 function activeChatContextId(state) {
@@ -241,7 +269,7 @@ const initialState = {
   chatTabs: savedChatTabs, // [{ id, name }]
   chatActiveTabId: savedChatActiveTabIsValid ? savedChatActiveTabId : null,
   chatTabMessages: loadAllChatTabMessages(savedChatTabs), // { [tabId]: [{ id, role, text, ts }] }
-  activeModal: null, // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor'
+  activeModal: null, // null | 'commands' | 'project' | 'settings' | 'planning' | 'taskEditor' | 'archive' | 'logs' | 'guide'
   modalDashboardId: null, // which dashboard a modal was opened for
   claudeDashboardId: null, // which dashboard the Claude view is associated with
   claudeViewMode: 'expanded', // 'minimized' | 'collapsed' | 'expanded' | 'maximized'
@@ -449,47 +477,35 @@ function appReducerCore(state, action) {
     case 'SET_APP_MODE':
       return { ...state, appMode: action.mode };
     case 'SET_CHAT_VIEW': {
-      // Switching to dashboard/make clears the active chat-instance pointer
-      // (purely UI — keeps the tab persisted in chatTabs).
-      const next = { ...state, chatActiveView: action.view };
-      if (action.view !== 'chat-instance') {
-        try { localStorage.removeItem(CHAT_TAB_ACTIVE_KEY); } catch (e) { /* */ }
-        next.chatActiveTabId = null;
-      }
-      return next;
+      return { ...state, chatActiveView: action.view };
     }
     case 'CHAT_TAB_CREATE': {
+      // Creates a new project sidebar tab with its first subtab (agent).
       const usedIds = new Set(state.chatTabs.map(t => t.id));
       let id;
       do {
         id = 'chat-' + Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0');
       } while (usedIds.has(id));
-      // Prefer the chatNumber the IPC handler reserved on disk so the tab name
-      // matches the on-disk chat folder (Chat/chat{N}/agent{XXXX}/). Fall back to
-      // an in-memory tally when no IPC info is supplied.
-      let nextNum = action.chatNumber;
-      if (!Number.isInteger(nextNum)) {
-        const existingNums = state.chatTabs
-          .map(t => /^Chat (\d+)$/.exec(t.name))
-          .filter(Boolean)
-          .map(m => parseInt(m[1], 10));
-        nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1;
-      }
+      const subId = 'sub-' + Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0');
+      const projectName = action.projectPath
+        ? action.projectPath.replace(/\/+$/, '').split('/').pop() || 'Project'
+        : 'Chat';
       const newTab = {
         id,
-        name: 'Chat ' + nextNum,
-        chatNumber: nextNum,
-        agentHex: action.agentHex || null,     // 4-hex agent id; null when IPC unavailable
+        name: projectName,
         projectPath: action.projectPath || null,
+        subtabs: [{
+          id: subId,
+          name: 'Chat 1',
+          agentHex: action.agentHex || null,
+          chatNumber: action.chatNumber || null,
+        }],
+        activeSubTabId: subId,
       };
       const updatedTabs = [...state.chatTabs, newTab];
       saveChatTabs(updatedTabs);
       try { localStorage.setItem(CHAT_TAB_ACTIVE_KEY, id); } catch (e) { /* */ }
 
-      // Stash the previously active chat tab's claude state so switching back
-      // restores its messages. Without this, creating a new chat while already
-      // in a chat would discard the prior chat's in-memory messages. Operates
-      // on the CHAT slice (chatClaude*) — code-side state is untouched.
       const prevTabCreate = state.chatTabs.find(t => t.id === state.chatActiveTabId);
       const prevCtxIdCreate = chatTabContextId(prevTabCreate);
       const prevSubTabIdCreate = state.chatClaudeActiveTabId;
@@ -529,6 +545,200 @@ function appReducerCore(state, action) {
         chatClaudeStatus: 'Ready',
         chatClaudePendingAttachments: [],
         chatClaudeDashboardId: newCtxId,
+      };
+    }
+    case 'CHAT_SUBTAB_CREATE': {
+      // Creates a new agent subtab within the active project tab.
+      const projectTab = state.chatTabs.find(t => t.id === state.chatActiveTabId);
+      if (!projectTab) return state;
+      const subId = 'sub-' + Math.floor(Math.random() * 0x10000).toString(16).padStart(4, '0');
+      const existingNums = projectTab.subtabs
+        .map(s => /^Chat (\d+)$/.exec(s.name))
+        .filter(Boolean)
+        .map(m => parseInt(m[1], 10));
+      const nextNum = existingNums.length > 0 ? Math.max(...existingNums) + 1 : 1;
+      const newSub = {
+        id: subId,
+        name: 'Chat ' + nextNum,
+        agentHex: action.agentHex || null,
+        chatNumber: action.chatNumber || null,
+      };
+
+      // Stash current subtab's chat state before switching.
+      const prevCtxIdSub = chatTabContextId(projectTab);
+      const prevClaudeTabId = state.chatClaudeActiveTabId;
+      const stashSub = prevCtxIdSub
+        ? { ...state.chatClaudeTabStash, [prevCtxIdSub + ':' + prevClaudeTabId]: state.chatClaudeMessages }
+        : state.chatClaudeTabStash;
+      const activeMapSub = prevCtxIdSub
+        ? { ...state.chatClaudeActiveTabMap, [prevCtxIdSub]: prevClaudeTabId }
+        : state.chatClaudeActiveTabMap;
+      const procStashSub = prevCtxIdSub
+        ? { ...state.chatClaudeProcessingStash, [prevCtxIdSub]: {
+            isProcessing: state.chatClaudeIsProcessing,
+            status: state.chatClaudeStatus,
+            pendingAttachments: state.chatClaudePendingAttachments,
+          } }
+        : state.chatClaudeProcessingStash;
+      if (prevCtxIdSub) {
+        try { localStorage.setItem(claudeMessagesKey(prevCtxIdSub, prevClaudeTabId), JSON.stringify(state.chatClaudeMessages)); } catch (e) { /* */ }
+      }
+
+      const updatedProjectTab = {
+        ...projectTab,
+        subtabs: [...projectTab.subtabs, newSub],
+        activeSubTabId: subId,
+      };
+      const updatedTabs = state.chatTabs.map(t => t.id === projectTab.id ? updatedProjectTab : t);
+      saveChatTabs(updatedTabs);
+
+      const newCtxId = newSub.agentHex ? 'chat-agent-' + newSub.agentHex : projectTab.id;
+      return {
+        ...state,
+        chatTabs: updatedTabs,
+        chatClaudeTabStash: stashSub,
+        chatClaudeActiveTabMap: activeMapSub,
+        chatClaudeActiveTabId: 'default',
+        chatClaudeTabs: { ...state.chatClaudeTabs, [newCtxId]: [{ ...DEFAULT_TAB }] },
+        chatClaudeProcessingStash: procStashSub,
+        chatClaudeMessages: [CLAUDE_WELCOME_MSG],
+        chatClaudeIsProcessing: false,
+        chatClaudeStatus: 'Ready',
+        chatClaudePendingAttachments: [],
+        chatClaudeDashboardId: newCtxId,
+      };
+    }
+    case 'CHAT_SUBTAB_SWITCH': {
+      // Switch active subtab within the current project tab.
+      const projectTab = state.chatTabs.find(t => t.id === state.chatActiveTabId);
+      if (!projectTab) return state;
+      const targetSub = projectTab.subtabs.find(s => s.id === action.subTabId);
+      if (!targetSub) return state;
+      if (action.subTabId === projectTab.activeSubTabId) return state;
+
+      const prevCtxId = chatTabContextId(projectTab);
+      const targetCtxId = targetSub.agentHex ? 'chat-agent-' + targetSub.agentHex : projectTab.id;
+      const prevClaudeTabId = state.chatClaudeActiveTabId;
+
+      // Stash current subtab state.
+      const stash = prevCtxId
+        ? { ...state.chatClaudeTabStash, [prevCtxId + ':' + prevClaudeTabId]: state.chatClaudeMessages }
+        : state.chatClaudeTabStash;
+      const activeMap = prevCtxId
+        ? { ...state.chatClaudeActiveTabMap, [prevCtxId]: prevClaudeTabId }
+        : state.chatClaudeActiveTabMap;
+      const procStash = prevCtxId
+        ? { ...state.chatClaudeProcessingStash, [prevCtxId]: {
+            isProcessing: state.chatClaudeIsProcessing,
+            status: state.chatClaudeStatus,
+            pendingAttachments: state.chatClaudePendingAttachments,
+          } }
+        : state.chatClaudeProcessingStash;
+      if (prevCtxId) {
+        try { localStorage.setItem(claudeMessagesKey(prevCtxId, prevClaudeTabId), JSON.stringify(state.chatClaudeMessages)); } catch (e) { /* */ }
+      }
+
+      // Restore target subtab state.
+      const targetClaudeTabId = activeMap[targetCtxId] || 'default';
+      const targetStashKey = targetCtxId + ':' + targetClaudeTabId;
+      const targetMessages = stash[targetStashKey]
+        || loadSavedMessages(targetCtxId, targetClaudeTabId)
+        || [CLAUDE_WELCOME_MSG];
+      const targetProc = procStash[targetCtxId] || {};
+      const targetClaudeTabs = state.chatClaudeTabs[targetCtxId]
+        || loadSavedTabs(targetCtxId)
+        || [{ ...DEFAULT_TAB }];
+
+      // Clear unread for the target subtab.
+      const clearedUnread = (({ [targetCtxId]: _, ...rest }) => rest)(state.unreadChatCounts);
+
+      const updatedProjectTab = { ...projectTab, activeSubTabId: action.subTabId };
+      const updatedTabs = state.chatTabs.map(t => t.id === projectTab.id ? updatedProjectTab : t);
+      saveChatTabs(updatedTabs);
+
+      return {
+        ...state,
+        chatTabs: updatedTabs,
+        chatClaudeTabStash: stash,
+        chatClaudeActiveTabMap: activeMap,
+        chatClaudeActiveTabId: targetClaudeTabId,
+        chatClaudeTabs: { ...state.chatClaudeTabs, [targetCtxId]: targetClaudeTabs },
+        chatClaudeProcessingStash: procStash,
+        chatClaudeMessages: targetMessages,
+        chatClaudeIsProcessing: targetProc.isProcessing || false,
+        chatClaudeStatus: targetProc.status || 'Ready',
+        chatClaudePendingAttachments: targetProc.pendingAttachments || [],
+        chatClaudeDashboardId: targetCtxId,
+        unreadChatCounts: clearedUnread,
+      };
+    }
+    case 'CHAT_SUBTAB_DELETE': {
+      const projectTab = state.chatTabs.find(t => t.id === state.chatActiveTabId);
+      if (!projectTab || projectTab.subtabs.length <= 1) return state;
+      const deletedSub = projectTab.subtabs.find(s => s.id === action.subTabId);
+      if (!deletedSub) return state;
+      const deletedCtxId = deletedSub.agentHex ? 'chat-agent-' + deletedSub.agentHex : null;
+
+      // Purge persisted state for the deleted subtab.
+      let newTabStash = state.chatClaudeTabStash;
+      let newClaudeTabs = state.chatClaudeTabs;
+      let newActiveTabMap = state.chatClaudeActiveTabMap;
+      let newProcStash = state.chatClaudeProcessingStash;
+      if (deletedCtxId) {
+        const subTabs = state.chatClaudeTabs[deletedCtxId] || [{ ...DEFAULT_TAB }];
+        for (const t of subTabs) {
+          try { localStorage.removeItem(claudeMessagesKey(deletedCtxId, t.id)); } catch (e) { /* */ }
+        }
+        try { localStorage.removeItem(claudeTabsKey(deletedCtxId)); } catch (e) { /* */ }
+        newTabStash = Object.fromEntries(
+          Object.entries(state.chatClaudeTabStash).filter(([k]) => !k.startsWith(deletedCtxId + ':'))
+        );
+        const { [deletedCtxId]: _a, ...restTabs } = state.chatClaudeTabs;
+        newClaudeTabs = restTabs;
+        const { [deletedCtxId]: _b, ...restMap } = state.chatClaudeActiveTabMap;
+        newActiveTabMap = restMap;
+        const { [deletedCtxId]: _c, ...restProc } = state.chatClaudeProcessingStash;
+        newProcStash = restProc;
+      }
+
+      const remainingSubs = projectTab.subtabs.filter(s => s.id !== action.subTabId);
+      const wasActive = projectTab.activeSubTabId === action.subTabId;
+      const newActiveSubId = wasActive ? remainingSubs[0]?.id : projectTab.activeSubTabId;
+      const updatedProjectTab = { ...projectTab, subtabs: remainingSubs, activeSubTabId: newActiveSubId };
+      const updatedTabs = state.chatTabs.map(t => t.id === projectTab.id ? updatedProjectTab : t);
+      saveChatTabs(updatedTabs);
+
+      // If deleted subtab was active, restore the new active subtab's state.
+      if (wasActive && newActiveSubId) {
+        const newActiveSub = remainingSubs.find(s => s.id === newActiveSubId);
+        const newCtxId = newActiveSub?.agentHex ? 'chat-agent-' + newActiveSub.agentHex : projectTab.id;
+        const restoredTabId = newActiveTabMap[newCtxId] || 'default';
+        const restoredMessages = newTabStash[newCtxId + ':' + restoredTabId]
+          || loadSavedMessages(newCtxId, restoredTabId)
+          || [CLAUDE_WELCOME_MSG];
+        const restoredProc = newProcStash[newCtxId] || {};
+        return {
+          ...state,
+          chatTabs: updatedTabs,
+          chatClaudeTabStash: newTabStash,
+          chatClaudeTabs: newClaudeTabs,
+          chatClaudeActiveTabMap: newActiveTabMap,
+          chatClaudeProcessingStash: newProcStash,
+          chatClaudeMessages: restoredMessages,
+          chatClaudeIsProcessing: restoredProc.isProcessing || false,
+          chatClaudeStatus: restoredProc.status || 'Ready',
+          chatClaudePendingAttachments: restoredProc.pendingAttachments || [],
+          chatClaudeActiveTabId: restoredTabId,
+          chatClaudeDashboardId: newCtxId,
+        };
+      }
+      return {
+        ...state,
+        chatTabs: updatedTabs,
+        chatClaudeTabStash: newTabStash,
+        chatClaudeTabs: newClaudeTabs,
+        chatClaudeActiveTabMap: newActiveTabMap,
+        chatClaudeProcessingStash: newProcStash,
       };
     }
     case 'CHAT_TAB_SWITCH': {
@@ -609,35 +819,36 @@ function appReducerCore(state, action) {
     }
     case 'CHAT_TAB_DELETE': {
       const deletedTab = state.chatTabs.find(t => t.id === action.tabId);
-      const deletedCtxId = chatTabContextId(deletedTab);
       const updatedTabs = state.chatTabs.filter(t => t.id !== action.tabId);
       saveChatTabs(updatedTabs);
       try { localStorage.removeItem(chatTabMessagesKey(action.tabId)); } catch (e) { /* */ }
       const newMessages = { ...state.chatTabMessages };
       delete newMessages[action.tabId];
 
-      // Purge persisted chat-claude messages and stashed sub-tabs for the
-      // deleted chat-agent context so its history doesn't linger after
-      // deletion. Operates on the CHAT slice — code-side state is untouched.
+      // Purge ALL subtabs' persisted state for this project tab.
       let newTabStash = state.chatClaudeTabStash;
       let newClaudeTabs = state.chatClaudeTabs;
       let newActiveTabMap = state.chatClaudeActiveTabMap;
       let newProcStash = state.chatClaudeProcessingStash;
-      if (deletedCtxId) {
-        const subTabs = state.chatClaudeTabs[deletedCtxId] || [{ ...DEFAULT_TAB }];
-        for (const t of subTabs) {
-          try { localStorage.removeItem(claudeMessagesKey(deletedCtxId, t.id)); } catch (e) { /* */ }
+      if (deletedTab?.subtabs) {
+        for (const sub of deletedTab.subtabs) {
+          const ctxId = sub.agentHex ? 'chat-agent-' + sub.agentHex : null;
+          if (!ctxId) continue;
+          const cTabs = newClaudeTabs[ctxId] || [{ ...DEFAULT_TAB }];
+          for (const t of cTabs) {
+            try { localStorage.removeItem(claudeMessagesKey(ctxId, t.id)); } catch (e) { /* */ }
+          }
+          try { localStorage.removeItem(claudeTabsKey(ctxId)); } catch (e) { /* */ }
+          newTabStash = Object.fromEntries(
+            Object.entries(newTabStash).filter(([k]) => !k.startsWith(ctxId + ':'))
+          );
+          const { [ctxId]: _a, ...restTabs } = newClaudeTabs;
+          newClaudeTabs = restTabs;
+          const { [ctxId]: _b, ...restMap } = newActiveTabMap;
+          newActiveTabMap = restMap;
+          const { [ctxId]: _c, ...restProc } = newProcStash;
+          newProcStash = restProc;
         }
-        try { localStorage.removeItem(claudeTabsKey(deletedCtxId)); } catch (e) { /* */ }
-        newTabStash = Object.fromEntries(
-          Object.entries(state.chatClaudeTabStash).filter(([k]) => !k.startsWith(deletedCtxId + ':'))
-        );
-        const { [deletedCtxId]: _omit1, ...restClaudeTabs } = state.chatClaudeTabs;
-        newClaudeTabs = restClaudeTabs;
-        const { [deletedCtxId]: _omit2, ...restActiveTabMap } = state.chatClaudeActiveTabMap;
-        newActiveTabMap = restActiveTabMap;
-        const { [deletedCtxId]: _omit3, ...restProcStash } = state.chatClaudeProcessingStash;
-        newProcStash = restProcStash;
       }
 
       const wasActive = state.chatActiveTabId === action.tabId;
@@ -654,7 +865,6 @@ function appReducerCore(state, action) {
         chatClaudeTabs: newClaudeTabs,
         chatClaudeActiveTabMap: newActiveTabMap,
         chatClaudeProcessingStash: newProcStash,
-        // Reset the visible chat-claude state when the active chat is deleted.
         chatClaudeMessages: wasActive ? [CLAUDE_WELCOME_MSG] : state.chatClaudeMessages,
         chatClaudeIsProcessing: wasActive ? false : state.chatClaudeIsProcessing,
         chatClaudeStatus: wasActive ? 'Ready' : state.chatClaudeStatus,
@@ -671,14 +881,17 @@ function appReducerCore(state, action) {
       return { ...state, chatTabs: updatedTabs };
     }
     case 'CHAT_TAB_BACKFILL_AGENT': {
-      // Attach an on-disk agent identity to a legacy tab that was persisted
-      // before chat agents had Chat/chat{N}/agent{XXXX} folders. Tab id and
-      // name are preserved so chat-message localStorage keys keep working.
-      const updatedTabs = state.chatTabs.map(t =>
-        t.id === action.tabId
-          ? { ...t, agentHex: action.agentHex, chatNumber: action.chatNumber ?? t.chatNumber }
-          : t
-      );
+      // Attach an agent identity to a subtab that lacks one (e.g. after migration).
+      const updatedTabs = state.chatTabs.map(t => {
+        if (t.id !== action.tabId) return t;
+        const subs = (t.subtabs || []).map((s, i) => {
+          if (i === 0 && !s.agentHex) {
+            return { ...s, agentHex: action.agentHex, chatNumber: action.chatNumber ?? s.chatNumber };
+          }
+          return s;
+        });
+        return { ...t, subtabs: subs };
+      });
       saveChatTabs(updatedTabs);
       return { ...state, chatTabs: updatedTabs };
     }
@@ -1360,15 +1573,15 @@ function appReducer(state, action) {
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // One-shot migration: legacy chat tabs persisted before the Chat/chat{N}/
-  // agent{XXXX} layout existed have no agentHex. Allocate one for each so
-  // future spawns can be sanity-checked against a real on-disk folder.
+  // One-shot migration: project tabs with subtabs lacking agentHex get backfilled.
   const backfilledRef = useRef(false);
   useEffect(() => {
     if (backfilledRef.current) return;
     const api = typeof window !== 'undefined' ? window.electronAPI : null;
     if (!api || typeof api.createChatAgent !== 'function') return;
-    const stale = state.chatTabs.filter(t => !t.agentHex);
+    const stale = state.chatTabs.filter(t =>
+      t.subtabs && t.subtabs.some(s => !s.agentHex)
+    );
     if (stale.length === 0) { backfilledRef.current = true; return; }
     backfilledRef.current = true;
     (async () => {

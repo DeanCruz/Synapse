@@ -1,0 +1,18 @@
+{
+  "id": "acaafb17",
+  "concept": "context-fork-runs-in-a-forked-claude-context-model",
+  "binding": {
+    "globs": [
+      ".claude/skills/**/*.md"
+    ],
+    "symbols": []
+  },
+  "gotcha": "context: fork — runs in a forked Claude context; model: opus",
+  "severity": "info",
+  "source_annotations": [
+    "27f2c050",
+    "33a4a11f",
+    "92f62d07"
+  ],
+  "created_at": "2026-05-06T04:18:50.910Z"
+}

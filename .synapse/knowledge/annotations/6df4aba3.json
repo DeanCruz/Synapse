@@ -1,0 +1,63 @@
+{
+  "file": "src/ui/pages/code/subpages/git/components/SafetyDialogs.jsx",
+  "content_hash": "599a94fd",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Reusable confirmation-dialog primitives for destructive git operations. Exports two components: ConfirmDialog (single-step) and DoubleConfirmDialog (two-step with optional type-to-confirm challenge). Both support three danger levels — danger / warning / safe — each with its own icon (DangerIcon triangle, WarningIcon circle-i, SafeIcon checkmark) and confirm-button class (confirm-danger / confirm-warning / confirm-safe). DoubleConfirmDialog renders ConfirmDialog twice in sequence (step 1 → step 2) with the second step typically requiring the user to type confirmText (e.g. 'DISCARD') exactly to enable the final confirm. Both support an `affectedItems` array that renders as a scrollable list inside the body — useful for showing exact files that will be lost.",
+  "exports": [
+    {
+      "name": "ConfirmDialog",
+      "kind": "component",
+      "signature": "default export ConfirmDialog"
+    },
+    {
+      "name": "DoubleConfirmDialog",
+      "kind": "function",
+      "signature": "function DoubleConfirmDialog(...)"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Dual prop API for visibility: accepts either `isOpen` or `open` (`isVisible = isOpen ?? open ?? false`) — choose one and stick to it; mixing leads to confusion.",
+    "Same dual-prop pattern for `dangerLevel` and `level` — both are accepted, dangerLevel takes precedence.",
+    "type-to-confirm: when confirmText is set, the input field auto-focuses and Enter submits IF canConfirm — but only the second step of DoubleConfirmDialog uses this typically.",
+    "Escape key listener is attached to document and stops propagation — be aware if a parent component also listens for Escape.",
+    "Backdrop click triggers onCancel — content area has stopPropagation to prevent accidental dismissal when clicking inside.",
+    "DoubleConfirmDialog resets step to 1 every time isVisible becomes false — but onCancel inside step 1 calls onCancel? AFTER setStep(1). On step 2, cancel goes through handleCancel which resets step then calls onCancel.",
+    "The default secondMessage is 'This action cannot be undone. All changes will be permanently lost.' — override via secondMessage when more specific guidance is needed.",
+    "BranchPanel and RemotePanel implement their OWN inline ConfirmDialogs and do not use this module — when consolidating, audit those files too."
+  ],
+  "patterns": [
+    "Three-tier danger level system with consistent icon + button class mapping — used by QuickActions for all destructive flows.",
+    "AffectedItems list rendered as a scrollable code-style list (git-manager-dialog-affected) — keeps long file lists readable.",
+    "Two-step double-confirm: step 1 is just acknowledge, step 2 has the type-to-confirm input — the actual onConfirm only fires from step 2."
+  ],
+  "conventions": [
+    "Inline SVG icons (DangerIcon, WarningIcon, SafeIcon) at top of file; LEVEL_ICONS map keys 'danger'|'warning'|'safe'.",
+    "All dialogs use role='dialog' and aria-modal='true' — accessibility baked in.",
+    "Class naming: git-manager-dialog-overlay (backdrop) → git-manager-dialog (content with level class) → header/body/footer subdivision."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/pages/code/subpages/git/components/QuickActions.jsx"
+    ],
+    "related": [
+      "src/ui/shared/git/BranchPanel.jsx (has its own inline ConfirmDialog)",
+      "src/ui/shared/git/RemotePanel.jsx (has its own inline confirmDialog)"
+    ]
+  },
+  "domains": [
+    "git-safety",
+    "git-manager"
+  ],
+  "tags": [
+    "react",
+    "git",
+    "component",
+    "dialog",
+    "confirmation",
+    "destructive-ops"
+  ],
+  "complexity": "moderate"
+}

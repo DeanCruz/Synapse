@@ -1,63 +1,41 @@
 {
   "file": "agent/instructions/failed_task.md",
   "content_hash": "4d18b9f5",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Repair-worker protocol for agents dispatched to fix a previously failed task. Defines retry-vs-repair decision matrix, mandatory five-phase planning mode (Diagnose → Plan → Implement → Verify → Complete), the Major Deviation Gate that forces escalation back to the master, double-failure escalation rules (repair tasks ending in `r` MUST NOT spawn another repair), cleanup responsibilities for partial work from the previous worker, and progress-file conventions for repair tasks (REPAIR: prefix on summaries, repair-keyed deviations, mandatory diagnosis milestone). Read every time a worker is dispatched as a repair (task ID ending in `r`).",
+  "purpose": "Agent protocol/control-plane instruction document: Repair Worker \u2014 Failed Task Recovery Protocol. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: **Who this is for:** Worker agents dispatched by the master agent to fix a task that previously failed. You are a **repair worker** \u2014 your job is to diagnose why the original task failed and make it succeed. You follow all standard worker reporting instructions from `tracker_worker_instructions.md`, plus the additional protocol below. The file is 204 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "Repair tasks are CRITICAL PATH — every minute of stall costs wall-clock time across the entire pipeline. Speed matters but diagnosis-first is non-negotiable.",
-    "Diagnose-before-implementing is non-negotiable — repeating the original approach blindly produces the same failure.",
-    "Major Deviation Gate: if the fix would change downstream contracts, scope, or requires capabilities not in the plan — STOP, do not proceed autonomously, write status:failed with REPAIR BLOCKED summary, return to master for user input.",
-    "Double-failure rule: a task ID ending in `r` (e.g., 2.4r) that fails MUST NOT trigger creation of another repair task — escalate to permanently_failed and trigger a permission popup. The swarm continues with other unblocked tasks.",
-    "Repair workers still follow tracker_worker_instructions.md in full — repair protocol is ADDITIVE, not a replacement.",
-    "Summary MUST start with `REPAIR:` so dashboard recognizes it as a repair task.",
-    "Partial files left by the previous worker must be assessed: keep usable changes, revert broken/incomplete state — do not blindly start fresh on top of broken state.",
-    "First log entry must reference the failed task: `Starting repair for failed task {failed_id}: {original failure summary}`."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Five fixed phases: reading_context (Diagnose) → planning (Plan the Fix) → implementing → testing (Verify) → finalizing/completed.",
-    "Three fix categories: Simple fix (typo/path) → continue original approach; Approach adjustment → log MODERATE deviation, implement; Major deviation → STOP and escalate.",
-    "Diagnosis log format: `Diagnosis: {root cause}. Previous worker failed at stage '{stage}' because {reason}.`",
-    "Plan log format: `Plan: {what you will do differently}. Keeping {X} from previous attempt, reverting {Y}.`",
-    "Repair-task progress-file conventions: summary `REPAIR: ...`, deviations prefixed `REPAIR DEVIATION:`, mandatory diagnosis milestone."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Tables for retry-vs-repair decision and cleanup-responsibilities by partial-work situation.",
-    "Phase sub-headings include the stage value parenthetically: `Phase 1 — Diagnose (stage: reading_context)`.",
-    "Numbered Rules Summary at the end (8 items)."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/instructions/tracker_worker_instructions.md (still applies in full)"
-    ],
-    "depended_by": [
-      "agent/master/failure_recovery.md",
-      ".claude/skills/failure-protocol",
-      "_commands/Synapse/retry.md"
-    ],
-    "related": [
-      "agent/instructions/tracker_master_instructions.md",
-      "agent/_commands/p_track_execution.md (Step 16 — handle failures)",
-      "agent/worker/deviations.md"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "failure-recovery",
-    "repair-worker-protocol",
-    "agent-protocol"
+    "agent-protocol",
+    "instructions"
   ],
   "tags": [
     "markdown",
-    "agent-doc",
-    "protocol",
-    "repair-task",
-    "failure-recovery",
-    "worker-agent",
-    "diagnosis",
-    "major-deviation-gate",
-    "double-failure",
-    "non-negotiable"
-  ]
+    "agent-instructions",
+    "instructions",
+    "dashboard",
+    "progress",
+    "sse",
+    "git",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

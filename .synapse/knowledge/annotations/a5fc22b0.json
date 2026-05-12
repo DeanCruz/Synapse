@@ -1,0 +1,52 @@
+{
+  "file": "src/ui/pages/code/subpages/dashboards/components/QueuePopup.jsx",
+  "content_hash": "0d74aa49",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Floating action button (FAB) with a badge showing queued task count. Clicking expands a panel listing each queued item with status dot, name, and meta string ('{n} tasks · {directory}'). Item click invokes onItemClick(queueId). Auto-collapses on outside-click via document click listener. Returns null when items.length === 0 (no FAB shown).",
+  "exports": [
+    {
+      "name": "QueuePopup",
+      "kind": "component",
+      "signature": "default function QueuePopup(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Outside-click listener uses `click` event (not mousedown like Header/ModeMenu); this means clicking another element that itself stops propagation could fail to collapse the panel.",
+    "Status dot class derivation only handles in_progress/completed/error/pending — unknown statuses fall through to 'pending'.",
+    "data-queue-id attribute is set on each item but only the React onClick is used to react to clicks (the attribute is informational)."
+  ],
+  "patterns": [
+    "Conditional render of expanded panel as sibling of FAB inside a single .queue-popup-container.",
+    "stopPropagation on FAB click prevents the document listener from immediately collapsing the panel."
+  ],
+  "conventions": [
+    "Default export; FAB-style positioning is in CSS (queue-fab class)."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": [
+      "src/server/services/DashboardService.js",
+      "src/server/services/QueueService.js",
+      "src/ui/hooks/useDashboardData.js"
+    ]
+  },
+  "domains": [
+    "dashboard-rendering"
+  ],
+  "tags": [
+    "react",
+    "jsx",
+    "component",
+    "queue-popup",
+    "fab"
+  ],
+  "complexity": "simple"
+}

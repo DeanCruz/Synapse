@@ -1,84 +1,46 @@
 {
   "file": "agent/instructions/tracker_worker_instructions.md",
-  "content_hash": "057461fc",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "1de39044",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "FULL worker-agent progress-reporting protocol — the canonical worker reference. Defines the {tracker_root} vs {project_root} distinction, the progress file path, the 11-step quick-start checklist (read plan.json → write initial progress → query PKI → read upstream deps → progress through fixed stages → write on every transition → track files_changed[] incrementally → report deviations immediately → populate shared_context → annotate files → return structured summary), module index pointing to agent/worker/{progress_reporting,return_format,deviations,upstream_deps,sibling_comms}.md, when-to-read decision table, summaries for progress reporting (8 mandatory writes), deviations (CRITICAL/MODERATE/MINOR severity), upstream dependencies (4-step procedure), sibling communication, additional-context-directories (read-only), full PKI retrieval procedure (6 steps with manifest.json + annotations/{hash}.json + insights_index lookup), full PKI annotation contribution rules, return-format summary, and the 15-rule final summary. Read by every worker dispatched in FULL mode.",
+  "purpose": "Agent protocol/control-plane instruction document: Worker Agent \u2014 Progress Reporting Instructions. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: **Who this is for:** Worker agents dispatched by the master agent during a `!p_track` swarm. This document is your quick-start reference and hub for all worker protocols. The file is 320 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "{tracker_root} and {project_root} are different locations — code work happens in project_root, progress reporting goes to tracker_root. CWD is project_root, not tracker_root, so a relative `dashboards/` path would write progress into the target project. A hook blocks writes outside {tracker_root}/dashboards/.",
-    "plan.json is the canonical task spec — your dispatch prompt summarizes it but plan.json is source of truth. If missing or your task entry is absent, write a CRITICAL deviation and stop.",
-    "Server REJECTS progress files where dashboard_id field doesn't match the dashboard directory.",
-    "files_changed[] is NON-NEGOTIABLE and must be updated INCREMENTALLY (every create/modify/delete) — not at finalization. Hooks warn if files_changed is empty during implementing.",
-    "8 mandatory writes — skipping any is a failure: before starting work, after PKI/upstream reads, on every stage transition, on any deviation, on any error, on every file change, on completion, on failure.",
-    "Vague log messages (≥20 chars enforced; never 'Starting...', 'Done', 'Working on it') — hooks warn on sparse logs.",
-    "Minimum log counts per stage are hook-enforced: reading_context ≥1, planning ≥2, implementing ≥3, testing ≥4, finalizing/completed ≥5.",
-    "From implementing onward, milestones[] must not be empty.",
-    "Reserve `failed` for ZERO useful output — partial completion (80%+ done) uses `completed` with summary stating what remains blocked.",
-    "Always use the Write tool for progress files — not echo/cat shell commands.",
-    "PKI is OPTIONAL but recommended — never block on PKI reads, max 3-5 annotation reads per task, treat stale:true as suspect.",
-    "Annotations are append-friendly and lightweight — only annotate files you read DEEPLY, do not speculate.",
-    "Never write to a sibling worker's file — use shared_context for cross-task signaling instead.",
-    "Always capture timestamps live via `date -u +\"%Y-%m-%dT%H:%M:%SZ\"` — never guess or hardcode.",
-    "Include template_version (from dispatch prompt header) in every progress write."
+    "Progress file writes must include template_version and dashboard_id and use the exact assigned dashboard path; relative dashboard paths corrupt visibility in tracked swarms."
   ],
   "patterns": [
-    "Fixed stage sequence: reading_context → planning → implementing → testing → finalizing → completed | failed.",
-    "Atomic full-file writes — worker is sole owner of {task_id}.json, no read-modify-write cycle needed.",
-    "Three-severity deviation classification: CRITICAL (changes downstream contracts, may trigger replanning), MODERATE (different approach, same outcome), MINOR (cosmetic).",
-    "Upstream dependency 4-step procedure: read upstream progress files → extract critical info → adapt approach → log findings.",
-    "PKI retrieval 6-step flow: check manifest.json → identify task files → look up via files object + domain_index/tag_index → read 3-5 annotation files → check insights_index → log what was consumed.",
-    "Annotations schema: per relative-path key with optional gotchas/patterns/conventions string arrays.",
-    "Structured return: STATUS / SUMMARY / FILES CHANGED / EXPORTS / DIVERGENT ACTIONS — quantified one-line summaries.",
-    "Hub-and-modules layout: this file is the index/quick-start, agent/worker/*.md hold detailed procedures."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Module Index table at top mapping File → What It Covers.",
-    "When-to-Read decision table mapping Moment → Module to Read.",
-    "Numbered Quick Start Checklist (steps 0-11) followed by per-topic Summary sections.",
-    "Final 'Rules Summary' is a numbered list of NON-NEGOTIABLE rules with hooks-enforce annotations."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/worker/progress_reporting.md",
-      "agent/worker/return_format.md",
-      "agent/worker/deviations.md",
-      "agent/worker/upstream_deps.md",
-      "agent/worker/sibling_comms.md"
-    ],
+    "depends_on": [],
     "depended_by": [
-      ".claude/skills/worker-protocol",
-      ".claude/agents/swarm-worker.md",
-      "agent/_commands/p_track_execution.md (Step 14 worker prompt template — INSTRUCTION MODE: FULL)",
-      "agent/instructions/failed_task.md (repair workers extend this)",
-      "agent/instructions/tracker_master_instructions.md",
-      "agent/instructions/tracker_multi_plan_instructions.md (child masters embed this path in their worker dispatches)"
+      "documentation/project-integration/pki-overview.md",
+      "documentation/troubleshooting/common-issues.md"
     ],
-    "related": [
-      "agent/instructions/tracker_worker_instructions_lite.md",
-      "{project_root}/.synapse/knowledge/manifest.json",
-      ".claude/hooks/validate-progress-file.sh"
-    ]
+    "related": []
   },
   "domains": [
-    "worker-progress-reporting",
     "agent-protocol",
-    "pki-integration"
+    "instructions"
   ],
   "tags": [
     "markdown",
-    "agent-doc",
-    "protocol",
-    "worker-agent",
-    "full-mode",
-    "progress-file",
-    "non-negotiable",
+    "agent-instructions",
+    "instructions",
     "pki",
-    "annotations",
-    "deviations",
-    "upstream-deps",
-    "sibling-comms",
-    "files-changed"
-  ]
+    "dashboard",
+    "progress",
+    "plan-json",
+    "guide"
+  ],
+  "complexity": "complex"
 }

@@ -1,8 +1,10 @@
-# Task Files -- Reference
+# Task Files -- Legacy/Companion Reference
 
 > **Note on filename:** This file is named `xml-task-files.md` for historical reasons. Task files are **JSON**, not XML. The filename has been retained to avoid breaking internal documentation links.
 
-Task files are the **authoritative master record** for each swarm. They contain the complete plan -- task descriptions, context, critical instructions, file lists, dependencies, statuses, and completion summaries. Every worker reads the task file for context about the overall swarm and its specific task. The master updates it on every agent completion.
+Task files under `tasks/{MM_DD_YY}/parallel_{name}.json` are now **legacy/companion records**. They may still be produced for history, review, and CLI compatibility, but the current canonical worker task specification is `dashboards/{dashboardId}/plan.json`.
+
+Current worker dispatch prompts instruct workers to read `plan.json` first. `plan.json` contains the shared swarm context and task entries with descriptions, approach, files, dependencies, critical constraints, and success criteria. Runtime lifecycle remains in worker-owned `progress/{task_id}.json` files, and dashboard rendering merges static plan data with progress data.
 
 **Location:** `{tracker_root}/tasks/{MM_DD_YY}/parallel_{name}.json`
 
@@ -21,9 +23,11 @@ The task file serves a different purpose from the dashboard data files:
 | `initialization.json` | Drive the dashboard UI (static plan) | Dashboard rendering engine |
 | `progress/{id}.json` | Live worker lifecycle data | Dashboard rendering engine, master dispatch scans |
 | `logs.json` | Timestamped event log | Dashboard log panel |
-| **`parallel_{name}.json`** | **Authoritative task record with full context** | **Workers (for context), master (for tracking), future reference** |
+| `plan.json` | Canonical current task specification and shared context | Workers, master/orchestrator, future reference |
+| `metrics.json` | Post-swarm performance metrics | Dashboard metrics panel, final report |
+| `parallel_{name}.json` | Legacy/companion task record with full context when produced | Humans, history, CLI compatibility |
 
-The task file contains richer information than `initialization.json`: full task descriptions, context paragraphs, critical instructions, file lists, and completion summaries. Workers can read the task file to understand the broader swarm and their specific task in detail. The master updates the task file with completion summaries after each agent returns.
+Historically, the task file contained richer information than `initialization.json` and workers read it for context. In the current protocol, workers read `dashboards/{dashboardId}/plan.json` for that canonical detail. If a task file is also produced, treat it as a companion record rather than the source of truth for active worker instructions.
 
 ---
 
@@ -209,7 +213,7 @@ These names aid human readability when reviewing the task file.
 
 ### During Planning (Write-Once for Structure)
 
-The master creates the task file with the full task structure during the planning phase:
+When companion task files are produced, the master creates the task file with the full task structure during the planning phase:
 - All task objects with description, context, critical, files, depends_on
 - All `status` fields set to `"pending"`
 - All `summary` fields set to `null`
@@ -224,7 +228,7 @@ The master creates the task file with the full task structure during the plannin
 | Worker fails | `status` changed to `"failed"`, `summary` added with error description |
 | Repair task created | New task object appended to the relevant wave's `tasks` array (with `id` suffix `"r"`) |
 
-Unlike `initialization.json` (which is write-once except for repairs), the task file is updated on every agent return to maintain a complete record with results.
+Current lifecycle data is authoritative in progress files. Companion task files may be updated on agent return for history and review, but workers and dashboards should not rely on them for live status.
 
 ---
 
@@ -256,7 +260,7 @@ From `tasks/03_22_26/parallel_synapse_backlog_phase1.json`:
           "title": "Remove context_cache.json references",
           "description": "Remove all references to .synapse/context_cache.json from CLAUDE.md and AGENTS.md. This is a dead feature -- no command creates, reads, or writes this file. Remove from: (1) the .synapse/ directory table in each file, (2) the target project directory tree in each file. Verify tables and trees render correctly after removal.",
           "context": "CLAUDE.md line 208 has the table row, line 604 has the tree entry. AGENTS.md line 196 has the table row, line 585 has the tree entry.",
-          "critical": "Do NOT remove the .synapse/ directory itself or toc.md or profile.json entries. Only remove context_cache.json rows/lines. Verify markdown renders correctly (no trailing pipes, no blank rows).",
+          "critical": "Do NOT remove the .synapse/ directory itself or knowledge/profile entries. Only remove context_cache.json rows/lines. Verify markdown renders correctly (no trailing pipes, no blank rows).",
           "files": [
             { "action": "modify", "path": "CLAUDE.md" },
             { "action": "modify", "path": "AGENTS.md" }
@@ -342,17 +346,17 @@ Key observations:
 
 ## Task File vs initialization.json
 
-The task file and initialization.json serve complementary purposes:
+The task file, `plan.json`, and `initialization.json` serve complementary purposes:
 
-| Aspect | Task File | initialization.json |
-|---|---|---|
-| **Primary audience** | Workers (context), master (record), humans (review) | Dashboard rendering engine |
-| **Detail level** | Full descriptions, context, critical instructions, file lists | Minimal: id, title, wave, layer, directory, depends_on |
-| **Updated after planning** | Yes -- status and summary on every completion | No (write-once, except repair tasks) |
-| **Lifecycle data** | `status` and `summary` updated by master | None -- all lifecycle in progress files |
-| **File lists** | Yes (`files` array with action/path objects) | No |
-| **Context/critical** | Yes (detailed paragraphs) | No |
-| **Layout data** | No (no layer, directory badges, chain definitions) | Yes (layer, directory, chains[]) |
+| Aspect | plan.json | Task File | initialization.json |
+|---|---|---|---|
+| **Primary audience** | Workers and orchestrators | Humans/history/CLI compatibility | Dashboard rendering engine |
+| **Detail level** | Full descriptions, approach, context, critical instructions, file lists, dependencies | Full descriptions and historical record when produced | Minimal render data: id, title, wave, layer, directory, depends_on |
+| **Updated after planning** | Normally static task spec | Optional companion updates | No (write-once, except repair tasks) |
+| **Lifecycle data** | None -- lifecycle is in progress files | Optional summary/status mirror | None -- all lifecycle in progress files |
+| **File lists** | Yes (`files` array with action/path objects) | Yes (`files` array with action/path objects) | No |
+| **Context/critical** | Yes (detailed paragraphs) | Yes (legacy/companion) | No |
+| **Layout data** | Task dependencies and wave metadata | Historical/decomposition record | Yes (layer, directory, chains[]) |
 
 ---
 
@@ -404,11 +408,12 @@ Each date directory contains all swarms created on that date. Multiple swarms on
 
 | Storage | What It Contains | When Created |
 |---|---|---|
-| **Task file** | Full task record with descriptions, context, statuses, summaries | During planning, updated throughout execution |
+| **plan.json** | Canonical task specification with descriptions, context, files, dependencies, and criteria | During planning |
+| **Task file** | Legacy/companion task record with descriptions, context, optional status mirrors and summaries | During planning, optionally updated throughout execution |
 | **History file** | Lightweight summary: task metadata, agent results (no descriptions/context) | When swarm completes and is moved to history |
 | **Archive** | Full copy of dashboard directory (init + logs + progress files) | When dashboard is cleared before a new swarm |
 
-The task file persists indefinitely in `tasks/`. It is the most complete record of what was planned, what happened, and what was accomplished. History files are summaries for quick reference. Archive copies preserve the full dashboard state including real-time progress data.
+Task files may persist indefinitely in `tasks/`, but archived dashboards preserve the canonical active-state artifacts: `plan.json`, `initialization.json`, `logs.json`, progress files, and metrics. History files are summaries for quick reference.
 
 ---
 

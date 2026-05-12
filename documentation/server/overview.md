@@ -106,7 +106,7 @@ The `startup()` function executes the following steps in order:
 | Step | Action | Description |
 |------|--------|-------------|
 | 1 | Ensure `dashboards/` directory | Creates the dashboards root directory if missing |
-| 2 | Ensure default dashboard | If no dashboards exist, creates `dashboard1` with default files |
+| 2 | Ensure default dashboard | If no dashboards exist, creates `a1b2c3` with default files |
 | 3 | Ensure system directories | Creates `Archive/`, `history/`, and `queue/` directories if missing |
 | 4 | Start dashboard watchers | Calls `watchDashboard()` for each existing dashboard |
 | 5 | Start dashboards directory watcher | Watches for new/removed dashboard subdirectories |
@@ -123,7 +123,7 @@ Synapse Dashboard (Multi-Dashboard)
 Synapse server listening on port 3456
 
 Dashboards directory: /path/to/Synapse/dashboards
-Active dashboards: dashboard1, dashboard2
+Active dashboards: a1b2c3, b2c3d4
 Watching per dashboard: initialization.json (100ms), logs.json (100ms), progress/ (fs.watch)
 Watching: dashboards/ directory for new/removed dashboards
 Watching: queue/ directory for queued tasks
@@ -177,7 +177,7 @@ Every non-SSE, non-OPTIONS request is logged on response completion:
 
 ```
 [http] GET /api/dashboards 200 (3ms)
-[http] POST /api/dashboards/dashboard1/clear 200 (12ms)
+[http] POST /api/dashboards/a1b2c3/clear 200 (12ms)
 ```
 
 The log format includes: HTTP method, URL path, response status code, and elapsed time in milliseconds.

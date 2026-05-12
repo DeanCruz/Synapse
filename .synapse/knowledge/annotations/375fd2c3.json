@@ -1,57 +1,51 @@
 {
   "file": "_commands/Synapse/p_track_plan.md",
   "content_hash": "91714ea4",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:56:26Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!p_track_plan [--dashboard {id}] {plan_path}` command — a plan-document-driven variant of !p_track. The master reads a pre-written .md plan (typically from !plan output), translates it FAITHFULLY (no redesign) into waves/tasks/dependencies, populates dashboard files, executes the NON-NEGOTIABLE approval gate, then runs the same Phase 2 (execution) and Phase 3 (completion+report) as !p_track. Plan source path is stored in task.plan_source. Same dashboard tracking thresholds apply (3+ agents or >1 wave = mandatory).",
-  "exports": [],
+  "purpose": "Command specification for `!p_track_plan`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: > ## NON-NEGOTIABLE RULES \u2014 READ BEFORE ANYTHING ELSE > > **1. You are now the MASTER AGENT. You do NOT write code. You do NOT implement anything. You do NOT edit application files. You ONLY plan and dispatch worker agents. No exceptions. Not \"just one small thing.\" Not \"it's faster if I do it.\" NEVER.** > > **2. You MUST read `{tracker_root}/agent/instructions/tracker_master_instructions.md` before writing any dashboard files. Do not skip this.  The file is 128 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!p_track_plan",
+      "kind": "command",
+      "signature": "!p_track_plan {plan_path}"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Plan document is the SOURCE OF TRUTH — translate faithfully, never redesign during translation",
-    "Plan ambiguities/gaps must be SURFACED at the approval gate, not silently filled in",
-    "Plan document is READ-ONLY — the master never modifies the source plan",
-    "Approval gate is NON-NEGOTIABLE — write `permission` log entry FIRST, then ask in terminal, then HALT (no master_state.json, no Task tool calls until approved)",
-    "validate-plan-required.sh hook blocks initialization.json writes when plan.json is missing/invalid",
-    "validate-approval-gate.sh hook blocks worker dispatch until the user approves via a `permission` → `info \"Approval granted\"` log entry pair",
-    "Every task must trace back to a specific section of the source plan document — traceability requirement",
-    "task.plan_source MUST be added to initialization.json with the absolute path to the source plan"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations.",
+    "Dashboard-resolution drift: current assigned-dashboard isolation says use the prompt-bound dashboard or explicit flag, ask if absent, and never auto-scan for an available dashboard."
   ],
   "patterns": [
-    "Three phases: Phase 0 Plan Ingestion (Steps 0A-0D parse+read+analyze+validate) → Phase 1 Translation (Steps 1-11 mirroring p_track planning) → Phase 2/3 Execution+Completion (delegated to p_track docs)",
-    "Translation rules: plan phases→waves, plan bullet points→tasks, phase ordering→dependencies, preserve plan structure, store plan source",
-    "Approval gate sequence: write permission log → present mapping → HALT → on approval log 'Approval granted — activating eager dispatch' at info level → proceed",
-    "Natural workflow: !plan {task} → review/refine → !p_track_plan {plan_path}"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "p_track-era planning pattern: plan.json carries shared context and task entries before initialization.json/progress files handle dashboard rendering and lifecycle state.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Top-of-file NON-NEGOTIABLE RULES blockquote (5 numbered rules) — same pattern as p_track.md",
-    "Plan-driven Additional Rules section",
-    "Phases are short — most detail delegated to agent/_commands/p_track_planning.md, p_track_execution.md, p_track_completion.md (and to p_track.md itself for shared rules)"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/instructions/tracker_master_instructions.md",
-      "agent/instructions/dashboard_resolution.md",
-      "agent/_commands/p_track_planning.md",
-      "agent/_commands/p_track_execution.md",
-      "agent/_commands/p_track_completion.md",
-      "_commands/Synapse/p_track.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/project/plan.md",
-      "_commands/Synapse/p_track.md"
-    ]
+    "related": []
   },
   "domains": [
-    "swarm-command",
-    "plan-driven",
-    "approval-gate"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "plan-translation",
-    "non-negotiable"
-  ]
+    "p-track-plan",
+    "swarm-command",
+    "pki",
+    "dashboard",
+    "progress"
+  ],
+  "complexity": "moderate"
 }

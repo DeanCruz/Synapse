@@ -12,7 +12,7 @@ Run this **once** when connecting Synapse to a new project.
 
 ```
 !initialize                  <- Full initialization
-!initialize --skip-toc       <- Skip TOC generation (useful if you want to do that separately)
+!initialize --skip-learn     <- Skip knowledge graph generation (useful if you want to do that separately)
 !initialize --skip-claude    <- Skip CLAUDE.md scaffolding even if missing
 ```
 
@@ -145,9 +145,8 @@ Create the Synapse metadata directory inside the project:
 
 ```
 {project_root}/.synapse/
-├── toc.md              <- Table of Contents (created empty or via !toc_generate)
 ├── config.json         <- Project-Synapse configuration
-└── knowledge/          <- PKI directory (populated by !learn)
+└── knowledge/          <- Project knowledge graph (populated by !learn)
     ├── annotations/    <- Per-file deep knowledge (created empty)
     └── queries/        <- Pre-computed domain bundles (created empty)
 ```
@@ -163,8 +162,7 @@ Write the configuration file linking this project to Synapse:
   "tracker_root": "{tracker_root}",
   "tech_stack": ["{detected_tech1}", "{detected_tech2}"],
   "initialized_at": "{ISO_timestamp}",
-  "toc_path": ".synapse/toc.md",
-  "pki_path": ".synapse/knowledge/",
+  "knowledge_path": ".synapse/knowledge/",
   "monorepo": {
     "type": "npm_workspaces | pnpm | lerna | nx | turbo | cargo | go",
     "packages": [
@@ -185,7 +183,6 @@ If the project is NOT a monorepo, the `monorepo` field should be `null` (not omi
 ```
 OK Created .synapse/ directory
   OK config.json written
-  OK toc.md placeholder created
   OK knowledge/ directory created (run !learn to populate)
 ```
 
@@ -238,23 +235,23 @@ OK CLAUDE.md found (or: Created starter CLAUDE.md — review and expand)
 
 ---
 
-### Step 5: Generate Table of Contents
+### Step 5: Generate Project Knowledge Graph
 
-Check for `{project_root}/.synapse/toc.md`:
+Check for `{project_root}/.synapse/knowledge/manifest.json`:
 
-- **If it's empty/placeholder and `--skip-toc` is NOT set:**
+- **If it is missing and `--skip-learn` is NOT set:**
   ```
-  Generating project Table of Contents...
+  Generating project knowledge graph...
   ```
-  Execute `!toc_generate` (this dispatches a parallel agent swarm — it is the most time-consuming step).
+  Execute `!learn` (this dispatches a parallel agent swarm — it is the most time-consuming step).
 
-- **If `--skip-toc` IS set:**
+- **If `--skip-learn` IS set:**
   ```
-  Warning: Skipping TOC generation (--skip-toc).
-  Run !toc_generate later to create the project index.
+  Warning: Skipping knowledge graph generation (--skip-learn).
+  Run !learn later to create the project knowledge graph.
   ```
 
-If a monorepo was detected in Step 2, pass the workspace information to `!toc_generate` via the `.synapse/config.json` file. The TOC generation agents should organize file entries by package:
+If a monorepo was detected in Step 2, pass the workspace information to `!learn` via the `.synapse/config.json` file. The annotation agents should organize file entries by package:
 
 ```markdown
 ## @myorg/api (packages/api/)
@@ -362,7 +359,7 @@ Compile and present a summary of everything that was done:
 | .synapse/ | OK Created |
 | .synapse/knowledge/ | OK Created (empty — run !learn to populate) |
 | CLAUDE.md | {OK Found / OK Scaffolded / Warning Skipped} |
-| Table of Contents | {OK Generated / Warning Skipped} |
+| Knowledge graph | {OK Generated / Warning Skipped} |
 | Dashboard Infrastructure | OK Ready (dashboards created dynamically) |
 | Dashboard Server | {OK Running / Warning Not started} |
 
@@ -372,7 +369,7 @@ Compile and present a summary of everything that was done:
 2. **Run `!learn`** — Bootstrap the Project Knowledge Index (PKI). This gives Synapse deep understanding of your codebase for better planning and worker prompts.
 3. **Run `!commands`** — See all available commands.
 4. **Try `!p_track {task}`** — Dispatch your first parallel agent swarm.
-5. **Run `!toc_generate`** — {Only if --skip-toc was used: "Generate the project index."}
+5. **Run `!learn`** — {Only if --skip-learn was used: "Generate the project knowledge graph."}
 
 ### Quick Reference
 
@@ -381,8 +378,6 @@ Compile and present a summary of everything that was done:
 | `!p_track {task}` | Dispatch a parallel agent swarm with live dashboard |
 | `!learn` | Bootstrap the PKI (deep codebase knowledge) |
 | `!learn_update` | Incrementally refresh the PKI (stale/new files) |
-| `!toc {query}` | Search the project index |
-| `!toc_update` | Update the project index incrementally |
 | `!context {query}` | Deep context gathering (uses PKI) |
 | `!env_check` | Environment variable audit |
 | `!commands` | List all available commands |
@@ -397,7 +392,7 @@ Compile and present a summary of everything that was done:
 | Synapse not found | Abort with instructions to install |
 | Project root not found | Abort with instructions |
 | .synapse/ already exists | Warn but continue (idempotent) |
-| !toc_generate fails | Log warning, continue without TOC |
+| !learn fails | Log warning, continue without the knowledge graph |
 | Dashboard server fails to start | Log warning, continue |
 
 The initialization should complete even if individual steps have warnings. Only abort for prerequisite failures (Steps 1a-1b).
@@ -409,6 +404,6 @@ The initialization should complete even if individual steps have warnings. Only 
 - **This command modifies the filesystem.** It creates directories, scaffolds files, and starts services. Every modification is reported to the user.
 - **Idempotent where possible.** Running `!initialize` twice should not break anything — it should detect existing state and skip already-completed steps.
 - **Never overwrite existing CLAUDE.md files.** Scaffolding only creates new files for projects that have none.
-- **Never overwrite existing .synapse/toc.md.** If it exists with content, skip TOC generation unless the user explicitly asks.
-- **Run in serial mode** except for Step 5 (TOC generation), which delegates to `!toc_generate` and its swarm.
+- **Never overwrite existing .synapse/knowledge/.** If a manifest exists with entries, skip knowledge graph generation unless the user explicitly asks.
+- **Run in serial mode** except for Step 5 (knowledge graph generation), which delegates to `!learn` and its swarm.
 - **Be transparent.** Every action taken (file created, directory made, service started) must be reported.

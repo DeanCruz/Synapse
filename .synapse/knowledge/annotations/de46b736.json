@@ -1,60 +1,41 @@
 {
   "file": "agent/master/compaction_recovery.md",
   "content_hash": "d51c1445",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the master agent's state-persistence and recovery systems: master_state.json checkpointing, the post-compaction recovery procedure (Steps 0-5), and the post-swarm metrics.json computation. Loaded by master-protocol when a long-running swarm risks context compaction or after the swarm completes for performance analysis. Informs decisions about how often to checkpoint, what to re-read after compaction, and how to compute parallel_efficiency / max_concurrent for historical comparison.",
+  "purpose": "Agent protocol/control-plane instruction document: Context Compaction Recovery, Master State Checkpoint & Swarm Metrics. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: This module covers the master agent's state persistence, context compaction recovery procedures, and post-swarm metrics computation. These systems work together to ensure swarm continuity after context compaction events and provide performance analysis after completion. The file is 250 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "Step 0 of recovery is non-negotiable: re-read role.md BEFORE touching operational state — context compaction frequently evicts the no-code constraint and the master starts implementing fixes itself, the #1 post-compaction failure mode.",
-    "Progress files do NOT contain FILES CHANGED data (that comes from worker returns). After compaction, file change data is permanently lost unless mentioned in summary/milestones — note this gap explicitly in downstream UPSTREAM RESULTS.",
-    "master_state.json is NOT watched by the server and NOT broadcast via SSE — it is purely for master self-recovery. Workers must never read or write it.",
-    "Keep summaries short (one line each) — master_state.json must stay under ~2000 tokens or it bloats every checkpoint write.",
-    "Progress files are AUTHORITATIVE if they conflict with the master_state.json checkpoint during recovery — never trust the cached state over ground truth.",
-    "metrics.json is write-once during Step 17 finalization — re-writing it corrupts historical comparison.",
-    "Printing full status tables during dispatch loops accelerates context consumption and triggers compaction earlier — keep terminal output to one-line confirmations."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Atomic full-file write for master_state.json after every dispatch/completion/failure event (master is sole writer, no read-modify-write needed).",
-    "6-step compaction recovery: re-read role -> read master_state.json -> read initialization.json -> read all progress files -> cross-reference and rebuild upstream cache -> resume eager dispatch.",
-    "metrics.json computation: parallel_efficiency = serial_estimate_seconds / elapsed_seconds; elapsed_seconds = max(completed_at) - min(started_at); max_concurrent computed from overlapping started_at/completed_at windows.",
-    "On compaction detection, log a 'warn' entry to logs.json: 'Context compaction detected — rebuilt upstream cache from {N} progress files. File change data may be incomplete.'"
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "master_state.json schema fields: last_updated, completed[], in_progress[], failed[], ready_to_dispatch[], upstream_results{}, next_agent_number, permanently_failed[].",
-    "Failed task IDs use 'r' suffix for repair tasks; permanently_failed[] holds IDs that failed twice (original + repair).",
-    "metrics.json schema: swarm_name, computed_at, elapsed_seconds, serial_estimate_seconds, parallel_efficiency, duration_distribution{min,avg,max,median}, failure_rate, max_concurrent, deviation_count, total_tasks, completed_tasks, failed_tasks.",
-    "Log metrics summary line format: 'Metrics: {N}s elapsed, {X}x efficiency, {N} max concurrent, {X} failure rate'."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/master/role.md",
-      "agent/master/dashboard_writes.md",
-      "agent/master/eager_dispatch.md"
-    ],
-    "depended_by": [
-      ".claude/skills/master-protocol",
-      "agent/master/dashboard_writes.md",
-      "_commands/Synapse/p_track_resume.md",
-      "_commands/Synapse/track_resume.md"
-    ],
-    "related": [
-      "agent/instructions/tracker_master_instructions.md",
-      "agent/master/failure_recovery.md"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "compaction-recovery",
-    "master-orchestration",
-    "dashboard-protocol"
+    "agent-protocol",
+    "master"
   ],
   "tags": [
     "markdown",
-    "master-agent",
-    "protocol",
-    "checkpointing",
-    "metrics",
-    "recovery"
-  ]
+    "agent-instructions",
+    "master",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "sse",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

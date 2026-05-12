@@ -1,15 +1,21 @@
 # `!learn`
 
-**Purpose:** Bootstrap the Project Knowledge Index (PKI) from scratch by dispatching a parallel swarm to deeply annotate every significant file in the project. Unlike `!toc_generate` which produces a searchable metadata index, `!learn` produces deep operational knowledge — gotchas, patterns, conventions, relationships, and domain taxonomy that agents can query to understand how the project actually works.
+**Purpose:** Bootstrap the Project Knowledge Index (PKI) from scratch by dispatching a parallel swarm to deeply annotate every significant file in the project. `!learn` produces deep operational knowledge — gotchas, patterns, conventions, relationships, and domain taxonomy that agents can query to understand how the project actually works.
 
 **Syntax:** `!learn`
 
 **Produces:**
-- `{project_root}/.synapse/knowledge/manifest.json` — Master routing index with per-file summaries, domains, tags, and cross-references
+- `{project_root}/.synapse/knowledge/manifest.json` — Master routing index with per-file summaries (`version`, `last_updated`, `stats`, `files`, `insights_index`)
+- `{project_root}/.synapse/knowledge/domain_index.json` — Reverse index from domain name to file paths (sibling of manifest)
+- `{project_root}/.synapse/knowledge/tag_index.json` — Reverse index from tag name to file paths (sibling of manifest)
+- `{project_root}/.synapse/knowledge/concept_map.json` — High-level cross-cutting concepts (sibling of manifest)
 - `{project_root}/.synapse/knowledge/annotations/{hash}.json` — Per-file deep annotation files (flat, hash-keyed)
+- `{project_root}/.synapse/knowledge/rules/` — Cross-cutting gotchas promoted from recurring annotation gotchas (auto-populated post-swarm starting Tier 2 #4); seed rules may be hand-authored
 - `{project_root}/.synapse/knowledge/domains.json` — Auto-discovered domain taxonomy
 - `{project_root}/.synapse/knowledge/patterns.json` — Cross-cutting patterns and conventions observed across the codebase
 - `{project_root}/.synapse/knowledge/queries/` — Directory for pre-computed domain bundles (created empty, populated by `!context` queries)
+
+> **MANIFEST SPLIT (as of 2026-05-06):** `domain_index`, `tag_index`, and `concept_map` no longer live inside `manifest.json`. They are now SIBLING FILES under `.synapse/knowledge/` (`domain_index.json`, `tag_index.json`, `concept_map.json`). Writers must (a) build each index in memory exactly as before, then (b) write each one to its own sibling file (top-level shape: `{ "_metadata": { "version": 1, "moved_from": "manifest.json", "moved_from_field": "<field>", "moved_at": "<ISO 8601>", "entry_count": N }, ...index entries verbatim... }`), and (c) write `manifest.json` containing ONLY `{ version, last_updated, stats, files, insights_index }`. Atomic writes apply per file. Readers (e.g., `PromptBuilder`, task 2.2) must fall back to reading these sections out of `manifest.json` if the sibling files are missing — backward-compatibility constraint per `plan.json` `shared_constraints`.
 
 ---
 
@@ -58,7 +64,10 @@ Create the knowledge directory tree if it does not exist:
 ```
 mkdir -p {project_root}/.synapse/knowledge/annotations
 mkdir -p {project_root}/.synapse/knowledge/queries
+mkdir -p {project_root}/.synapse/knowledge/rules
 ```
+
+The `rules/` directory is created empty here. It is auto-populated post-swarm by PASS-C of `SwarmOrchestrator.extractSwarmKnowledge` (added in Tier 2 #4 / task 3.1) when gotcha strings recur across 3+ annotations. See `documentation/data-architecture/pki-schemas.md` (`## Rule Schema (rules/{rule_id}.json)`) for the full schema.
 
 ---
 
@@ -254,9 +263,11 @@ echo -n "relative/path/to/file.ts" | shasum -a 256 | cut -c1-8
 }
 ```
 
-### Step 9: Build manifest.json
+### Step 9: Build manifest.json plus the three sibling indices
 
-Incrementally build `{project_root}/.synapse/knowledge/manifest.json` as agents return. On each agent return, add entries to the `files` map and update the indexes.
+Incrementally build `{project_root}/.synapse/knowledge/manifest.json` as agents return. On each agent return, add entries to the `files` map and update the in-memory `domain_index`, `tag_index`, and `concept_map`.
+
+> **Split-file output (as of 2026-05-06):** When you flush to disk, write FOUR files instead of one. `manifest.json` carries only `{ version, last_updated, stats, files, insights_index? }`. The three reverse indices each go to their own sibling file (`domain_index.json`, `tag_index.json`, `concept_map.json`) wrapped with a `_metadata` header `{ version, moved_from, moved_from_field, moved_at, entry_count }`. The legacy combined `manifest.json` is no longer produced. Readers must fall back to `manifest.<field>` when a sibling file is missing for backward compatibility.
 
 **Assembly rules for manifest.json:**
 
@@ -484,23 +495,23 @@ These rules are absolute. Violating any of them is a failure.
 
 4. **The master's only jobs are: discover, dispatch, assemble, report.** It gathers project structure (Phase 1), dispatches agents (Phase 2), assembles their returns into PKI files (Phase 3), and reports completion (Phase 4). It does not read, analyze, or summarize source files — that is the agents' job.
 
-### Annotation Depth — Deeper Than TOC
+### Annotation Depth
 
-Annotations produced by `!learn` MUST be operationally deeper than TOC entries. The difference:
+Annotations produced by `!learn` MUST contain operational knowledge that helps future agents act correctly:
 
-| Dimension | TOC (`!toc_generate`) | PKI (`!learn`) |
-|---|---|---|
-| **Purpose** | 1-3 sentence summary | Full paragraph with role in system |
-| **Exports** | Symbol names only | Names + kinds + signatures |
-| **Imports** | Not tracked | Full module-to-names mapping |
-| **Gotchas** | Not tracked | Operational warnings for agents |
-| **Patterns** | Not tracked | Coding patterns used |
-| **Conventions** | Not tracked | Project conventions observed |
-| **Relationships** | Related files | depends_on + depended_by + related |
-| **Domains** | Not tracked | Domain classification |
-| **Tags** | Flat tag list | Same (shared with TOC) |
+| Dimension | Required PKI depth |
+|---|---|
+| **Purpose** | Full paragraph with role in system |
+| **Exports** | Names + kinds + signatures |
+| **Imports** | Full module-to-names mapping |
+| **Gotchas** | Operational warnings for agents |
+| **Patterns** | Coding patterns used |
+| **Conventions** | Project conventions observed |
+| **Relationships** | depends_on + depended_by + related |
+| **Domains** | Domain classification |
+| **Tags** | Routing tags for discovery |
 
-If an annotation reads like a TOC entry — just a short summary and some tags — it has failed. Every annotation should contain knowledge that would save an agent 5-10 minutes of investigation.
+If an annotation is just a short summary and some tags, it has failed. Every annotation should contain knowledge that would save an agent 5-10 minutes of investigation.
 
 ### Hash Rules
 

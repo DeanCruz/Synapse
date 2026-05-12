@@ -26,7 +26,7 @@ export default function StatsBar({ onOpenTimeline }) {
   const { currentStatus, activeStatFilter } = state;
 
   const task = currentStatus?.active_task ?? null;
-  const agents = currentStatus?.agents ?? [];
+  const agents = Array.isArray(currentStatus?.agents) ? currentStatus.agents : [];
 
   // Derive counts
   const total = task?.total_tasks ?? agents.length;

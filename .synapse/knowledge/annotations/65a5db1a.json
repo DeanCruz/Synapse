@@ -1,8 +1,8 @@
 {
   "file": "start.sh",
   "content_hash": "1b38d37d",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.414Z",
+  "annotated_by": "learn-update",
   "purpose": "Production-style start script. Resolves its own directory, checks whether port 3456 (Synapse's SSE server port) already has a listener via `lsof -ti :3456 -sTCP:LISTEN`, refuses to start if Synapse is already running (telling the user to run `./stop.sh` first), and then `cd`s into the script directory and runs `npm run dev`. Functions as a guarded version of launch.sh.",
   "exports": [],
   "imports_from": {},
@@ -44,5 +44,6 @@
     "launcher",
     "port-check",
     "macos"
-  ]
+  ],
+  "complexity": "simple"
 }

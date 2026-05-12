@@ -22,6 +22,9 @@ This document defines the JSON schemas for all PKI data files. It is the authori
 ├── insights/                      ← Swarm-level lessons learned (auto-generated post-swarm)
 │   ├── 2026-04-19_add-rate-limiting.json
 │   └── ...
+├── rules/                         ← Cross-cutting gotchas promoted from recurring annotations (auto-populated post-swarm starting Tier 2 #4)
+│   ├── 51d5ed29.json
+│   └── ...
 ├── domains.json                   ← Auto-discovered domain taxonomy
 ├── patterns.json                  ← Cross-cutting patterns & conventions
 └── queries/                       ← Pre-computed domain bundles (cached, gitignored)
@@ -34,6 +37,7 @@ This document defines the JSON schemas for all PKI data files. It is the authori
 | `manifest.json` | `!learn` / `!learn_update` / post-swarm extraction | Master routing index mapping every annotated file to its annotation hash, domains, tags, and summary. Contains reverse indexes for fast lookup by domain or tag, and `insights_index` for swarm-level knowledge. |
 | `annotations/{hash}.json` | `!learn` / `!learn_update` / post-swarm extraction | Deep per-file knowledge: purpose, exports, imports, gotchas, patterns, relationships. Filename is the first 8 hex characters of the SHA-256 hash of the relative file path. Post-swarm extraction merges worker-discovered annotations into these files. |
 | `insights/{date}_{slug}.json` | Post-swarm extraction (Step 17G) / `SwarmOrchestrator` | Swarm-level lessons learned: dependency insights, complexity surprises, failure patterns, effective patterns, architecture notes. Auto-generated after every swarm completion. |
+| `rules/{rule_id}.json` | Post-swarm extraction (PASS-C in `extractSwarmKnowledge`, added in Tier 2 #4) | Cross-cutting gotchas promoted from gotcha strings recurring in 3+ annotations. Each rule binds to file globs and/or symbol patterns and carries a generalized gotcha text plus references to the source annotation hashes it was derived from. Filename is the 8-char hex prefix of `SHA-256(concept_slug)`. |
 | `domains.json` | `!learn` / `!learn_update` | Auto-discovered domain taxonomy grouping files by functional area (e.g., "authentication", "database", "UI components"). |
 | `patterns.json` | `!learn` / `!learn_update` | Cross-cutting patterns and conventions observed across the codebase (e.g., "error handling pattern", "repository pattern", "event-driven architecture"). |
 | `queries/` | `!learn` (cached output) | Pre-computed domain bundles for fast retrieval. Gitignored -- regenerated on demand. |
@@ -788,6 +792,123 @@ The manifest's `insights_index` array tracks all insight files:
 - Capped at 50 entries (FIFO — oldest entries dropped when cap is reached)
 - `insight_count` is the sum of all items across all insight categories
 - `files_changed_count` is the length of `files_changed` in the insight file
+
+---
+
+## Rule Schema (rules/{rule_id}.json)
+
+The `rules/` directory contains **cross-cutting gotchas** that have been promoted from gotcha strings recurring across 3+ annotation files. Unlike per-file annotations (which describe one file in depth) or insights (which capture per-swarm lessons), rules are **first-class retrieval targets** — small, indexed, generalized statements that downstream retrieval (`PromptBuilder.readPKIKnowledge` from Tier 2 #2) can match against an active task by file glob or symbol pattern, independent of any one file's annotation.
+
+**Location:** `{project_root}/.synapse/knowledge/rules/{rule_id}.json`
+
+**Owner:** Post-swarm knowledge extraction. Rules are **auto-populated** by PASS-C of `SwarmOrchestrator.extractSwarmKnowledge()` (added in Tier 2 #4 / task 3.1 of the PKI improvement plan). PASS-C scans annotations for gotcha strings appearing in 3+ different files and writes a rule per recurring gotcha (deduplicating by gotcha text). Initial seed rules in this repo were authored by hand in Tier 1 #3 (task 1.3) as proof-of-concept.
+
+**Filename derivation:** First 8 hex characters of `SHA-256(concept_slug)`. The slug is a kebab-case derivation of the gotcha (e.g., `atomic-json-writes`, `hooks-fail-open`).
+
+### Complete Schema
+
+```json
+{
+  "id": "string",
+  "concept": "string",
+  "binding": {
+    "globs": ["string"],
+    "symbols": ["string"]
+  },
+  "gotcha": "string",
+  "severity": "info | warn | error",
+  "source_annotations": ["string"],
+  "created_at": "ISO 8601 string"
+}
+```
+
+### Field Definitions
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `id` | string | Yes | 8-char lowercase hex slug. Equals the first 8 characters of `SHA-256(concept)`. Must match the filename (without `.json`). |
+| `concept` | string | Yes | Kebab-case slug derived from the gotcha (e.g., `"atomic-json-writes"`). Used to compute `id` and as a stable retrieval key — two annotations promoted with the same concept slug collapse to one rule. |
+| `binding` | object | Yes | How the rule attaches to files and code symbols. PromptBuilder retrieval matches a task's affected paths/symbols against this binding to decide whether to surface the rule. |
+| `binding.globs` | array of strings | Yes | File glob patterns the rule applies to (e.g., `["src/server/**/*.js", "dashboards/**/*.json"]`). May be empty if the rule binds purely by symbol. |
+| `binding.symbols` | array of strings | Yes | Function / class / constant / env-var names the rule applies to (e.g., `["writeAtomic", "SYNAPSE_DASHBOARD_ID"]`). May be empty if the rule binds purely by glob. |
+| `gotcha` | string | Yes | Generalized rule text — clear, prescriptive, and not bound to a single file. This is the body that gets surfaced in worker prompts when the rule matches. |
+| `severity` | string | Yes | One of `"info"`, `"warn"`, `"error"`. Used by retrieval to rank and by the UI to color-code surfaced rules. |
+| `source_annotations` | array of strings | Yes | The 8-char annotation hashes the rule was derived from (the recurring-gotcha sources). Must contain at least 3 entries — single-source rules are not promoted. Every entry must be a real existing file under `annotations/`. |
+| `created_at` | ISO 8601 | Yes | When the rule was written (PASS-C run timestamp, or hand-seed timestamp for the bootstrap rules). |
+
+### Validation Rules
+
+| Rule | Detail |
+|---|---|
+| `id` | Required. Must match `/^[0-9a-f]{8}$/`. Must equal the filename without `.json`. Must equal `SHA-256(concept).slice(0, 8)`. |
+| `concept` | Required. Kebab-case (`/^[a-z][a-z0-9-]*$/`). Non-empty. Used as the deterministic input to the `id` hash — changing the concept changes the id. |
+| `binding` | Required. `globs` and `symbols` must both be present (may be empty arrays, but at least one of the two must be non-empty). |
+| `binding.globs` | If present and non-empty, each entry must be a non-empty string. Glob syntax follows the project's standard conventions (`**`, `*`, `{a,b}`). |
+| `binding.symbols` | If present and non-empty, each entry must be a non-empty string. |
+| `gotcha` | Required. Non-empty. Should be generalized — do not embed a single file path or function name as the entire gotcha; that belongs in an annotation, not a rule. |
+| `severity` | Required. Exactly one of `"info"`, `"warn"`, `"error"`. |
+| `source_annotations` | Required. Must contain at least 3 entries. Every entry must be exactly 8 lowercase hex chars and must reference an existing file under `annotations/{hash}.json`. |
+| `created_at` | Required. Valid ISO 8601 timestamp. |
+| Filename consistency | Filename (minus `.json`) must equal `id`. |
+| Atomic write | Use the same atomic-write pattern as the rest of the PKI: write to `<path>.tmp`, rename. 2-space JSON indent. |
+
+### Example
+
+```json
+{
+  "id": "51d5ed29",
+  "concept": "atomic-json-writes",
+  "binding": {
+    "globs": [
+      "src/server/**/*.js",
+      "electron/**/*.js",
+      "dashboards/**/*.json",
+      ".synapse/knowledge/**/*.json"
+    ],
+    "symbols": [
+      "writeAtomic",
+      "writeAtomicAsync",
+      "writeJSON"
+    ]
+  },
+  "gotcha": "All JSON writes that other processes may read must be atomic. Use writeAtomic / writeAtomicAsync (write to <path>.tmp then rename) — never partial appends or read-modify-write cycles. Build the full document in memory and overwrite. Non-atomic writes race against fs.watch consumers and produce mid-write JSON parse errors; cross-filesystem renames fall back to copy+delete and break atomicity, so keep all PKI/dashboard writes inside ROOT.",
+  "severity": "error",
+  "source_annotations": [
+    "cb3ed7b7",
+    "e7242712",
+    "d169fdd8",
+    "27b0bb1a",
+    "8169a6b6"
+  ],
+  "created_at": "2026-05-06T03:36:48Z"
+}
+```
+
+### Promotion Algorithm (PASS-C)
+
+The post-swarm extractor populates `rules/` as follows (see Tier 2 #4 / task 3.1):
+
+1. Scan every annotation under `annotations/` and collect each gotcha string with its annotation hash.
+2. Group identical (or near-identical, fuzzy-matched) gotcha strings.
+3. For each group with `≥ 3` distinct annotations from `≥ 3` distinct files:
+   - Derive a `concept` slug from the gotcha text.
+   - Compute `id = SHA-256(concept).slice(0, 8)`.
+   - If `rules/{id}.json` already exists, skip (deduplicate by id).
+   - Otherwise write a new rule file with the schema above.
+4. Cap at 10 new rules per swarm to prevent explosion.
+
+PASS-C runs after the existing post-swarm logic in `extractSwarmKnowledge` — it does not replace insights, annotation harvest, or concept_map promotion. All four passes run sequentially.
+
+### Retrieval Integration
+
+`PromptBuilder.readPKIKnowledge` (rewritten in Tier 1 #2 / task 2.2) reads `rules/*.json` lazily. For each task being prompted, it:
+
+1. Tokenizes the task description and target file paths.
+2. For each rule, tests the task's file paths against `binding.globs` and the task's symbols against `binding.symbols`.
+3. Includes up to 5 matching rules in the worker's PKI knowledge block under a `### RULES` section.
+4. Severity weighting: `error` rules outrank `warn`, which outrank `info`.
+
+Retrieval is fail-open: missing `rules/` directory or any read failure produces an empty rules section and standard planning proceeds.
 
 ---
 

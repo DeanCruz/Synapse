@@ -4,6 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const { DASHBOARDS_DIR } = require('../../src/server/utils/constants');
 const { readDashboardInit, readDashboardProgress } = require('../../src/server/services/DashboardService');
@@ -983,7 +984,7 @@ function extractSwarmKnowledge(dashboardId, projectPath) {
         }
 
         if (changed) {
-          existing.annotated_at = now;
+          existing.last_annotated = now;
           existing.annotated_by = 'swarm:' + taskSlug;
           try {
             fs.writeFileSync(annPath, JSON.stringify(existing, null, 2));
@@ -1004,20 +1005,342 @@ function extractSwarmKnowledge(dashboardId, projectPath) {
         insights.architecture_notes.length,
       files_changed_count: allFilesChanged.length,
     });
+    manifestChanged = true;
 
     // Cap at 50 entries
     if (manifest.insights_index.length > 50) {
       manifest.insights_index = manifest.insights_index.slice(-50);
     }
 
-    manifest.updated_at = now;
-    manifestChanged = true;
-
     if (manifestChanged) {
+      manifest.last_updated = now;
       try {
         fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
       } catch (e) { /* best-effort */ }
     }
+  }
+
+  // ════════════════════════════════════════════════════════════════════
+  // POST-SWARM ENRICHMENT PASSES (task 3.1)
+  // These run after the existing harvest+insights+merge logic above and
+  // operate on the project's full annotation corpus + this swarm's
+  // progress files. All three passes fail open — any read/write error
+  // is logged-and-continued, never thrown.
+  // ════════════════════════════════════════════════════════════════════
+
+  var passACount = 0;
+  var passBCount = 0;
+  var passCCount = 0;
+
+  // ──────────────────────── PASS-A: concept_map promotion ────────────────────────
+  // Detect patterns recurring across 3+ different annotation files and promote
+  // them into {project_root}/.synapse/knowledge/concept_map.json. Cap 10 new
+  // concepts per swarm. Deduplicate by slug — never overwrite existing concepts.
+  try {
+    var allAnnFiles = [];
+    try {
+      allAnnFiles = fs.readdirSync(annotationsDir).filter(function (n) { return n.endsWith('.json'); });
+    } catch (e) {
+      allAnnFiles = [];
+    }
+
+    // pattern_string -> { sources: Set<annotation-hash>, files: Set<file-path> }
+    var patternMap = {};
+
+    for (var pa_i = 0; pa_i < allAnnFiles.length; pa_i++) {
+      var pa_name = allAnnFiles[pa_i];
+      var pa_hash = pa_name.replace(/\.json$/, '');
+      var pa_data;
+      try {
+        pa_data = JSON.parse(fs.readFileSync(path.join(annotationsDir, pa_name), 'utf-8'));
+      } catch (e) {
+        continue; // skip unreadable annotations
+      }
+      if (!pa_data || !Array.isArray(pa_data.patterns)) continue;
+
+      for (var pa_p = 0; pa_p < pa_data.patterns.length; pa_p++) {
+        var pa_pat = pa_data.patterns[pa_p];
+        if (typeof pa_pat !== 'string' || pa_pat.length === 0) continue;
+        if (!patternMap[pa_pat]) {
+          patternMap[pa_pat] = { sources: {}, files: {} };
+        }
+        patternMap[pa_pat].sources[pa_hash] = true;
+        if (pa_data.file) patternMap[pa_pat].files[pa_data.file] = true;
+      }
+    }
+
+    // Load existing concept_map.json (sibling, post-1.2 shape with _metadata)
+    var conceptMapPath = path.join(knowledgeDir, 'concept_map.json');
+    var conceptMap;
+    try {
+      conceptMap = JSON.parse(fs.readFileSync(conceptMapPath, 'utf-8'));
+    } catch (e) {
+      conceptMap = {};
+    }
+    if (!conceptMap || typeof conceptMap !== 'object') conceptMap = {};
+
+    // Promote eligible patterns
+    var pa_promoted = [];
+    for (var pa_str in patternMap) {
+      var pa_entry = patternMap[pa_str];
+      var pa_distinctFiles = Object.keys(pa_entry.files);
+      var pa_distinctSources = Object.keys(pa_entry.sources);
+      // Recurrence threshold: 3+ different files (not just 3 entries from same file)
+      if (pa_distinctFiles.length < 3) continue;
+
+      var pa_slug = slugify(pa_str);
+      if (!pa_slug || pa_slug.length === 0) continue;
+      // Skip if already present in concept_map
+      if (Object.prototype.hasOwnProperty.call(conceptMap, pa_slug)) continue;
+
+      pa_promoted.push({
+        slug: pa_slug,
+        pattern: pa_str,
+        files: pa_distinctFiles.sort(),
+        score: pa_distinctSources.length,
+      });
+    }
+
+    // Highest-recurrence first, cap at 10 new concepts per swarm
+    pa_promoted.sort(function (a, b) { return b.score - a.score; });
+    if (pa_promoted.length > 10) pa_promoted = pa_promoted.slice(0, 10);
+
+    if (pa_promoted.length > 0) {
+      // Preserve _metadata; append new concepts
+      for (var pa_n = 0; pa_n < pa_promoted.length; pa_n++) {
+        var pa_new = pa_promoted[pa_n];
+        if (Object.prototype.hasOwnProperty.call(conceptMap, pa_new.slug)) continue; // belt-and-braces dedupe
+        conceptMap[pa_new.slug] = {
+          pattern: pa_new.pattern,
+          files: pa_new.files,
+        };
+        passACount++;
+      }
+      // Touch _metadata
+      if (!conceptMap._metadata) conceptMap._metadata = { version: 1 };
+      conceptMap._metadata.last_promoted_at = now;
+      conceptMap._metadata.entry_count = Object.keys(conceptMap).filter(function (k) { return k !== '_metadata'; }).length;
+
+      try {
+        fs.writeFileSync(conceptMapPath, JSON.stringify(conceptMap, null, 2));
+      } catch (e) { /* best-effort */ }
+    }
+
+    appendLog(dashboardId, {
+      level: 'info',
+      message: 'PASS-A (concept promotion): scanned ' + allAnnFiles.length + ' annotations, promoted ' + passACount + ' new concept(s)' + (pa_promoted.length === 0 ? ' (no-op)' : ''),
+    });
+  } catch (eA) {
+    appendLog(dashboardId, { level: 'warn', message: 'PASS-A failed open: ' + (eA && eA.message ? eA.message : 'unknown error') });
+  }
+
+  // ──────────────────────── PASS-B: usage telemetry tally ────────────────────────
+  // Read every progress/{task_id}.json from this swarm's dashboard. Sum optional
+  // pki_used / pki_noise arrays (string entries of the form "[<file>] <gotcha>")
+  // and adjust a usefulness_score field on each affected annotation. Tolerates
+  // absence of the optional fields cleanly (no-op the pass).
+  try {
+    var pb_progressDir = path.join(DASHBOARDS_DIR, dashboardId, 'progress');
+    var pb_progFiles = [];
+    try {
+      pb_progFiles = fs.readdirSync(pb_progressDir).filter(function (n) { return n.endsWith('.json'); });
+    } catch (e) {
+      pb_progFiles = [];
+    }
+
+    // file_path -> { used: count, noise: count }
+    var pb_tally = {};
+    var pb_anyTelemetry = false;
+
+    for (var pb_i = 0; pb_i < pb_progFiles.length; pb_i++) {
+      var pb_data;
+      try {
+        pb_data = JSON.parse(fs.readFileSync(path.join(pb_progressDir, pb_progFiles[pb_i]), 'utf-8'));
+      } catch (e) {
+        continue;
+      }
+      if (!pb_data) continue;
+
+      var pb_classes = ['pki_used', 'pki_noise'];
+      for (var pb_c = 0; pb_c < pb_classes.length; pb_c++) {
+        var pb_cls = pb_classes[pb_c];
+        var pb_arr = pb_data[pb_cls];
+        if (!Array.isArray(pb_arr)) continue;
+        for (var pb_e = 0; pb_e < pb_arr.length; pb_e++) {
+          var pb_entry = pb_arr[pb_e];
+          if (typeof pb_entry !== 'string') continue;
+          // Form: "[<file path>] <gotcha-text>"
+          var pb_match = pb_entry.match(/^\[([^\]]+)\]/);
+          if (!pb_match) continue;
+          var pb_file = pb_match[1].trim();
+          if (!pb_file) continue;
+          if (!pb_tally[pb_file]) pb_tally[pb_file] = { used: 0, noise: 0 };
+          if (pb_cls === 'pki_used') pb_tally[pb_file].used++; else pb_tally[pb_file].noise++;
+          pb_anyTelemetry = true;
+        }
+      }
+    }
+
+    if (!pb_anyTelemetry) {
+      appendLog(dashboardId, {
+        level: 'info',
+        message: 'PASS-B (usage telemetry): no pki_used/pki_noise entries on ' + pb_progFiles.length + ' progress file(s) — clean no-op',
+      });
+    } else {
+      // Apply scores to annotations. Use manifest.files[file].hash to find each annotation.
+      var pb_manifest = manifest; // reuse the manifest already loaded above
+      if (!pb_manifest || !pb_manifest.files) {
+        // Manifest may not have been loaded if the merge branch was skipped — try once.
+        try {
+          pb_manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+        } catch (e) { pb_manifest = null; }
+      }
+
+      if (pb_manifest && pb_manifest.files) {
+        for (var pb_file2 in pb_tally) {
+          var pb_mEntry = pb_manifest.files[pb_file2];
+          if (!pb_mEntry || !pb_mEntry.hash) continue;
+          var pb_annPath = path.join(annotationsDir, pb_mEntry.hash + '.json');
+          var pb_ann;
+          try {
+            pb_ann = JSON.parse(fs.readFileSync(pb_annPath, 'utf-8'));
+          } catch (e) {
+            continue;
+          }
+          var pb_currScore = (typeof pb_ann.usefulness_score === 'number') ? pb_ann.usefulness_score : 0;
+          var pb_delta = pb_tally[pb_file2].used - 0.5 * pb_tally[pb_file2].noise;
+          var pb_newScore = pb_currScore + pb_delta;
+          if (pb_newScore > 5) pb_newScore = 5;
+          if (pb_newScore < -3) pb_newScore = -3;
+          // Round to one decimal place to keep the file readable
+          pb_newScore = Math.round(pb_newScore * 10) / 10;
+          pb_ann.usefulness_score = pb_newScore;
+          pb_ann.last_annotated = now;
+          try {
+            fs.writeFileSync(pb_annPath, JSON.stringify(pb_ann, null, 2));
+            passBCount++;
+          } catch (e) { /* best-effort */ }
+        }
+      }
+
+      appendLog(dashboardId, {
+        level: 'info',
+        message: 'PASS-B (usage telemetry): updated usefulness_score on ' + passBCount + ' annotation(s) from ' + pb_progFiles.length + ' progress file(s)',
+      });
+    }
+  } catch (eB) {
+    appendLog(dashboardId, { level: 'warn', message: 'PASS-B failed open: ' + (eB && eB.message ? eB.message : 'unknown error') });
+  }
+
+  // ──────────────────────── PASS-C: rule promotion ────────────────────────
+  // Scan all annotations for gotcha strings recurring in 3+ different annotation
+  // files. For each recurring gotcha, write a {project_root}/.synapse/knowledge/
+  // rules/{id}.json file using the schema from documentation/data-architecture/
+  // pki-schemas.md (Rule Schema). Cap 10 new rules per swarm. Skip if a rule
+  // with the same id already exists. Create rules/ dir on demand.
+  try {
+    var pc_rulesDir = path.join(knowledgeDir, 'rules');
+    try {
+      fs.mkdirSync(pc_rulesDir, { recursive: true });
+    } catch (e) { /* best-effort */ }
+
+    var pc_annFiles = [];
+    try {
+      pc_annFiles = fs.readdirSync(annotationsDir).filter(function (n) { return n.endsWith('.json'); });
+    } catch (e) {
+      pc_annFiles = [];
+    }
+
+    // gotcha_string -> { sources: Set<annotation-hash>, files: Set<file-path> }
+    var gotchaMap = {};
+
+    for (var pc_i = 0; pc_i < pc_annFiles.length; pc_i++) {
+      var pc_name = pc_annFiles[pc_i];
+      var pc_hash = pc_name.replace(/\.json$/, '');
+      var pc_data;
+      try {
+        pc_data = JSON.parse(fs.readFileSync(path.join(annotationsDir, pc_name), 'utf-8'));
+      } catch (e) {
+        continue;
+      }
+      if (!pc_data || !Array.isArray(pc_data.gotchas)) continue;
+
+      for (var pc_g = 0; pc_g < pc_data.gotchas.length; pc_g++) {
+        var pc_got = pc_data.gotchas[pc_g];
+        if (typeof pc_got !== 'string' || pc_got.length === 0) continue;
+        if (!gotchaMap[pc_got]) {
+          gotchaMap[pc_got] = { sources: {}, files: {} };
+        }
+        gotchaMap[pc_got].sources[pc_hash] = true;
+        if (pc_data.file) gotchaMap[pc_got].files[pc_data.file] = true;
+      }
+    }
+
+    // List existing rule ids
+    var pc_existingIds = {};
+    try {
+      var pc_existing = fs.readdirSync(pc_rulesDir).filter(function (n) { return n.endsWith('.json'); });
+      for (var pc_x = 0; pc_x < pc_existing.length; pc_x++) {
+        pc_existingIds[pc_existing[pc_x].replace(/\.json$/, '')] = true;
+      }
+    } catch (e) { /* best-effort */ }
+
+    var pc_candidates = [];
+    for (var pc_str in gotchaMap) {
+      var pc_entry = gotchaMap[pc_str];
+      var pc_distinctFiles = Object.keys(pc_entry.files);
+      var pc_distinctSources = Object.keys(pc_entry.sources);
+      if (pc_distinctFiles.length < 3) continue;
+      if (pc_distinctSources.length < 3) continue; // schema requires source_annotations >= 3
+
+      var pc_concept = slugify(pc_str);
+      if (!pc_concept || pc_concept.length === 0) continue;
+      var pc_id = crypto.createHash('sha256').update(pc_concept).digest('hex').slice(0, 8);
+      if (pc_existingIds[pc_id]) continue;
+
+      pc_candidates.push({
+        id: pc_id,
+        concept: pc_concept,
+        gotcha: pc_str,
+        sources: pc_distinctSources.sort(),
+        files: pc_distinctFiles.sort(),
+        score: pc_distinctSources.length,
+      });
+    }
+
+    // Highest-recurrence first, cap at 10 new rules per swarm
+    pc_candidates.sort(function (a, b) { return b.score - a.score; });
+    if (pc_candidates.length > 10) pc_candidates = pc_candidates.slice(0, 10);
+
+    for (var pc_c = 0; pc_c < pc_candidates.length; pc_c++) {
+      var pc_cand = pc_candidates[pc_c];
+      var pc_globs = inferGlobsFromFiles(pc_cand.files);
+      var pc_rule = {
+        id: pc_cand.id,
+        concept: pc_cand.concept,
+        binding: {
+          globs: pc_globs,
+          symbols: [],
+        },
+        gotcha: pc_cand.gotcha,
+        severity: 'info',
+        source_annotations: pc_cand.sources,
+        created_at: now,
+      };
+      var pc_rulePath = path.join(pc_rulesDir, pc_cand.id + '.json');
+      try {
+        fs.writeFileSync(pc_rulePath, JSON.stringify(pc_rule, null, 2));
+        passCCount++;
+        pc_existingIds[pc_cand.id] = true;
+      } catch (e) { /* best-effort */ }
+    }
+
+    appendLog(dashboardId, {
+      level: 'info',
+      message: 'PASS-C (rule promotion): scanned ' + pc_annFiles.length + ' annotations, promoted ' + passCCount + ' new rule(s)' + (pc_candidates.length === 0 ? ' (no-op)' : ''),
+    });
+  } catch (eC) {
+    appendLog(dashboardId, { level: 'warn', message: 'PASS-C failed open: ' + (eC && eC.message ? eC.message : 'unknown error') });
   }
 
   appendLog(dashboardId, {
@@ -1025,8 +1348,66 @@ function extractSwarmKnowledge(dashboardId, projectPath) {
     message: 'Knowledge extracted: ' + annotationCount + ' annotations harvested, ' +
       (insights.dependency_insights.length + insights.failure_patterns.length +
        insights.effective_patterns.length + insights.architecture_notes.length) +
-      ' insights captured, PKI updated at ' + knowledgeDir,
+      ' insights captured, ' + passACount + ' concept(s) promoted, ' + passBCount +
+      ' usefulness_score update(s), ' + passCCount + ' rule(s) promoted, PKI updated at ' + knowledgeDir,
   });
+}
+
+// --- PKI enrichment helpers (task 3.1) ---
+
+/**
+ * Convert a free-text string into a deterministic kebab-case slug.
+ * Lowercase, alphanumeric + hyphens only, max 50 chars, no leading/trailing hyphens.
+ * Same input always produces the same slug.
+ */
+function slugify(s) {
+  if (typeof s !== 'string') return '';
+  var lower = s.toLowerCase();
+  // Replace any run of non-alphanumeric chars with a single hyphen
+  var dashed = lower.replace(/[^a-z0-9]+/g, '-');
+  // Strip leading/trailing hyphens
+  dashed = dashed.replace(/^-+/, '').replace(/-+$/, '');
+  if (dashed.length > 50) dashed = dashed.slice(0, 50).replace(/-+$/, '');
+  return dashed;
+}
+
+/**
+ * Infer file globs covering a set of relative file paths. If all files share
+ * an extension and a common directory prefix, emit one glob; otherwise emit
+ * an empty array (rule binds purely by symbol — workers refine later).
+ */
+function inferGlobsFromFiles(files) {
+  if (!Array.isArray(files) || files.length === 0) return [];
+  // Collect extensions
+  var exts = {};
+  for (var i = 0; i < files.length; i++) {
+    var dot = files[i].lastIndexOf('.');
+    if (dot < 0 || dot === files[i].length - 1) return []; // mixed: bail
+    exts[files[i].slice(dot + 1)] = true;
+  }
+  var extKeys = Object.keys(exts);
+  if (extKeys.length !== 1) return []; // mixed extensions
+  var ext = extKeys[0];
+
+  // Common directory prefix
+  var splitPaths = files.map(function (f) { return f.split('/').slice(0, -1); });
+  var minLen = splitPaths[0].length;
+  for (var s = 1; s < splitPaths.length; s++) {
+    if (splitPaths[s].length < minLen) minLen = splitPaths[s].length;
+  }
+  var prefix = [];
+  for (var p = 0; p < minLen; p++) {
+    var seg = splitPaths[0][p];
+    var allSame = true;
+    for (var q = 1; q < splitPaths.length; q++) {
+      if (splitPaths[q][p] !== seg) { allSame = false; break; }
+    }
+    if (!allSame) break;
+    prefix.push(seg);
+  }
+  var prefixStr = prefix.join('/');
+  if (prefixStr.length === 0) return ['**/*.' + ext];
+  return [prefixStr + '/**/*.' + ext];
 }
 
 // --- Helpers ---

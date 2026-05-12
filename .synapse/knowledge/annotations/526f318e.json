@@ -1,50 +1,46 @@
 {
   "file": "_commands/project/scope.md",
-  "content_hash": "218d6170",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "ce047d9b",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !scope {task} slash command — blast-radius analysis BEFORE touching any code. Determines which directories, files, and contracts a proposed change would affect; helps user decide whether to proceed, simplify, or split into phases. Three-step workflow: parse task (new feature / refactor / bug fix / migration; which domains; additive vs modificative), search for affected files (grep + glob + .synapse/toc.md + import/export tracing for indirect deps + cross-layer contract consumers + config/env/deploy scripts), produce analysis (Impact Summary / Affected Files by Area / Cross-Layer Impact / Dependencies & Ordering / Risks / Recommendation: Proceed-as-is | Break-into-phases | Simplify-first | Needs-more-investigation). Optional dep_graph.json consultation: if {project_root}/.synapse/dep_graph.json exists, look up importers + imports + transitive importers to capture full blast radius beyond manual import tracing.",
-  "exports": [],
+  "purpose": "Command specification for `!scope`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: Before touching any code, analyze a task to determine its full blast radius \u2014 which directories, files, and contracts would be affected. Helps the user understand complexity and make informed decisions about whether to proceed, simplify, or break the task into phases. The file is 105 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!scope",
+      "kind": "command",
+      "signature": "!scope {task description} \u2014 Blast Radius Analysis"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Read-only — never modifies files.",
-    "Be HONEST about complexity — don't minimize scope to make the task seem easier; user needs accurate info.",
-    "INCLUDE indirect effects: a type rename might touch 50 files; a new endpoint might require auth+validation+tests+frontend integration. Surface all of it.",
-    "dep_graph.json is OPTIONAL but valuable: provides transitive importer chains that manual tracing misses. Falls back gracefully when absent.",
-    "Recommendation must be one of four explicit options — not vague hedging."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Pre-coding analysis: parse intent → find affected files → trace cross-layer → recommend.",
-    "Optional dep_graph.json enrichment for transitive deps.",
-    "Four-option recommendation: proceed / break / simplify / investigate."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
   ],
   "conventions": [
-    "Read-only.",
-    "Serial execution.",
-    "Output sections: Impact Summary / Affected Files / Cross-Layer / Dependencies / Risks / Recommendation."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "{project_root}/.synapse/toc.md",
-      "{project_root}/.synapse/dep_graph.json"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/project/plan.md",
-      "_commands/project/trace.md",
-      "_commands/project/toc.md"
-    ]
+    "related": []
   },
   "domains": [
-    "planning",
-    "auditing"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
-    "blast-radius",
-    "dep-graph",
-    "read-only"
-  ]
+    "slash-command",
+    "scope",
+    "project-command",
+    "profile",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

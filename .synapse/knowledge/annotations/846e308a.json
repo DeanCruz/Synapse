@@ -1,8 +1,8 @@
 {
   "file": "src/server/index.js",
   "content_hash": "73702c27",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.408Z",
+  "annotated_by": "learn-update",
   "purpose": "HTTP server entry point that wires together SSEManager, DashboardService, WatcherService, QueueService, and apiRoutes into a single pure-Node `http` server (no framework). On every request it sets permissive CORS headers, logs non-SSE/non-OPTIONS requests on response finish, handles preflight OPTIONS with 204, and dispatches to either the `/events` SSE endpoint or the apiRoutes handler. The `/events` handler is the live dashboard pipe: it sets `text/event-stream` headers, optionally honors a `?dashboard=` query param to filter events, then immediately replays state to the new client via `dashboards_list`, `initialization`, `all_progress`, `init_state`, and `queue_changed` events before registering the response with `addClient`. The `startup()` function (passed as the listen callback) creates dashboards/, Archive/, history/, queue/ dirs if missing, ensures at least `dashboard1` exists, attaches per-dashboard watchers, starts the dashboards-dir watcher, queue-dir watcher, periodic reconciliation loop, and SSE heartbeat — all wired with `broadcast` from SSEManager as the change sink. Graceful shutdown on SIGINT/SIGTERM stops watchers, heartbeat, closes all SSE clients, then `server.close()` and `process.exit(0)`.",
   "exports": [],
   "imports_from": {
@@ -100,5 +100,6 @@
     "startup",
     "shutdown",
     "cors"
-  ]
+  ],
+  "complexity": "moderate"
 }

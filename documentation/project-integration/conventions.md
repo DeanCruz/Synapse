@@ -177,8 +177,7 @@ The `.synapse/` directory stores Synapse-specific metadata inside the target pro
 ```
 .synapse/
 ├── config.json    # Project-Synapse configuration
-├── toc.md         # Table of Contents (semantic file index)
-└── knowledge/     # Project Knowledge Index (persistent knowledge layer)
+└── knowledge/     # Project knowledge graph (persistent knowledge layer)
     ├── manifest.json
     ├── annotations/
     ├── domains.json
@@ -197,7 +196,7 @@ Links the project to Synapse with detected metadata:
   "tracker_root": "/Users/dean/tools/Synapse",
   "tech_stack": ["typescript", "next.js", "postgresql"],
   "initialized_at": "2026-03-22T10:00:00Z",
-  "toc_path": ".synapse/toc.md",
+  "knowledge_path": ".synapse/knowledge/",
   "monorepo": null
 }
 ```
@@ -211,7 +210,7 @@ Links the project to Synapse with detected metadata:
 | `tracker_root` | string | Absolute path to the Synapse installation |
 | `tech_stack` | string[] | Detected technologies |
 | `initialized_at` | ISO 8601 | When `!initialize` was run |
-| `toc_path` | string | Relative path to the TOC file |
+| `knowledge_path` | string | Relative path to the project knowledge graph |
 | `monorepo` | object or null | Monorepo details if detected |
 
 #### Monorepo Configuration
@@ -247,13 +246,9 @@ Detected monorepo types include: `npm_workspaces`, `pnpm`, `lerna`, `nx`, `turbo
 
 For non-monorepo projects, the field is explicitly `null` (not omitted).
 
-### toc.md
-
-The Table of Contents is a semantic index of every significant file in the project. See the [TOC System](./toc-system.md) documentation for full details on generation, searching, and maintenance.
-
 ### knowledge/
 
-The Project Knowledge Index (PKI) stores persistent, auto-accumulating knowledge about the codebase -- gotchas, patterns, conventions, domain taxonomy, and file relationships. Created by `!learn` and incrementally refreshed by `!learn_update`. See the [PKI Overview](./pki-overview.md) documentation for full details.
+The Project Knowledge Index (PKI) stores persistent, auto-accumulating knowledge about the codebase -- gotchas, patterns, conventions, domain taxonomy, file relationships, and query indexes. Created by `!learn` and incrementally refreshed by `!learn_update`. See the [PKI Overview](./pki-overview.md) documentation for full details.
 
 ### Version Control
 
@@ -270,7 +265,7 @@ The Project Knowledge Index (PKI) stores persistent, auto-accumulating knowledge
 
 Running `!initialize` on a project that already has `.synapse/` is safe. The command:
 - Detects the existing directory and warns
-- Does not overwrite existing files (`config.json`, `toc.md`)
+- Does not overwrite existing files (`config.json`, populated `.synapse/knowledge/` data)
 - Only creates missing files
 - Use `--force` to reinitialize from scratch
 
@@ -376,11 +371,11 @@ When the master agent gathers context about a project, it follows these efficien
 
 ### Priority Order
 
-1. **Glob/Grep first for targeted searches.** They cost zero context tokens and return immediate results. Use them before reaching for the TOC.
+1. **Glob/Grep first for targeted searches.** They cost zero context tokens and return immediate results. Use them alongside the `.synapse/knowledge/` graph.
 
 2. **Project CLAUDE.md for orientation.** Read `{project_root}/CLAUDE.md` before any work in the project. It provides the architectural overview, conventions, and patterns.
 
-3. **Project TOC for semantic discovery.** When filenames do not reveal purpose, or you need to understand how components relate, check `{project_root}/.synapse/toc.md` if one exists.
+3. **Project knowledge graph for semantic discovery.** When filenames do not reveal purpose, or you need to understand how components relate, query `{project_root}/.synapse/knowledge/` if it exists.
 
 4. **Read with purpose.** Before reading any file, know what you expect to find. If you are reading "just in case," you are wasting context.
 
@@ -430,7 +425,6 @@ When no CLAUDE.md exists, agents:
 |---|---|---|---|---|
 | `CLAUDE.md` | `{project_root}/CLAUDE.md` | Yes (commit) | `!scaffold`, `!initialize`, or manual | Project conventions for agents |
 | `.synapse/config.json` | `{project_root}/.synapse/config.json` | No (gitignore) | `!initialize` | Links project to Synapse |
-| `.synapse/toc.md` | `{project_root}/.synapse/toc.md` | No (gitignore) | `!toc_generate` | Semantic file index |
 | `.synapse/knowledge/` | `{project_root}/.synapse/knowledge/` | No (gitignore) | `!learn` | Persistent knowledge layer (PKI) |
 | `_commands/*.md` | `{project_root}/_commands/` | Optional | Manual | Project-specific commands |
 
@@ -439,6 +433,6 @@ When no CLAUDE.md exists, agents:
 ## Related Documentation
 
 - [Project Setup](./project-setup.md) -- Step-by-step initialization guide
-- [TOC System](./toc-system.md) -- Table of Contents generation and management
+- [Project Knowledge Graph](./toc-system.md) -- `.synapse/knowledge/` generation and management
 - [Project Integration Overview](./overview.md) -- How Synapse integrates with any project
 - [Multi-Dashboard Overview](../multi-dashboard/overview.md) -- Running multiple concurrent swarms

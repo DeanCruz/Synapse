@@ -1,0 +1,67 @@
+{
+  "file": "src/ui/shared/Header.jsx",
+  "content_hash": "75463d96",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Header is the shared top navigation for Synapse. It exposes app-mode switching, dashboard/task status controls, archive/project/commands/settings/logs/guide modal entry points, and provider-aware actions while remaining mounted above both chat and code shells.",
+  "exports": [
+    {
+      "name": "Header",
+      "kind": "component",
+      "signature": "default function Header(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/hooks/useElectronAPI": [
+      "useIsElectron"
+    ],
+    "src/ui/assets/synapse-logo-mark.svg": [
+      "logoMark"
+    ],
+    "src/ui/shared/ModeMenu.jsx": [
+      "ModeMenu"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/assets/synapse-logo-mark.svg",
+      "src/ui/context/AppContext",
+      "src/ui/hooks/useElectronAPI",
+      "src/ui/shared/ModeMenu.jsx"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-ui",
+    "in-app-guide",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "guide",
+    "swarm"
+  ],
+  "complexity": "moderate"
+}

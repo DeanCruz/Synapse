@@ -1,8 +1,8 @@
 {
   "file": "src/server/services/WatcherService.js",
   "content_hash": "ca47ebb4",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.409Z",
+  "annotated_by": "learn-update",
   "purpose": "The reactive heart of the server. Orchestrates THREE distinct watcher layers: (1) per-dashboard fs.watchFile polling on initialization.json + logs.json (INIT_POLL_MS interval) plus fs.watch on the progress/ directory for new/changed task progress files; (2) a top-level fs.watch on DASHBOARDS_DIR with debounced (RECONCILE_DEBOUNCE_MS) reconciliation that adds/removes dashboard watchers as folders appear/disappear; (3) a recursive fs.watch on QUEUE_DIR with the same debounce that broadcasts queue_changed. ALSO runs a periodic setInterval (RECONCILE_INTERVAL_MS) that walks every tracked dashboard's progress dir, comparing mtimeMs against an in-memory lastKnownProgress map to catch progress writes that fs.watch missed (a known Linux/macOS issue with fast bursts). Validates every payload against utils/json schema validators (isValidInitialization/isValidLogs/isValidProgress). When a progress file flips to status='completed', delays DEPENDENCY_CHECK_DELAY_MS then calls computeNewlyUnblocked and emits 'tasks_unblocked'. validateAndBroadcast (currently exported only via the module's top-block, not in module.exports) hard-rejects task_id-vs-filename mismatches and dashboard_id-vs-directory mismatches as 'write_rejected' SSE events.",
   "exports": [
     {
@@ -136,5 +136,6 @@
     "fs-watch",
     "reconciliation",
     "debounce"
-  ]
+  ],
+  "complexity": "complex"
 }

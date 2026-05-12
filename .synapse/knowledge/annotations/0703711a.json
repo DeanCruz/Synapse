@@ -1,50 +1,46 @@
 {
   "file": "documentation/commands/project-commands.md",
-  "content_hash": "cb2fc9be",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "3263edc1",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Reference documentation for all commands in {tracker_root}/_commands/project/. Documents project setup commands (!initialize, !onboard, !scaffold, !create_claude), analysis commands (!context, !review, !health, !plan, !scope, !trace, !contracts, !env_check), TOC commands (!toc, !toc_generate, !toc_update), PKI commands (!learn, !learn_update), instrumentation (!instrument), audit (!prompt_audit), and discovery (!commands, !profiles, !help, !guide). Most are read-only and run in serial mode.",
+  "purpose": "Documentation page for the commands area: Project Commands. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: All project commands are located at `{tracker_root}/_commands/project/`. They analyze, audit, index, and manage the target project. Most project commands are **read-only** -- they do not modify project files unless explicitly stated. All run in serial mode unless noted otherwise. The file is 509 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Most project commands are read-only by design -- they do not modify project files",
-    "!scaffold never overwrites existing CLAUDE.md without --force",
-    "!create_claude vs !scaffold: scaffold documents what IS, create_claude prescribes what SHOULD BE",
-    "!learn requires no PKI; !learn_update requires existing manifest.json",
-    "!toc_generate dispatches parallel agents -- master never reads source files directly"
+    "Guide description may be narrow: `!guide` remains a command-decision aid, but the app also exposes an in-app markdown Guide modal backed by documentation/guide via GuideService and IPC."
   ],
   "patterns": [
-    "Each command documented with Purpose / Syntax / Key Behavior",
-    "Commands grouped by lifecycle (setup -> analysis -> TOC -> PKI -> audit -> discovery)",
-    "Parallel dispatch commands (!toc_generate, !learn) use !p mode internally"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Read-only by default; modifying commands explicitly stated",
-    "Serial mode default; parallel mode noted explicitly",
-    "Idempotency for commands like !initialize that may be re-run"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
+    "depends_on": [],
+    "depended_by": [
+      "documentation/README.md",
       "documentation/commands/overview.md"
     ],
-    "depended_by": [],
     "related": [
-      "documentation/project-integration/pki-overview.md",
-      "documentation/project-integration/toc-system.md",
-      "documentation/project-integration/project-setup.md",
-      "_commands/project/"
+      "documentation/commands/overview.md"
     ]
   },
   "domains": [
-    "command-docs",
-    "project-integration-docs"
+    "documentation",
+    "commands"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "project-commands",
-    "analysis",
-    "toc",
-    "pki"
-  ]
+    "commands",
+    "pki",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide"
+  ],
+  "complexity": "complex"
 }

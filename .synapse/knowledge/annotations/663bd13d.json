@@ -1,37 +1,48 @@
 {
   "file": "documentation/worker-protocol/deviations.md",
   "content_hash": "437684b4",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the deviation reporting protocol for worker agents. A deviation is anything the worker did that was not explicitly specified in its dispatch prompt, classified into CRITICAL (interface/contract change affecting downstream tasks), MODERATE (different approach but same outcome), or MINOR (cosmetic, no functional impact). Workers must report deviations immediately to both deviations[] and a level:'deviation' log entry.",
+  "purpose": "Documentation page for the worker-protocol area: Deviation Reporting. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: A deviation is any divergence from the original plan -- anything the worker does that was not explicitly specified in its dispatch prompt. Deviations are not failures. They are expected in complex tasks. But they must be visible so the master agent and the user can assess their impact on the swarm. The file is 248 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Under-reporting is worse than over-reporting -- when in doubt, report it",
-    "CRITICAL deviations may force the master to re-plan downstream tasks before dispatching them",
-    "Deviation must be added to BOTH deviations[] and logs[] (level:'deviation') -- one without the other is incomplete"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Severity-based triage of plan divergences",
-    "Immediate (not end-of-task) deviation reporting for live dashboard visibility"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Deviation descriptions answer: what happened, why, and what the impact is",
-    "Resolution priority for ambiguity: dispatch prompt -> CLAUDE.md -> conservative choice -> document as deviation"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/worker-protocol/overview.md",
+      "documentation/worker-protocol/progress-reporting.md"
+    ],
+    "related": [
+      "documentation/worker-protocol/overview.md"
+    ]
   },
   "domains": [
-    "worker-protocol",
-    "deviations"
+    "documentation",
+    "worker-protocol"
   ],
   "tags": [
-    "deviation",
-    "severity",
-    "reporting",
-    "ambiguity"
-  ]
+    "markdown",
+    "documentation",
+    "worker-protocol",
+    "dashboard",
+    "progress",
+    "claude",
+    "sse",
+    "ide"
+  ],
+  "complexity": "moderate"
 }

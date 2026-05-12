@@ -1,50 +1,47 @@
 {
   "file": "_commands/Synapse/history.md",
   "content_hash": "965bd279",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the `!history [--last N] [--analytics]` command for viewing past swarm history summaries. History is GLOBAL across all dashboards (no dashboardId param) and is populated when a dashboard is cleared (via Clear Dashboard button or !reset). Lists each history JSON file from {tracker_root}/history/, sorts by cleared_at descending, and renders a table. The --analytics subcommand additionally computes aggregate metrics across all history (avg tasks/duration, failure rate trend, largest/longest swarm, top failure-keyword patterns) and writes them to history/analytics.json.",
-  "exports": [],
+  "purpose": "Command specification for `!history`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: **Purpose:** Display all past swarm tasks from the `{tracker_root}/history/` directory. Each entry is a JSON summary file created when a dashboard is cleared. The file is 111 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!history",
+      "kind": "command",
+      "signature": "!history [--last N] [--analytics]"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "History is global — no dashboardId argument; do not auto-detect a dashboard for this command",
-    "History summaries are produced by the server's buildHistorySummary() function — schema must match what HistoryService.js writes",
-    "--analytics persists results to {tracker_root}/history/analytics.json (this is the ONLY history command write — base !history is read-only)",
-    "failure_rate_trend compares LAST 3 swarms against the overall rate (improving/stable/degrading)",
-    "failure_patterns groups failed agents by FIRST significant word in their title — this is a heuristic and may misgroup",
-    "Status emojis: completed=✅, completed_with_errors=⚠️, failed=🔴, in_progress=🔵 (last shouldn't normally appear in history)"
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "12-step procedure: read dir → handle empty → parse each → sort → apply --last → render table → compute summary; analytics adds steps 8-12",
-    "Sort order: cleared_at descending (newest first)",
-    "Cleared-at format: MMM DD, HH:MM",
-    "Analytics computes 8 distinct metrics + failure_patterns array"
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Note callout that history requires no dashboardId param",
-    "Two output sections: main listing table + (if --analytics) analytics report table with Failure Patterns sub-table",
-    "JSON schema defined for analytics.json"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "src/server/services/HistoryService.js"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/Synapse/reset.md",
-      "_commands/Synapse/export.md"
-    ]
+    "related": []
   },
   "domains": [
-    "dashboard-monitoring",
-    "history-analytics",
-    "post-swarm"
+    "command-system",
+    "Synapse"
   ],
   "tags": [
     "markdown",
     "command-doc",
     "slash-command",
-    "global-scope",
-    "analytics"
-  ]
+    "history",
+    "swarm-command",
+    "dashboard",
+    "progress"
+  ],
+  "complexity": "moderate"
 }

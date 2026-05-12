@@ -13,7 +13,7 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 **Syntax:**
 ```
 !initialize                      -- Full initialization
-!initialize --skip-toc           -- Skip TOC generation
+!initialize --skip-learn         -- Skip knowledge graph generation
 !initialize --skip-claude        -- Skip CLAUDE.md scaffolding
 ```
 
@@ -21,9 +21,9 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 - Run once when connecting Synapse to a new project
 - Scans for tech stack indicators: `package.json`, `tsconfig.json`, `next.config.*`, `requirements.txt`, `go.mod`, `Cargo.toml`, and more
 - Detects monorepo patterns: npm/Yarn workspaces, pnpm, Lerna, Nx, Turborepo, Cargo workspaces, Go workspaces
-- Creates `{project_root}/.synapse/` with `config.json` and `toc.md`
+- Creates `{project_root}/.synapse/` with `config.json` and `knowledge/`
 - Scaffolds a starter `CLAUDE.md` if none exists (unless `--skip-claude`)
-- Generates the project Table of Contents via `!toc_generate` (unless `--skip-toc`)
+- Generates the project knowledge graph via `!learn` (unless `--skip-learn`)
 - Ensures all 5 dashboard slots are initialized with proper directory structure
 - Starts the dashboard server
 - Idempotent -- running twice does not break anything
@@ -32,7 +32,7 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 
 ### `!onboard`
 
-**Purpose:** Project walkthrough. Reads `CLAUDE.md`, TOC, and key files, then presents a structured orientation of the project.
+**Purpose:** Project walkthrough. Reads `CLAUDE.md`, the `.synapse/knowledge/` graph, and key files, then presents a structured orientation of the project.
 
 **Syntax:**
 ```
@@ -110,7 +110,7 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 
 **Key Behavior:**
 - Expands the topic into multiple search terms (synonyms, technical terms, code identifiers)
-- Searches in parallel: Grep for content, Glob for file patterns, TOC for semantic matches
+- Searches in parallel: Grep for content, Glob for file patterns, and `.synapse/knowledge/` for semantic matches
 - Reads key architectural files (not every matching file)
 - Traces connections across layers: frontend to backend, shared types, config values, data flows
 - Produces a structured summary: files by area, architecture description, connections, and key observations
@@ -152,7 +152,7 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 ```
 
 **Key Behavior:**
-- Documentation health: checks CLAUDE.md, TOC existence and freshness, commands directory
+- Documentation health: checks CLAUDE.md, PKI coverage and freshness, commands directory
 - Dependency health: checks `node_modules/`, lock files, dependency manifests
 - Cross-layer health (unless `--quick`): API endpoint consistency, `.env.example` completeness, type consistency
 - Git status: branch, uncommitted changes, unpushed commits, conflicts
@@ -177,7 +177,7 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 ```
 
 **Key Behavior:**
-- Gathers context: TOC, CLAUDE.md, relevant source files, cross-layer contracts
+- Gathers context: the `.synapse/knowledge/` graph, CLAUDE.md, relevant source files, cross-layer contracts
 - For each required change: identifies the file, what changes, why, dependencies, and risks
 - Determines execution mode: serial (3 or fewer sequential changes) or parallel (3+ independent changes)
 - Presents the plan with dependency ordering, cross-layer impact, risks and mitigations, testing strategy, and estimated scope
@@ -277,78 +277,6 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 
 ---
 
-## Table of Contents Commands
-
-### `!toc`
-
-**Purpose:** Search the project's semantic Table of Contents to quickly locate files by topic, keyword, or object name.
-
-**Syntax:**
-```
-!toc {search_query}              -- Text search
-!toc #{tag}                      -- Tag-only search
-!toc #{tag1} #{tag2}             -- Multi-tag AND search
-!toc #{tag} {query}              -- Tag + text search
-```
-
-**Examples:**
-```
-!toc SimulationService
-!toc auth middleware
-!toc #api #backend
-!toc #hook explore
-```
-
-**Key Behavior:**
-- Reads `{project_root}/.synapse/toc.md` and searches entries by filename, summary, tags, and related files
-- Ranks results: exact name match > summary match > tag match > related file match
-- Verifies candidates by reading actual files (prevents false positives from stale TOC entries)
-- Shows related files for each match (one-hop traversal of `Related:` entries)
-- Returns 1-5 most relevant results with path, summary, tags, and related context
-- Read-only, serial mode
-
----
-
-### `!toc_generate`
-
-**Purpose:** Generate a complete Table of Contents from scratch by dispatching parallel agents to scan every directory.
-
-**Syntax:**
-```
-!toc_generate
-```
-
-**Key Behavior:**
-- Scans project structure and creates one agent task per directory (or groups of small directories)
-- Dispatches all agents in parallel -- the master never reads source files directly
-- Each agent reads files in its directory and reports: path, summary, tags, related files, exports, and content hash
-- The master assembles results incrementally into `{project_root}/.synapse/toc.md` as agents return
-- TOC includes a Project Overview section (summary, tech stack, architecture, key directories) and a per-directory File Index
-- Uses content hashes (`<!-- hash:xxxxxxxx -->`) to enable future incremental updates
-- Parallelized via `!p` dispatch mode
-
----
-
-### `!toc_update`
-
-**Purpose:** Incrementally update the Table of Contents for changed files. Much faster than a full `!toc_generate`.
-
-**Syntax:**
-```
-!toc_update
-```
-
-**Key Behavior:**
-- Reads the current TOC and scans the filesystem to compute a diff: new files, deleted files, modified files (via content hash comparison), and renamed files (via git history)
-- Only dispatches agents for directories with new or modified files
-- Preserves unchanged entries verbatim -- does not rewrite or "improve" existing entries
-- For renames: carries over existing metadata to the new path and updates cross-references
-- Reports the diff before dispatching agents
-- If no changes are detected, exits immediately with "TOC is up to date"
-- Backward compatible with legacy TOCs that lack hash comments
-
----
-
 ## Project Knowledge Index (PKI) Commands
 
 ### `!learn`
@@ -373,7 +301,7 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 - Phase 2 (Parallel Scan): Decomposes directories into agent tasks, dispatches agents in parallel batches via `!p` dispatch mode. Each agent deeply reads files in its directory and produces annotations covering: purpose, exports (with signatures), imports, gotchas, patterns, conventions, relationships, domain classification, tags, and complexity
 - Phase 3 (Assembly): Master assembles annotations incrementally as agents return -- writes per-file annotation files, builds manifest.json with domain/tag indexes and concept map, generates domains.json and patterns.json
 - Phase 4 (Report): Prints summary with domain/pattern statistics
-- Annotations are operationally deeper than TOC entries -- they include gotchas, patterns, conventions, and bidirectional relationships
+- Annotations include gotchas, patterns, conventions, and bidirectional relationships
 - Uses content hashes for staleness detection, enabling future incremental updates via `!learn_update`
 
 ---
@@ -437,7 +365,7 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 **Syntax:**
 ```
 !prompt_audit                                -- Audit your assigned dashboard
-!prompt_audit dashboard3                     -- Audit a specific dashboard
+!prompt_audit c3d4e5                     -- Audit a specific dashboard
 ```
 
 **Key Behavior:**
@@ -449,6 +377,65 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 - Generates a quality scorecard with per-task grades, summary statistics (average duration, failure rate, deviation rate, upstream gap rate, log density, template version coverage, prompt size), and grade distribution
 - Produces 2-5 actionable recommendations based on threshold triggers (high failure rate, upstream gaps, low log density, high deviation rate, missing template versions, CRITICAL deviations, prompt size outliers)
 - Serial mode
+
+---
+
+## Wiki Commands
+
+### `!wiki`
+
+**Purpose:** Build and maintain a living personal knowledge base -- an LLM-curated wiki that compiles understanding instead of re-deriving it from raw sources every time. Integrates with PKI, hooks, and post-swarm extraction.
+
+**Syntax:**
+```
+!wiki init [--upgrade]                 -- Bootstrap or upgrade wiki tier
+!wiki status                           -- Stats, health, recent activity
+!wiki ingest <source>                  -- Ingest one source
+!wiki ingest_batch <dir|glob>          -- Parallel ingest swarm
+!wiki query <question>                 -- Hybrid search and answer
+!wiki lint                             -- Structural quality sweep
+!wiki audit                            -- Epistemic contradiction sweep
+!wiki crystallize [dashboard_id]       -- Distill a completed swarm
+!wiki consolidate                      -- Promote working to procedural memory
+!wiki decay                            -- Apply Ebbinghaus retention decay
+!wiki graph <entity>                   -- Walk the knowledge graph
+!wiki schema_propose                   -- Generate schema patch from drift
+!wiki schema_accept <ver>              -- Promote proposed schema to current
+!wiki schema_rollback <ver>            -- Roll back to prior schema version
+!wiki calibrate [--from <date>]        -- Learn ranking weights from history
+!wiki export <format> [filter]         -- Export subset (md/json/csv/slides)
+```
+
+**Cost Classes:**
+- `free` -- Local I/O only (init, status, consolidate, decay, graph, schema_accept, schema_rollback, export)
+- `cheap` -- One LLM call (ingest, query, schema_propose, calibrate)
+- `swarm` -- Parallel LLM workers (ingest_batch, lint, audit, crystallize)
+
+**Key Behavior:**
+- Distinct from PKI: PKI is operational knowledge about THIS codebase (gotchas, conventions). The wiki is durable knowledge across sessions/projects/topics (claims, entities, decisions, lessons, knowledge graph)
+- Storage at `{project_root}/.synapse/wiki/` (project-scoped) or a custom `WIKI_ROOT` for user-scoped wiki across projects
+- Pages have frontmatter + body with wikilinks; append-only `.history.jsonl` edit logs per page
+- Knowledge graph with typed entities (people, projects, libraries, concepts) and typed edges (uses, depends_on, contradicts, supersedes)
+- Hybrid search index combining BM25 postings + embeddings + entity references
+- Memory consolidation tiers: working -> episodic -> semantic -> procedural
+- Audit findings with stable hash IDs and cross-run history (same primitive as `!p_synthesize` `_open_issues.md`)
+- Versioned schema system with propose/accept/rollback lifecycle
+
+**Key Subcommands:**
+
+| Subcommand | Description |
+|------------|-------------|
+| `init` | Bootstrap the wiki directory structure, create initial schema, set up indexes |
+| `ingest` | Process a single source into wiki pages with entity extraction and graph updates |
+| `ingest_batch` | Parallel swarm ingestion of multiple sources (full dashboard tracking) |
+| `query` | Hybrid search (BM25 + embedding + graph traversal) to answer a question from wiki knowledge |
+| `lint` | Structural quality sweep: broken links, orphan pages, stale embeddings, schema compliance |
+| `audit` | Epistemic sweep: contradictions between pages, outdated claims, confidence drift |
+| `crystallize` | Distill a completed swarm's output into wiki pages (post-swarm knowledge extraction) |
+| `consolidate` | Promote knowledge up the memory tiers based on access patterns and age |
+| `decay` | Apply Ebbinghaus-style retention decay to reduce noise from unused knowledge |
+| `graph` | Walk the knowledge graph from an entity, showing relationships and connected pages |
+| `export` | Export a subset of the wiki in various formats for external use |
 
 ---
 
@@ -517,6 +504,6 @@ All project commands are located at `{tracker_root}/_commands/project/`. They an
 
 **Key Behavior:**
 - Displays a visual decision tree organized by "what do you want to do?" categories
-- Covers: project setup, starting parallel work, monitoring, taking action on tasks, viewing history, server control, project analysis, TOC management, profiles/discovery, and housekeeping
+- Covers: project setup, starting parallel work, monitoring, taking action on tasks, viewing history, server control, project analysis, knowledge graph management, profiles/discovery, and housekeeping
 - Includes a full command reference table and quick-pick tips
 - Serial mode, instant output

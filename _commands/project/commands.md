@@ -76,9 +76,6 @@ For each command file, read the first few lines to extract:
 | `!learn` | Bootstrap the Project Knowledge Index |
 | `!learn_update` | Incrementally refresh the PKI |
 | `!instrument` | Add data-synapse-label attributes for Live Preview |
-| `!toc {query}` | Search the project Table of Contents |
-| `!toc_generate` | Full rebuild of project TOC via agent swarm |
-| `!toc_update` | Incremental update of project TOC |
 | `!commands` | This list |
 | `!profiles` | List available agent profiles |
 | `!help` | Tips on using Synapse effectively |

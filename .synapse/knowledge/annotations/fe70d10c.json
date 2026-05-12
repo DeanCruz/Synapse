@@ -1,43 +1,45 @@
 {
   "file": "documentation/ide/ipc-handlers.md",
   "content_hash": "aedda743",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Catalog of the 24 IDE-related IPC handlers: 9 file-system handlers (read/write/list/rename/etc.), 2 diagnostics handlers, and 13 debug handlers (start, stop, breakpoints, step in/over/out, pause/resume, evaluate, scopes). Documents request/response shapes and security validations.",
+  "purpose": "Documentation page for the ide area: IDE IPC Handlers Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The IDE operations are handled by 24 IPC handlers registered in `electron/ipc-handlers.js`: 9 file system handlers (`ide-*`), 2 diagnostics handlers (`ide-check-syntax*`), and 13 debug handlers (`debug-*`). All are exposed to the renderer via `window.electronAPI` in `electron/preload.js`. The file is 903 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
-  "imports_from": [],
+  "imports_from": {},
   "gotchas": [
-    "All paths validated against workspace root — escaping via .. is rejected",
-    "Debug session is single-instance — calling start while active errors out",
-    "File watcher events are debounced — rapid edits coalesce"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Workspace-scoped path validation on every handler",
-    "CDP-driven debugger via DebugService",
-    "Standardized { success, data, error } responses"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Handler names: ide-* and debug-*"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "documentation/ide/overview.md",
-      "documentation/electron/ipc-reference.md"
+    "depends_on": [],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/ide/overview.md"
     ],
-    "depended_by": [],
     "related": [
-      "documentation/ide/components.md",
-      "documentation/electron/services.md"
+      "documentation/ide/overview.md"
     ]
   },
   "domains": [
-    "ide",
-    "electron"
+    "documentation",
+    "ide"
   ],
   "tags": [
     "markdown",
     "documentation",
+    "ide",
+    "electron",
     "ipc",
-    "debug"
-  ]
+    "sse",
+    "git"
+  ],
+  "complexity": "complex"
 }

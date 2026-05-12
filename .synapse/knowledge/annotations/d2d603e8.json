@@ -1,0 +1,73 @@
+{
+  "file": "src/ui/shared/modals/Modal.jsx",
+  "content_hash": "f2e806dc",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "Base modal wrapper component used as the foundation for nearly all modal dialogs in the app. Provides a fixed overlay div (.history-overlay), a centered modal panel (.history-modal) with a header (title + close X button), a scrollable body, and an optional fixed footer drawer below the body. Handles two universal close affordances: ESC key (global keydown listener attached/removed in useEffect) and overlay-only click (event.target === event.currentTarget guards against clicks bubbling from inner content). Sets ARIA attributes (role='dialog', aria-modal, aria-label) for accessibility. The title prop accepts both strings and React nodes — ErrorModal exploits this to inject colored span. The optional className is appended to .history-modal for per-modal sizing/styling overrides (e.g. 'commands-modal', 'logs-modal', 'agent-details-modal-wrapper').",
+  "exports": [
+    {
+      "name": "Modal",
+      "kind": "component",
+      "signature": "default function Modal(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {},
+  "gotchas": [
+    "Class names are .history-overlay and .history-modal (legacy from when only HistoryModal existed) — NOT .modal-overlay. New CSS must target these names.",
+    "Title prop is rendered raw inside a span — passing JSX works (ErrorModal does this) but means there is no string fallback for aria-label when title is a React node; the aria-label receives the JSX object and may not render meaningfully to screen readers.",
+    "The close-on-outside-click only fires when e.target === e.currentTarget (the overlay div itself). Clicking on whitespace inside .history-modal does NOT close — only clicking the surrounding overlay backdrop does.",
+    "ESC handler is attached to document, not the modal — multiple stacked modals will all receive the ESC and may all close simultaneously.",
+    "Does NOT use React Portal — modal renders in the DOM where it is mounted. CSS z-index in styles must keep .history-overlay above other layers.",
+    "If onClose is null/undefined, the close button is hidden AND ESC has no effect — be deliberate about always passing onClose unless intentionally locking the modal."
+  ],
+  "patterns": [
+    "Every other modal in this directory wraps its body in <Modal title=... onClose=... className=...> rather than reimplementing overlay/ESC/header logic — single source of truth for keyboard and click-out behavior.",
+    "Modals that need fixed action buttons at the bottom use the `footer` prop (e.g. ProjectModal); modals with inline buttons in the body do not (e.g. ConfirmModal, ErrorModal, TaskEditorModal)."
+  ],
+  "conventions": [
+    "Filename and component are PascalCase: Modal.jsx exports default Modal.",
+    "JSX comment header at top of file describes purpose in 1-3 lines.",
+    "JSDoc block above the component describes props."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "src/ui/shared/modals/AgentDetails.jsx",
+      "src/ui/shared/modals/ArchiveModal.jsx",
+      "src/ui/shared/modals/CommandsModal.jsx",
+      "src/ui/shared/modals/ConfirmModal.jsx",
+      "src/ui/shared/modals/ErrorModal.jsx",
+      "src/ui/shared/modals/GuideModal.jsx",
+      "src/ui/shared/modals/HistoryModal.jsx",
+      "src/ui/shared/modals/LogsModal.jsx",
+      "src/ui/shared/modals/PlanningModal.jsx",
+      "src/ui/shared/modals/ProjectModal.jsx",
+      "src/ui/shared/modals/SettingsModal.jsx",
+      "src/ui/shared/modals/TaskDetails.jsx",
+      "src/ui/shared/modals/TaskEditorModal.jsx",
+      "src/ui/shared/modals/WorkerTerminal.jsx"
+    ],
+    "related": [
+      "src/ui/shared/modals/PermissionModal.jsx"
+    ]
+  },
+  "domains": [
+    "modal-dialogs",
+    "accessibility"
+  ],
+  "tags": [
+    "react",
+    "modal",
+    "component",
+    "base",
+    "overlay",
+    "keyboard",
+    "aria"
+  ],
+  "complexity": "simple"
+}

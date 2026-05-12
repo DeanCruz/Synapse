@@ -26,7 +26,7 @@ The master agent has exactly **five responsibilities** during a swarm. Nothing m
 
 - Read the Synapse `CLAUDE.md` for swarm protocols
 - Read `{project_root}/CLAUDE.md` for target project conventions, architecture, and constraints
-- If a project TOC exists at `{project_root}/.synapse/toc.md`, read it for semantic orientation
+- If a project knowledge graph exists at `{project_root}/.synapse/knowledge/`, query it for semantic orientation
 - If additional context directories are configured (in `.synapse/project.json` or the Electron app), read their `CLAUDE.md` files alongside the project CLAUDE.md. These directories are read-only supplemental context — their conventions should be included in worker prompts.
 - Use Glob/Grep within `{project_root}` for targeted file discovery
 - Read source files, documentation, types, schemas, and configs needed to understand the task
@@ -71,7 +71,7 @@ Planning is where the master agent earns its value. A well-planned swarm execute
 
 - When all agents have completed (or failed), compile a final summary
 - Report what was accomplished, what failed, and what needs follow-up
-- Update the project TOC at `{project_root}/.synapse/toc.md` if the swarm created, moved, or restructured files (and if a TOC exists)
+- Update the project knowledge graph via `!learn_update` if the swarm created, moved, or restructured files
 - Move the completed swarm to history if a new swarm will start
 
 ---

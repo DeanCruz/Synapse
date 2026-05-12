@@ -1,53 +1,46 @@
 {
   "file": ".claude/skills/p/SKILL.md",
   "content_hash": "449345fc",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "User-invocable forked-context Opus skill (`!p`) — lightweight parallel dispatch without full dashboard tracking. The master plans + dispatches workers with rich prompts, but skips progress files, master_state.json, and metrics.json. Decision matrix vs !p_track: <3 tasks/single wave/focused -> !p; 3+ tasks OR >1 wave OR live monitoring -> !p_track. Master writes only initialization.json (plan snapshot) + bookend logs.json entries. Workers write nothing to dashboard — coordination via conversation context only. Auto-escalation rule: if plan has 3+ agents or >1 wave, master SHOULD recommend !p_track. Defers to _commands/Synapse/p.md, agent/instructions/tracker_master_instructions.md, and {project_root}/CLAUDE.md.",
-  "exports": [],
-  "imports_from": {
-    "commands": [
-      "_commands/Synapse/p.md"
-    ],
-    "agent_modules": [
-      "agent/instructions/tracker_master_instructions.md"
-    ]
-  },
-  "gotchas": [
-    "No worker progress files = no live tracking = blind during execution",
-    "No master_state.json = no compaction recovery checkpoint",
-    "No metrics.json = no parallel efficiency calculations post-swarm",
-    "Auto-escalation is advisory — user can override and stay in !p mode",
-    "Workers use a different TEMPLATE_VERSION (p_v2) than !p_track (p_track_v2) — checked by validate-worker-prompt.sh with reduced required-section set"
+  "purpose": "Claude Code skill definition for `p`. It describes trigger conditions, workflow, constraints, and referenced protocol files for that skill. Key content: --- name: p description: > Run a lightweight Synapse parallel dispatch without full dashboard tracking. Use when the user invokes !p or when a task needs quick parallel execution without live progress files, metrics, or master state checkpoints. argument-hint: <prompt> user-invocable: true context: fork model: opus --- The file is 65 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "p",
+      "kind": "skill",
+      "signature": "p SKILL.md instructions"
+    }
   ],
+  "imports_from": {},
+  "gotchas": [],
   "patterns": [
-    "Lightweight dispatch: plan + bookend logs only",
-    "Auto-escalation recommendation pattern"
+    "Skill-definition pattern: trigger guidance first, then workflow steps and referenced protocol files; these files are loaded on demand by Claude Code.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Bookend logs: swarm-start + swarm-completion entries"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "_commands/Synapse/p.md",
-      "agent/instructions/tracker_master_instructions.md"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      ".claude/skills/p-track/SKILL.md",
-      ".claude/hooks/validate-worker-prompt.sh"
-    ]
+    "related": []
   },
   "domains": [
-    "skill-definition",
-    "lightweight-dispatch"
+    "claude-skills",
+    "p"
   ],
   "tags": [
+    "markdown",
     "skill",
-    "user-invocable",
-    "fork",
-    "opus",
-    "lightweight",
-    "no-tracking"
-  ]
+    "p",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "claude",
+    "ide"
+  ],
+  "complexity": "simple"
 }

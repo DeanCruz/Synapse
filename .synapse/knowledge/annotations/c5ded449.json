@@ -1,44 +1,49 @@
 {
   "file": "electron/services/PromptBuilder.js",
-  "content_hash": "4db74c5d",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "3969b911",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "Constructs the two prompts every worker receives: the system prompt (worker instructions + dispatch context) and the task prompt (task description + PKI knowledge + CLAUDE.md project context + read-only additional context dirs + upstream task results). Also builds the circuit-breaker REPLAN prompt + system prompt that gets fed to a Claude CLI process when the swarm hits 3+ failures in one wave. The buildSystemPrompt function defensively validates that the dashboardId matches a known shape (`ide`, 6-char hex, or `dashboardN`) — if a master agent passed a made-up dashboardId, this throws rather than silently routing progress files into a wrong directory. PKI integration: reads `{projectPath}/.synapse/knowledge/manifest.json` and matches task title+description against domain_index, tag_index, concept_map; pulls top-8 relevant annotations and recent insights and injects them as a 'PKI Knowledge' block in the task prompt.",
   "exports": [
     {
       "name": "buildSystemPrompt",
       "kind": "function",
-      "signature": "({taskId, dashboardId, trackerRoot, projectPath, additionalContextDirs}) => string"
+      "signature": "buildSystemPrompt(...)"
     },
     {
       "name": "buildTaskPrompt",
       "kind": "function",
-      "signature": "({task, taskDescription, projectContexts, upstreamResults, additionalContextPaths, projectPath}) => string"
+      "signature": "buildTaskPrompt(...)"
     },
     {
       "name": "readUpstreamResults",
       "kind": "function",
-      "signature": "(dashboardId, dependsOn, trackerRoot) => [{taskId, summary, deviations}]"
-    },
-    {
-      "name": "buildReplanPrompt",
-      "kind": "function",
-      "signature": "({dashboardId, init, progress, failedTasks, completedTasks, failedInWave}) => string"
-    },
-    {
-      "name": "buildReplanSystemPrompt",
-      "kind": "function",
-      "signature": "() => string"
+      "signature": "readUpstreamResults(...)"
     },
     {
       "name": "readPKIKnowledge",
       "kind": "function",
-      "signature": "(projectPath, task) => string"
+      "signature": "readPKIKnowledge(...)"
+    },
+    {
+      "name": "readRelevantInsightsForPlanning",
+      "kind": "function",
+      "signature": "readRelevantInsightsForPlanning(...)"
+    },
+    {
+      "name": "buildReplanPrompt",
+      "kind": "function",
+      "signature": "buildReplanPrompt(...)"
+    },
+    {
+      "name": "buildReplanSystemPrompt",
+      "kind": "function",
+      "signature": "buildReplanSystemPrompt(...)"
     }
   ],
   "imports_from": {
-    "src/server/utils/constants": [
-      "ROOT"
+    "src/server/utils/constants.js": [
+      "require"
     ]
   },
   "gotchas": [
@@ -63,13 +68,10 @@
   ],
   "relationships": {
     "depends_on": [
-      "src/server/utils/constants",
-      "node:fs",
-      "node:path"
+      "src/server/utils/constants.js"
     ],
     "depended_by": [
-      "electron/services/SwarmOrchestrator.js",
-      "electron/ipc-handlers.js"
+      "electron/services/SwarmOrchestrator.js"
     ],
     "related": [
       "agent/instructions/tracker_worker_instructions.md",
@@ -91,5 +93,6 @@
     "system-prompt",
     "replan",
     "worker-protocol"
-  ]
+  ],
+  "complexity": "complex"
 }

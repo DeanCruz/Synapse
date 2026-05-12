@@ -1,8 +1,8 @@
 {
   "file": "Stop Synapse.command",
   "content_hash": "9272d575",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.404Z",
+  "annotated_by": "learn-update",
   "purpose": "End-user-friendly macOS double-clickable shutdown counterpart to `Start Synapse.command`. Same logic as stop.sh — find the SSE server PID by port and the Electron PID by pgrep, kill both — but with a banner-style header, blank-line padding for readability, and a 'Press any key to close...' final prompt so the Terminal popup window doesn't disappear before the user sees the success message.",
   "exports": [],
   "imports_from": {},
@@ -41,5 +41,6 @@
     "command-file",
     "shutdown",
     "process-management"
-  ]
+  ],
+  "complexity": "simple"
 }

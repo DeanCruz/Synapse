@@ -14,6 +14,10 @@
           },
           {
             "type": "command",
+            "command": "bash .claude/hooks/enforce-instance-type.sh"
+          },
+          {
+            "type": "command",
             "command": "bash .claude/hooks/validate-master-write.sh"
           },
           {
@@ -44,6 +48,15 @@
         ]
       },
       {
+        "matcher": "Agent",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/validate-wave-lifecycle.sh"
+          }
+        ]
+      },
+      {
         "matcher": "Bash",
         "hooks": [
           {
@@ -62,6 +75,15 @@
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/enforce-command-compliance.sh"
+          }
+        ]
+      },
       {
         "matcher": "Write",
         "hooks": [
@@ -84,6 +106,10 @@
           {
             "type": "command",
             "command": "bash .claude/hooks/validate-master-state.sh"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/validate-chat-dashboard.sh"
           }
         ]
       },

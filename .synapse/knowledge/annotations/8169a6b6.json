@@ -1,66 +1,42 @@
 {
   "file": "agent/worker/progress_reporting.md",
   "content_hash": "3a064c7b",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "The complete worker agent progress reporting protocol — the canonical reference for how worker agents in a !p_track swarm report live state to the dashboard via per-task progress files at {tracker_root}/dashboards/{dashboardId}/progress/{task_id}.json. Defines the full progress JSON schema (status, started_at/completed_at, summary, stage, message, milestones[], deviations[], logs[], files_changed[], shared_context, sibling_reads, annotations, prompt_size, template_version, dashboard_id), the seven fixed lifecycle stages (reading_context → planning → implementing → testing → finalizing → completed/failed), the eight mandatory write points, hook-enforced quality rules (log count thresholds, vague message rejection, milestone requirements), atomic write semantics (full-file overwrite, sole-writer model, write-then-rename for shell), the partial-completion protocol (80%+ done = completed not failed), the optional PKI annotations subschema, and the sibling shared_context coordination fields. This is the worker's bible.",
+  "purpose": "Agent protocol/control-plane instruction document: Worker Agent \u2014 Progress Reporting Protocol. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: **Who this is for:** Worker agents dispatched by the master agent during a `!p_track` swarm. This document is your complete reference for how to report your progress to the live dashboard. The file is 515 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "{tracker_root} and {project_root} are DIFFERENT locations — code work happens in {project_root}, progress reporting goes to {tracker_root}. Confusing the two is the most common worker failure mode.",
-    "dashboard_id must be present in every progress write and must match the directory name — the server REJECTS writes where these don't match (dashboard binding enforcement).",
-    "Workers write the FULL file every time (overwrite, not append) — they are sole writers, no read-modify-write needed. Manual echo/cat shell writes are forbidden because they don't guarantee atomicity; use the Write tool or write-then-rename.",
-    "Hooks automatically validate every write: empty logs[], log messages <20 chars, vague placeholder messages ('Starting...', 'Done'), insufficient log count for stage (planning ≥2, implementing ≥3, testing ≥4, finalizing/completed ≥5), and consecutive duplicate messages will trigger warnings.",
-    "files_changed[] is REQUIRED from the implementing stage onward — must be updated incrementally as files change, not batched at the end. Paths are relative to {project_root}, not {tracker_root}.",
-    "On completion, files_changed must match the FILES CHANGED section of the return format — mismatches break the master's downstream prompt construction.",
-    "Partial completion with 80%+ done uses status 'completed' (not 'failed') with a clear blocker summary + MODERATE deviation. Reserving 'failed' for zero-useful-output cases is a deliberate convention.",
-    "Token estimate uses Math.ceil(totalChars / 3.5) — this 3.5 ratio (mixed content) must match agent/utils/token_estimate.js to be consistent.",
-    "annotations differ from files_changed: annotations are about files the worker READ deeply (PKI material), not files modified."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Full-file atomic overwrite via the Write tool (which uses tmp-rename internally) — the only correct way to update progress files.",
-    "Fixed seven-stage lifecycle progressed in order: reading_context → planning → implementing → testing → finalizing → completed/failed.",
-    "Eight mandatory write points: initial write before work, after reading upstream deps, on every stage transition, on every deviation, on every error, on every file change, on completion, on failure.",
-    "Append-only semantics for milestones[], deviations[], logs[], files_changed[] (no removal once added).",
-    "Annotations sub-schema (gotchas/patterns/conventions per file path) intentionally mirrors PKI per-file annotation structure for clean merging.",
-    "Log levels follow strict color mapping: info=purple, warn=lime/yellow, error=red, deviation=yellow."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Timestamps via `date -u +\"%Y-%m-%dT%H:%M:%SZ\"` — never guessed.",
-    "Log entry shape: { at, level, msg }; milestone shape: { at, msg }; deviation shape: { at, severity, description }.",
-    "files_changed entry: { path, action: 'created'|'modified'|'deleted' } with paths relative to {project_root}.",
-    "template_version tracks the dispatch prompt template (e.g., 'p_track_v2') for master-side calibration.",
-    "summary field must be specific and quantified ('Created auth middleware with rate limiting — 3 endpoints'), never vague ('Done')."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
     "depends_on": [],
-    "depended_by": [
-      "agent/instructions/tracker_worker_instructions.md",
-      "agent/instructions/tracker_worker_instructions_lite.md",
-      ".claude/agents/swarm-worker.md",
-      ".claude/skills/worker-protocol"
-    ],
-    "related": [
-      "agent/worker/return_format.md",
-      "agent/worker/deviations.md",
-      "agent/worker/upstream_deps.md",
-      "agent/worker/sibling_comms.md",
-      "agent/core/data_architecture.md",
-      "agent/core/dashboard_features.md",
-      ".claude/hooks/validate-progress-file.sh"
-    ]
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "worker-protocol",
-    "progress-reporting",
-    "dashboard-integration"
+    "agent-protocol",
+    "worker"
   ],
   "tags": [
     "markdown",
-    "worker-agent",
-    "protocol",
-    "schema",
-    "non-negotiable",
-    "swarm"
-  ]
+    "agent-instructions",
+    "worker",
+    "pki",
+    "dashboard",
+    "progress",
+    "claude",
+    "sse"
+  ],
+  "complexity": "complex"
 }

@@ -1,54 +1,40 @@
 {
   "file": "agent/worker/return_format.md",
   "content_hash": "7e92e3d6",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the structured terminal return format every worker agent must emit when its task ends — the text the master parses to log the result, build downstream prompts, and harvest PKI annotations. Lists the eight return sections (STATUS, SUMMARY, FILES CHANGED, EXPORTS, ANNOTATIONS, WARNINGS, ERRORS, DIVERGENT ACTIONS), which are conditional vs always-present, and the formatting rules for each. Specifies what qualifies as an EXPORT (new public functions/types/interfaces/endpoints/constants/files for downstream tasks), what qualifies as an ANNOTATION (deeply-read source files producing gotchas/patterns/conventions), and contrasts good vs bad SUMMARY values via concrete examples. The return format is the master's primary read after worker termination — bad summaries force the master to re-read progress files (context burn).",
+  "purpose": "Agent protocol/control-plane instruction document: Worker Agent \u2014 Return Format. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: When a worker agent completes (or fails) its task, it must return a structured summary to the master agent. This return format is what the master reads to assess task outcome, log results, and construct upstream context for downstream workers. The file is 203 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
-  "gotchas": [
-    "Summary is the master's single most important read — vague summaries ('Done', 'Made the changes') force the master to re-read progress files, burning context. Always specific + quantified.",
-    "STATUS is 'completed' for partial completion (80%+) too — 'failed' is reserved for zero-useful-output. Wrong status classification skews downstream dispatch decisions.",
-    "EXPORTS section is consumed by the master to construct the UPSTREAM RESULTS section of downstream worker prompts — missing exports cause downstream workers to operate on stale assumptions.",
-    "Annotations in the return format MUST match the annotations field in the progress file — mismatches break PKI merging.",
-    "Internal helpers do NOT qualify as exports — only items downstream tasks might depend on. Bloating EXPORTS with private utilities pollutes upstream context.",
-    "The DIVERGENT ACTIONS section in the return format is parallel to deviations[] in the progress file — both must agree, severity must be tagged."
-  ],
+  "gotchas": [],
   "patterns": [
-    "Plain-text key-value sections (not JSON) with colon separators — designed for grep/eyeballing in terminal output.",
-    "Conditional sections: omit ENTIRELY if empty (no 'EXPORTS: (none)'). EXPORTS, ANNOTATIONS, WARNINGS, ERRORS, DIVERGENT ACTIONS all follow this rule.",
-    "FILES CHANGED uses action prefix per line (created, modified, deleted) and parallels progress file files_changed[].",
-    "Export entry format: '- {type: function|type|interface|endpoint|constant|file} {name} — {brief description}' — type tag is a 6-value enum.",
-    "Annotation entry format: indented file path followed by gotchas/patterns/conventions sub-lines (any combination, all optional)."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Em-dash separator in summaries to join action and qualifier.",
-    "DIVERGENT ACTIONS entries include severity in parentheses: '(severity: MODERATE)'.",
-    "Both 'completed' and 'failed' STATUS values lowercase; severity values uppercase (CRITICAL/MODERATE/MINOR)."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/worker/progress_reporting.md"
-    ],
-    "depended_by": [
-      "agent/instructions/tracker_worker_instructions.md",
-      ".claude/agents/swarm-worker.md",
-      "agent/master/worker_prompts.md"
-    ],
-    "related": [
-      "agent/worker/deviations.md",
-      "agent/master/pki_integration.md",
-      "agent/master/role.md"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "worker-protocol",
-    "return-format"
+    "agent-protocol",
+    "worker"
   ],
   "tags": [
     "markdown",
-    "worker-agent",
-    "protocol",
-    "structured-output"
-  ]
+    "agent-instructions",
+    "worker",
+    "pki",
+    "dashboard",
+    "progress",
+    "profile",
+    "sse"
+  ],
+  "complexity": "moderate"
 }

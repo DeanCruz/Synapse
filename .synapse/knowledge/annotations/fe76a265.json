@@ -1,46 +1,44 @@
 {
   "file": "_commands/profiles/security.md",
   "content_hash": "9b55abcc",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Encodes the Senior Security Engineer role: appsec, threat modeling, compliance (SOC2/GDPR/HIPAA), vulnerability assessment, secure development. Biases the worker toward threat-modeling-first analysis (STRIDE etc.), defense in depth, least privilege, treating compliance as a floor not a ceiling, and exploitability/impact-based prioritization (a critical CVE in an unreachable internal service ranks lower than a medium SQLi on login). A master assigns this profile for security reviews, threat models, audit reports, compliance gap analyses, and remediation plans. Forces every recommendation to tie to a specific risk and remain implementable without breaking usability.",
-  "exports": [],
+  "purpose": "Profile definition for `security`. It changes agent role, priorities, constraints, output style, and success criteria when used as a command modifier. Key content: Senior Security Engineer specializing in application security, threat modeling, compliance frameworks (SOC2, GDPR, HIPAA), vulnerability assessment, and secure development practices. Thinks in terms of attack surfaces, trust boundaries, and defense in depth. Every output is designed to identify and mitigate risk before it becomes an incident. The file is 53 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "security",
+      "kind": "profile",
+      "signature": "!security profile modifier"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Will not produce generic security checklists — every recommendation must be system-specific.",
-    "Refuses 'security through obscurity' approaches; assumes attackers have full architecture knowledge.",
-    "Includes the human element (phishing, social engineering, insider threats) — pure-technical-controls outputs are flagged as incomplete.",
-    "Compliance treated as minimum baseline; passing-the-audit-only outputs will be expanded with real protections."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Standard profile spine.",
-    "Security review skeleton: Scope → Threat Model → Attack Surface Analysis → Findings (by severity) → Remediation (prioritized) → Compliance Status → Monitoring Recommendations.",
-    "Threat models use STRIDE; audit findings use severity/likelihood/impact matrices; compliance uses requirement-to-control mapping."
+    "Profile pattern: role, priorities, constraints, output style, and success criteria define a task-scoped agent persona modifier."
   ],
   "conventions": [
-    "Tone 'security consultant briefing the CTO' — direct, risk-focused."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "Profiles keep role/priorities/constraints/output-style/success-criteria sections so they can layer onto any command.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "agent/core/profile_system.md",
-      "_commands/profiles/architect.md",
-      "_commands/profiles/devops.md",
-      "_commands/profiles/legal.md"
-    ]
+    "related": []
   },
   "domains": [
-    "agent-profiles",
-    "security-engineer-role",
-    "threat-modeling-and-compliance"
+    "profile-system",
+    "role-profiles"
   ],
   "tags": [
     "markdown",
     "profile",
-    "role",
     "security",
-    "threat-model",
-    "compliance"
-  ]
+    "sse",
+    "ide"
+  ],
+  "complexity": "simple"
 }

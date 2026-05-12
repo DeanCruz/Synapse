@@ -1,8 +1,8 @@
 {
   "file": "src/server/services/DependencyService.js",
   "content_hash": "b3aa1801",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.408Z",
+  "annotated_by": "learn-update",
   "purpose": "Pure-computation service for dependency-aware dispatch readiness. Does not touch filesystem directly — delegates to DashboardService for init/progress reads. Three exports: getDispatchableTasks(dashboardId) does a full scan returning every agent whose `depends_on` is fully satisfied (all deps have status==='completed') AND whose own progress file does NOT yet exist (i.e., not yet dispatched); computeNewlyUnblocked(dashboardId, completedTaskId) is the optimized incremental variant — only inspects agents whose depends_on includes the just-completed task, used by WatcherService on every progress-completion event to fire 'tasks_unblocked' SSE; getDependencyStatus(dashboardId, taskId) returns per-task aggregate {dependencies map, allSatisfied, satisfiedCount, totalCount} for inspection UI. Status resolution is strict: anything not 'completed' (including 'in_progress', 'failed', 'pending') is treated as unsatisfied.",
   "exports": [
     {
@@ -68,5 +68,6 @@
     "dependency-graph",
     "dispatch",
     "pure-function"
-  ]
+  ],
+  "complexity": "moderate"
 }

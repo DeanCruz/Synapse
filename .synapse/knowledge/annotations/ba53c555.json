@@ -1,44 +1,49 @@
 {
   "file": "documentation/server/api-reference.md",
   "content_hash": "7f2cca96",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Complete REST API reference for the Synapse SSE server: 22 endpoints (21 REST + 1 SSE) covering dashboards CRUD, statuses, initialization/logs/progress reads, dispatchable tasks, archives, history, queue, and overview. Documents path sanitization, request/response shapes, status codes, and side effects.",
+  "purpose": "Documentation page for the server area: REST API Reference. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: All API endpoints are handled by `src/server/routes/apiRoutes.js`. The server applies CORS headers to every response (see [Server Overview](./overview.md) for CORS details). The file is 790 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
-  "imports_from": [],
+  "imports_from": {},
   "gotchas": [
-    "Path params sanitized by sanitizePathParam — rejects ../, /, \\, and >100 chars",
-    "Dashboard IDs are 6-char hex (no fixed cap on count)",
-    "Save-history is idempotent; returns alreadySaved:true if file exists",
-    "Clear endpoint archives + saves history + resets — destructive"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Consistent { error: string } body for failures",
-    "200/201/204/400/404/500 status code conventions",
-    "Status derivation by scanning progress files"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "All endpoints under /api/, content-type application/json",
-    "Permissive CORS on all responses"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [
       "documentation/server/overview.md",
-      "documentation/server/services.md"
+      "documentation/server/sse-events.md"
     ],
-    "depended_by": [],
+    "depended_by": [
+      "documentation/README.md"
+    ],
     "related": [
-      "documentation/server/sse-events.md",
-      "documentation/server/configuration.md"
+      "documentation/server/overview.md",
+      "documentation/server/sse-events.md"
     ]
   },
   "domains": [
+    "documentation",
     "server"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "rest",
-    "api"
-  ]
+    "server",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "sse",
+    "git"
+  ],
+  "complexity": "complex"
 }

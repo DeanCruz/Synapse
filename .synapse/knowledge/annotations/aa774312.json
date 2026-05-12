@@ -1,0 +1,71 @@
+{
+  "file": "src/ui/shared/claude/ClaudeView.jsx",
+  "content_hash": "b8db0472",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "ClaudeView is shared Claude/Codex chat UI for the code surface. It handles agent conversation state, attachments, worker output/status events, and provider-aware controls while keeping chat-side and code-side state slices separate.",
+  "exports": [
+    {
+      "name": "ClaudeView",
+      "kind": "component",
+      "signature": "default function ClaudeView(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch",
+      "getClaudeSlice"
+    ],
+    "src/ui/utils/markdown": [
+      "renderMarkdown",
+      "linkifyFilePaths"
+    ],
+    "src/ui/utils/dashboardProjects": [
+      "getDashboardProject",
+      "getDashboardAdditionalContext"
+    ],
+    "src/ui/shared/modals/PermissionModal": [
+      "PermissionModal"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/shared/modals/PermissionModal",
+      "src/ui/utils/dashboardProjects",
+      "src/ui/utils/markdown"
+    ],
+    "depended_by": [
+      "src/ui/pages/chat/components/ChatInstanceView.jsx",
+      "src/ui/shared/claude/ClaudeFloatingPanel.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-ui",
+    "in-app-guide",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "guide",
+    "swarm"
+  ],
+  "complexity": "complex"
+}

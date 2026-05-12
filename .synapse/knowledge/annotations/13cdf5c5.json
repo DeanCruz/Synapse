@@ -1,44 +1,40 @@
 {
   "file": "documentation/final_reports/04-18-2026_updates.md",
   "content_hash": "37011cb0",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Final report from the synapse-doc-audit swarm (dashboard 1f36a3) on 2026-04-18. Documents a comprehensive 2-wave/7-task documentation audit across five layers (Electron, Server, UI, Agent/Commands, Documentation Gaps). Reports findings (stale counts, missing services like AutoUpdateService, undocumented endpoints, incomplete component inventories, missing !instrument and p_track_plan docs, complete absence of troubleshooting), corrections applied (12 modified, 2 created files), remaining gaps (testing, performance, migration, ADRs), and recommendations.",
+  "purpose": "Documentation page for the final_reports area: Synapse Documentation Audit Report. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: **Date:** 2026-04-18 **Swarm:** synapse-doc-audit **Dashboard:** 1f36a3 The file is 262 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Stale count drift was the most common finding -- automated CI checks recommended",
-    "Three CLAUDE.md tasks ran in parallel -- holistic review needed to prevent merge conflicts",
-    "AutoUpdateService gap existed because service was added without doc update"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Two-phase audit: pre-planning research across 5 layers, then targeted corrections in 7 tasks/2 waves",
-    "Wave 1 parallel (5 audit tasks), Wave 2 dependent (CLAUDE.md consolidation + final report)"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Task IDs follow {wave}.{index} format (1.1-1.5, 2.1-2.2)",
-    "Each finding documents Item / Before / After in tables",
-    "Final report covers Executive Summary, Methodology, Findings, Change Log, Remaining Gaps, Recommendations, Swarm Metadata"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
     "depends_on": [],
     "depended_by": [],
-    "related": [
-      "documentation/troubleshooting/common-issues.md",
-      "documentation/troubleshooting/faq.md",
-      "documentation/electron/",
-      "documentation/server/",
-      "CLAUDE.md"
-    ]
+    "related": []
   },
   "domains": [
-    "release-notes"
+    "documentation",
+    "final_reports"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "audit-report",
-    "swarm-output",
-    "doc-drift"
-  ]
+    "final-reports",
+    "pki",
+    "dashboard",
+    "progress",
+    "guide",
+    "profile"
+  ],
+  "complexity": "moderate"
 }

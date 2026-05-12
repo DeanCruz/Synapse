@@ -1,43 +1,46 @@
 {
   "file": "_commands/project/profiles.md",
   "content_hash": "18e277f9",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the !profiles slash command — scans {tracker_root}/_commands/profiles/ for all .md files, extracts profile name (filename minus .md), role title (from ## Role heading or first line), and one-line summary, then renders a sorted table with Profile/Role/Best Used For columns. Includes usage reminder showing composition syntax: !{profile} {prompt}, !{profile} !{command} {prompt}, !{profile} !p {prompt}, !{profile} !p_track {prompt} (profiles compose with commands). Always scans live — never hardcode profile list. Reports 'No profiles found. Create one with: create a new profile called {name}' if directory empty/missing.",
-  "exports": [],
+  "purpose": "Command specification for `!profiles`. It defines invocation syntax, resolution assumptions, dashboard/project context, required reads and writes, and success behavior for agents executing this command. Key content: Display a formatted table of all available agent profiles, their roles, and when to use them. The file is 36 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [
+    {
+      "name": "!profiles",
+      "kind": "command",
+      "signature": "!profiles"
+    }
+  ],
   "imports_from": {},
   "gotchas": [
-    "Always scan _commands/profiles/ LIVE — never hardcode the profile list. New profiles must surface automatically.",
-    "Read EACH profile file to extract accurate role/usage info — do not guess from filenames alone.",
-    "Profiles compose with commands via !{profile} !{command} syntax — output reminder must include this.",
-    "Empty/missing directory: emit specific guidance message rather than silent failure."
+    "Command files are executable specs: agents must read the whole file and follow it exactly; changing a command doc changes runtime behavior for future command invocations."
   ],
   "patterns": [
-    "Filesystem-driven discovery.",
-    "Composition syntax shown in output."
+    "Command-spec pattern: title names the bang command, followed by syntax, phase/step procedures, required dashboard/project reads, and final reporting expectations.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Alphabetical sort by profile name.",
-    "Three-column table format: Profile / Role / Best Used For."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Command names are written with leading `!` and placeholders use `{name}` braces for runtime paths or arguments.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "_commands/profiles/"
-    ],
+    "depends_on": [],
     "depended_by": [],
-    "related": [
-      "_commands/project/commands.md"
-    ]
+    "related": []
   },
   "domains": [
-    "command-discovery",
-    "profile-system"
+    "command-system",
+    "project"
   ],
   "tags": [
     "markdown",
     "command-doc",
-    "project-workflow",
+    "slash-command",
     "profiles",
-    "discovery"
-  ]
+    "project-command",
+    "profile"
+  ],
+  "complexity": "simple"
 }

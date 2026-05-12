@@ -1,48 +1,59 @@
 {
   "file": "documentation/configuration/overview.md",
   "content_hash": "c97c1733",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "High-level overview of Synapse's layered configuration system across three runtime contexts: Node.js SSE server, Electron desktop shell, and Vite-built React frontend. Documents the five configuration layers (server constants, Electron settings, build config, CSS design tokens, project config), how configuration loads at server/Electron/frontend startup, configuration precedence rules for port/settings/project path, key files at-a-glance table, and minimal environment variable usage (PORT, ELECTRON_RUN_AS_NODE).",
+  "purpose": "Documentation page for the configuration area: Configuration Overview. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Synapse has a layered configuration system split across three runtime contexts: the **Node.js SSE server**, the **Electron desktop shell**, and the **Vite-built React frontend**. Each layer has its own configuration source, defaults, and override mechanism. The file is 106 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Server timing constants are hardcoded -- only PORT is overridable via env var",
-    "No .env file is used -- server runs with zero configuration",
-    "Electron settings store accepts unknown keys for extensibility (not schema-locked)",
-    "Project path priority: --project flag > .synapse/project.json > CWD"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Layer separation: server / electron / build / CSS / project config",
-    "Defaults-first with override layer (env var, persisted JSON, runtime arg)"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Persisted-value-overlaid-on-defaults precedence",
-    "Single-file constants for server-side config",
-    "JSON-backed settings store for Electron"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
+    "depends_on": [
+      "documentation/configuration/server-config.md",
+      "documentation/configuration/electron-config.md",
+      "documentation/configuration/theming.md"
+    ],
     "depended_by": [
+      "documentation/README.md",
+      "documentation/architecture/directory-structure.md",
       "documentation/configuration/electron-config.md",
       "documentation/configuration/server-config.md",
+      "documentation/configuration/settings.md",
       "documentation/configuration/theming.md"
     ],
     "related": [
-      "src/server/utils/constants.js",
-      "electron/settings.js",
-      "vite.config.js",
-      "package.json"
+      "documentation/configuration/electron-config.md",
+      "documentation/configuration/hooks.md",
+      "documentation/configuration/server-config.md",
+      "documentation/configuration/settings.md",
+      "documentation/configuration/skills.md",
+      "documentation/configuration/theming.md"
     ]
   },
   "domains": [
-    "configuration-docs"
+    "documentation",
+    "configuration"
   ],
   "tags": [
     "markdown",
     "documentation",
     "configuration",
-    "overview",
-    "layers"
-  ]
+    "dashboard",
+    "electron",
+    "react",
+    "ipc",
+    "sse"
+  ],
+  "complexity": "moderate"
 }

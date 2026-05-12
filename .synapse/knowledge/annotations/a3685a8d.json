@@ -1,59 +1,43 @@
 {
   "file": "agent/core/project_discovery.md",
-  "content_hash": "a0e13c90",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "cf26f4c3",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Defines the master agent's context-efficiency discipline — the eleven principles for gathering project context with minimal reads while preserving context window space for reasoning. Covers Glob/Grep first (zero-token cost, always current), CLAUDE.md for orientation, project TOC for semantic discovery, read-with-purpose, parallel reads, targeted line ranges, cache awareness post-compaction, summarize-don't-hoard, ~8000-token worker prompt budget, filtered convention injection, and sibling communication for context savings. Also documents the {project_root}/.synapse/ project metadata directory (toc.md, config.json, fingerprints.json, dep_graph.json) and includes the canonical Synapse directory structure.",
+  "purpose": "Agent protocol/control-plane instruction document: Project Discovery and Context Gathering. It provides reusable procedure details for masters or workers and is referenced by command specs and Claude skills. Key content: This module defines how the master agent discovers project context efficiently, the principles governing context usage, the project `.synapse/` directory structure for project-scoped metadata, and the full Synapse directory structure. The file is 182 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Glob/Grep cost ZERO context tokens and are always current — use them BEFORE reaching for the TOC. Reaching for TOC first when filenames reveal purpose wastes tokens.",
-    "After context compaction, the agent loses file contents from earlier reads — re-read critical files rather than working from stale memory.",
-    "Worker prompt budget is ~8000 tokens TOTAL — bloated prompts are the primary cause of worker context exhaustion. Filter conventions by relevance: a backend worker doesn't need frontend styling conventions.",
-    "For large CLAUDE.md (500+ lines), always SUMMARIZE rather than quote when injecting into worker prompts.",
-    "Sibling shared_context can substitute for redundant file reads — workers in the same wave can read each other's progress files instead of re-reading source files a peer already processed.",
-    "Reading 'just in case' is wasteful — every read should have a known expected outcome before invoking it.",
-    "{project_root}/.synapse/ is OPTIONAL — Synapse works without it but is more context-efficient when it exists. The directory should be added to project's .gitignore."
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files.",
+    "Guide description may be narrow: `!guide` remains a command-decision aid, but the app also exposes an in-app markdown Guide modal backed by documentation/guide via GuideService and IPC."
   ],
   "patterns": [
-    "Discovery hierarchy: Glob/Grep > CLAUDE.md > TOC > full file reads — escalate only when needed.",
-    "Parallel multi-file reads: never read files sequentially when they have no dependency on each other.",
-    "Targeted line ranges via offset for large files — read the section you need, not the whole file.",
-    "Worker prompt section budgeting: split into description/context/conventions/upstream results/instructions, estimate each, split task or summarize if total exceeds 8000 tokens.",
-    "Sibling-context substitution: prefer reading sibling shared_context over re-reading the same source files."
+    "Protocol-module pattern: focused markdown files decompose master/worker behavior into reusable instructions referenced by command files and skills.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "{project_root}/.synapse/ contents: toc.md (semantic index), config.json (project-Synapse config), fingerprints.json (semantic fingerprints from !toc_generate), dep_graph.json (file-level deps).",
-    "Worker prompt token budget: ~8000 tokens.",
-    "TOC generation threshold: consider !toc_generate for projects with 500+ files."
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [
-      "agent/core/path_convention.md"
-    ],
-    "depended_by": [
-      "CLAUDE.md",
-      "agent/instructions/tracker_master_instructions.md",
-      "agent/master/role.md",
-      "agent/master/worker_prompts.md"
-    ],
-    "related": [
-      "agent/utils/token_estimate.js",
-      "_commands/project/toc_generate.md",
-      "_commands/project/learn.md",
-      "_commands/project/context.md"
-    ]
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
   },
   "domains": [
-    "core-conventions",
-    "project-discovery",
-    "context-efficiency"
+    "agent-protocol",
+    "core"
   ],
   "tags": [
     "markdown",
+    "agent-instructions",
     "core",
-    "discovery",
-    "context-management",
-    "master-agent"
-  ]
+    "pki",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide"
+  ],
+  "complexity": "moderate"
 }

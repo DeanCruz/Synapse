@@ -1,8 +1,8 @@
 {
   "file": "electron/services/PreviewService.js",
   "content_hash": "2beca093",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.406Z",
+  "annotated_by": "learn-update",
   "purpose": "Builds the reverse map for the Live Preview tab: scans a project's JSX/TSX/HTML files for `data-synapse-label=\"...\"` attributes and produces `{ [label]: { file, line, text } }`. Used by the Preview overlay to resolve a clicked element to its source file location and current text. Caches the map in-memory keyed by projectPath and invalidates when any tracked file's mtime changes or when new files appear.",
   "exports": [
     {
@@ -66,5 +66,6 @@
     "data-synapse-label",
     "label-map",
     "mtime-cache"
-  ]
+  ],
+  "complexity": "complex"
 }

@@ -24,6 +24,25 @@ function StatusBadge({ status }) {
   );
 }
 
+function formatDeviationText(dev) {
+  if (typeof dev === 'string') return dev;
+  if (!dev || typeof dev !== 'object') return '';
+
+  const text = dev.description || dev.msg || dev.message || dev.summary || dev.reason || dev.details;
+  if (text) return String(text);
+
+  try {
+    return JSON.stringify(dev);
+  } catch {
+    return '';
+  }
+}
+
+function formatDeviationSeverity(dev) {
+  if (!dev || typeof dev !== 'object' || !dev.severity) return null;
+  return String(dev.severity);
+}
+
 export default function AgentDetails({ onClose, agent, progressData, findAgentFn, projectRoot }) {
   const logsBoxRef = useRef(null);
   const dispatch = useDispatch();
@@ -39,7 +58,11 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
   // Merge lifecycle data from progress file into agent
   const merged = { ...agent, ...(agentProg || {}) };
 
-  const filesChanged = (agentProg && agentProg.files_changed) || merged.files_changed || [];
+  const filesChanged = Array.isArray(agentProg?.files_changed)
+    ? agentProg.files_changed
+    : Array.isArray(merged.files_changed)
+      ? merged.files_changed
+      : [];
 
   function handleFileClick(file) {
     dispatch({
@@ -67,7 +90,7 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
     );
   }
 
-  const deps = agent.depends_on || [];
+  const deps = Array.isArray(agent.depends_on) ? agent.depends_on : [];
 
   // Live-updating duration for in-progress tasks
   const isRunning = merged.started_at && !merged.completed_at;
@@ -193,7 +216,7 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
             {metaItem('Started', merged.started_at ? formatTime(merged.started_at) : null)}
             {metaItem('Completed', merged.completed_at ? formatTime(merged.completed_at) : null)}
             {metaItem('Duration', durationStr)}
-            {metaItem('Status', merged.status ? merged.status.replace(/_/g, ' ') : null)}
+            {metaItem('Status', typeof merged.status === 'string' ? merged.status.replace(/_/g, ' ') : null)}
           </div>
         )}
 
@@ -230,7 +253,7 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
         {/* Live progress (stage + message) */}
         {merged.status === 'in_progress' && (merged.stage || merged.message) && (
           <div className="agent-details-progress">
-            {merged.stage && (
+            {typeof merged.stage === 'string' && (
               <span className="agent-details-stage">
                 {merged.stage.replace(/_/g, ' ')}
               </span>
@@ -242,7 +265,7 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
         )}
 
         {/* Milestones */}
-        {agentProg && agentProg.milestones && agentProg.milestones.length > 0 && (
+        {agentProg && Array.isArray(agentProg.milestones) && agentProg.milestones.length > 0 && (
           <div className="agent-milestones">
             <span className="agent-milestones-label">Milestones</span>
             {agentProg.milestones.map((ms, i) => (
@@ -255,22 +278,30 @@ export default function AgentDetails({ onClose, agent, progressData, findAgentFn
         )}
 
         {/* Deviations */}
-        {agentProg && agentProg.deviations && agentProg.deviations.length > 0 && (
+        {agentProg && Array.isArray(agentProg.deviations) && agentProg.deviations.length > 0 && (
           <div className="agent-deviations">
             <span className="agent-deviations-label">⚠ Deviations from Plan</span>
-            {agentProg.deviations.map((dev, i) => (
-              <div key={i} className="agent-deviation-item">
-                {dev.at && (
-                  <span className="agent-deviation-time">{formatTime(dev.at)}</span>
-                )}
-                {dev.description || ''}
-              </div>
-            ))}
+            {agentProg.deviations.map((dev, i) => {
+              const text = formatDeviationText(dev);
+              const severity = formatDeviationSeverity(dev);
+
+              return (
+                <div key={i} className="agent-deviation-item">
+                  {dev?.at && (
+                    <span className="agent-deviation-time">{formatTime(dev.at)}</span>
+                  )}
+                  {severity && (
+                    <span className="agent-deviation-severity">[{severity}]</span>
+                  )}
+                  {text || 'Deviation reported without details'}
+                </div>
+              );
+            })}
           </div>
         )}
 
         {/* Activity log */}
-        {agentProg && agentProg.logs && agentProg.logs.length > 0 && (
+        {agentProg && Array.isArray(agentProg.logs) && agentProg.logs.length > 0 && (
           <div className="agent-logs-section">
             <span className="agent-logs-label">Activity Log</span>
             <div className="agent-logs-box" ref={logsBoxRef}>

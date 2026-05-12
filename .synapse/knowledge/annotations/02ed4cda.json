@@ -1,0 +1,67 @@
+{
+  "file": "src/ui/pages/code/subpages/preview/PreviewPage.jsx",
+  "content_hash": "7bd5d73c",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "PreviewPage participates in the preview workspace. It coordinates the Electron-backed web preview, injected overlay edit requests, and preview state so users can inspect or interact with a running target app from the Synapse code surface.",
+  "exports": [
+    {
+      "name": "PreviewPage",
+      "kind": "component",
+      "signature": "default function PreviewPage(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/utils/dashboardProjects": [
+      "getDashboardProject",
+      "saveDashboardProject"
+    ],
+    "src/ui/pages/code/subpages/preview/inject-overlay.js?raw": [
+      "OVERLAY_SCRIPT_RAW"
+    ]
+  },
+  "gotchas": [
+    "Preview features rely on Electron services and injected overlay messaging; renderer code must tolerate unavailable preview sessions."
+  ],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/pages/code/subpages/preview/inject-overlay.js?raw",
+      "src/ui/utils/dashboardProjects"
+    ],
+    "depended_by": [
+      "src/ui/pages/code/CodePage.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-ui",
+    "preview-workspace",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "preview",
+    "swarm"
+  ],
+  "complexity": "complex"
+}

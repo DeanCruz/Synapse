@@ -1,35 +1,57 @@
 {
   "file": "documentation/master-agent/planning.md",
-  "content_hash": "d7890753",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "7df6eef8",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Specifies the planning phase the master executes before any swarm runs: deep-thinking analysis, task decomposition, dependency graph construction, wave/chain layout choice, and writing the canonical plan.json before initialization.json. Includes guidance on right-sizing tasks (1-5 minute scope) and resolving shared-file conflicts via Pattern A/B/C.",
+  "purpose": "Documentation page for the master-agent area: Master Agent \u2014 Planning Protocol. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Planning is where the master agent earns its value. A well-planned swarm executes fast with zero confusion. A poorly-planned swarm produces broken code, conflicting edits, and wasted cycles. This document covers the complete planning protocol: task decomposition, dependency mapping, wave grouping, prompt writing, and dashboard population. The file is 380 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "plan.json must exist before initialization.json -- it is the canonical planning artifact",
-    "Shared file ownership across tasks is the #1 cause of swarm bottlenecks; prefer Pattern C (separate files)"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Waves for phase-grouping, chains for linear deps, hybrid for most real swarms",
-    "Pattern A/B/C decision tree for shared-file conflict resolution"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses explicit NON-NEGOTIABLE language to encode hard behavioral constraints for agents.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Tasks described in 2-3 sentences max; longer descriptions indicate over-large tasks"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "agent/master/worker_prompts.md",
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/statusing.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/statusing.md"
+    ],
+    "related": [
+      "agent/master/worker_prompts.md",
+      "documentation/master-agent/dispatch-protocol.md",
+      "documentation/master-agent/overview.md",
+      "documentation/master-agent/statusing.md"
+    ]
   },
   "domains": [
-    "master-agent",
-    "planning"
+    "documentation",
+    "master-agent"
   ],
   "tags": [
-    "planning",
-    "decomposition",
-    "waves",
-    "chains"
-  ]
+    "markdown",
+    "documentation",
+    "master-agent",
+    "pki",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide"
+  ],
+  "complexity": "complex"
 }

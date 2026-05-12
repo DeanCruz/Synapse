@@ -51,8 +51,8 @@ export default function Header() {
     dispatch({ type: 'OPEN_MODAL', modal: 'archive' });
   }
 
-  function handleHistory() {
-    dispatch({ type: 'SET_VIEW', view: 'dashboard' });
+  function handleGuide() {
+    dispatch({ type: 'OPEN_MODAL', modal: 'guide' });
   }
 
   function handleCommands() {
@@ -109,9 +109,9 @@ export default function Header() {
         )}
       </div>
 
-      {/* Right — archive, history, swarm controls, active badge */}
+      {/* Right — archive, guide, swarm controls, active badge */}
       <div className="header-right">
-        {/* Archive + History button group */}
+        {/* Archive + Guide button group */}
         <div className="header-btn-group">
           <div className="archive-dropdown-wrap" ref={archiveRef}>
             <button
@@ -140,16 +140,16 @@ export default function Header() {
           </div>
 
           <button
-            className="header-action-btn"
-            title="History"
-            aria-label="View task history"
-            onClick={handleHistory}
+            className="header-action-btn header-guide-btn"
+            title="Guide"
+            aria-label="Open user guide"
+            onClick={handleGuide}
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.2"/>
-              <path d="M8 4.5V8l2.5 1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+              <path d="M3 3.5h3.5A2.5 2.5 0 019 6v7a2.5 2.5 0 00-2.5-2.5H3v-7z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+              <path d="M13 3.5H9.5A2.5 2.5 0 007 6v7a2.5 2.5 0 012.5-2.5H13v-7z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
             </svg>
-            <span>History</span>
+            <span>Guide</span>
           </button>
 
           {/* Export button hidden for now */}

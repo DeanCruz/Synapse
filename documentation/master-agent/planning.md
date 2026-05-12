@@ -36,7 +36,7 @@ Before anything else, the master resolves `{project_root}` using the standard re
 Once resolved, read:
 
 - `{project_root}/CLAUDE.md` for conventions, architecture, and constraints.
-- `{project_root}/.synapse/toc.md` (if it exists) for semantic orientation.
+- `{project_root}/.synapse/knowledge/` (if it exists) for semantic orientation.
 - Any sub-directory CLAUDE.md files if the task touches specific sub-projects.
 
 If no `CLAUDE.md` exists, scan the project structure to understand the codebase layout.
@@ -306,7 +306,7 @@ Create `{tracker_root}/tasks/{MM_DD_YY}/parallel_{task_name}.json` containing:
 - **Waves** -- Each wave contains task entries with: ID, title, description, directory, dependencies, context, critical details, tags, file lists, status fields, and logs.
 - **Dependency chains** -- Every path from root tasks (no dependencies) to terminal tasks (nothing depends on them).
 
-The task file is the authoritative task record. All agents read from it. The master updates it on every completion.
+`dashboards/{dashboardId}/plan.json` is the canonical current task spec. All tracked workers read from it before implementation. Companion task files under `tasks/{date}/parallel_{name}.json` may be produced for history and CLI compatibility, but progress files remain authoritative for lifecycle state.
 
 ### Task Status Lifecycle (in the task file)
 

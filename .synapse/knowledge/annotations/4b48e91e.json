@@ -1,50 +1,58 @@
 {
   "file": "documentation/project-integration/conventions.md",
-  "content_hash": "1ea4c165",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "8e922ff3",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Reference for the two project-level artifacts Synapse uses: the CLAUDE.md project convention file and the .synapse/ metadata directory. Covers CLAUDE.md purpose/structure/quality guidance/creation methods (!scaffold, !initialize, manual), the .synapse/ directory contents (config.json with monorepo support, toc.md, knowledge/), version control recommendations, project _commands/ resolution hierarchy, context gathering priorities, and CLAUDE.md's impact on swarm quality.",
+  "purpose": "Documentation page for the project-integration area: CLAUDE.md and .synapse/ Directory Conventions. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: Synapse uses two project-level artifacts to understand and work with a target project: the **CLAUDE.md** file (project conventions and architecture) and the **`.synapse/` directory** (Synapse-specific metadata). This document covers what each contains, how they are created, and best practices for maintaining them. The file is 438 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "Synapse NEVER overwrites existing CLAUDE.md (use --force to override)",
-    "CLAUDE.md should be committed; .synapse/ should be gitignored",
-    ".synapse/ contains absolute paths -- machine-local, not portable",
-    "Project _commands/ have lowest priority -- cannot override built-in Synapse commands",
-    "Monorepo field is explicit null (not omitted) for non-monorepo projects"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Specificity over vagueness: 'TypeScript 5.x with strict mode, no any' vs 'we use TypeScript'",
-    "Patterns over descriptions: explain how to create new code, not just what exists",
-    "Idempotent !initialize: skips existing files, never overwrites",
-    "Eight-priority context gathering: glob/grep first, parallel reads, targeted ranges"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Recommended CLAUDE.md sections: Tech Stack, Architecture, File Structure, Conventions, Commands, Environment",
-    "Monorepo detection types: npm_workspaces, pnpm, lerna, nx, turbo, cargo, go",
-    "Add .synapse/ to .gitignore"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/project-integration/overview.md"
-    ],
-    "depended_by": [],
-    "related": [
-      "documentation/project-integration/toc-system.md",
       "documentation/project-integration/pki-overview.md",
       "documentation/project-integration/project-setup.md",
-      "_commands/project/scaffold.md",
-      "_commands/project/initialize.md"
+      "documentation/project-integration/toc-system.md",
+      "documentation/project-integration/overview.md",
+      "documentation/multi-dashboard/overview.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/project-integration/overview.md",
+      "documentation/project-integration/project-setup.md"
+    ],
+    "related": [
+      "documentation/multi-dashboard/overview.md",
+      "documentation/project-integration/overview.md",
+      "documentation/project-integration/pki-overview.md",
+      "documentation/project-integration/project-setup.md",
+      "documentation/project-integration/toc-system.md"
     ]
   },
   "domains": [
-    "project-integration-docs"
+    "documentation",
+    "project-integration"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "claude-md",
-    "synapse-directory",
-    "conventions"
-  ]
+    "project-integration",
+    "pki",
+    "dashboard",
+    "guide",
+    "claude",
+    "react"
+  ],
+  "complexity": "complex"
 }

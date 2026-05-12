@@ -1,0 +1,63 @@
+{
+  "file": "src/ui/pages/code/components/CodeSidebar.jsx",
+  "content_hash": "77ca6c7b",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "CodeSidebar is a runtime UI module in the Synapse desktop app. It contributes to the current page/shared component structure and should be maintained with the surrounding AppContext, Electron IPC, and CSS class conventions.",
+  "exports": [
+    {
+      "name": "CodeSidebar",
+      "kind": "component",
+      "signature": "default function CodeSidebar(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState",
+      "useDispatch"
+    ],
+    "src/ui/utils/constants": [
+      "getDashboardLabel"
+    ],
+    "src/ui/utils/dashboardProjects": [
+      "getDashboardProject",
+      "saveDashboardProject"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Page-directory organization separates high-level page shells from nested component, style, and index modules."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/utils/constants",
+      "src/ui/utils/dashboardProjects"
+    ],
+    "depended_by": [
+      "src/ui/pages/code/CodePage.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-ui",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "swarm"
+  ],
+  "complexity": "complex"
+}

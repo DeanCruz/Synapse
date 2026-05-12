@@ -1,34 +1,57 @@
 {
   "file": "documentation/architecture/directory-structure.md",
-  "content_hash": "adfd9183",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "c87e0768",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Complete reference for the Synapse repository's directory layout, listing every top-level directory and explaining what each contains -- _commands/, agent/, electron/, src/server/, src/ui/, dashboards/, Archive/, history/, queue/, conversations/, documentation/, etc. Serves as the authoritative map any agent or developer can use to locate code by responsibility.",
+  "purpose": "Documentation page for the architecture area: Synapse Directory Structure. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: This document provides a complete reference for every directory and file in the Synapse repository, with explanations of each component's role in the system. The file is 584 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "tasks/{date}/ is legacy -- planning artifacts now live in dashboards/{id}/plan.json",
-    "Some hook/skill names in CLAUDE.md must be cross-referenced here; mismatches indicate one is stale"
+    "Legacy task-record reference: this file mentions tasks/{date}/parallel_* artifacts; current p_track planning context is canonical in dashboards/{dashboardId}/plan.json, with lifecycle state in progress files.",
+    "Guide description may be narrow: `!guide` remains a command-decision aid, but the app also exposes an in-app markdown Guide modal backed by documentation/guide via GuideService and IPC."
   ],
   "patterns": [
-    "Hierarchical directory map with one-line purpose annotations"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Forward-slash paths relative to {tracker_root}",
-    "Tree-style indented listings with connector characters"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
   ],
   "relationships": {
-    "depends_on": [],
-    "depended_by": [],
-    "related": []
+    "depends_on": [
+      "documentation/chat/overview.md",
+      "documentation/configuration/overview.md",
+      "documentation/configuration/hooks.md",
+      "documentation/configuration/skills.md",
+      "documentation/configuration/settings.md"
+    ],
+    "depended_by": [
+      "documentation/README.md"
+    ],
+    "related": [
+      "documentation/architecture/overview.md",
+      "documentation/chat/overview.md",
+      "documentation/configuration/hooks.md",
+      "documentation/configuration/overview.md",
+      "documentation/configuration/settings.md",
+      "documentation/configuration/skills.md"
+    ]
   },
   "domains": [
-    "architecture",
-    "documentation"
+    "documentation",
+    "architecture"
   ],
   "tags": [
-    "directory-tree",
-    "reference",
-    "layout"
-  ]
+    "markdown",
+    "documentation",
+    "architecture",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide",
+    "profile"
+  ],
+  "complexity": "complex"
 }

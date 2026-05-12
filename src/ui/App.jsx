@@ -14,6 +14,7 @@ import PlanningModal from '@/shared/modals/PlanningModal.jsx';
 import SettingsModal from '@/shared/modals/SettingsModal.jsx';
 import LogsModal from '@/shared/modals/LogsModal.jsx';
 import ArchiveModal from '@/shared/modals/ArchiveModal.jsx';
+import GuideModal from '@/shared/modals/GuideModal.jsx';
 
 import ChatPage from '@/pages/chat/ChatPage.jsx';
 import CodePage from '@/pages/code/CodePage.jsx';
@@ -113,6 +114,9 @@ export default function App() {
       )}
       {activeModal === 'archive' && (
         <ArchiveModal onClose={closeModal} />
+      )}
+      {activeModal === 'guide' && (
+        <GuideModal onClose={closeModal} />
       )}
     </>
   );

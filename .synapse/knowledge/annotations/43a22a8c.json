@@ -1,64 +1,69 @@
 {
   "file": "src/ui/utils/dashboardProjects.js",
-  "content_hash": "299f06f5",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "30de9ab7",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "Per-dashboard project-path and per-dashboard additional-context-directory mappings persisted to localStorage with optional async sync to disk via window.electronAPI.saveAdditionalContext / getAdditionalContext. Each dashboard is bound to a target project (the {project_root} for that swarm) and may also have additional context dirs (extra read-only roots given to workers). The disk-sync layer (loadDashboardAdditionalContextFromDisk / loadAllDashboardAdditionalContextFromDisk) merges localStorage with disk-persisted data so dirs survive a localStorage clear.",
   "exports": [
     {
       "name": "getAllDashboardProjects",
       "kind": "function",
-      "signature": "() => { [dashboardId]: projectPath }"
+      "signature": "function getAllDashboardProjects(...)"
     },
     {
       "name": "getDashboardProject",
       "kind": "function",
-      "signature": "(dashboardId) => string|null"
+      "signature": "function getDashboardProject(...)"
     },
     {
       "name": "saveDashboardProject",
       "kind": "function",
-      "signature": "(dashboardId, projectPath) => void"
+      "signature": "function saveDashboardProject(...)"
     },
     {
       "name": "clearDashboardProject",
       "kind": "function",
-      "signature": "(dashboardId) => void"
+      "signature": "function clearDashboardProject(...)"
+    },
+    {
+      "name": "getDashboardActiveRepo",
+      "kind": "function",
+      "signature": "function getDashboardActiveRepo(...)"
+    },
+    {
+      "name": "saveDashboardActiveRepo",
+      "kind": "function",
+      "signature": "function saveDashboardActiveRepo(...)"
+    },
+    {
+      "name": "clearDashboardActiveRepo",
+      "kind": "function",
+      "signature": "function clearDashboardActiveRepo(...)"
     },
     {
       "name": "getAllDashboardAdditionalContext",
       "kind": "function",
-      "signature": "() => { [dashboardId]: string[] }"
+      "signature": "function getAllDashboardAdditionalContext(...)"
     },
     {
       "name": "getDashboardAdditionalContext",
       "kind": "function",
-      "signature": "(dashboardId) => string[]"
+      "signature": "function getDashboardAdditionalContext(...)"
     },
     {
       "name": "saveDashboardAdditionalContext",
       "kind": "function",
-      "signature": "(dashboardId, dirs) => void"
+      "signature": "function saveDashboardAdditionalContext(...)"
     },
     {
       "name": "addDashboardAdditionalContext",
       "kind": "function",
-      "signature": "(dashboardId, dirPath) => void"
+      "signature": "function addDashboardAdditionalContext(...)"
     },
     {
       "name": "removeDashboardAdditionalContext",
       "kind": "function",
-      "signature": "(dashboardId, dirPath) => void"
-    },
-    {
-      "name": "loadDashboardAdditionalContextFromDisk",
-      "kind": "function",
-      "signature": "async (dashboardId) => void"
-    },
-    {
-      "name": "loadAllDashboardAdditionalContextFromDisk",
-      "kind": "function",
-      "signature": "async () => void"
+      "signature": "function removeDashboardAdditionalContext(...)"
     }
   ],
   "imports_from": {},
@@ -79,14 +84,23 @@
     "Try/catch around localStorage on read; quota errors swallowed on write."
   ],
   "relationships": {
-    "depends_on": [
-      "window.electronAPI.saveAdditionalContext / getAdditionalContext"
-    ],
+    "depends_on": [],
     "depended_by": [
-      "src/ui/App.jsx",
-      "src/ui/components/modals/ProjectModal.jsx",
-      "src/ui/components/Sidebar.jsx",
-      "src/ui/components/HomeView.jsx"
+      "src/ui/pages/chat/ChatPage.jsx",
+      "src/ui/pages/chat/components/ChatDashboardView.jsx",
+      "src/ui/pages/chat/components/ChatSidebar.jsx",
+      "src/ui/pages/code/components/CodeSidebar.jsx",
+      "src/ui/pages/code/subpages/code-explorer/CodeExplorerPage.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/FileExplorer.jsx",
+      "src/ui/pages/code/subpages/code-explorer/components/SearchPanel.jsx",
+      "src/ui/pages/code/subpages/dashboards/DashboardsPage.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/BottomPanel.jsx",
+      "src/ui/pages/code/subpages/git/GitPage.jsx",
+      "src/ui/pages/code/subpages/preview/PreviewPage.jsx",
+      "src/ui/shared/claude/ClaudeFloatingPanel.jsx",
+      "src/ui/shared/claude/ClaudeView.jsx",
+      "src/ui/shared/modals/PlanningModal.jsx",
+      "src/ui/shared/modals/ProjectModal.jsx"
     ],
     "related": [
       "electron/services/ProjectService.js"
@@ -102,5 +116,6 @@
     "localStorage",
     "ipc-sync",
     "dashboard-config"
-  ]
+  ],
+  "complexity": "moderate"
 }

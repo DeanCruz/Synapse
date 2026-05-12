@@ -1,8 +1,8 @@
 {
   "file": "electron/services/AutoUpdateService.js",
   "content_hash": "a25dbaa5",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "annotated_at": "2026-05-11T01:56:57.405Z",
+  "annotated_by": "learn-update",
   "purpose": "Wraps electron-updater into a single-state-machine service that powers the in-app auto-update UI. Subscribes to autoUpdater lifecycle events (checking-for-update, update-available, download-progress, update-downloaded, error), keeps a single shared `state` object, and pushes snapshots to the renderer via the injected `broadcast('update-status', snapshot)` channel. Auto-downloads and auto-installs on quit are enabled. A 10s post-init startup check is scheduled so the user gets an update banner shortly after launch.",
   "exports": [
     {
@@ -70,5 +70,6 @@
     "auto-update",
     "electron-updater",
     "ipc-broadcast"
-  ]
+  ],
+  "complexity": "moderate"
 }

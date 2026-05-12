@@ -1,0 +1,65 @@
+{
+  "file": "src/ui/shared/modals/GuideModal.jsx",
+  "content_hash": "583718df",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "GuideModal is the renderer modal for the in-app documentation Guide. It calls window.electronAPI.listGuide/getGuide, normalizes folder groups, manages loading/error/empty states, renders markdown with the shared renderer, and reuses the commands modal layout so guide docs are browsable inside the desktop app.",
+  "exports": [
+    {
+      "name": "GuideModal",
+      "kind": "component",
+      "signature": "default function GuideModal(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    }
+  ],
+  "imports_from": {
+    "src/ui/shared/modals/Modal.jsx": [
+      "Modal"
+    ],
+    "src/ui/utils/markdown": [
+      "renderMarkdown"
+    ]
+  },
+  "gotchas": [
+    "GuideModal expects listGuide/getGuide on window.electronAPI; browser-only render paths enter missing_api state instead of throwing."
+  ],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI.",
+    "Modal components compose the shared Modal shell and close via an onClose callback from App-level modal routing."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/shared/modals/Modal.jsx",
+      "src/ui/utils/markdown"
+    ],
+    "depended_by": [
+      "src/ui/App.jsx"
+    ],
+    "related": [
+      "electron/preload.js",
+      "electron/services/GuideService.js",
+      "src/ui/shared/Header.jsx"
+    ]
+  },
+  "domains": [
+    "react-ui",
+    "modal-system",
+    "in-app-guide"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "modal",
+    "guide"
+  ],
+  "complexity": "moderate"
+}

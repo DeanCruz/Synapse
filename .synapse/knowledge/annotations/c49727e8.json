@@ -1,24 +1,24 @@
 {
   "file": "src/ui/utils/dependencyLines.js",
-  "content_hash": "0c2b1187",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
-  "annotated_by": "learn-bootstrap",
+  "content_hash": "e2b2620c",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
   "purpose": "BFS-based dependency-line and sibling-communication-line drawing for WavePipeline / ChainPipeline SVG overlays. Builds a 'pathway grid' of horizontal corridors (between cards) and vertical corridors (between wave columns), runs BFS to find shortest paths through this grid (so lines never cross cards), then renders SVG polylines with status-aware styling (completed=green, in_progress=purple, pending=gray-dashed). Sibling lines (drawn AFTER dep lines) reuse the same cached grid; they draw between agents whose progress files contain non-empty sibling_reads arrays. Also registers card hover handlers that highlight needs/blocks/sibling relationships and dim unrelated lines.",
   "exports": [
     {
       "name": "drawDependencyLines",
       "kind": "function",
-      "signature": "(svg, agents, agentMap, cardElements, container) => void"
+      "signature": "function drawDependencyLines(...)"
     },
     {
       "name": "drawSiblingLines",
       "kind": "function",
-      "signature": "(svg, agents, agentMap, cardElements, container, progressData) => void"
+      "signature": "function drawSiblingLines(...)"
     },
     {
       "name": "setupCardHoverEffects",
       "kind": "function",
-      "signature": "(container, svg) => void"
+      "signature": "function setupCardHoverEffects(...)"
     }
   ],
   "imports_from": {},
@@ -47,8 +47,8 @@
   "relationships": {
     "depends_on": [],
     "depended_by": [
-      "src/ui/components/WavePipeline.jsx",
-      "src/ui/components/ChainPipeline.jsx"
+      "src/ui/pages/chat/components/ChatDashboardView.jsx",
+      "src/ui/pages/code/subpages/dashboards/components/WavePipeline.jsx"
     ],
     "related": [
       "src/ui/utils/constants.js"
@@ -66,5 +66,6 @@
     "dependency-lines",
     "sibling-lines",
     "hover-highlight"
-  ]
+  ],
+  "complexity": "complex"
 }

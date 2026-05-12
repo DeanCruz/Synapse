@@ -1,0 +1,47 @@
+{
+  "file": "documentation/chat/ipc-handlers.md",
+  "content_hash": "52f0c68d",
+  "annotated_at": "2026-05-11T01:54:48Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Documentation page for the chat area: Chat IPC Handlers. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: The Chat system communicates between the renderer (React UI) and main process (Electron) via IPC channels exposed through `electron/preload.js`. The bridge is exposed as `window.electronAPI`. The file is 351 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
+  ],
+  "patterns": [
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
+  ],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/dashboard/state-management.md",
+      "documentation/electron/ipc-reference.md",
+      "documentation/electron/overview.md"
+    ],
+    "related": [
+      "documentation/chat/overview.md"
+    ]
+  },
+  "domains": [
+    "documentation",
+    "chat"
+  ],
+  "tags": [
+    "markdown",
+    "documentation",
+    "chat",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "codex",
+    "claude"
+  ],
+  "complexity": "complex"
+}

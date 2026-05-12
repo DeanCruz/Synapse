@@ -1,0 +1,69 @@
+{
+  "file": "src/ui/shared/claude/ClaudeFloatingPanel.jsx",
+  "content_hash": "f21535a4",
+  "annotated_at": "2026-05-11T01:55:09.543Z",
+  "annotated_by": "learn-update",
+  "purpose": "ClaudeFloatingPanel is shared Claude/Codex chat UI for the code surface. It handles agent conversation state, attachments, worker output/status events, and provider-aware controls while keeping chat-side and code-side state slices separate.",
+  "exports": [
+    {
+      "name": "ClaudeFloatingPanel",
+      "kind": "component",
+      "signature": "default function ClaudeFloatingPanel(...)"
+    },
+    {
+      "name": "function",
+      "kind": "component",
+      "signature": "default export function"
+    },
+    {
+      "name": "useAgentProviderLabel",
+      "kind": "function",
+      "signature": "function useAgentProviderLabel(...)"
+    }
+  ],
+  "imports_from": {
+    "src/ui/context/AppContext": [
+      "useAppState"
+    ],
+    "src/ui/hooks/useResize": [
+      "useResize"
+    ],
+    "src/ui/utils/dashboardProjects": [
+      "getDashboardProject"
+    ],
+    "src/ui/shared/claude/ClaudeView.jsx": [
+      "ClaudeView"
+    ]
+  },
+  "gotchas": [],
+  "patterns": [
+    "Functional React component with hooks for local state/effects and Electron API calls isolated behind window.electronAPI."
+  ],
+  "conventions": [
+    "Renderer components use .jsx extensions, PascalCase component names, and @ alias imports for src/ui modules."
+  ],
+  "relationships": {
+    "depends_on": [
+      "src/ui/context/AppContext",
+      "src/ui/hooks/useResize",
+      "src/ui/shared/claude/ClaudeView.jsx",
+      "src/ui/utils/dashboardProjects"
+    ],
+    "depended_by": [
+      "src/ui/pages/code/CodePage.jsx"
+    ],
+    "related": []
+  },
+  "domains": [
+    "react-ui",
+    "swarm-orchestration"
+  ],
+  "tags": [
+    "javascript",
+    "react",
+    "jsx",
+    "renderer",
+    "swarm"
+  ],
+  "complexity": "moderate"
+}

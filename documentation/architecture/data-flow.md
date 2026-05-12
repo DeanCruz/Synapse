@@ -4,7 +4,7 @@ This document describes how data flows through Synapse from the moment a swarm i
 
 ---
 
-## Table of Contents
+## Contents
 
 - [High-Level Data Flow](#high-level-data-flow)
 - [Planning Phase](#planning-phase)
@@ -64,7 +64,7 @@ User prompt
 Master reads context:
   - {tracker_root}/CLAUDE.md (Synapse instructions)
   - {project_root}/CLAUDE.md (project conventions)
-  - {project_root}/.synapse/toc.md (optional file index)
+  - {project_root}/.synapse/knowledge/ (optional project knowledge graph)
   - Source files via Glob/Grep/Read tools
     |
     v

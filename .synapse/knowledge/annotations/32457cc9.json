@@ -1,0 +1,36 @@
+{
+  "file": ".claude/plans/resize-fix.md",
+  "content_hash": "ce419ff5",
+  "annotated_at": "2026-05-11T01:54:48Z",
+  "annotated_by": "learn-bootstrap",
+  "purpose": "Control-plane markdown document: Fix: Chat Widget Resize \u2014 Instant, Lag-Free. Key content: 1. **`transition: all 0.25s`** on `.claude-float` \u2014 applies to width/height during resize, creating 250ms delay on every mouse movement 2. **Native CSS `resize: both`** \u2014 poor control, tiny grab target, no visual affordance 3. **`direction: rtl` hack** \u2014 fragile workaround for bottom-right anchoring The file is 72 lines long and should be treated as a knowledge/control-plane source rather than application code.",
+  "exports": [],
+  "imports_from": {},
+  "gotchas": [],
+  "patterns": [
+    "Control-plane documentation pattern: markdown is treated as operational configuration for agents, not just explanatory prose.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates."
+  ],
+  "conventions": [
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "Agent-control documents use `{tracker_root}`, `{project_root}`, and `{dashboardId}` placeholders instead of machine-specific paths.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability."
+  ],
+  "relationships": {
+    "depends_on": [],
+    "depended_by": [],
+    "related": []
+  },
+  "domains": [
+    "control-plane-docs"
+  ],
+  "tags": [
+    "markdown",
+    "control-plane",
+    "claude",
+    "react",
+    "chat",
+    "ide"
+  ],
+  "complexity": "simple"
+}

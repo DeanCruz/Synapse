@@ -1,48 +1,55 @@
 {
   "file": "documentation/project-integration/project-setup.md",
-  "content_hash": "15a0b3e0",
-  "annotated_at": "2026-05-02T06:27:25.130Z",
+  "content_hash": "e2e11654",
+  "annotated_at": "2026-05-11T01:54:48Z",
   "annotated_by": "learn-bootstrap",
-  "purpose": "Step-by-step guide for connecting Synapse to a new project. Walks through pointing Synapse at the project (3 options: store path, CWD, --project), running !initialize (8-step process: verify prerequisites, detect tech stack, create .synapse/, scaffold CLAUDE.md, generate TOC, init dashboards, start server, report), reviewing CLAUDE.md, generating TOC, bootstrapping PKI with !learn, project-specific commands, disconnecting projects, and troubleshooting common setup issues.",
+  "purpose": "Documentation page for the project-integration area: Project Setup. It explains operational behavior, user workflow, data ownership, or architecture details that future agents use when updating Synapse docs or app behavior. Key content: This guide walks through connecting Synapse to a new project, from initial pointing to full initialization with knowledge graph generation. The file is 355 lines long and should be treated as a knowledge/control-plane source rather than application code.",
   "exports": [],
   "imports_from": {},
   "gotchas": [
-    "!initialize is idempotent -- safe to re-run, skips existing files",
-    "--skip-toc and --skip-claude flags available for partial init",
-    "Dashboards are swarm-specific not project-specific -- changing project doesn't affect existing dashboards",
-    "CLAUDE.md never overwritten without --force"
+    "Documentation may describe behavior that has moved into Electron IPC/services or .claude skills; verify implementation before making broad user-facing claims."
   ],
   "patterns": [
-    "Quick-start path: !project set -> !initialize -> !start -> !p_track",
-    "Tech stack detection via config file presence (package.json, tsconfig.json, etc.)",
-    "Monorepo detection: npm/pnpm workspaces, lerna, nx, turbo, cargo, go"
+    "Documentation pattern: H1 title, short introduction, then operational sections with headings, tables, examples, or path references for future maintainers.",
+    "Uses fenced code blocks for command examples, schemas, or prompt templates.",
+    "Uses markdown tables for compact command, file, or option matrices."
   ],
   "conventions": [
-    "Project root resolution priority: --project > stored config > CWD",
-    ".synapse/config.json links project to tracker_root with metadata",
-    "TOC generation parallelized via agent swarm"
+    "Markdown headings use a single H1 followed by H2/H3 sections for navigable documentation.",
+    "ASCII double hyphen is used in prose where many docs avoid Unicode punctuation for terminal readability.",
+    "Shell examples use fenced `bash` code blocks."
   ],
   "relationships": {
     "depends_on": [
-      "documentation/project-integration/overview.md"
-    ],
-    "depended_by": [],
-    "related": [
       "documentation/project-integration/conventions.md",
       "documentation/project-integration/toc-system.md",
+      "documentation/project-integration/pki-overview.md"
+    ],
+    "depended_by": [
+      "documentation/README.md",
+      "documentation/project-integration/conventions.md",
+      "documentation/project-integration/overview.md"
+    ],
+    "related": [
+      "documentation/project-integration/conventions.md",
+      "documentation/project-integration/overview.md",
       "documentation/project-integration/pki-overview.md",
-      "_commands/project/initialize.md",
-      "_commands/Synapse/project.md"
+      "documentation/project-integration/toc-system.md"
     ]
   },
   "domains": [
-    "project-integration-docs"
+    "documentation",
+    "project-integration"
   ],
   "tags": [
     "markdown",
     "documentation",
-    "setup",
-    "initialization",
-    "onboarding"
-  ]
+    "project-integration",
+    "pki",
+    "dashboard",
+    "progress",
+    "initialization-json",
+    "guide"
+  ],
+  "complexity": "complex"
 }
